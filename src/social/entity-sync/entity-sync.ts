@@ -10,7 +10,12 @@
  * @see .claude/rules/L1-social.md
  */
 
+import { SocialEvents } from '@sn/types';
+
+import { bus } from '../../kernel/bus';
+import { useCanvasStore } from '../../kernel/stores/canvas/canvas.store';
 import type { CanvasChannel } from '../channel';
+import { resolveLWW } from '../conflict';
 
 /**
  * Entity transform data broadcast over the channel.
@@ -22,6 +27,11 @@ export interface EntityTransform {
   scale?: number;
   userId: string;
   timestamp: number;
+}
+
+/** Internal broadcast payload with finality flag */
+interface EntityTransformMessage extends EntityTransform {
+  isFinal: boolean;
 }
 
 /**
@@ -37,12 +47,110 @@ export interface EntitySyncManager {
 }
 
 /**
+ * Check if the current user has write permission on the canvas.
+ */
+function canWrite(): boolean {
+  const role = useCanvasStore.getState().userRole;
+  return role === 'owner' || role === 'editor';
+}
+
+/**
  * Creates an entity sync manager for a canvas channel.
  *
  * @param channel - The canvas channel for broadcasting
  * @returns An EntitySyncManager instance
  */
-export function createEntitySync(_channel: CanvasChannel): EntitySyncManager {
-  // TODO: Implement — see AC4 in current-story.md
-  throw new Error('Not implemented: createEntitySync');
+export function createEntitySync(channel: CanvasChannel): EntitySyncManager {
+  const lastKnownTransforms = new Map<string, EntityTransform>();
+  let destroyed = false;
+
+  // Listen for remote entity transform broadcasts
+  channel.onBroadcast('entity-transform', (payload) => {
+    if (destroyed) return;
+    const remote = payload as EntityTransformMessage;
+
+    if (remote.isFinal) {
+      // Final drop — apply LWW resolution
+      const local = lastKnownTransforms.get(remote.entityId);
+      let winner: EntityTransform;
+
+      if (local) {
+        winner = resolveLWW(
+          { value: local, timestamp: local.timestamp },
+          { value: remote, timestamp: remote.timestamp },
+        );
+      } else {
+        winner = remote;
+      }
+
+      lastKnownTransforms.set(remote.entityId, winner);
+
+      bus.emit(SocialEvents.ENTITY_TRANSFORMED, {
+        entityId: winner.entityId,
+        position: winner.position,
+        rotation: winner.rotation,
+        scale: winner.scale,
+        userId: winner.userId,
+        timestamp: winner.timestamp,
+      });
+    } else {
+      // Optimistic drag — apply immediately for visual feedback
+      bus.emit(SocialEvents.ENTITY_TRANSFORMED, {
+        entityId: remote.entityId,
+        position: remote.position,
+        rotation: remote.rotation,
+        scale: remote.scale,
+        userId: remote.userId,
+        timestamp: remote.timestamp,
+      });
+    }
+  });
+
+  return {
+    broadcastTransform(transform: EntityTransform): void {
+      if (!canWrite()) {
+        bus.emit(SocialEvents.CONFLICT_REJECTED, {
+          reason: 'permission',
+          message: 'You do not have edit permission on this canvas',
+        });
+        return;
+      }
+
+      channel.broadcast('entity-transform', {
+        ...transform,
+        isFinal: false,
+      } satisfies EntityTransformMessage);
+    },
+
+    reconcileOnDrop(transform: EntityTransform): void {
+      if (!canWrite()) {
+        bus.emit(SocialEvents.CONFLICT_REJECTED, {
+          reason: 'permission',
+          message: 'You do not have edit permission on this canvas',
+        });
+        return;
+      }
+
+      lastKnownTransforms.set(transform.entityId, transform);
+      channel.broadcast('entity-transform', {
+        ...transform,
+        isFinal: true,
+      } satisfies EntityTransformMessage);
+
+      // Emit locally for our own canvas layer
+      bus.emit(SocialEvents.ENTITY_TRANSFORMED, {
+        entityId: transform.entityId,
+        position: transform.position,
+        rotation: transform.rotation,
+        scale: transform.scale,
+        userId: transform.userId,
+        timestamp: transform.timestamp,
+      });
+    },
+
+    destroy(): void {
+      destroyed = true;
+      lastKnownTransforms.clear();
+    },
+  };
 }
