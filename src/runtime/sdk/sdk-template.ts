@@ -55,6 +55,196 @@ export interface StickerNestSDK {
  * @returns The SDK source code as a string
  */
 export function generateSDKTemplate(): string {
-  // TODO: Implement — see runtime plan section 2.3
-  throw new Error('Not implemented: generateSDKTemplate');
+  // This returns a self-contained JavaScript string that creates
+  // window.StickerNest when evaluated inside a widget iframe.
+  return `(function() {
+  'use strict';
+
+  var _config = {};
+  var _manifest = null;
+  var _registered = false;
+  var _ready = false;
+  var _eventHandlers = {};
+  var _themeHandlers = [];
+  var _resizeHandlers = [];
+  var _crossCanvasHandlers = {};
+  var _pendingRequests = {};
+  var _requestCounter = 0;
+
+  function postToHost(message) {
+    window.parent.postMessage(message, '*');
+  }
+
+  // Listen for messages from the host
+  window.addEventListener('message', function(event) {
+    var data = event.data;
+    if (!data || typeof data.type !== 'string') return;
+
+    switch (data.type) {
+      case 'INIT':
+        _config = data.config || {};
+        if (data.theme) {
+          for (var i = 0; i < _themeHandlers.length; i++) {
+            try { _themeHandlers[i](data.theme); } catch(e) { console.error('[StickerNest SDK] Theme handler error:', e); }
+          }
+        }
+        break;
+
+      case 'EVENT':
+        if (data.event && data.event.type) {
+          var handlers = _eventHandlers[data.event.type];
+          if (handlers) {
+            for (var j = 0; j < handlers.length; j++) {
+              try { handlers[j](data.event.payload); } catch(e) { console.error('[StickerNest SDK] Event handler error:', e); }
+            }
+          }
+        }
+        break;
+
+      case 'CONFIG_UPDATE':
+        _config = data.config || {};
+        break;
+
+      case 'THEME_UPDATE':
+        if (data.theme) {
+          for (var k = 0; k < _themeHandlers.length; k++) {
+            try { _themeHandlers[k](data.theme); } catch(e) { console.error('[StickerNest SDK] Theme handler error:', e); }
+          }
+        }
+        break;
+
+      case 'RESIZE':
+        for (var r = 0; r < _resizeHandlers.length; r++) {
+          try { _resizeHandlers[r](data.width, data.height); } catch(e) { console.error('[StickerNest SDK] Resize handler error:', e); }
+        }
+        break;
+
+      case 'STATE_RESPONSE':
+        var pending = _pendingRequests[data.key];
+        if (pending) {
+          pending.resolve(data.value);
+          delete _pendingRequests[data.key];
+        }
+        break;
+
+      case 'DESTROY':
+        _eventHandlers = {};
+        _themeHandlers = [];
+        _resizeHandlers = [];
+        _crossCanvasHandlers = {};
+        _pendingRequests = {};
+        break;
+    }
+  });
+
+  window.StickerNest = {
+    emit: function(type, payload) {
+      postToHost({ type: 'EMIT', eventType: type, payload: payload });
+    },
+
+    subscribe: function(type, handler) {
+      if (!_eventHandlers[type]) {
+        _eventHandlers[type] = [];
+      }
+      _eventHandlers[type].push(handler);
+    },
+
+    unsubscribe: function(type, handler) {
+      var handlers = _eventHandlers[type];
+      if (handlers) {
+        var idx = handlers.indexOf(handler);
+        if (idx !== -1) {
+          handlers.splice(idx, 1);
+        }
+        if (handlers.length === 0) {
+          delete _eventHandlers[type];
+        }
+      }
+    },
+
+    setState: function(key, value) {
+      postToHost({ type: 'SET_STATE', key: key, value: value });
+    },
+
+    getState: function(key) {
+      return new Promise(function(resolve, reject) {
+        var requestKey = '__state_' + (++_requestCounter) + '_' + key;
+        _pendingRequests[key] = { resolve: resolve, reject: reject };
+        postToHost({ type: 'GET_STATE', key: key });
+      });
+    },
+
+    setUserState: function(key, value) {
+      postToHost({ type: 'SET_USER_STATE', key: key, value: value });
+    },
+
+    getUserState: function(key) {
+      return new Promise(function(resolve, reject) {
+        var requestKey = '__ustate_' + (++_requestCounter) + '_' + key;
+        _pendingRequests[key] = { resolve: resolve, reject: reject };
+        postToHost({ type: 'GET_USER_STATE', key: key });
+      });
+    },
+
+    getConfig: function() {
+      return Object.assign({}, _config);
+    },
+
+    register: function(manifest) {
+      if (_ready) {
+        throw new Error('StickerNest.register() must be called before StickerNest.ready()');
+      }
+      _manifest = manifest;
+      _registered = true;
+      postToHost({ type: 'REGISTER', manifest: manifest });
+    },
+
+    ready: function() {
+      if (_ready) return;
+      _ready = true;
+      postToHost({ type: 'READY' });
+    },
+
+    onThemeChange: function(handler) {
+      _themeHandlers.push(handler);
+    },
+
+    onResize: function(handler) {
+      _resizeHandlers.push(handler);
+    },
+
+    integration: function(name) {
+      return {
+        query: function(params) {
+          return new Promise(function(resolve) {
+            postToHost({ type: 'EMIT', eventType: 'integration.query', payload: { name: name, params: params } });
+            resolve(undefined);
+          });
+        },
+        mutate: function(params) {
+          return new Promise(function(resolve) {
+            postToHost({ type: 'EMIT', eventType: 'integration.mutate', payload: { name: name, params: params } });
+            resolve(undefined);
+          });
+        }
+      };
+    },
+
+    emitCrossCanvas: function(channel, payload) {
+      postToHost({ type: 'EMIT', eventType: 'crosscanvas.' + channel, payload: payload });
+    },
+
+    subscribeCrossCanvas: function(channel, handler) {
+      if (!_crossCanvasHandlers[channel]) {
+        _crossCanvasHandlers[channel] = [];
+      }
+      _crossCanvasHandlers[channel].push(handler);
+      // Also register as a regular event handler for the namespaced event
+      if (!_eventHandlers['crosscanvas.' + channel]) {
+        _eventHandlers['crosscanvas.' + channel] = [];
+      }
+      _eventHandlers['crosscanvas.' + channel].push(handler);
+    }
+  };
+})();`;
 }

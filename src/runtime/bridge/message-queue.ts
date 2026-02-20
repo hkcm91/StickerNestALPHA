@@ -33,6 +33,28 @@ export interface MessageQueue {
  * Creates a message queue for pre-READY event buffering.
  */
 export function createMessageQueue(): MessageQueue {
-  // TODO: Implement — see runtime plan section 2.2
-  throw new Error('Not implemented: createMessageQueue');
+  let queue: HostMessage[] = [];
+
+  return {
+    enqueue(message: HostMessage): void {
+      queue.push(message);
+      if (queue.length > MAX_QUEUE_SIZE) {
+        queue.shift();
+      }
+    },
+
+    flush(): HostMessage[] {
+      const messages = [...queue];
+      queue = [];
+      return messages;
+    },
+
+    size(): number {
+      return queue.length;
+    },
+
+    clear(): void {
+      queue = [];
+    },
+  };
 }
