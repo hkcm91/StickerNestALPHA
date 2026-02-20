@@ -1,0 +1,89 @@
+name: Production Deployment
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: production
+  cancel-in-progress: false
+
+# NOTE: This workflow requires the following secrets to be configured in GitHub:
+# - VERCEL_TOKEN: Vercel API token (get from https://vercel.com/account/tokens)
+# - VERCEL_ORG_ID: Your Vercel organization/team ID
+# - VERCEL_PROJECT_ID: Your Vercel project ID
+#
+# To get VERCEL_ORG_ID and VERCEL_PROJECT_ID:
+# 1. Run `npx vercel link` locally in this project
+# 2. Check .vercel/project.json for the values
+
+jobs:
+  # Wait for CI checks to pass before deploying
+  ci-checks:
+    name: CI Checks
+    uses: ./.github/workflows/ci.yml
+
+  deploy-production:
+    name: Deploy Production
+    runs-on: ubuntu-latest
+    needs: ci-checks
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.production_url }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        id: cache-node-modules
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json', 'yarn.lock', 'pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install dependencies
+        if: steps.cache-node-modules.outputs.cache-hit != 'true'
+        run: npm ci
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Pull Vercel environment information
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Build project artifacts
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Deploy to Vercel Production
+        id: deploy
+        run: |
+          DEPLOY_URL=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }})
+          echo "production_url=$DEPLOY_URL" >> $GITHUB_OUTPUT
+          echo "Deployed to production: $DEPLOY_URL"
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Create deployment summary
+        run: |
+          echo "## Production Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Environment | URL |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------------|-----|" >> $GITHUB_STEP_SUMMARY
+          echo "| Production | [${{ steps.deploy.outputs.production_url }}](${{ steps.deploy.outputs.production_url }}) |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "*StickerNest V5 CI*" >> $GITHUB_STEP_SUMMARY

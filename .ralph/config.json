@@ -1,0 +1,10 @@
+{
+  "maxTurnsPerStory": 50,
+  "requireTestsPass": true,
+  "requireLintPass": true,
+  "autoCommit": false,
+  "storyDirectory": ".ralph/stories",
+  "testCommand": "npm run test",
+  "lintCommand": "npm run lint",
+  "coverageThreshold": 80
+}

@@ -1,0 +1,42 @@
+/**
+ * {{titleCase name}} Module
+ *
+ * @module {{layer}}/{{kebabCase name}}
+ */
+
+{{#if isKernel}}
+import { z } from 'zod';
+{{/if}}
+{{#if importFromKernel}}
+import type { BusEvent } from '@sn/types';
+{{/if}}
+
+/**
+ * {{titleCase name}} module implementation.
+ *
+ * TODO: Add your implementation here.
+ */
+export class {{pascalCase name}} {
+  constructor() {
+    // Initialize module
+  }
+
+  /**
+   * Initialize the module.
+   */
+  async init(): Promise<void> {
+    // TODO: Add initialization logic
+  }
+
+  /**
+   * Cleanup the module.
+   */
+  async dispose(): Promise<void> {
+    // TODO: Add cleanup logic
+  }
+}
+
+/**
+ * Default export for the module.
+ */
+export default {{pascalCase name}};

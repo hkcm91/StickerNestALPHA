@@ -1,0 +1,44 @@
+/**
+ * {{titleCase eventName}} Event Payload Schema
+ *
+ * Defines the payload shape for the {{namespace}}.{{kebabCase eventName}} event.
+ *
+ * @module kernel/schemas/events/{{kebabCase eventName}}
+ */
+
+import { z } from 'zod';
+
+/**
+ * Payload schema for {{namespace}}.{{kebabCase eventName}} event.
+ *
+ * @remarks
+ * This event is emitted when {{lowerCase description}}.
+ *
+ * @example
+ * ```typescript
+ * import { createBusEvent } from '@sn/types';
+ * import { {{pascalCase eventName}}PayloadSchema } from './{{kebabCase eventName}}.payload';
+ *
+ * const event = createBusEvent(
+ *   '{{namespace}}.{{kebabCase eventName}}',
+ *   {{pascalCase eventName}}PayloadSchema.parse({
+ *     // payload data
+ *   })
+ * );
+ * ```
+ */
+export const {{pascalCase eventName}}PayloadSchema = z.object({
+  /** Timestamp when the event occurred */
+  timestamp: z.number().int().positive(),
+  // TODO: Add your payload fields here
+});
+
+/**
+ * TypeScript type inferred from the payload schema.
+ */
+export type {{pascalCase eventName}}Payload = z.infer<typeof {{pascalCase eventName}}PayloadSchema>;
+
+/**
+ * JSON Schema export for external validation.
+ */
+export const {{pascalCase eventName}}PayloadJSONSchema = {{pascalCase eventName}}PayloadSchema.toJSONSchema();

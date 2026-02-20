@@ -1,0 +1,284 @@
+/**
+ * {{titleCase name}} Widget - Test Suite
+ *
+ * Tests for the {{titleCase name}} widget component, schema, and events.
+ *
+ * @module runtime/widgets/{{kebabCase name}}
+ */
+
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import React from 'react';
+
+import { {{pascalCase name}}Widget, {{camelCase name}}Manifest } from './{{kebabCase name}}.widget';
+import {
+  {{camelCase name}}ConfigSchema,
+  {{camelCase name}}DefaultConfig,
+  parse{{pascalCase name}}Config,
+  safeParse{{pascalCase name}}Config,
+} from './{{kebabCase name}}.schema';
+import { {{constantCase name}}_EVENTS } from './{{kebabCase name}}.events';
+
+describe('{{titleCase name}} Widget', () => {
+  // Mock functions for widget props
+  const mockEmit = vi.fn();
+  const mockSubscribe = vi.fn(() => vi.fn()); // Returns unsubscribe function
+  const mockGetState = vi.fn();
+  const mockSetState = vi.fn();
+
+  const defaultProps = {
+    instanceId: 'test-instance-123',
+    config: {{camelCase name}}DefaultConfig,
+    emit: mockEmit,
+    subscribe: mockSubscribe,
+    getState: mockGetState,
+    setState: mockSetState,
+    theme: {
+      '--sn-bg': '#ffffff',
+      '--sn-surface': '#f9fafb',
+      '--sn-accent': '#3b82f6',
+      '--sn-text': '#111827',
+      '--sn-text-muted': '#6b7280',
+      '--sn-border': '#e5e7eb',
+      '--sn-radius': '8px',
+      '--sn-font-family': 'system-ui',
+    },
+    viewport: { width: 300, height: 200 },
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetState.mockResolvedValue(undefined);
+    mockSetState.mockResolvedValue(undefined);
+  });
+
+  describe('Component Rendering', () => {
+    it('should render the widget', async () => {
+      render(<{{pascalCase name}}Widget {...defaultProps} />);
+
+      // Wait for initialization
+      await waitFor(() => {
+        expect(screen.getByTestId('{{kebabCase name}}-widget')).toBeInTheDocument();
+      });
+    });
+
+    it('should display the widget title', async () => {
+      render(<{{pascalCase name}}Widget {...defaultProps} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('{{titleCase name}}')).toBeInTheDocument();
+      });
+    });
+
+    it('should show loading state initially', () => {
+      // Delay getState resolution
+      mockGetState.mockReturnValue(new Promise(() => {}));
+
+      render(<{{pascalCase name}}Widget {...defaultProps} />);
+
+      expect(screen.getByText('Loading...')).toBeInTheDocument();
+    });
+
+    it('should show debug info when config.showDebugInfo is true', async () => {
+      render(
+        <{{pascalCase name}}Widget
+          {...defaultProps}
+          config=\{{ ...{{camelCase name}}DefaultConfig, showDebugInfo: true }}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText(/Instance:/)).toBeInTheDocument();
+        expect(screen.getByText(/Viewport:/)).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Event Emission', () => {
+    it('should emit READY event on initialization', async () => {
+      render(<{{pascalCase name}}Widget {...defaultProps} />);
+
+      await waitFor(() => {
+        expect(mockEmit).toHaveBeenCalledWith(
+          {{constantCase name}}_EVENTS.emits.READY,
+          expect.objectContaining({
+            instanceId: 'test-instance-123',
+            timestamp: expect.any(Number),
+          })
+        );
+      });
+    });
+
+    it('should emit ACTION event when action button is clicked', async () => {
+      render(<{{pascalCase name}}Widget {...defaultProps} />);
+
+      // Wait for widget to be ready
+      await waitFor(() => {
+        expect(screen.getByTestId('{{kebabCase name}}-action-button')).toBeInTheDocument();
+      });
+
+      // Click the action button
+      fireEvent.click(screen.getByTestId('{{kebabCase name}}-action-button'));
+
+      await waitFor(() => {
+        expect(mockEmit).toHaveBeenCalledWith(
+          {{constantCase name}}_EVENTS.emits.ACTION,
+          expect.objectContaining({
+            instanceId: 'test-instance-123',
+            action: 'user-interaction',
+          })
+        );
+      });
+    });
+  });
+
+  describe('Event Subscription', () => {
+    it('should subscribe to CONFIG_UPDATE event', async () => {
+      render(<{{pascalCase name}}Widget {...defaultProps} />);
+
+      await waitFor(() => {
+        expect(mockSubscribe).toHaveBeenCalledWith(
+          {{constantCase name}}_EVENTS.subscribes.CONFIG_UPDATE,
+          expect.any(Function)
+        );
+      });
+    });
+
+    it('should unsubscribe on unmount', async () => {
+      const unsubscribe = vi.fn();
+      mockSubscribe.mockReturnValue(unsubscribe);
+
+      const { unmount } = render(<{{pascalCase name}}Widget {...defaultProps} />);
+
+      await waitFor(() => {
+        expect(mockSubscribe).toHaveBeenCalled();
+      });
+
+      unmount();
+
+      expect(unsubscribe).toHaveBeenCalled();
+    });
+  });
+
+  describe('State Persistence', () => {
+    it('should restore saved state on mount', async () => {
+      const savedState = { lastAction: 12345 };
+      mockGetState.mockResolvedValue(savedState);
+
+      render(<{{pascalCase name}}Widget {...defaultProps} />);
+
+      await waitFor(() => {
+        expect(mockGetState).toHaveBeenCalledWith('widgetState');
+      });
+    });
+
+    it('should persist state when action is performed', async () => {
+      render(<{{pascalCase name}}Widget {...defaultProps} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('{{kebabCase name}}-action-button')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByTestId('{{kebabCase name}}-action-button'));
+
+      await waitFor(() => {
+        expect(mockSetState).toHaveBeenCalledWith(
+          'widgetState',
+          expect.objectContaining({
+            lastAction: expect.any(Number),
+          })
+        );
+      });
+    });
+  });
+});
+
+describe('{{titleCase name}} Config Schema', () => {
+  describe('Validation', () => {
+    it('should accept valid config', () => {
+      const validConfig = {
+        title: 'My Widget',
+        accentColor: '#ff5500',
+        showDebugInfo: true,
+        refreshInterval: 60,
+      };
+
+      const result = {{camelCase name}}ConfigSchema.safeParse(validConfig);
+      expect(result.success).toBe(true);
+    });
+
+    it('should accept empty config with defaults', () => {
+      const result = {{camelCase name}}ConfigSchema.safeParse({});
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.showDebugInfo).toBe(false);
+        expect(result.data.refreshInterval).toBe(0);
+      }
+    });
+
+    it('should reject invalid accent color format', () => {
+      const invalidConfig = {
+        accentColor: 'not-a-hex-color',
+      };
+
+      const result = {{camelCase name}}ConfigSchema.safeParse(invalidConfig);
+      expect(result.success).toBe(false);
+    });
+
+    it('should reject refresh interval out of range', () => {
+      const invalidConfig = {
+        refreshInterval: 9999,
+      };
+
+      const result = {{camelCase name}}ConfigSchema.safeParse(invalidConfig);
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe('Parse Functions', () => {
+    it('parse{{pascalCase name}}Config should throw on invalid input', () => {
+      expect(() => {
+        parse{{pascalCase name}}Config({ accentColor: 'invalid' });
+      }).toThrow();
+    });
+
+    it('safeParse{{pascalCase name}}Config should return defaults on invalid input', () => {
+      const result = safeParse{{pascalCase name}}Config({ accentColor: 'invalid' });
+      expect(result).toEqual({{camelCase name}}DefaultConfig);
+    });
+  });
+});
+
+describe('{{titleCase name}} Manifest', () => {
+  it('should have required manifest fields', () => {
+    expect({{camelCase name}}Manifest.id).toBe('{{kebabCase name}}');
+    expect({{camelCase name}}Manifest.name).toBe('{{titleCase name}}');
+    expect({{camelCase name}}Manifest.version).toMatch(/^\d+\.\d+\.\d+$/);
+    expect({{camelCase name}}Manifest.category).toBe('{{category}}');
+  });
+
+  it('should declare emit events', () => {
+    expect({{camelCase name}}Manifest.events.emits).toContain({{constantCase name}}_EVENTS.emits.READY);
+    expect({{camelCase name}}Manifest.events.emits).toContain({{constantCase name}}_EVENTS.emits.ACTION);
+  });
+
+  it('should declare subscribe events', () => {
+    expect({{camelCase name}}Manifest.events.subscribes).toContain(
+      {{constantCase name}}_EVENTS.subscribes.CONFIG_UPDATE
+    );
+  });
+});
+
+describe('{{titleCase name}} Events', () => {
+  it('should have consistent event naming', () => {
+    // All events should follow the widget.{{kebabCase name}}.* pattern
+    const allEvents = [
+      ...Object.values({{constantCase name}}_EVENTS.emits),
+      ...Object.values({{constantCase name}}_EVENTS.subscribes),
+    ];
+
+    allEvents.forEach((event) => {
+      expect(event).toMatch(/^widget\.{{kebabCase name}}\..+$/);
+    });
+  });
+});

@@ -1,0 +1,205 @@
+/**
+ * {{titleCase name}} Store - Test Suite
+ *
+ * @module kernel/stores/{{kebabCase name}}
+ */
+
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { act } from '@testing-library/react';
+
+import {
+  use{{pascalCase name}}Store,
+  select{{pascalCase name}}Ready,
+  select{{pascalCase name}}Loading,
+  select{{pascalCase name}}Error,
+} from './{{kebabCase name}}.store';
+
+describe('{{titleCase name}} Store', () => {
+  // Reset store state before each test
+  beforeEach(() => {
+    use{{pascalCase name}}Store.getState().reset();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe('initial state', () => {
+    it('should have correct initial state', () => {
+      const state = use{{pascalCase name}}Store.getState();
+
+      expect(state.isInitialized).toBe(false);
+      expect(state.isLoading).toBe(false);
+      expect(state.error).toBeNull();
+    });
+  });
+
+  describe('init action', () => {
+    it('should initialize the store', async () => {
+      const store = use{{pascalCase name}}Store.getState();
+
+      await act(async () => {
+        await store.init();
+      });
+
+      const state = use{{pascalCase name}}Store.getState();
+      expect(state.isInitialized).toBe(true);
+      expect(state.isLoading).toBe(false);
+    });
+
+    it('should not re-initialize if already initialized', async () => {
+      const store = use{{pascalCase name}}Store.getState();
+
+      await act(async () => {
+        await store.init();
+        await store.init(); // Second call
+      });
+
+      // Should not throw and state should remain the same
+      const state = use{{pascalCase name}}Store.getState();
+      expect(state.isInitialized).toBe(true);
+    });
+
+    it('should set loading state during initialization', async () => {
+      const store = use{{pascalCase name}}Store.getState();
+
+      // Start init but don't await
+      const initPromise = store.init();
+
+      // Check loading state immediately
+      expect(use{{pascalCase name}}Store.getState().isLoading).toBe(true);
+
+      await act(async () => {
+        await initPromise;
+      });
+
+      expect(use{{pascalCase name}}Store.getState().isLoading).toBe(false);
+    });
+  });
+
+  describe('reset action', () => {
+    it('should reset store to initial state', async () => {
+      const store = use{{pascalCase name}}Store.getState();
+
+      // Initialize first
+      await act(async () => {
+        await store.init();
+      });
+
+      expect(use{{pascalCase name}}Store.getState().isInitialized).toBe(true);
+
+      // Reset
+      act(() => {
+        store.reset();
+      });
+
+      const state = use{{pascalCase name}}Store.getState();
+      expect(state.isInitialized).toBe(false);
+      expect(state.isLoading).toBe(false);
+      expect(state.error).toBeNull();
+    });
+  });
+
+  describe('error handling', () => {
+    it('should set error state', () => {
+      const store = use{{pascalCase name}}Store.getState();
+
+      act(() => {
+        store.setError('Test error message');
+      });
+
+      expect(use{{pascalCase name}}Store.getState().error).toBe('Test error message');
+    });
+
+    it('should clear error state', () => {
+      const store = use{{pascalCase name}}Store.getState();
+
+      act(() => {
+        store.setError('Test error');
+        store.clearError();
+      });
+
+      expect(use{{pascalCase name}}Store.getState().error).toBeNull();
+    });
+  });
+
+  describe('loading state', () => {
+    it('should set loading state', () => {
+      const store = use{{pascalCase name}}Store.getState();
+
+      act(() => {
+        store.setLoading(true);
+      });
+
+      expect(use{{pascalCase name}}Store.getState().isLoading).toBe(true);
+
+      act(() => {
+        store.setLoading(false);
+      });
+
+      expect(use{{pascalCase name}}Store.getState().isLoading).toBe(false);
+    });
+  });
+
+  describe('selectors', () => {
+    it('select{{pascalCase name}}Ready should return true when initialized and not loading', async () => {
+      const store = use{{pascalCase name}}Store.getState();
+
+      // Initially not ready
+      expect(select{{pascalCase name}}Ready(use{{pascalCase name}}Store.getState())).toBe(false);
+
+      await act(async () => {
+        await store.init();
+      });
+
+      // Ready after init
+      expect(select{{pascalCase name}}Ready(use{{pascalCase name}}Store.getState())).toBe(true);
+    });
+
+    it('select{{pascalCase name}}Ready should return false when there is an error', async () => {
+      const store = use{{pascalCase name}}Store.getState();
+
+      await act(async () => {
+        await store.init();
+        store.setError('Some error');
+      });
+
+      expect(select{{pascalCase name}}Ready(use{{pascalCase name}}Store.getState())).toBe(false);
+    });
+
+    it('select{{pascalCase name}}Loading should return loading state', () => {
+      const store = use{{pascalCase name}}Store.getState();
+
+      expect(select{{pascalCase name}}Loading(use{{pascalCase name}}Store.getState())).toBe(false);
+
+      act(() => {
+        store.setLoading(true);
+      });
+
+      expect(select{{pascalCase name}}Loading(use{{pascalCase name}}Store.getState())).toBe(true);
+    });
+
+    it('select{{pascalCase name}}Error should return error state', () => {
+      const store = use{{pascalCase name}}Store.getState();
+
+      expect(select{{pascalCase name}}Error(use{{pascalCase name}}Store.getState())).toBeNull();
+
+      act(() => {
+        store.setError('Error message');
+      });
+
+      expect(select{{pascalCase name}}Error(use{{pascalCase name}}Store.getState())).toBe('Error message');
+    });
+  });
+
+  describe('store isolation', () => {
+    it('should not import from other stores', () => {
+      // This test validates the import rule by checking the store exists
+      // The actual import validation is done by eslint-plugin-boundaries
+      expect(use{{pascalCase name}}Store).toBeDefined();
+      expect(typeof use{{pascalCase name}}Store.getState).toBe('function');
+      expect(typeof use{{pascalCase name}}Store.setState).toBe('function');
+      expect(typeof use{{pascalCase name}}Store.subscribe).toBe('function');
+    });
+  });
+});

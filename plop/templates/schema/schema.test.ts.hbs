@@ -1,0 +1,139 @@
+/**
+ * {{titleCase name}} Schema - Test Suite
+ *
+ * @module @sn/types/{{kebabCase name}}
+ */
+
+import { describe, it, expect } from 'vitest';
+
+import {
+  {{pascalCase name}}Schema,
+  Create{{pascalCase name}}InputSchema,
+  Update{{pascalCase name}}InputSchema,
+  {{pascalCase name}}JSONSchema,
+  type {{pascalCase name}},
+  type Create{{pascalCase name}}Input,
+  type Update{{pascalCase name}}Input,
+} from './{{kebabCase name}}';
+
+describe('{{titleCase name}} Schema', () => {
+  // Valid test data
+  const validData: {{pascalCase name}} = {
+    id: '550e8400-e29b-41d4-a716-446655440000',
+    {{#each fields}}
+    {{this.name}}: {{this.testValue}},
+    {{/each}}
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  describe('{{pascalCase name}}Schema', () => {
+    it('should accept valid data', () => {
+      const result = {{pascalCase name}}Schema.safeParse(validData);
+      expect(result.success).toBe(true);
+    });
+
+    it('should reject data without required id', () => {
+      const invalidData = { ...validData, id: undefined };
+      const result = {{pascalCase name}}Schema.safeParse(invalidData);
+      expect(result.success).toBe(false);
+    });
+
+    it('should reject invalid UUID format for id', () => {
+      const invalidData = { ...validData, id: 'not-a-uuid' };
+      const result = {{pascalCase name}}Schema.safeParse(invalidData);
+      expect(result.success).toBe(false);
+    });
+
+    it('should coerce date strings to Date objects', () => {
+      const dataWithStringDates = {
+        ...validData,
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+      };
+      const result = {{pascalCase name}}Schema.safeParse(dataWithStringDates);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.createdAt).toBeInstanceOf(Date);
+        expect(result.data.updatedAt).toBeInstanceOf(Date);
+      }
+    });
+  });
+
+  describe('Create{{pascalCase name}}InputSchema', () => {
+    it('should accept valid create input without id and timestamps', () => {
+      const createInput: Create{{pascalCase name}}Input = {
+        {{#each fields}}
+        {{this.name}}: {{this.testValue}},
+        {{/each}}
+      };
+      const result = Create{{pascalCase name}}InputSchema.safeParse(createInput);
+      expect(result.success).toBe(true);
+    });
+
+    it('should strip id if provided', () => {
+      const createInput = {
+        id: '550e8400-e29b-41d4-a716-446655440000',
+        {{#each fields}}
+        {{this.name}}: {{this.testValue}},
+        {{/each}}
+      };
+      const result = Create{{pascalCase name}}InputSchema.safeParse(createInput);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect('id' in result.data).toBe(false);
+      }
+    });
+  });
+
+  describe('Update{{pascalCase name}}InputSchema', () => {
+    it('should require id for updates', () => {
+      const updateInput = {
+        {{#if fields.length}}
+        {{fields.0.name}}: {{fields.0.testValue}},
+        {{/if}}
+      };
+      const result = Update{{pascalCase name}}InputSchema.safeParse(updateInput);
+      expect(result.success).toBe(false);
+    });
+
+    it('should accept partial updates with id', () => {
+      const updateInput: Update{{pascalCase name}}Input = {
+        id: '550e8400-e29b-41d4-a716-446655440000',
+        {{#if fields.length}}
+        {{fields.0.name}}: {{fields.0.testValue}},
+        {{/if}}
+      };
+      const result = Update{{pascalCase name}}InputSchema.safeParse(updateInput);
+      expect(result.success).toBe(true);
+    });
+  });
+
+  describe('JSON Schema Export', () => {
+    it('should export a valid JSON schema', () => {
+      expect({{pascalCase name}}JSONSchema).toBeDefined();
+      expect({{pascalCase name}}JSONSchema.type).toBe('object');
+      expect({{pascalCase name}}JSONSchema.properties).toBeDefined();
+    });
+
+    it('should include all schema fields in JSON schema', () => {
+      const properties = {{pascalCase name}}JSONSchema.properties as Record<string, unknown>;
+      expect(properties).toHaveProperty('id');
+      expect(properties).toHaveProperty('createdAt');
+      expect(properties).toHaveProperty('updatedAt');
+      {{#each fields}}
+      expect(properties).toHaveProperty('{{this.name}}');
+      {{/each}}
+    });
+  });
+
+  describe('Type inference', () => {
+    it('should correctly infer {{pascalCase name}} type', () => {
+      // Type check - this is a compile-time test
+      const data: {{pascalCase name}} = validData;
+      expect(data.id).toBeDefined();
+      expect(data.createdAt).toBeDefined();
+      expect(data.updatedAt).toBeDefined();
+    });
+  });
+});

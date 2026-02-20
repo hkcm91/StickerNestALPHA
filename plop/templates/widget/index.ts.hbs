@@ -1,0 +1,35 @@
+/**
+ * {{titleCase name}} Widget - Barrel Export
+ *
+ * Re-exports all public API from this widget module.
+ *
+ * @module runtime/widgets/{{kebabCase name}}
+ */
+
+// Widget component and manifest
+export {
+  {{pascalCase name}}Widget,
+  {{pascalCase name}}Widget as default,
+  {{camelCase name}}Manifest,
+  type {{pascalCase name}}WidgetProps,
+} from './{{kebabCase name}}.widget';
+
+// Configuration schema and types
+export {
+  {{camelCase name}}ConfigSchema,
+  {{camelCase name}}DefaultConfig,
+  parse{{pascalCase name}}Config,
+  safeParse{{pascalCase name}}Config,
+  type {{pascalCase name}}Config,
+} from './{{kebabCase name}}.schema';
+
+// Event definitions and types
+export {
+  {{constantCase name}}_EVENTS,
+  type {{pascalCase name}}EventPayloads,
+  type {{pascalCase name}}EmitPayloads,
+  type {{pascalCase name}}SubscribePayloads,
+  type {{pascalCase name}}EmitEventType,
+  type {{pascalCase name}}SubscribeEventType,
+  type {{pascalCase name}}EventType,
+} from './{{kebabCase name}}.events';

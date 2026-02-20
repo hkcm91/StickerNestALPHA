@@ -1,0 +1,161 @@
+/**
+ * {{titleCase name}} Store
+ *
+ * Zustand store for {{lowerCase description}}.
+ *
+ * @module kernel/stores/{{kebabCase name}}
+ */
+
+import { create } from 'zustand';
+import { devtools, subscribeWithSelector } from 'zustand/middleware';
+
+// =============================================================================
+// Types
+// =============================================================================
+
+/**
+ * {{titleCase name}} store state shape.
+ */
+export interface {{pascalCase name}}State {
+  /** Store initialization status */
+  isInitialized: boolean;
+  /** Loading state for async operations */
+  isLoading: boolean;
+  /** Error state */
+  error: string | null;
+  // TODO: Add your state properties here
+}
+
+/**
+ * {{titleCase name}} store actions.
+ */
+export interface {{pascalCase name}}Actions {
+  /** Initialize the store */
+  init: () => Promise<void>;
+  /** Reset the store to initial state */
+  reset: () => void;
+  /** Clear any error state */
+  clearError: () => void;
+  /** Set loading state */
+  setLoading: (loading: boolean) => void;
+  /** Set error state */
+  setError: (error: string | null) => void;
+  // TODO: Add your action signatures here
+}
+
+/**
+ * Combined store type.
+ */
+export type {{pascalCase name}}Store = {{pascalCase name}}State & {{pascalCase name}}Actions;
+
+// =============================================================================
+// Initial State
+// =============================================================================
+
+const initialState: {{pascalCase name}}State = {
+  isInitialized: false,
+  isLoading: false,
+  error: null,
+  // TODO: Add your initial state values here
+};
+
+// =============================================================================
+// Store Implementation
+// =============================================================================
+
+/**
+ * {{titleCase name}} Zustand store.
+ *
+ * @remarks
+ * This store follows StickerNest V5 conventions:
+ * - Uses `subscribeWithSelector` for fine-grained subscriptions
+ * - Uses `devtools` for Redux DevTools integration in development
+ * - All cross-store communication goes through the event bus
+ * - State mutations are only done through actions
+ *
+ * @example
+ * ```typescript
+ * import { use{{pascalCase name}}Store } from '@/kernel/stores/{{kebabCase name}}';
+ *
+ * // In a component
+ * const { isInitialized, init } = use{{pascalCase name}}Store();
+ *
+ * // With selector (recommended for performance)
+ * const isLoading = use{{pascalCase name}}Store((state) => state.isLoading);
+ * ```
+ */
+export const use{{pascalCase name}}Store = create<{{pascalCase name}}Store>()(
+  devtools(
+    subscribeWithSelector((set, get) => ({
+      // State
+      ...initialState,
+
+      // Actions
+      init: async () => {
+        const state = get();
+        if (state.isInitialized) {
+          return;
+        }
+
+        set({ isLoading: true, error: null });
+
+        try {
+          // TODO: Add initialization logic here
+          // Example: Load data from API, set up subscriptions, etc.
+
+          set({ isInitialized: true, isLoading: false });
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Failed to initialize store';
+          set({ error: message, isLoading: false });
+          throw error;
+        }
+      },
+
+      reset: () => {
+        set(initialState);
+      },
+
+      clearError: () => {
+        set({ error: null });
+      },
+
+      setLoading: (loading: boolean) => {
+        set({ isLoading: loading });
+      },
+
+      setError: (error: string | null) => {
+        set({ error });
+      },
+
+      // TODO: Add your action implementations here
+    })),
+    {
+      name: '{{kebabCase name}}Store',
+      enabled: process.env.NODE_ENV === 'development',
+    }
+  )
+);
+
+// =============================================================================
+// Selectors
+// =============================================================================
+
+/**
+ * Selector for checking if the store is ready for use.
+ */
+export const select{{pascalCase name}}Ready = (state: {{pascalCase name}}Store): boolean =>
+  state.isInitialized && !state.isLoading && !state.error;
+
+/**
+ * Selector for the loading state.
+ */
+export const select{{pascalCase name}}Loading = (state: {{pascalCase name}}Store): boolean =>
+  state.isLoading;
+
+/**
+ * Selector for the error state.
+ */
+export const select{{pascalCase name}}Error = (state: {{pascalCase name}}Store): string | null =>
+  state.error;
+
+// TODO: Add more selectors as needed

@@ -1,0 +1,124 @@
+/**
+ * {{titleCase name}} Widget - Event Type Definitions
+ *
+ * Defines the event contract for this widget:
+ * - Events the widget emits
+ * - Events the widget subscribes to
+ *
+ * All events use the StickerNest event bus.
+ *
+ * @module runtime/widgets/{{kebabCase name}}
+ */
+
+/**
+ * Event type constants for the {{titleCase name}} widget.
+ *
+ * Events follow the naming convention: widget.{{kebabCase name}}.{action}
+ */
+export const {{constantCase name}}_EVENTS = {
+  /**
+   * Events this widget emits to the bus.
+   */
+  emits: {
+    /** Emitted when the widget is ready and initialized */
+    READY: 'widget.{{kebabCase name}}.ready',
+    /** Emitted when the user performs an action */
+    ACTION: 'widget.{{kebabCase name}}.action',
+    /** Emitted when widget state changes */
+    STATE_CHANGED: 'widget.{{kebabCase name}}.state-changed',
+    /** Emitted when an error occurs */
+    ERROR: 'widget.{{kebabCase name}}.error',
+  },
+
+  /**
+   * Events this widget subscribes to from the bus.
+   */
+  subscribes: {
+    /** Received when external config update is requested */
+    CONFIG_UPDATE: 'widget.{{kebabCase name}}.config-update',
+    /** Received when widget should refresh its data */
+    REFRESH: 'widget.{{kebabCase name}}.refresh',
+    /** Received when widget should reset to initial state */
+    RESET: 'widget.{{kebabCase name}}.reset',
+  },
+} as const;
+
+/**
+ * Payload types for emitted events.
+ */
+export interface {{pascalCase name}}EmitPayloads {
+  /** Payload for READY event */
+  [typeof {{constantCase name}}_EVENTS.emits.READY]: {
+    instanceId: string;
+    timestamp: number;
+  };
+
+  /** Payload for ACTION event */
+  [typeof {{constantCase name}}_EVENTS.emits.ACTION]: {
+    instanceId: string;
+    action: string;
+    data: Record<string, unknown>;
+    timestamp: number;
+  };
+
+  /** Payload for STATE_CHANGED event */
+  [typeof {{constantCase name}}_EVENTS.emits.STATE_CHANGED]: {
+    instanceId: string;
+    previousState: Record<string, unknown>;
+    currentState: Record<string, unknown>;
+    timestamp: number;
+  };
+
+  /** Payload for ERROR event */
+  [typeof {{constantCase name}}_EVENTS.emits.ERROR]: {
+    instanceId: string;
+    code: string;
+    message: string;
+    details?: Record<string, unknown>;
+    timestamp: number;
+  };
+}
+
+/**
+ * Payload types for subscribed events.
+ */
+export interface {{pascalCase name}}SubscribePayloads {
+  /** Payload for CONFIG_UPDATE event */
+  [typeof {{constantCase name}}_EVENTS.subscribes.CONFIG_UPDATE]: {
+    config: Record<string, unknown>;
+    source: 'user' | 'pipeline' | 'api';
+  };
+
+  /** Payload for REFRESH event */
+  [typeof {{constantCase name}}_EVENTS.subscribes.REFRESH]: {
+    force?: boolean;
+  };
+
+  /** Payload for RESET event */
+  [typeof {{constantCase name}}_EVENTS.subscribes.RESET]: {
+    preserveConfig?: boolean;
+  };
+}
+
+/**
+ * Combined event payloads type for use in widget props.
+ */
+export interface {{pascalCase name}}EventPayloads {
+  emits: {{pascalCase name}}EmitPayloads;
+  subscribes: {{pascalCase name}}SubscribePayloads;
+}
+
+/**
+ * Type helper: Extract all emit event types.
+ */
+export type {{pascalCase name}}EmitEventType = typeof {{constantCase name}}_EVENTS.emits[keyof typeof {{constantCase name}}_EVENTS.emits];
+
+/**
+ * Type helper: Extract all subscribe event types.
+ */
+export type {{pascalCase name}}SubscribeEventType = typeof {{constantCase name}}_EVENTS.subscribes[keyof typeof {{constantCase name}}_EVENTS.subscribes];
+
+/**
+ * Type helper: All event types (emit + subscribe).
+ */
+export type {{pascalCase name}}EventType = {{pascalCase name}}EmitEventType | {{pascalCase name}}SubscribeEventType;

@@ -1,0 +1,257 @@
+/**
+ * {{titleCase name}} Widget
+ *
+ * {{description}}
+ *
+ * Category: {{category}}
+ *
+ * @module runtime/widgets/{{kebabCase name}}
+ */
+
+import React, { useEffect, useState, useCallback } from 'react';
+import type { WidgetManifest } from '@sn/types';
+import { {{camelCase name}}ConfigSchema, type {{pascalCase name}}Config } from './{{kebabCase name}}.schema';
+import { {{constantCase name}}_EVENTS, type {{pascalCase name}}EventPayloads } from './{{kebabCase name}}.events';
+
+/**
+ * Widget manifest declaration.
+ * This defines the widget's identity, permissions, and event contracts.
+ */
+export const {{camelCase name}}Manifest: WidgetManifest = {
+  id: '{{kebabCase name}}',
+  name: '{{titleCase name}}',
+  version: '1.0.0',
+  description: '{{description}}',
+  category: '{{category}}',
+  author: 'StickerNest',
+  permissions: [],
+  configSchema: {{camelCase name}}ConfigSchema,
+  events: {
+    emits: Object.values({{constantCase name}}_EVENTS.emits),
+    subscribes: Object.values({{constantCase name}}_EVENTS.subscribes),
+  },
+};
+
+/**
+ * Props for the {{titleCase name}} widget component.
+ */
+export interface {{pascalCase name}}WidgetProps {
+  /** Widget instance ID */
+  instanceId: string;
+  /** Widget configuration */
+  config: {{pascalCase name}}Config;
+  /** Emit an event to the bus */
+  emit: <T extends keyof {{pascalCase name}}EventPayloads['emits']>(
+    type: T,
+    payload: {{pascalCase name}}EventPayloads['emits'][T]
+  ) => void;
+  /** Subscribe to bus events */
+  subscribe: <T extends keyof {{pascalCase name}}EventPayloads['subscribes']>(
+    type: T,
+    handler: (payload: {{pascalCase name}}EventPayloads['subscribes'][T]) => void
+  ) => () => void;
+  /** Get persisted state */
+  getState: <T>(key: string) => Promise<T | undefined>;
+  /** Set persisted state */
+  setState: <T>(key: string, value: T) => Promise<void>;
+  /** Theme tokens from the host */
+  theme: Record<string, string>;
+  /** Viewport dimensions */
+  viewport: { width: number; height: number };
+}
+
+/**
+ * {{titleCase name}} widget component.
+ *
+ * This is a built-in trusted widget that uses the same SDK interface
+ * as sandboxed third-party widgets for consistency and portability.
+ */
+export const {{pascalCase name}}Widget: React.FC<{{pascalCase name}}WidgetProps> = ({
+  instanceId,
+  config,
+  emit,
+  subscribe,
+  getState,
+  setState,
+  theme,
+  viewport,
+}) => {
+  // Widget internal state
+  const [isReady, setIsReady] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  /**
+   * Initialize widget on mount.
+   * Load persisted state and set up event subscriptions.
+   */
+  useEffect(() => {
+    const initialize = async () => {
+      try {
+        // Load any persisted state
+        const savedState = await getState<Record<string, unknown>>('widgetState');
+        if (savedState) {
+          // Restore state as needed
+          console.log(`[{{pascalCase name}}] Restored state for instance ${instanceId}`);
+        }
+
+        setIsReady(true);
+
+        // Emit ready event
+        emit({{constantCase name}}_EVENTS.emits.READY, {
+          instanceId,
+          timestamp: Date.now(),
+        });
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to initialize widget');
+        console.error(`[{{pascalCase name}}] Initialization error:`, err);
+      }
+    };
+
+    initialize();
+  }, [instanceId, getState, emit]);
+
+  /**
+   * Set up event subscriptions.
+   */
+  useEffect(() => {
+    if (!isReady) return;
+
+    // Example: Subscribe to external events
+    const unsubscribe = subscribe(
+      {{constantCase name}}_EVENTS.subscribes.CONFIG_UPDATE,
+      (payload) => {
+        console.log(`[{{pascalCase name}}] Config update received:`, payload);
+        // Handle config updates
+      }
+    );
+
+    return () => {
+      unsubscribe();
+    };
+  }, [isReady, subscribe]);
+
+  /**
+   * Handle user interaction example.
+   */
+  const handleAction = useCallback(async () => {
+    // Emit action event
+    emit({{constantCase name}}_EVENTS.emits.ACTION, {
+      instanceId,
+      action: 'user-interaction',
+      data: {},
+      timestamp: Date.now(),
+    });
+
+    // Persist state
+    await setState('widgetState', {
+      lastAction: Date.now(),
+    });
+  }, [instanceId, emit, setState]);
+
+  // Error state
+  if (error) {
+    return (
+      <div
+        style=\{{
+          padding: '16px',
+          backgroundColor: theme['--sn-surface'] || '#fff',
+          color: '#ef4444',
+          borderRadius: theme['--sn-radius'] || '8px',
+          fontFamily: theme['--sn-font-family'] || 'system-ui',
+        }}
+      >
+        <strong>Error:</strong> {error}
+      </div>
+    );
+  }
+
+  // Loading state
+  if (!isReady) {
+    return (
+      <div
+        style=\{{
+          padding: '16px',
+          backgroundColor: theme['--sn-surface'] || '#fff',
+          color: theme['--sn-text-muted'] || '#666',
+          borderRadius: theme['--sn-radius'] || '8px',
+          fontFamily: theme['--sn-font-family'] || 'system-ui',
+        }}
+      >
+        Loading...
+      </div>
+    );
+  }
+
+  // Main widget UI
+  return (
+    <div
+      style=\{{
+        padding: '16px',
+        backgroundColor: theme['--sn-surface'] || '#fff',
+        color: theme['--sn-text'] || '#000',
+        borderRadius: theme['--sn-radius'] || '8px',
+        border: `1px solid ${theme['--sn-border'] || '#e5e7eb'}`,
+        fontFamily: theme['--sn-font-family'] || 'system-ui',
+        width: '100%',
+        height: '100%',
+        boxSizing: 'border-box',
+      }}
+      data-testid="{{kebabCase name}}-widget"
+    >
+      <h3
+        style=\{{
+          margin: '0 0 12px 0',
+          fontSize: '16px',
+          fontWeight: 600,
+        }}
+      >
+        {{titleCase name}}
+      </h3>
+
+      <p
+        style=\{{
+          margin: '0 0 16px 0',
+          color: theme['--sn-text-muted'] || '#666',
+          fontSize: '14px',
+        }}
+      >
+        {{description}}
+      </p>
+
+      <button
+        onClick={handleAction}
+        style=\{{
+          padding: '8px 16px',
+          backgroundColor: theme['--sn-accent'] || '#3b82f6',
+          color: '#fff',
+          border: 'none',
+          borderRadius: theme['--sn-radius'] || '4px',
+          cursor: 'pointer',
+          fontSize: '14px',
+          fontWeight: 500,
+        }}
+        data-testid="{{kebabCase name}}-action-button"
+      >
+        Interact
+      </button>
+
+      {config.showDebugInfo && (
+        <div
+          style=\{{
+            marginTop: '16px',
+            padding: '8px',
+            backgroundColor: theme['--sn-bg'] || '#f3f4f6',
+            borderRadius: '4px',
+            fontSize: '12px',
+            fontFamily: 'monospace',
+          }}
+        >
+          <div>Instance: {instanceId}</div>
+          <div>Viewport: {viewport.width}x{viewport.height}</div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default {{pascalCase name}}Widget;

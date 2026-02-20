@@ -1,0 +1,40 @@
+/**
+ * {{titleCase name}} Module - Test Suite
+ *
+ * @module {{layer}}/{{kebabCase name}}
+ */
+
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+
+import { {{pascalCase name}} } from './{{kebabCase name}}';
+
+describe('{{titleCase name}}', () => {
+  let instance: {{pascalCase name}};
+
+  beforeEach(() => {
+    instance = new {{pascalCase name}}();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe('initialization', () => {
+    it('should create an instance', () => {
+      expect(instance).toBeInstanceOf({{pascalCase name}});
+    });
+
+    it('should initialize successfully', async () => {
+      await expect(instance.init()).resolves.not.toThrow();
+    });
+  });
+
+  describe('disposal', () => {
+    it('should dispose successfully', async () => {
+      await instance.init();
+      await expect(instance.dispose()).resolves.not.toThrow();
+    });
+  });
+
+  // TODO: Add more tests for your module
+});

@@ -1,0 +1,93 @@
+/**
+ * {{titleCase name}} Schema
+ *
+ * @module @sn/types/{{kebabCase name}}
+ */
+
+import { z } from 'zod';
+
+// =============================================================================
+// Schema Definition
+// =============================================================================
+
+/**
+ * {{titleCase name}} schema.
+ *
+ * @remarks
+ * {{description}}
+ *
+ * @example
+ * ```typescript
+ * import { {{pascalCase name}}Schema, type {{pascalCase name}} } from '@sn/types';
+ *
+ * const data = {{pascalCase name}}Schema.parse({
+ *   // your data here
+ * });
+ * ```
+ */
+export const {{pascalCase name}}Schema = z.object({
+  /** Unique identifier */
+  id: z.string().uuid(),
+  {{#each fields}}
+  /** {{this.description}} */
+  {{this.name}}: {{this.zodType}},
+  {{/each}}
+  /** Creation timestamp */
+  createdAt: z.coerce.date(),
+  /** Last update timestamp */
+  updatedAt: z.coerce.date(),
+});
+
+// =============================================================================
+// Type Exports
+// =============================================================================
+
+/**
+ * TypeScript type inferred from the schema.
+ */
+export type {{pascalCase name}} = z.infer<typeof {{pascalCase name}}Schema>;
+
+// =============================================================================
+// Input Schemas
+// =============================================================================
+
+/**
+ * Schema for creating a new {{titleCase name}}.
+ * Excludes auto-generated fields like id and timestamps.
+ */
+export const Create{{pascalCase name}}InputSchema = {{pascalCase name}}Schema.omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+/**
+ * Type for create input.
+ */
+export type Create{{pascalCase name}}Input = z.infer<typeof Create{{pascalCase name}}InputSchema>;
+
+/**
+ * Schema for updating an existing {{titleCase name}}.
+ * All fields are optional except id.
+ */
+export const Update{{pascalCase name}}InputSchema = {{pascalCase name}}Schema
+  .partial()
+  .required({ id: true })
+  .omit({
+    createdAt: true,
+    updatedAt: true,
+  });
+
+/**
+ * Type for update input.
+ */
+export type Update{{pascalCase name}}Input = z.infer<typeof Update{{pascalCase name}}InputSchema>;
+
+// =============================================================================
+// JSON Schema Export
+// =============================================================================
+
+/**
+ * JSON Schema for external validation.
+ */
+export const {{pascalCase name}}JSONSchema = {{pascalCase name}}Schema.toJSONSchema();

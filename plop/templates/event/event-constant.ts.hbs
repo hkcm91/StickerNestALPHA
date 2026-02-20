@@ -1,0 +1,14 @@
+/**
+ * Event constant for {{namespace}}.{{kebabCase eventName}}
+ *
+ * Add this constant to the appropriate events object in bus-event.ts:
+ *
+ * @example
+ * ```typescript
+ * export const {{pascalCase namespace}}Events = {
+ *   // ... existing events
+ *   {{constantCase eventName}}: '{{namespace}}.{{kebabCase eventName}}',
+ * } as const;
+ * ```
+ */
+export const {{constantCase namespace}}_{{constantCase eventName}} = '{{namespace}}.{{kebabCase eventName}}' as const;
