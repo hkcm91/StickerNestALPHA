@@ -112,6 +112,54 @@ describe('compileGraph', () => {
     expect(result.html).toContain('StickerNest.integration');
     expect(result.html).toContain('query');
   });
+
+  it('wires subscribe to emit through edge (data flow)', () => {
+    const nodes: GraphNode[] = [
+      { id: 'sub', type: 'subscribe', config: { eventType: 'data.in' } },
+      { id: 'em', type: 'emit', config: { eventType: 'data.out' } },
+    ];
+    const edges: GraphEdge[] = [
+      { id: 'e1', sourceNodeId: 'sub', sourcePort: 'out', targetNodeId: 'em', targetPort: 'in' },
+    ];
+    const result = compileGraph(nodes, edges);
+    expect(result.errors).toEqual([]);
+    // The subscribe handler should contain the emit call
+    expect(result.html).toContain('subscribe("data.in"');
+    expect(result.html).toContain('emit("data.out"');
+    // emit should be inside subscribe handler (not standalone)
+    const subIdx = result.html.indexOf('subscribe("data.in"');
+    const emitIdx = result.html.indexOf('emit("data.out"');
+    expect(emitIdx).toBeGreaterThan(subIdx);
+  });
+
+  it('wires subscribe through filter to emit', () => {
+    const nodes: GraphNode[] = [
+      { id: 'sub', type: 'subscribe', config: { eventType: 'input' } },
+      { id: 'filt', type: 'filter', config: { condition: 'payload.value > 0' } },
+      { id: 'em', type: 'emit', config: { eventType: 'output' } },
+    ];
+    const edges: GraphEdge[] = [
+      { id: 'e1', sourceNodeId: 'sub', sourcePort: 'out', targetNodeId: 'filt', targetPort: 'in' },
+      { id: 'e2', sourceNodeId: 'filt', sourcePort: 'out', targetNodeId: 'em', targetPort: 'in' },
+    ];
+    const result = compileGraph(nodes, edges);
+    expect(result.errors).toEqual([]);
+    expect(result.html).toContain('payload.value > 0');
+    expect(result.html).toContain('emit("output"');
+  });
+
+  it('register() includes correct emits and subscribes from graph', () => {
+    const nodes: GraphNode[] = [
+      { id: 'sub', type: 'subscribe', config: { eventType: 'event.a' } },
+      { id: 'em', type: 'emit', config: { eventType: 'event.b' } },
+    ];
+    const edges: GraphEdge[] = [
+      { id: 'e1', sourceNodeId: 'sub', sourcePort: 'out', targetNodeId: 'em', targetPort: 'in' },
+    ];
+    const result = compileGraph(nodes, edges);
+    expect(result.html).toContain("emits: ['event.b']");
+    expect(result.html).toContain("subscribes: ['event.a']");
+  });
 });
 
 describe('createGraphSync', () => {

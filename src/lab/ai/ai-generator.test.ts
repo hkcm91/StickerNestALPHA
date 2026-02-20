@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-import { createAIGenerator, validateWidgetHtml } from './ai-generator';
+import { createAIGenerator, createDefaultAIGenerator, validateWidgetHtml } from './ai-generator';
 
 describe('validateWidgetHtml', () => {
   it('accepts valid HTML with script', () => {
@@ -134,5 +134,16 @@ describe('createAIGenerator', () => {
         body: JSON.stringify({ prompt: 'Build a clock', type: 'widget-generation' }),
       }),
     );
+  });
+});
+
+describe('createDefaultAIGenerator', () => {
+  it('returns error generator when VITE_AI_PROXY_URL is not set', async () => {
+    const gen = createDefaultAIGenerator();
+    const result = await gen.generate('test');
+    expect(result.isValid).toBe(false);
+    expect(result.errors[0]).toContain('not configured');
+    expect(gen.isGenerating()).toBe(false);
+    expect(gen.getLastResult()).toBeNull();
   });
 });
