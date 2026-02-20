@@ -139,6 +139,20 @@ export const SpatialEvents = {
 } as const;
 
 /**
+ * Event type constants for Marketplace layer (Layer 5)
+ * Marketplace owns the `marketplace.*` namespace.
+ */
+export const MarketplaceEvents = {
+  WIDGET_INSTALLED: 'marketplace.widget.installed',
+  WIDGET_UNINSTALLED: 'marketplace.widget.uninstalled',
+  WIDGET_UPDATED: 'marketplace.widget.updated',
+  WIDGET_PUBLISHED: 'marketplace.widget.published',
+  WIDGET_DEPRECATED: 'marketplace.widget.deprecated',
+  PUBLISH_REQUEST: 'marketplace.publish.request',
+  PUBLISH_RESPONSE: 'marketplace.publish.response',
+} as const;
+
+/**
  * JSON Schema export for external validation
  */
 export const BusEventJSONSchema = BusEventSchema.toJSONSchema();
