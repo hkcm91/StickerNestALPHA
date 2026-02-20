@@ -48,3 +48,29 @@ export function getStrategyForType(type: DataSourceType | 'entity'): ConflictStr
       return 'lww-silent';
   }
 }
+
+/**
+ * Last-Write-Wins resolver: compares two timestamped values and returns the winner.
+ * Ties go to the remote value (standard LWW convention for concurrent writes).
+ *
+ * Used by entity-sync (canvas entities) and note DataSource conflict resolution.
+ */
+export function resolveLWW<T>(
+  local: { value: T; timestamp: number },
+  remote: { value: T; timestamp: number },
+): T {
+  return remote.timestamp >= local.timestamp ? remote.value : local.value;
+}
+
+/**
+ * Revision-based conflict check: returns true if the write should proceed.
+ * Returns false if the server revision has advanced beyond lastSeenRevision (conflict).
+ *
+ * Used by Table and Custom DataSource conflict resolution.
+ */
+export function checkRevision(
+  lastSeenRevision: number,
+  serverRevision: number,
+): boolean {
+  return serverRevision === lastSeenRevision;
+}
