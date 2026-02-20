@@ -31,6 +31,60 @@ export interface LazyLoader {
  * @returns A LazyLoader instance
  */
 export function createLazyLoader(): LazyLoader {
-  // TODO: Implement — see runtime plan section 6.2
-  throw new Error('Not implemented: createLazyLoader');
+  const entries = new Map<string, { element: HTMLElement; callback: () => void }>();
+  const elementToId = new Map<Element, string>();
+
+  const observer = new IntersectionObserver(
+    (intersections) => {
+      for (const entry of intersections) {
+        if (entry.isIntersecting) {
+          const instanceId = elementToId.get(entry.target);
+          if (instanceId) {
+            const record = entries.get(instanceId);
+            if (record) {
+              record.callback();
+            }
+            // Clean up after triggering
+            observer.unobserve(entry.target);
+            entries.delete(instanceId);
+            elementToId.delete(entry.target);
+          }
+        }
+      }
+    },
+    {
+      rootMargin: `${LAZY_LOAD_MARGIN}px`,
+      threshold: 0,
+    },
+  );
+
+  return {
+    observe(instanceId: string, element: HTMLElement, onVisible: () => void): void {
+      // Clean up any existing observation for this instance
+      const existing = entries.get(instanceId);
+      if (existing) {
+        observer.unobserve(existing.element);
+        elementToId.delete(existing.element);
+      }
+
+      entries.set(instanceId, { element, callback: onVisible });
+      elementToId.set(element, instanceId);
+      observer.observe(element);
+    },
+
+    unobserve(instanceId: string): void {
+      const record = entries.get(instanceId);
+      if (record) {
+        observer.unobserve(record.element);
+        elementToId.delete(record.element);
+        entries.delete(instanceId);
+      }
+    },
+
+    destroy(): void {
+      observer.disconnect();
+      entries.clear();
+      elementToId.clear();
+    },
+  };
 }

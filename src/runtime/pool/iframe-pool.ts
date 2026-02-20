@@ -9,6 +9,8 @@
  * @see .claude/rules/L3-runtime.md
  */
 
+import { SANDBOX_POLICY } from '../security/sandbox-policy';
+
 /** Default maximum pool size */
 export const DEFAULT_POOL_MAX_SIZE = 20;
 
@@ -34,12 +36,68 @@ export interface IframePool {
 }
 
 /**
+ * Creates a fresh iframe element with sandbox attributes.
+ */
+function createIframe(): HTMLIFrameElement {
+  const iframe = document.createElement('iframe');
+  iframe.setAttribute('sandbox', SANDBOX_POLICY);
+  iframe.style.border = 'none';
+  iframe.style.width = '100%';
+  iframe.style.height = '100%';
+  return iframe;
+}
+
+/**
  * Creates an iframe pool.
  *
- * @param maxSize - Maximum pool size (default: 20)
+ * @param max - Maximum pool size (default: 20)
  * @returns An IframePool instance
  */
-export function createIframePool(_maxSize?: number): IframePool {
-  // TODO: Implement — see runtime plan section 6.1
-  throw new Error('Not implemented: createIframePool');
+export function createIframePool(max?: number): IframePool {
+  const poolMaxSize = max ?? DEFAULT_POOL_MAX_SIZE;
+  const pool: HTMLIFrameElement[] = [];
+
+  return {
+    acquire(): HTMLIFrameElement {
+      if (pool.length > 0) {
+        return pool.pop()!;
+      }
+      return createIframe();
+    },
+
+    release(iframe: HTMLIFrameElement): void {
+      // Clear content
+      iframe.srcdoc = '';
+      iframe.removeAttribute('src');
+
+      if (pool.length < poolMaxSize) {
+        pool.push(iframe);
+      } else {
+        // Pool full — remove from DOM if attached
+        iframe.parentNode?.removeChild(iframe);
+      }
+    },
+
+    warmUp(count?: number): void {
+      const target = count ?? DEFAULT_WARMUP_COUNT;
+      for (let i = 0; i < target && pool.length < poolMaxSize; i++) {
+        pool.push(createIframe());
+      }
+    },
+
+    size(): number {
+      return pool.length;
+    },
+
+    get maxSize(): number {
+      return poolMaxSize;
+    },
+
+    destroy(): void {
+      for (const iframe of pool) {
+        iframe.parentNode?.removeChild(iframe);
+      }
+      pool.length = 0;
+    },
+  };
 }

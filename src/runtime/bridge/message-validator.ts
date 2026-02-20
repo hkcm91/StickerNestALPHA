@@ -10,15 +10,84 @@
  * @see .claude/rules/L3-runtime.md
  */
 
+import { z } from 'zod';
+
+import type { HostMessage, WidgetMessage } from './message-types';
+
+// ---------------------------------------------------------------------------
+// Theme tokens schema
+// ---------------------------------------------------------------------------
+const ThemeTokensSchema = z.object({
+  '--sn-bg': z.string(),
+  '--sn-surface': z.string(),
+  '--sn-accent': z.string(),
+  '--sn-text': z.string(),
+  '--sn-text-muted': z.string(),
+  '--sn-border': z.string(),
+  '--sn-radius': z.string(),
+  '--sn-font-family': z.string(),
+});
+
+// ---------------------------------------------------------------------------
+// Widget → Host message schemas (discriminated union)
+// ---------------------------------------------------------------------------
+const WidgetMessageSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('READY') }),
+  z.object({ type: z.literal('REGISTER'), manifest: z.unknown() }),
+  z.object({ type: z.literal('EMIT'), eventType: z.string(), payload: z.unknown() }),
+  z.object({ type: z.literal('SET_STATE'), key: z.string(), value: z.unknown() }),
+  z.object({ type: z.literal('GET_STATE'), key: z.string() }),
+  z.object({ type: z.literal('SET_USER_STATE'), key: z.string(), value: z.unknown() }),
+  z.object({ type: z.literal('GET_USER_STATE'), key: z.string() }),
+  z.object({ type: z.literal('RESIZE_REQUEST'), width: z.number(), height: z.number() }),
+  z.object({
+    type: z.literal('LOG'),
+    level: z.enum(['info', 'warn', 'error']),
+    message: z.string(),
+  }),
+]);
+
+// ---------------------------------------------------------------------------
+// Host → Widget message schemas (discriminated union)
+// ---------------------------------------------------------------------------
+const HostMessageSchema = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal('INIT'),
+    widgetId: z.string(),
+    instanceId: z.string(),
+    config: z.record(z.string(), z.unknown()),
+    theme: ThemeTokensSchema,
+  }),
+  z.object({
+    type: z.literal('EVENT'),
+    event: z.object({ type: z.string(), payload: z.unknown() }),
+  }),
+  z.object({
+    type: z.literal('CONFIG_UPDATE'),
+    config: z.record(z.string(), z.unknown()),
+  }),
+  z.object({ type: z.literal('THEME_UPDATE'), theme: ThemeTokensSchema }),
+  z.object({ type: z.literal('RESIZE'), width: z.number(), height: z.number() }),
+  z.object({ type: z.literal('STATE_RESPONSE'), key: z.string(), value: z.unknown() }),
+  z.object({ type: z.literal('DESTROY') }),
+]);
+
+// ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
+
 /**
  * Validates an incoming WidgetMessage from an iframe.
  *
  * @param data - Raw message data from postMessage
  * @returns Parsed WidgetMessage or null if invalid
  */
-export function validateWidgetMessage(_data: unknown): unknown | null {
-  // TODO: Implement — Zod schemas from @sn/types
-  throw new Error('Not implemented: validateWidgetMessage');
+export function validateWidgetMessage(data: unknown): WidgetMessage | null {
+  const result = WidgetMessageSchema.safeParse(data);
+  if (!result.success) {
+    return null;
+  }
+  return result.data as WidgetMessage;
 }
 
 /**
@@ -27,7 +96,10 @@ export function validateWidgetMessage(_data: unknown): unknown | null {
  * @param data - Raw message data from postMessage
  * @returns Parsed HostMessage or null if invalid
  */
-export function validateHostMessage(_data: unknown): unknown | null {
-  // TODO: Implement — Zod schemas from @sn/types
-  throw new Error('Not implemented: validateHostMessage');
+export function validateHostMessage(data: unknown): HostMessage | null {
+  const result = HostMessageSchema.safeParse(data);
+  if (!result.success) {
+    return null;
+  }
+  return result.data as HostMessage;
 }

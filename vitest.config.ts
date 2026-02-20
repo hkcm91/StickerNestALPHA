@@ -4,7 +4,7 @@ import path from 'path';
 export default defineConfig({
   test: {
     // Test file patterns
-    include: ['**/*.test.ts', '**/*.spec.ts'],
+    include: ['**/*.test.ts', '**/*.test.tsx', '**/*.spec.ts', '**/*.spec.tsx'],
 
     // Exclude patterns
     exclude: ['node_modules', 'dist', '**/*.d.ts'],
