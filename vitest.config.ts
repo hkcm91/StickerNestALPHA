@@ -52,6 +52,7 @@ export default defineConfig({
     // Runtime tests need jsdom for React component + iframe testing
     environmentMatchGlobs: [
       ['src/runtime/**/*.test.{ts,tsx}', 'jsdom'],
+      ['src/shell/**/*.test.{ts,tsx}', 'jsdom'],
     ],
   },
 

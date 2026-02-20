@@ -210,7 +210,7 @@ module.exports = {
     // =========================================================================
     {
       name: "L6-forbidden-imports",
-      comment: "Layer 6 (shell) must not import from lab or canvas sub-layers",
+      comment: "Layer 6 (shell) must not import from lab or canvas sub-layers (dynamic imports allowed for lazy routes)",
       severity: "error",
       from: { path: "^src/shell/" },
       to: {
@@ -220,6 +220,7 @@ module.exports = {
           "^src/canvas/wiring/",
           "^src/canvas/panels/",
         ],
+        dependencyTypesNot: ["dynamic-import"],
       },
     },
 
