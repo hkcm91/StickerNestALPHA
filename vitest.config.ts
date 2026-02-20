@@ -48,6 +48,11 @@ export default defineConfig({
 
     // TypeScript support via native ESM
     environment: 'node',
+
+    // Runtime tests need jsdom for React component + iframe testing
+    environmentMatchGlobs: [
+      ['src/runtime/**/*.test.{ts,tsx}', 'jsdom'],
+    ],
   },
 
   resolve: {
