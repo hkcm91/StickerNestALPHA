@@ -18,6 +18,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // Mocks — must be defined before any import that triggers the mocked modules
 // ---------------------------------------------------------------------------
 
+vi.mock('../kernel/supabase/client', () => ({
+  supabase: {
+    channel: vi.fn(() => ({
+      on: vi.fn().mockReturnThis(),
+      subscribe: vi.fn(),
+      send: vi.fn(),
+    })),
+    removeChannel: vi.fn(),
+  },
+}));
+
 vi.mock('../kernel/bus', () => ({
   bus: {
     emit: vi.fn(),
@@ -70,6 +81,25 @@ vi.mock('./sdk/sdk-builder', () => ({
       instanceId: string;
     }) => `<html><body>${widgetHtml}</body></html>`,
   ),
+}));
+
+vi.mock('./integrations/integration-proxy', () => ({
+  createIntegrationProxy: vi.fn(() => ({
+    register: vi.fn(),
+    unregister: vi.fn(),
+    query: vi.fn().mockResolvedValue(undefined),
+    mutate: vi.fn().mockResolvedValue(undefined),
+    has: vi.fn().mockReturnValue(false),
+  })),
+}));
+
+vi.mock('./cross-canvas/cross-canvas-router', () => ({
+  createCrossCanvasRouter: vi.fn(() => ({
+    subscribe: vi.fn(),
+    unsubscribe: vi.fn(),
+    emit: vi.fn(),
+    destroy: vi.fn(),
+  })),
 }));
 
 // ---------------------------------------------------------------------------

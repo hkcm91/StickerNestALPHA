@@ -18,6 +18,10 @@ import { useWidgetStore } from '../kernel/stores/widget/widget.store';
 import { createWidgetBridge } from './bridge/bridge';
 import type { WidgetBridge } from './bridge/bridge';
 import type { ThemeTokens } from './bridge/message-types';
+import { createCrossCanvasRouter } from './cross-canvas/cross-canvas-router';
+import type { CrossCanvasRouter } from './cross-canvas/cross-canvas-router';
+import { createIntegrationProxy } from './integrations/integration-proxy';
+import type { IntegrationProxy } from './integrations/integration-proxy';
 import { WidgetErrorBoundary } from './lifecycle/error-boundary';
 import { createLifecycleManager } from './lifecycle/manager';
 import type { WidgetLifecycleManager } from './lifecycle/manager';
@@ -27,8 +31,14 @@ import { SANDBOX_POLICY } from './security/sandbox-policy';
 /** Maximum state size per instance: 1MB */
 const MAX_STATE_SIZE = 1_048_576;
 
+/** Maximum user state size per value: 10MB */
+const MAX_USER_STATE_SIZE = 10_485_760;
+
 /** Timeout before widget is considered failed to initialize: 5 seconds */
 const READY_TIMEOUT_MS = 5_000;
+
+/** Shared integration proxy — host-side registry for proxied external calls */
+const integrationProxy: IntegrationProxy = createIntegrationProxy();
 
 /**
  * Props for the WidgetFrame component.
@@ -60,6 +70,7 @@ const WidgetIframe: React.FC<WidgetFrameProps> = (props) => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const bridgeRef = useRef<WidgetBridge | null>(null);
   const lifecycleRef = useRef<WidgetLifecycleManager | null>(null);
+  const crossCanvasRouterRef = useRef<CrossCanvasRouter | null>(null);
 
   // Memoize srcdoc — keyed on widgetId, widgetHtml, instanceId
   // Config and theme changes are delivered via postMessage, NOT srcdoc rebuild
@@ -113,15 +124,15 @@ const WidgetIframe: React.FC<WidgetFrameProps> = (props) => {
           try {
             const serialized = JSON.stringify(message.value);
             if (serialized.length > MAX_STATE_SIZE) {
-              console.error(
-                `[WidgetFrame][${instanceId}] State write rejected: exceeds 1MB limit (${serialized.length} bytes)`,
-              );
+              const reason = `State write rejected: exceeds 1MB limit (${serialized.length} bytes)`;
+              console.error(`[WidgetFrame][${instanceId}] ${reason}`);
+              bridge.send({ type: 'STATE_REJECTED', key: message.key, reason });
               return;
             }
           } catch {
-            console.error(
-              `[WidgetFrame][${instanceId}] State write rejected: value is not serializable`,
-            );
+            const reason = 'State write rejected: value is not serializable';
+            console.error(`[WidgetFrame][${instanceId}] ${reason}`);
+            bridge.send({ type: 'STATE_REJECTED', key: message.key, reason });
             return;
           }
 
@@ -144,7 +155,23 @@ const WidgetIframe: React.FC<WidgetFrameProps> = (props) => {
           break;
         }
 
-        case 'SET_USER_STATE':
+        case 'SET_USER_STATE': {
+          // Enforce 10MB limit on user state value size
+          try {
+            const userSerialized = JSON.stringify(message.value);
+            if (userSerialized.length > MAX_USER_STATE_SIZE) {
+              const reason = `User state write rejected: exceeds 10MB limit (${userSerialized.length} bytes)`;
+              console.error(`[WidgetFrame][${instanceId}] ${reason}`);
+              bridge.send({ type: 'STATE_REJECTED', key: message.key, reason });
+              return;
+            }
+          } catch {
+            const reason = 'User state write rejected: value is not serializable';
+            console.error(`[WidgetFrame][${instanceId}] ${reason}`);
+            bridge.send({ type: 'STATE_REJECTED', key: message.key, reason });
+            return;
+          }
+
           // User state persistence — handled by widget store
           bus.emit('widget.userState.set', {
             instanceId,
@@ -152,6 +179,7 @@ const WidgetIframe: React.FC<WidgetFrameProps> = (props) => {
             value: message.value,
           });
           break;
+        }
 
         case 'GET_USER_STATE':
           bus.emit('widget.userState.get', {
@@ -176,6 +204,60 @@ const WidgetIframe: React.FC<WidgetFrameProps> = (props) => {
             height: message.height,
           });
           break;
+
+        case 'INTEGRATION_QUERY': {
+          const queryRequestId = message.requestId;
+          integrationProxy.query(message.name, message.params)
+            .then((result) => {
+              bridge.send({ type: 'INTEGRATION_RESPONSE', requestId: queryRequestId, result });
+            })
+            .catch((err: unknown) => {
+              const errorMessage = err instanceof Error ? err.message : String(err);
+              bridge.send({ type: 'INTEGRATION_RESPONSE', requestId: queryRequestId, result: null, error: errorMessage });
+            });
+          break;
+        }
+
+        case 'INTEGRATION_MUTATE': {
+          const mutateRequestId = message.requestId;
+          integrationProxy.mutate(message.name, message.params)
+            .then((result) => {
+              bridge.send({ type: 'INTEGRATION_RESPONSE', requestId: mutateRequestId, result });
+            })
+            .catch((err: unknown) => {
+              const errorMessage = err instanceof Error ? err.message : String(err);
+              bridge.send({ type: 'INTEGRATION_RESPONSE', requestId: mutateRequestId, result: null, error: errorMessage });
+            });
+          break;
+        }
+
+        case 'CROSS_CANVAS_EMIT': {
+          const router = crossCanvasRouterRef.current;
+          if (router) {
+            router.emit(message.channel, message.payload);
+          }
+          break;
+        }
+
+        case 'CROSS_CANVAS_SUBSCRIBE': {
+          let router = crossCanvasRouterRef.current;
+          if (!router) {
+            router = createCrossCanvasRouter();
+            crossCanvasRouterRef.current = router;
+          }
+          router.subscribe(message.channel, (payload) => {
+            bridge.send({ type: 'CROSS_CANVAS_EVENT', channel: message.channel, payload });
+          });
+          break;
+        }
+
+        case 'CROSS_CANVAS_UNSUBSCRIBE': {
+          const unsubRouter = crossCanvasRouterRef.current;
+          if (unsubRouter) {
+            unsubRouter.unsubscribe(message.channel);
+          }
+          break;
+        }
       }
     });
 
@@ -195,6 +277,10 @@ const WidgetIframe: React.FC<WidgetFrameProps> = (props) => {
       bridge.send({ type: 'DESTROY' });
       bridge.destroy();
       lifecycle.destroy();
+      if (crossCanvasRouterRef.current) {
+        crossCanvasRouterRef.current.destroy();
+        crossCanvasRouterRef.current = null;
+      }
       bridgeRef.current = null;
       lifecycleRef.current = null;
     };
