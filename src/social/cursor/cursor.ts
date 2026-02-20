@@ -10,6 +10,9 @@
  * @see .claude/rules/L1-social.md
  */
 
+import { SocialEvents } from '@sn/types';
+
+import { bus } from '../../kernel/bus';
 import type { CanvasChannel } from '../channel';
 
 /** 30fps throttle = 33ms between broadcasts */
@@ -51,10 +54,71 @@ export interface CursorBroadcaster {
  * @returns A CursorBroadcaster instance
  */
 export function createCursorBroadcaster(
-  _channel: CanvasChannel,
-  _userId: string,
-  _color: string,
+  channel: CanvasChannel,
+  userId: string,
+  color: string,
 ): CursorBroadcaster {
-  // TODO: Implement — see AC3 in current-story.md
-  throw new Error('Not implemented: createCursorBroadcaster');
+  let lastBroadcastTime = 0;
+  let pendingPosition: CursorPosition | null = null;
+  let throttleTimer: ReturnType<typeof setTimeout> | null = null;
+  let stopped = false;
+
+  // Listen for incoming cursor broadcasts from other users
+  channel.onBroadcast('cursor', (payload) => {
+    if (stopped) return;
+    const data = payload as CursorData;
+    // Filter out own cursor — only emit for remote users
+    if (data.userId !== userId) {
+      bus.emit(SocialEvents.CURSOR_MOVED, {
+        userId: data.userId,
+        position: data.position,
+        color: data.color,
+      });
+    }
+  });
+
+  function doBroadcast(position: CursorPosition): void {
+    channel.broadcast('cursor', {
+      userId,
+      position,
+      color,
+    } satisfies CursorData);
+    lastBroadcastTime = Date.now();
+  }
+
+  return {
+    broadcastPosition(position: CursorPosition): void {
+      if (stopped) return;
+
+      const now = Date.now();
+      const elapsed = now - lastBroadcastTime;
+
+      if (elapsed >= CURSOR_THROTTLE_MS) {
+        // Enough time has passed — send immediately
+        doBroadcast(position);
+        pendingPosition = null;
+      } else {
+        // Within throttle window — queue and send when window opens
+        pendingPosition = position;
+        if (!throttleTimer) {
+          throttleTimer = setTimeout(() => {
+            if (pendingPosition && !stopped) {
+              doBroadcast(pendingPosition);
+              pendingPosition = null;
+            }
+            throttleTimer = null;
+          }, CURSOR_THROTTLE_MS - elapsed);
+        }
+      }
+    },
+
+    stop(): void {
+      stopped = true;
+      if (throttleTimer) {
+        clearTimeout(throttleTimer);
+        throttleTimer = null;
+      }
+      pendingPosition = null;
+    },
+  };
 }
