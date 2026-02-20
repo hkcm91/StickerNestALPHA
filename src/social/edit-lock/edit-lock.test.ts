@@ -206,4 +206,35 @@ describe('EditLockManager', () => {
     manager.releaseLock('nonexistent');
     expect(mock._broadcastCalls).toHaveLength(0);
   });
+
+  it('ignores remote broadcasts after destroy', () => {
+    const mock = createMockChannel();
+    const manager = createEditLockManager(mock);
+
+    manager.destroy();
+
+    // Simulate a remote lock acquisition arriving after destroy
+    mock._simulateBroadcast('edit-lock', {
+      action: 'acquire',
+      lock: { entityId: 'entity-1', lockedBy: 'user-b', lockedAt: Date.now() },
+    });
+
+    // Lock map should remain empty
+    expect(manager.getAllLocks()).toHaveLength(0);
+    expect(manager.getLock('entity-1')).toBeNull();
+  });
+
+  it('releaseLock is a no-op after destroy', () => {
+    const mock = createMockChannel();
+    const manager = createEditLockManager(mock);
+
+    manager.acquireLock('entity-1', 'user-a');
+    const broadcastCountBeforeDestroy = mock._broadcastCalls.length;
+
+    manager.destroy();
+
+    // releaseLock after destroy should not throw and should not broadcast
+    manager.releaseLock('entity-1');
+    expect(mock._broadcastCalls).toHaveLength(broadcastCountBeforeDestroy);
+  });
 });

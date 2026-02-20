@@ -145,6 +145,41 @@ describe('PresenceManager', () => {
     expect(stored.joinedAt).toBeDefined();
   });
 
+  it('join event skips entries without userId', () => {
+    setupSocialBusSubscriptions();
+    const mock = createMockChannel();
+    createPresenceManager(mock);
+
+    // Simulate join with one valid and one entry missing userId
+    mock._simulatePresenceJoin([
+      testUser,
+      { displayName: 'NoId', color: '#CCCCCC', joinedAt: Date.now() } as unknown as PresenceState,
+    ]);
+
+    const store = useSocialStore.getState();
+    expect(store.presenceMap['user-1']).toBeDefined();
+    expect(Object.keys(store.presenceMap)).toHaveLength(1);
+  });
+
+  it('leave event skips entries without userId', () => {
+    setupSocialBusSubscriptions();
+    const mock = createMockChannel();
+    const manager = createPresenceManager(mock);
+
+    // Join a user first
+    mock._simulatePresenceJoin([testUser]);
+    expect(useSocialStore.getState().presenceMap['user-1']).toBeDefined();
+
+    // Simulate leave with an entry missing userId — should not throw
+    mock._simulatePresenceLeave([
+      { displayName: 'NoId', color: '#CCCCCC', joinedAt: Date.now() } as unknown as PresenceState,
+    ]);
+
+    // Original user should still be present
+    expect(useSocialStore.getState().presenceMap['user-1']).toBeDefined();
+    expect(Object.keys(manager.getPresenceMap())).toHaveLength(1);
+  });
+
   it('handles multiple users joining the same canvas', async () => {
     setupSocialBusSubscriptions();
     const mock = createMockChannel();
@@ -231,6 +266,42 @@ describe('PresenceManager', () => {
 
     await manager.leave();
     expect(mock.channel.untrack).toHaveBeenCalled();
+  });
+
+  it('sync event rebuilds local presence map from channel state', () => {
+    const mock = createMockChannel();
+    const manager = createPresenceManager(mock);
+
+    // Mock presenceState to return two users
+    (mock.channel.presenceState as ReturnType<typeof vi.fn>).mockReturnValue({
+      'key-1': [{ userId: 'user-a', displayName: 'Alice', color: '#FF0000', joinedAt: Date.now() }],
+      'key-2': [{ userId: 'user-b', displayName: 'Bob', color: '#00FF00', joinedAt: Date.now() }],
+    });
+
+    mock._simulatePresenceSync();
+
+    const map = manager.getPresenceMap();
+    expect(Object.keys(map)).toHaveLength(2);
+    expect(map['user-a'].displayName).toBe('Alice');
+    expect(map['user-b'].displayName).toBe('Bob');
+  });
+
+  it('sync event skips entries without userId', () => {
+    const mock = createMockChannel();
+    const manager = createPresenceManager(mock);
+
+    // Mock presenceState with one valid and one invalid entry
+    (mock.channel.presenceState as ReturnType<typeof vi.fn>).mockReturnValue({
+      'key-1': [{ userId: 'user-a', displayName: 'Alice', color: '#FF0000', joinedAt: Date.now() }],
+      'key-2': [{ displayName: 'NoId', color: '#CCCCCC', joinedAt: Date.now() }],
+      'key-3': [{}],
+    });
+
+    mock._simulatePresenceSync();
+
+    const map = manager.getPresenceMap();
+    expect(Object.keys(map)).toHaveLength(1);
+    expect(map['user-a']).toBeDefined();
   });
 });
 

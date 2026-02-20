@@ -183,6 +183,47 @@ describe('CursorBroadcaster', () => {
     expect(mock._broadcastCalls).toHaveLength(1);
   });
 
+  it('stop() clears a pending throttle timer so queued position is never sent', () => {
+    const mock = createMockChannel();
+    const broadcaster = createCursorBroadcaster(mock, 'user-a', '#FF0000');
+
+    // First call goes through immediately
+    broadcaster.broadcastPosition({ x: 10, y: 20 });
+    expect(mock._broadcastCalls).toHaveLength(1);
+
+    // Second call within throttle window queues a timer
+    broadcaster.broadcastPosition({ x: 50, y: 60 });
+    expect(mock._broadcastCalls).toHaveLength(1);
+
+    // Stop while the throttle timer is pending
+    broadcaster.stop();
+
+    // Advance past the throttle window — queued position should NOT be sent
+    vi.advanceTimersByTime(CURSOR_THROTTLE_MS * 2);
+    expect(mock._broadcastCalls).toHaveLength(1);
+  });
+
+  it('incoming broadcasts are ignored after stop()', () => {
+    const events: unknown[] = [];
+    bus.subscribe(SocialEvents.CURSOR_MOVED, (event) => {
+      events.push(event.payload);
+    });
+
+    const mock = createMockChannel();
+    const broadcaster = createCursorBroadcaster(mock, 'user-a', '#FF0000');
+
+    broadcaster.stop();
+
+    // Simulate incoming cursor after stop — should be silently ignored
+    mock._simulateBroadcast('cursor', {
+      userId: 'user-b',
+      position: { x: 50, y: 60 },
+      color: '#00FF00',
+    } satisfies CursorData);
+
+    expect(events).toHaveLength(0);
+  });
+
   it('cursors visible for ALL user types including Guests', () => {
     const events: unknown[] = [];
     bus.subscribe(SocialEvents.CURSOR_MOVED, (event) => {

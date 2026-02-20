@@ -235,4 +235,22 @@ describe('OfflineManager', () => {
 
     expect(manager.getQueuedEdits()).toHaveLength(0);
   });
+
+  it('destroy during grace period prevents offline transition', () => {
+    const mock = createMockChannel(true);
+    const manager = createOfflineManager(mock);
+
+    // Disconnect — start grace period
+    mock._setConnected(false);
+    vi.advanceTimersByTime(1_000); // poll detects disconnect
+
+    // Destroy while grace timer is still pending
+    manager.destroy();
+
+    // Advance past what would have been the grace period
+    vi.advanceTimersByTime(OFFLINE_GRACE_PERIOD_MS + 1_000);
+
+    // Should NOT have transitioned to offline because destroyed flag short-circuits
+    expect(manager.isOffline()).toBe(false);
+  });
 });

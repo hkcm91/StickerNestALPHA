@@ -193,6 +193,35 @@ describe('EntitySyncManager', () => {
     expect(mock._broadcastCalls).toHaveLength(10);
   });
 
+  it('emits ENTITY_TRANSFORMED for optimistic remote drag (isFinal: false)', () => {
+    const events: unknown[] = [];
+    bus.subscribe(SocialEvents.ENTITY_TRANSFORMED, (event) => {
+      events.push(event.payload);
+    });
+
+    const mock = createMockChannel();
+    createEntitySync(mock);
+
+    // Simulate a remote optimistic drag update (not final)
+    mock._simulateBroadcast('entity-transform', {
+      entityId: 'e-1',
+      position: { x: 75, y: 85 },
+      rotation: 10,
+      scale: 2.0,
+      userId: 'user-b',
+      timestamp: Date.now(),
+      isFinal: false,
+    });
+
+    expect(events).toHaveLength(1);
+    const payload = events[0] as EntityTransform;
+    expect(payload.entityId).toBe('e-1');
+    expect(payload.position).toEqual({ x: 75, y: 85 });
+    expect(payload.rotation).toBe(10);
+    expect(payload.scale).toBe(2.0);
+    expect(payload.userId).toBe('user-b');
+  });
+
   it('destroy() cleans up all subscriptions', () => {
     const events: unknown[] = [];
     bus.subscribe(SocialEvents.ENTITY_TRANSFORMED, (event) => {

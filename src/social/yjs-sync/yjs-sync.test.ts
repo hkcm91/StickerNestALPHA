@@ -180,6 +180,35 @@ describe('YjsSyncManager', () => {
     expect(payload.source).toBe('remote');
   });
 
+  it('ignores yjs-update for unknown DataSource (no doc created)', () => {
+    const events: unknown[] = [];
+    bus.subscribe(SocialEvents.DATASOURCE_UPDATED, (event) => {
+      events.push(event.payload);
+    });
+
+    const mock = createMockChannel();
+    const yjs = createYjsSync(mock);
+
+    // Start sync only for ds-1 — ds-unknown has no doc
+    yjs.startSync('ds-1');
+
+    // Get a real base64 update by making a local edit
+    yjs.getDoc('ds-1').getText('content').insert(0, 'Hi');
+    const realPayload = mock._broadcastCalls[0].payload as { update: string };
+
+    // Simulate a yjs-update arriving for a DataSource that has no doc
+    mock._simulateBroadcast('yjs-update', {
+      dataSourceId: 'ds-unknown',
+      update: realPayload.update,
+    });
+
+    // Only ds-1 should have a DATASOURCE_UPDATED event, not ds-unknown
+    const unknownEvents = (events as Array<Record<string, unknown>>).filter(
+      e => e.dataSourceId === 'ds-unknown',
+    );
+    expect(unknownEvents).toHaveLength(0);
+  });
+
   it('does not double-subscribe on repeated startSync calls', () => {
     const mock = createMockChannel();
     const yjs = createYjsSync(mock);

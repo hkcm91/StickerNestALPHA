@@ -126,4 +126,21 @@ describe('CanvasChannel', () => {
 
     expect(callback).toHaveBeenCalledWith({ userId: 'u1', x: 100, y: 200 });
   });
+
+  it('isConnected() returns false after CLOSED status', async () => {
+    let subscribeCb: ((status: string) => void) | undefined;
+    mockRealtimeChannel.subscribe.mockImplementation((cb?: (status: string) => void) => {
+      subscribeCb = cb;
+      if (cb) cb('SUBSCRIBED');
+      return mockRealtimeChannel;
+    });
+
+    const channel = createCanvasChannel('my-canvas');
+    await channel.join();
+    expect(channel.isConnected()).toBe(true);
+
+    // Simulate the channel being closed after connection
+    subscribeCb!('CLOSED');
+    expect(channel.isConnected()).toBe(false);
+  });
 });
