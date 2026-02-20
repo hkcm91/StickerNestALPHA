@@ -99,7 +99,7 @@ export const DataSourceMetadataSchema = z.object({
   /** Tags for organization */
   tags: z.array(z.string()).optional(),
   /** Custom metadata from widgets */
-  custom: z.record(z.string(), z.any()).optional(),
+  custom: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type DataSourceMetadata = z.infer<typeof DataSourceMetadataSchema>;
@@ -126,7 +126,7 @@ export const DataSourceSchema = z.object({
    * JSON Schema defining the data structure.
    * Required for 'table' and 'custom' types.
    */
-  schema: z.record(z.string(), z.any()).optional(),
+  schema: z.record(z.string(), z.unknown()).optional(),
   /** Metadata for display and organization */
   metadata: DataSourceMetadataSchema.optional(),
   /** Creation timestamp */

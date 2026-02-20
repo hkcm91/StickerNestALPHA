@@ -149,7 +149,7 @@ export const WidgetContainerEntitySchema = CanvasEntityBaseSchema.extend({
   /** Widget definition ID (from marketplace/registry) */
   widgetId: z.string(),
   /** Widget configuration (shape defined by widget manifest) */
-  config: z.record(z.unknown()).default({}),
+  config: z.record(z.string(), z.unknown()).default({}),
 });
 
 export type WidgetContainerEntity = z.infer<typeof WidgetContainerEntitySchema>;

@@ -50,7 +50,7 @@ export const EventPortSchema = z.object({
   /** Human-readable description */
   description: z.string().optional(),
   /** JSON Schema for the event payload */
-  schema: z.record(z.unknown()).optional(),
+  schema: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type EventPort = z.infer<typeof EventPortSchema>;
@@ -118,7 +118,7 @@ export const WidgetConfigSchema = z.object({
   /** Config fields */
   fields: z.array(WidgetConfigFieldSchema).default([]),
   /** JSON Schema for validation (generated from fields) */
-  jsonSchema: z.record(z.unknown()).optional(),
+  jsonSchema: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type WidgetConfig = z.infer<typeof WidgetConfigSchema>;
@@ -256,9 +256,9 @@ export const WidgetInstanceStateSchema = z.object({
   /** User ID who owns this instance */
   userId: z.string().uuid(),
   /** Instance state (max 1MB) */
-  state: z.record(z.unknown()).default({}),
+  state: z.record(z.string(), z.unknown()).default({}),
   /** Instance config overrides */
-  config: z.record(z.unknown()).default({}),
+  config: z.record(z.string(), z.unknown()).default({}),
   /** Creation timestamp */
   createdAt: z.string().datetime(),
   /** Last update timestamp */
@@ -276,7 +276,7 @@ export const UserWidgetStateSchema = z.object({
   /** Widget ID */
   widgetId: z.string(),
   /** User state for this widget (max 10MB total per user) */
-  state: z.record(z.unknown()).default({}),
+  state: z.record(z.string(), z.unknown()).default({}),
   /** Last update timestamp */
   updatedAt: z.string().datetime(),
 });
