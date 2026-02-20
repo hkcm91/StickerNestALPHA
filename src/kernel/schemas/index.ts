@@ -159,3 +159,28 @@ export {
   WidgetInstanceStateJSONSchema,
   UserWidgetStateJSONSchema,
 } from './widget-manifest';
+
+// =============================================================================
+// Pipeline Schemas
+// =============================================================================
+export {
+  // Schemas
+  PipelinePortDirectionSchema,
+  PipelinePortSchema,
+  PipelineNodeTypeSchema,
+  PipelineNodeSchema,
+  PipelineEdgeSchema,
+  PipelineSchema,
+  // Types
+  type PipelinePortDirection,
+  type PipelinePort,
+  type PipelineNodeType,
+  type PipelineNode,
+  type PipelineEdge,
+  type Pipeline,
+  // JSON Schemas
+  PipelinePortJSONSchema,
+  PipelineNodeJSONSchema,
+  PipelineEdgeJSONSchema,
+  PipelineJSONSchema,
+} from './pipeline';

@@ -96,7 +96,15 @@ export const CanvasEvents = {
   ENTITY_RESIZED: 'canvas.entity.resized',
   ENTITY_CONFIG_UPDATED: 'canvas.entity.config.updated',
   MODE_CHANGED: 'canvas.mode.changed',
+  TOOL_CHANGED: 'canvas.tool.changed',
+  ENTITY_SELECTED: 'canvas.entity.selected',
+  ENTITY_DESELECTED: 'canvas.entity.deselected',
+  SELECTION_CLEARED: 'canvas.selection.cleared',
   PIPELINE_INVALID: 'canvas.pipeline.invalid',
+  PIPELINE_EDGE_CREATED: 'canvas.pipeline.edge.created',
+  PIPELINE_EDGE_DELETED: 'canvas.pipeline.edge.deleted',
+  PIPELINE_NODE_ADDED: 'canvas.pipeline.node.added',
+  PIPELINE_NODE_REMOVED: 'canvas.pipeline.node.removed',
 } as const;
 
 /**
