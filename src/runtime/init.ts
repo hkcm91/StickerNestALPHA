@@ -10,6 +10,7 @@
  */
 
 import type { BusEvent } from '@sn/types';
+import { MarketplaceEvents } from '@sn/types';
 
 import { bus } from '../kernel/bus';
 import { useWidgetStore } from '../kernel/stores/widget/widget.store';
@@ -181,7 +182,7 @@ export function initRuntime(): void {
   busUnsubscribes.push(unsubTheme);
 
   const unsubUninstall = bus.subscribe(
-    'marketplace.widget.uninstalled',
+    MarketplaceEvents.WIDGET_UNINSTALLED,
     (event: BusEvent) => {
       const payload = event.payload as { widgetId?: string };
       if (payload.widgetId) {

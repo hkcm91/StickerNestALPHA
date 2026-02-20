@@ -58,6 +58,7 @@ export {
   WidgetEvents,
   ShellEvents,
   SpatialEvents,
+  MarketplaceEvents,
   // JSON Schemas
   BusEventJSONSchema,
 } from './bus-event';

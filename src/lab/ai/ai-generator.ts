@@ -60,6 +60,29 @@ export function validateWidgetHtml(html: string): { valid: boolean; errors: stri
 }
 
 /**
+ * Creates an AI generator using the environment-configured proxy URL.
+ * Returns a generator that immediately errors if the proxy is not configured.
+ */
+export function createDefaultAIGenerator(): AIGenerator {
+  const proxyUrl = typeof import.meta !== 'undefined'
+    ? (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_AI_PROXY_URL
+    : undefined;
+
+  if (!proxyUrl) {
+    return {
+      async generate(): Promise<AIGenerationResult> {
+        return { html: '', isValid: false, errors: ['AI generation is not configured'] };
+      },
+      isGenerating() { return false; },
+      cancel() { /* no-op */ },
+      getLastResult() { return null; },
+    };
+  }
+
+  return createAIGenerator(proxyUrl);
+}
+
+/**
  * Creates an AI generator that routes through the platform proxy.
  *
  * @param proxyUrl - URL of the platform's Anthropic API proxy endpoint

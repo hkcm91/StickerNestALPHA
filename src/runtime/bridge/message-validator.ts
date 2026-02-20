@@ -45,6 +45,11 @@ const WidgetMessageSchema = z.discriminatedUnion('type', [
     level: z.enum(['info', 'warn', 'error']),
     message: z.string(),
   }),
+  z.object({ type: z.literal('INTEGRATION_QUERY'), requestId: z.string(), name: z.string(), params: z.unknown() }),
+  z.object({ type: z.literal('INTEGRATION_MUTATE'), requestId: z.string(), name: z.string(), params: z.unknown() }),
+  z.object({ type: z.literal('CROSS_CANVAS_EMIT'), channel: z.string(), payload: z.unknown() }),
+  z.object({ type: z.literal('CROSS_CANVAS_SUBSCRIBE'), channel: z.string() }),
+  z.object({ type: z.literal('CROSS_CANVAS_UNSUBSCRIBE'), channel: z.string() }),
 ]);
 
 // ---------------------------------------------------------------------------
@@ -69,6 +74,9 @@ const HostMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('THEME_UPDATE'), theme: ThemeTokensSchema }),
   z.object({ type: z.literal('RESIZE'), width: z.number(), height: z.number() }),
   z.object({ type: z.literal('STATE_RESPONSE'), key: z.string(), value: z.unknown() }),
+  z.object({ type: z.literal('STATE_REJECTED'), key: z.string(), reason: z.string() }),
+  z.object({ type: z.literal('INTEGRATION_RESPONSE'), requestId: z.string(), result: z.unknown(), error: z.string().optional() }),
+  z.object({ type: z.literal('CROSS_CANVAS_EVENT'), channel: z.string(), payload: z.unknown() }),
   z.object({ type: z.literal('DESTROY') }),
 ]);
 

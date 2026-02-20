@@ -127,6 +127,31 @@ export function generateSDKTemplate(): string {
         }
         break;
 
+      case 'STATE_REJECTED':
+        console.warn('[StickerNest SDK] State rejected for key "' + data.key + '": ' + data.reason);
+        break;
+
+      case 'INTEGRATION_RESPONSE':
+        var pendingIntegration = _pendingRequests['integration_' + data.requestId];
+        if (pendingIntegration) {
+          if (data.error) {
+            pendingIntegration.reject(new Error(data.error));
+          } else {
+            pendingIntegration.resolve(data.result);
+          }
+          delete _pendingRequests['integration_' + data.requestId];
+        }
+        break;
+
+      case 'CROSS_CANVAS_EVENT':
+        var ccHandlers = _crossCanvasHandlers[data.channel];
+        if (ccHandlers) {
+          for (var cc = 0; cc < ccHandlers.length; cc++) {
+            try { ccHandlers[cc](data.payload); } catch(e) { console.error('[StickerNest SDK] Cross-canvas handler error:', e); }
+          }
+        }
+        break;
+
       case 'DESTROY':
         _eventHandlers = {};
         _themeHandlers = [];
@@ -216,34 +241,33 @@ export function generateSDKTemplate(): string {
     integration: function(name) {
       return {
         query: function(params) {
-          return new Promise(function(resolve) {
-            postToHost({ type: 'EMIT', eventType: 'integration.query', payload: { name: name, params: params } });
-            resolve(undefined);
+          return new Promise(function(resolve, reject) {
+            var requestId = 'req_' + (++_requestCounter);
+            _pendingRequests['integration_' + requestId] = { resolve: resolve, reject: reject };
+            postToHost({ type: 'INTEGRATION_QUERY', requestId: requestId, name: name, params: params });
           });
         },
         mutate: function(params) {
-          return new Promise(function(resolve) {
-            postToHost({ type: 'EMIT', eventType: 'integration.mutate', payload: { name: name, params: params } });
-            resolve(undefined);
+          return new Promise(function(resolve, reject) {
+            var requestId = 'req_' + (++_requestCounter);
+            _pendingRequests['integration_' + requestId] = { resolve: resolve, reject: reject };
+            postToHost({ type: 'INTEGRATION_MUTATE', requestId: requestId, name: name, params: params });
           });
         }
       };
     },
 
     emitCrossCanvas: function(channel, payload) {
-      postToHost({ type: 'EMIT', eventType: 'crosscanvas.' + channel, payload: payload });
+      postToHost({ type: 'CROSS_CANVAS_EMIT', channel: channel, payload: payload });
     },
 
     subscribeCrossCanvas: function(channel, handler) {
       if (!_crossCanvasHandlers[channel]) {
         _crossCanvasHandlers[channel] = [];
+        // Tell the host to subscribe to this channel
+        postToHost({ type: 'CROSS_CANVAS_SUBSCRIBE', channel: channel });
       }
       _crossCanvasHandlers[channel].push(handler);
-      // Also register as a regular event handler for the namespaced event
-      if (!_eventHandlers['crosscanvas.' + channel]) {
-        _eventHandlers['crosscanvas.' + channel] = [];
-      }
-      _eventHandlers['crosscanvas.' + channel].push(handler);
     }
   };
 })();`;

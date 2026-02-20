@@ -26,7 +26,7 @@ export interface PipelineStatus {
 }
 
 export interface PublishPipeline {
-  run(html: string, manifest: WidgetManifest): Promise<PipelineStatus>;
+  run(html: string, manifest: WidgetManifest, authorId?: string): Promise<PipelineStatus>;
   getStatus(): PipelineStatus;
   reset(): void;
 }
@@ -38,7 +38,7 @@ export function createPublishPipeline(): PublishPipeline {
   let status: PipelineStatus = { step: 'idle' };
 
   return {
-    async run(html: string, manifest: WidgetManifest): Promise<PipelineStatus> {
+    async run(html: string, manifest: WidgetManifest, authorId?: string): Promise<PipelineStatus> {
       // Step 1: Validate
       status = { step: 'validating' };
       const validation = validateWidget(html);
@@ -69,6 +69,7 @@ export function createPublishPipeline(): PublishPipeline {
         html,
         manifest,
         thumbnail: thumbnailResult.data,
+        authorId: authorId ?? '',
       });
       if (!submitResult.success) {
         status = { step: 'failed', error: 'Submission failed', errors: [submitResult.error ?? 'Unknown error'] };

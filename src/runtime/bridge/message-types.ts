@@ -33,6 +33,9 @@ export type HostMessage =
   | { type: 'THEME_UPDATE'; theme: ThemeTokens }
   | { type: 'RESIZE'; width: number; height: number }
   | { type: 'STATE_RESPONSE'; key: string; value: unknown }
+  | { type: 'STATE_REJECTED'; key: string; reason: string }
+  | { type: 'INTEGRATION_RESPONSE'; requestId: string; result: unknown; error?: string }
+  | { type: 'CROSS_CANVAS_EVENT'; channel: string; payload: unknown }
   | { type: 'DESTROY' };
 
 /**
@@ -47,4 +50,9 @@ export type WidgetMessage =
   | { type: 'SET_USER_STATE'; key: string; value: unknown }
   | { type: 'GET_USER_STATE'; key: string }
   | { type: 'RESIZE_REQUEST'; width: number; height: number }
-  | { type: 'LOG'; level: 'info' | 'warn' | 'error'; message: string };
+  | { type: 'LOG'; level: 'info' | 'warn' | 'error'; message: string }
+  | { type: 'INTEGRATION_QUERY'; requestId: string; name: string; params: unknown }
+  | { type: 'INTEGRATION_MUTATE'; requestId: string; name: string; params: unknown }
+  | { type: 'CROSS_CANVAS_EMIT'; channel: string; payload: unknown }
+  | { type: 'CROSS_CANVAS_SUBSCRIBE'; channel: string }
+  | { type: 'CROSS_CANVAS_UNSUBSCRIBE'; channel: string };

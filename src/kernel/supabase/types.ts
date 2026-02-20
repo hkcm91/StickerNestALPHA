@@ -4,11 +4,14 @@
  * Generated from:
  *   supabase/migrations/00001_initial_schema.sql
  *   supabase/migrations/00002_add_datasource_revision.sql
+ *   supabase/migrations/00003_add_widget_snapshots.sql
+ *   supabase/migrations/00004_add_marketplace_tables.sql
  *
  * Tables: users, canvases, canvas_members, entities, widgets, stickers,
  *         pipelines, widget_connections, presence, data_sources,
  *         data_source_acl, widget_instances, user_installed_widgets,
- *         user_widget_state
+ *         user_widget_state, widget_snapshots, widget_reviews,
+ *         widget_versions
  */
 
 /**
@@ -593,6 +596,96 @@ export interface Database {
           value_size?: number;
           created_at?: string;
           updated_at?: string;
+        };
+      };
+
+      widget_snapshots: {
+        Row: {
+          id: string;
+          widget_id: string;
+          label: string;
+          html_content: string;
+          manifest: Json;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          widget_id: string;
+          label: string;
+          html_content: string;
+          manifest: Json;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          widget_id?: string;
+          label?: string;
+          html_content?: string;
+          manifest?: Json;
+          created_by?: string | null;
+          created_at?: string;
+        };
+      };
+
+      widget_reviews: {
+        Row: {
+          id: string;
+          widget_id: string;
+          user_id: string;
+          rating: number;
+          review_text: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          widget_id: string;
+          user_id: string;
+          rating: number;
+          review_text?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          widget_id?: string;
+          user_id?: string;
+          rating?: number;
+          review_text?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+
+      widget_versions: {
+        Row: {
+          id: string;
+          widget_id: string;
+          version: string;
+          html_content: string;
+          manifest: Json;
+          changelog: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          widget_id: string;
+          version: string;
+          html_content: string;
+          manifest: Json;
+          changelog?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          widget_id?: string;
+          version?: string;
+          html_content?: string;
+          manifest?: Json;
+          changelog?: string | null;
+          created_at?: string;
         };
       };
     };

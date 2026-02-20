@@ -241,30 +241,70 @@ describe('StickerNest SDK Template', () => {
     expect(resizeHandler).toHaveBeenCalledWith(800, 600);
   });
 
-  it('integration().query() proxies external data read via host', async () => {
-    await sdk.integration('github').query({ repo: 'my-repo' });
+  it('integration().query() sends INTEGRATION_QUERY with requestId and resolves on INTEGRATION_RESPONSE', async () => {
+    const promise = sdk.integration('github').query({ repo: 'my-repo' });
 
-    expect(parentPostMessage).toHaveBeenCalledWith(
-      {
-        type: 'EMIT',
-        eventType: 'integration.query',
-        payload: { name: 'github', params: { repo: 'my-repo' } },
-      },
-      '*',
+    // Verify INTEGRATION_QUERY was posted
+    const queryCalls = parentPostMessage.mock.calls.filter(
+      (call: any[]) => call[0]?.type === 'INTEGRATION_QUERY',
     );
+    expect(queryCalls).toHaveLength(1);
+
+    const queryMsg = queryCalls[0][0];
+    expect(queryMsg.name).toBe('github');
+    expect(queryMsg.params).toEqual({ repo: 'my-repo' });
+    expect(typeof queryMsg.requestId).toBe('string');
+
+    // Simulate INTEGRATION_RESPONSE from host
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        data: { type: 'INTEGRATION_RESPONSE', requestId: queryMsg.requestId, result: { repos: ['a', 'b'] } },
+      }),
+    );
+
+    await expect(promise).resolves.toEqual({ repos: ['a', 'b'] });
   });
 
-  it('integration().mutate() proxies external data write via host', async () => {
-    await sdk.integration('github').mutate({ action: 'create-issue', title: 'Bug' });
+  it('integration().mutate() sends INTEGRATION_MUTATE with requestId and resolves on INTEGRATION_RESPONSE', async () => {
+    const promise = sdk.integration('github').mutate({ action: 'create-issue', title: 'Bug' });
 
-    expect(parentPostMessage).toHaveBeenCalledWith(
-      {
-        type: 'EMIT',
-        eventType: 'integration.mutate',
-        payload: { name: 'github', params: { action: 'create-issue', title: 'Bug' } },
-      },
-      '*',
+    // Verify INTEGRATION_MUTATE was posted
+    const mutateCalls = parentPostMessage.mock.calls.filter(
+      (call: any[]) => call[0]?.type === 'INTEGRATION_MUTATE',
     );
+    expect(mutateCalls).toHaveLength(1);
+
+    const mutateMsg = mutateCalls[0][0];
+    expect(mutateMsg.name).toBe('github');
+    expect(mutateMsg.params).toEqual({ action: 'create-issue', title: 'Bug' });
+    expect(typeof mutateMsg.requestId).toBe('string');
+
+    // Simulate INTEGRATION_RESPONSE from host
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        data: { type: 'INTEGRATION_RESPONSE', requestId: mutateMsg.requestId, result: { id: 'issue-123' } },
+      }),
+    );
+
+    await expect(promise).resolves.toEqual({ id: 'issue-123' });
+  });
+
+  it('integration().query() rejects when INTEGRATION_RESPONSE has error', async () => {
+    const promise = sdk.integration('github').query({ repo: 'private' });
+
+    const queryCalls = parentPostMessage.mock.calls.filter(
+      (call: any[]) => call[0]?.type === 'INTEGRATION_QUERY',
+    );
+    const queryMsg = queryCalls[0][0];
+
+    // Simulate error response
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        data: { type: 'INTEGRATION_RESPONSE', requestId: queryMsg.requestId, result: null, error: 'Unauthorized' },
+      }),
+    );
+
+    await expect(promise).rejects.toThrow('Unauthorized');
   });
 
   it('register() before ready() succeeds; reverse order errors', () => {
@@ -387,34 +427,84 @@ describe('StickerNest SDK Template', () => {
     expect(sdk.getConfig()).toEqual({ b: 2 });
   });
 
-  it('emitCrossCanvas() posts namespaced EMIT to parent', () => {
+  it('emitCrossCanvas() posts CROSS_CANVAS_EMIT to parent', () => {
     sdk.emitCrossCanvas('notifications', { text: 'hello' });
 
     expect(parentPostMessage).toHaveBeenCalledWith(
       {
-        type: 'EMIT',
-        eventType: 'crosscanvas.notifications',
+        type: 'CROSS_CANVAS_EMIT',
+        channel: 'notifications',
         payload: { text: 'hello' },
       },
       '*',
     );
   });
 
-  it('subscribeCrossCanvas() registers handler for namespaced events', () => {
+  it('subscribeCrossCanvas() sends CROSS_CANVAS_SUBSCRIBE and registers handler for CROSS_CANVAS_EVENT', () => {
     const handler = vi.fn();
     sdk.subscribeCrossCanvas('notifications', handler);
 
-    // Dispatch the namespaced event
+    // Verify CROSS_CANVAS_SUBSCRIBE was posted
+    expect(parentPostMessage).toHaveBeenCalledWith(
+      { type: 'CROSS_CANVAS_SUBSCRIBE', channel: 'notifications' },
+      '*',
+    );
+
+    // Dispatch a CROSS_CANVAS_EVENT from the host
     window.dispatchEvent(
       new MessageEvent('message', {
         data: {
-          type: 'EVENT',
-          event: { type: 'crosscanvas.notifications', payload: { text: 'hi' } },
+          type: 'CROSS_CANVAS_EVENT',
+          channel: 'notifications',
+          payload: { text: 'hi' },
         },
       }),
     );
 
     expect(handler).toHaveBeenCalledWith({ text: 'hi' });
+  });
+
+  it('subscribeCrossCanvas() only sends CROSS_CANVAS_SUBSCRIBE once per channel', () => {
+    const handler1 = vi.fn();
+    const handler2 = vi.fn();
+    sdk.subscribeCrossCanvas('notifications', handler1);
+    sdk.subscribeCrossCanvas('notifications', handler2);
+
+    // CROSS_CANVAS_SUBSCRIBE should only have been sent once
+    const subscribeCalls = parentPostMessage.mock.calls.filter(
+      (call: any[]) => call[0]?.type === 'CROSS_CANVAS_SUBSCRIBE' && call[0]?.channel === 'notifications',
+    );
+    expect(subscribeCalls).toHaveLength(1);
+
+    // Both handlers should receive events
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        data: {
+          type: 'CROSS_CANVAS_EVENT',
+          channel: 'notifications',
+          payload: { text: 'both' },
+        },
+      }),
+    );
+
+    expect(handler1).toHaveBeenCalledWith({ text: 'both' });
+    expect(handler2).toHaveBeenCalledWith({ text: 'both' });
+  });
+
+  it('STATE_REJECTED message logs a warning', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        data: { type: 'STATE_REJECTED', key: 'bigdata', reason: 'exceeds 1MB limit' },
+      }),
+    );
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('State rejected for key "bigdata"'),
+    );
+
+    warnSpy.mockRestore();
   });
 });
 

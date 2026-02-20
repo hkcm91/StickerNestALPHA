@@ -1,6 +1,9 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import type { WidgetManifest } from '@sn/types';
+import { MarketplaceEvents } from '@sn/types';
+
+import { bus } from '../../kernel/bus';
 
 import { createPublishPipeline } from './pipeline';
 import { submitWidget } from './submitter';
@@ -91,34 +94,80 @@ describe('generateThumbnail', () => {
 });
 
 describe('submitWidget', () => {
-  it('returns success with listing id (stub)', async () => {
-    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+  it('emits PUBLISH_REQUEST and resolves on PUBLISH_RESPONSE', async () => {
+    // Simulate marketplace responding to the publish request
+    const unsub = bus.subscribe(MarketplaceEvents.PUBLISH_REQUEST, () => {
+      bus.emit(MarketplaceEvents.PUBLISH_RESPONSE, {
+        success: true,
+        listingId: 'listing-123',
+      });
+    });
+
     const result = await submitWidget({
       html: VALID_HTML,
       manifest: makeManifest(),
       thumbnail: new Blob(['test']),
+      authorId: 'user-1',
     });
+
     expect(result.success).toBe(true);
-    expect(result.listingId).toBeTruthy();
-    consoleSpy.mockRestore();
+    expect(result.listingId).toBe('listing-123');
+    unsub();
+  });
+
+  it('times out when no response is received', async () => {
+    vi.useFakeTimers();
+
+    const promise = submitWidget({
+      html: VALID_HTML,
+      manifest: makeManifest(),
+      thumbnail: new Blob(['test']),
+      authorId: 'user-1',
+    });
+
+    // Fast-forward past the 30s timeout
+    vi.advanceTimersByTime(31_000);
+
+    const result = await promise;
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('timed out');
+
+    vi.useRealTimers();
   });
 });
 
 describe('createPublishPipeline', () => {
+  let unsub: (() => void) | null = null;
+
+  beforeEach(() => {
+    // Set up marketplace responder for submit step
+    unsub = bus.subscribe(MarketplaceEvents.PUBLISH_REQUEST, () => {
+      bus.emit(MarketplaceEvents.PUBLISH_RESPONSE, {
+        success: true,
+        listingId: 'listing-456',
+      });
+    });
+  });
+
+  afterEach(() => {
+    if (unsub) {
+      unsub();
+      unsub = null;
+    }
+  });
+
   it('starts in idle state', () => {
     const pipeline = createPublishPipeline();
     expect(pipeline.getStatus().step).toBe('idle');
   });
 
   it('completes full pipeline for valid widget', async () => {
-    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     const pipeline = createPublishPipeline();
-    const status = await pipeline.run(VALID_HTML, makeManifest());
+    const status = await pipeline.run(VALID_HTML, makeManifest(), 'author-1');
 
     expect(status.step).toBe('done');
     expect(status.result?.success).toBe(true);
-    expect(status.result?.listingId).toBeTruthy();
-    consoleSpy.mockRestore();
+    expect(status.result?.listingId).toBe('listing-456');
   });
 
   it('fails at validation step for invalid HTML', async () => {
