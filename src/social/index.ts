@@ -27,7 +27,7 @@ export { createEntitySync } from './entity-sync';
 export type { EntitySyncManager, EntityTransform } from './entity-sync';
 
 // Conflict resolution
-export { getStrategyForType } from './conflict';
+export { getStrategyForType, resolveLWW, checkRevision } from './conflict';
 export type { ConflictStrategy } from './conflict';
 
 // Yjs CRDT sync

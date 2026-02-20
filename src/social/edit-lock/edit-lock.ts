@@ -16,6 +16,9 @@ import type { CanvasChannel } from '../channel';
 /** Default lock timeout in milliseconds (30 seconds) */
 export const EDIT_LOCK_TIMEOUT_MS = 30_000;
 
+/** Interval for checking expired locks (1 second) */
+const EXPIRY_CHECK_INTERVAL_MS = 1_000;
+
 /**
  * Lock state for an entity.
  */
@@ -23,6 +26,12 @@ export interface EditLock {
   entityId: string;
   lockedBy: string;
   lockedAt: number;
+}
+
+/** Internal broadcast payload with action type */
+interface EditLockMessage {
+  action: 'acquire' | 'release';
+  lock: EditLock;
 }
 
 /**
@@ -47,7 +56,75 @@ export interface EditLockManager {
  * @param channel - The canvas channel for lock broadcasts
  * @returns An EditLockManager instance
  */
-export function createEditLockManager(_channel: CanvasChannel): EditLockManager {
-  // TODO: Implement — see AC8 in current-story.md
-  throw new Error('Not implemented: createEditLockManager');
+export function createEditLockManager(channel: CanvasChannel): EditLockManager {
+  const locks = new Map<string, EditLock>();
+  let destroyed = false;
+
+  // Listen for remote lock broadcasts
+  channel.onBroadcast('edit-lock', (payload) => {
+    if (destroyed) return;
+    const message = payload as EditLockMessage;
+
+    if (message.action === 'acquire') {
+      locks.set(message.lock.entityId, message.lock);
+    } else if (message.action === 'release') {
+      locks.delete(message.lock.entityId);
+    }
+  });
+
+  // Periodically check for expired locks
+  const expiryInterval = setInterval(() => {
+    if (destroyed) return;
+    const now = Date.now();
+    for (const [entityId, lock] of locks) {
+      if (now - lock.lockedAt > EDIT_LOCK_TIMEOUT_MS) {
+        locks.delete(entityId);
+      }
+    }
+  }, EXPIRY_CHECK_INTERVAL_MS);
+
+  return {
+    acquireLock(entityId: string, userId: string): void {
+      if (destroyed) return;
+
+      const lock: EditLock = {
+        entityId,
+        lockedBy: userId,
+        lockedAt: Date.now(),
+      };
+
+      locks.set(entityId, lock);
+      channel.broadcast('edit-lock', {
+        action: 'acquire',
+        lock,
+      } satisfies EditLockMessage);
+    },
+
+    releaseLock(entityId: string): void {
+      if (destroyed) return;
+
+      const lock = locks.get(entityId);
+      if (!lock) return;
+
+      locks.delete(entityId);
+      channel.broadcast('edit-lock', {
+        action: 'release',
+        lock,
+      } satisfies EditLockMessage);
+    },
+
+    getLock(entityId: string): EditLock | null {
+      return locks.get(entityId) ?? null;
+    },
+
+    getAllLocks(): EditLock[] {
+      return Array.from(locks.values());
+    },
+
+    destroy(): void {
+      destroyed = true;
+      clearInterval(expiryInterval);
+      locks.clear();
+    },
+  };
 }
