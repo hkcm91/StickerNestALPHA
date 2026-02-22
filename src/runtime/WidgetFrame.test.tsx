@@ -530,6 +530,127 @@ describe('WidgetFrame', () => {
     consoleErrorSpy.mockRestore();
   });
 
+  it('SET_STATE rejects non-serializable value (circular reference)', () => {
+    const mockUpdateInstanceState = vi.fn();
+    (useWidgetStore.getState as ReturnType<typeof vi.fn>).mockReturnValue({
+      registry: {},
+      instances: {
+        'instance-1': { state: {} },
+      },
+      updateInstanceState: mockUpdateInstanceState,
+    });
+
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    render(<WidgetFrame {...defaultProps} />);
+    const handler = getOnMessageHandler();
+
+    // Create a circular reference that JSON.stringify will throw on
+    const circular: Record<string, unknown> = { a: 1 };
+    circular.self = circular;
+
+    handler({ type: 'SET_STATE', key: 'badKey', value: circular });
+
+    // Should be rejected — updateInstanceState should NOT be called
+    expect(mockUpdateInstanceState).not.toHaveBeenCalled();
+
+    // console.error should report the non-serializable rejection
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect.stringContaining('State write rejected: value is not serializable'),
+    );
+
+    // Bridge should send STATE_REJECTED back to the widget
+    expect(mockBridge.send).toHaveBeenCalledWith({
+      type: 'STATE_REJECTED',
+      key: 'badKey',
+      reason: 'State write rejected: value is not serializable',
+    });
+
+    consoleErrorSpy.mockRestore();
+  });
+
+  it('SET_USER_STATE rejects value exceeding 10MB limit', () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    render(<WidgetFrame {...defaultProps} />);
+    const handler = getOnMessageHandler();
+
+    // Create a value that exceeds 10MB (10_485_760 bytes) when serialized
+    const overSizedValue = 'x'.repeat(10_485_759);
+    expect(JSON.stringify(overSizedValue).length).toBe(10_485_761);
+
+    handler({ type: 'SET_USER_STATE', key: 'bigUserKey', value: overSizedValue });
+
+    // Should be rejected — bus.emit for userState.set should NOT be called
+    expect(bus.emit).not.toHaveBeenCalledWith(
+      'widget.userState.set',
+      expect.anything(),
+    );
+
+    // console.error should report the size limit
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect.stringContaining('User state write rejected: exceeds 10MB limit'),
+    );
+
+    // Bridge should send STATE_REJECTED back to the widget
+    expect(mockBridge.send).toHaveBeenCalledWith({
+      type: 'STATE_REJECTED',
+      key: 'bigUserKey',
+      reason: expect.stringContaining('User state write rejected: exceeds 10MB limit'),
+    });
+
+    consoleErrorSpy.mockRestore();
+  });
+
+  it('SET_USER_STATE accepts value just under 10MB limit', () => {
+    render(<WidgetFrame {...defaultProps} />);
+    const handler = getOnMessageHandler();
+
+    // Create a value that serializes to exactly 10MB (10_485_760 bytes)
+    // JSON.stringify of a string adds 2 bytes for quotes: 10_485_760 - 2 = 10_485_758
+    const justUnderValue = 'x'.repeat(10_485_758);
+    expect(JSON.stringify(justUnderValue).length).toBe(10_485_760);
+
+    handler({ type: 'SET_USER_STATE', key: 'okUserKey', value: justUnderValue });
+
+    // Should be accepted — bus.emit for userState.set should be called
+    expect(bus.emit).toHaveBeenCalledWith('widget.userState.set', {
+      instanceId: defaultProps.instanceId,
+      key: 'okUserKey',
+      value: justUnderValue,
+    });
+  });
+
+  it('SET_USER_STATE rejects non-serializable value', () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    render(<WidgetFrame {...defaultProps} />);
+    const handler = getOnMessageHandler();
+
+    const circular: Record<string, unknown> = { b: 2 };
+    circular.self = circular;
+
+    handler({ type: 'SET_USER_STATE', key: 'badUserKey', value: circular });
+
+    // Should be rejected
+    expect(bus.emit).not.toHaveBeenCalledWith(
+      'widget.userState.set',
+      expect.anything(),
+    );
+
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect.stringContaining('User state write rejected: value is not serializable'),
+    );
+
+    expect(mockBridge.send).toHaveBeenCalledWith({
+      type: 'STATE_REJECTED',
+      key: 'badUserKey',
+      reason: 'User state write rejected: value is not serializable',
+    });
+
+    consoleErrorSpy.mockRestore();
+  });
+
   // -----------------------------------------------------------------------
   // Resize
   // -----------------------------------------------------------------------
@@ -569,5 +690,225 @@ describe('WidgetFrame', () => {
     const iframe = getIframe();
     expect(iframe.style.width).toBe('400px');
     expect(iframe.style.height).toBe('300px');
+  });
+
+  // -----------------------------------------------------------------------
+  // Inter-widget communication
+  // -----------------------------------------------------------------------
+
+  it('SUBSCRIBE registers bus subscription and forwards events as EVENT messages', () => {
+    // Track subscriptions added via bus.subscribe mock
+    const subscriptions: { type: string; callback: (payload: unknown) => void }[] = [];
+    (bus.subscribe as ReturnType<typeof vi.fn>).mockImplementation(
+      (type: string, callback: (payload: unknown) => void) => {
+        subscriptions.push({ type, callback });
+        return vi.fn(); // unsubscribe function
+      },
+    );
+
+    render(<WidgetFrame {...defaultProps} />);
+    const handler = getOnMessageHandler();
+
+    // Simulate widget sending SUBSCRIBE message
+    handler({ type: 'SUBSCRIBE', eventType: 'myEvent' });
+
+    // Verify bus.subscribe was called with widget.myEvent
+    expect(bus.subscribe).toHaveBeenCalledWith('widget.myEvent', expect.any(Function));
+
+    // Simulate a bus event being emitted
+    const subscription = subscriptions.find((s) => s.type === 'widget.myEvent');
+    expect(subscription).toBeDefined();
+    // Bus delivers a full BusEvent envelope — WidgetFrame extracts .payload from it
+    subscription!.callback({ type: 'widget.myEvent', payload: { data: 'test-payload' }, timestamp: Date.now() });
+
+    // Verify bridge.send was called with EVENT message containing the extracted payload
+    expect(mockBridge.send).toHaveBeenCalledWith({
+      type: 'EVENT',
+      event: { type: 'myEvent', payload: { data: 'test-payload' } },
+    });
+  });
+
+  it('UNSUBSCRIBE removes bus subscription', () => {
+    const mockUnsubscribe = vi.fn();
+    (bus.subscribe as ReturnType<typeof vi.fn>).mockReturnValue(mockUnsubscribe);
+
+    render(<WidgetFrame {...defaultProps} />);
+    const handler = getOnMessageHandler();
+
+    // First subscribe
+    handler({ type: 'SUBSCRIBE', eventType: 'myEvent' });
+    expect(bus.subscribe).toHaveBeenCalledWith('widget.myEvent', expect.any(Function));
+
+    // Then unsubscribe
+    handler({ type: 'UNSUBSCRIBE', eventType: 'myEvent' });
+
+    // Verify the unsubscribe function was called
+    expect(mockUnsubscribe).toHaveBeenCalled();
+  });
+
+  it('EMIT from widget A reaches widget B via bus', () => {
+    // This test verifies the complete inter-widget flow:
+    // Widget A emits → bus.emit → bus delivers to subscribers → Widget B receives EVENT
+
+    // Track bus.emit calls
+    const emitCalls: { type: string; payload: unknown }[] = [];
+    (bus.emit as ReturnType<typeof vi.fn>).mockImplementation((type: string, payload: unknown) => {
+      emitCalls.push({ type, payload });
+    });
+
+    render(<WidgetFrame {...defaultProps} />);
+    const handler = getOnMessageHandler();
+
+    // Widget emits an event
+    handler({ type: 'EMIT', eventType: 'sharedEvent', payload: { value: 42 } });
+
+    // Verify bus.emit was called with the correct event type
+    expect(bus.emit).toHaveBeenCalledWith('widget.sharedEvent', { value: 42 });
+  });
+
+  // -----------------------------------------------------------------------
+  // READY timeout
+  // -----------------------------------------------------------------------
+
+  it('transitions to ERROR if widget never signals READY within 5 seconds', () => {
+    vi.useFakeTimers();
+
+    // Bridge never becomes ready
+    mockBridge.isReady.mockReturnValue(false);
+    // Lifecycle starts at LOADING (set by WidgetFrame on mount)
+    mockLifecycle.getState.mockReturnValue('LOADING');
+
+    render(<WidgetFrame {...defaultProps} />);
+
+    // Lifecycle should have been transitioned to LOADING on mount
+    expect(mockLifecycle.transition).toHaveBeenCalledWith('LOADING');
+
+    // Advance just under the 5s timeout — ERROR should NOT have fired yet
+    vi.advanceTimersByTime(4999);
+    expect(mockLifecycle.transition).not.toHaveBeenCalledWith('ERROR');
+
+    // Advance past the timeout
+    vi.advanceTimersByTime(2);
+    expect(mockLifecycle.transition).toHaveBeenCalledWith('ERROR');
+
+    vi.useRealTimers();
+  });
+
+  it('does NOT transition to ERROR if widget signals READY before timeout', () => {
+    vi.useFakeTimers();
+
+    mockBridge.isReady.mockReturnValue(false);
+    mockLifecycle.getState.mockReturnValue('LOADING');
+
+    render(<WidgetFrame {...defaultProps} />);
+    const handler = getOnMessageHandler();
+
+    // Widget signals READY before timeout
+    mockLifecycle.getState.mockReturnValue('LOADING');
+    handler({ type: 'READY' });
+
+    // Bridge is now ready
+    mockBridge.isReady.mockReturnValue(true);
+
+    // Advance past timeout
+    vi.advanceTimersByTime(6000);
+
+    // ERROR should NOT have been called (isReady() returns true)
+    expect(mockLifecycle.transition).not.toHaveBeenCalledWith('ERROR');
+
+    vi.useRealTimers();
+  });
+
+  // -----------------------------------------------------------------------
+  // Cleanup on unmount
+  // -----------------------------------------------------------------------
+
+  it('cleans up bridge, lifecycle, and all bus subscriptions on unmount', () => {
+    const mockUnsub1 = vi.fn();
+    const mockUnsub2 = vi.fn();
+    const mockUnsub3 = vi.fn();
+    let subCallCount = 0;
+    (bus.subscribe as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      subCallCount++;
+      if (subCallCount === 1) return mockUnsub1;
+      if (subCallCount === 2) return mockUnsub2;
+      return mockUnsub3;
+    });
+
+    const { unmount } = render(<WidgetFrame {...defaultProps} />);
+    const handler = getOnMessageHandler();
+
+    // Subscribe to 3 different event types
+    handler({ type: 'SUBSCRIBE', eventType: 'eventA' });
+    handler({ type: 'SUBSCRIBE', eventType: 'eventB' });
+    handler({ type: 'SUBSCRIBE', eventType: 'eventC' });
+
+    expect(bus.subscribe).toHaveBeenCalledTimes(3);
+
+    // Unmount the component
+    unmount();
+
+    // Bridge should have sent DESTROY and been destroyed
+    expect(mockBridge.send).toHaveBeenCalledWith({ type: 'DESTROY' });
+    expect(mockBridge.destroy).toHaveBeenCalled();
+
+    // Lifecycle should have been destroyed
+    expect(mockLifecycle.destroy).toHaveBeenCalled();
+
+    // All 3 bus subscriptions should have been cleaned up
+    expect(mockUnsub1).toHaveBeenCalled();
+    expect(mockUnsub2).toHaveBeenCalled();
+    expect(mockUnsub3).toHaveBeenCalled();
+  });
+
+  // -----------------------------------------------------------------------
+  // Channel Routing
+  // -----------------------------------------------------------------------
+
+  it('EMIT with channel routes to widget.{channel}.{eventType} on bus', () => {
+    render(<WidgetFrame {...defaultProps} channel="teamA" />);
+    const handler = getOnMessageHandler();
+
+    handler({ type: 'EMIT', eventType: 'counter.changed', payload: { count: 5 } });
+
+    expect(bus.emit).toHaveBeenCalledWith('widget.teamA.counter.changed', { count: 5 });
+    // Must NOT emit to the global (unchanneled) bus event
+    expect(bus.emit).not.toHaveBeenCalledWith('widget.counter.changed', { count: 5 });
+  });
+
+  it('EMIT without channel routes to global widget.{eventType} (backward-compatible)', () => {
+    render(<WidgetFrame {...defaultProps} />);
+    const handler = getOnMessageHandler();
+
+    handler({ type: 'EMIT', eventType: 'counter.changed', payload: { count: 10 } });
+
+    expect(bus.emit).toHaveBeenCalledWith('widget.counter.changed', { count: 10 });
+  });
+
+  it('SUBSCRIBE with channel subscribes to widget.{channel}.{eventType}', () => {
+    render(<WidgetFrame {...defaultProps} channel="teamB" />);
+    const handler = getOnMessageHandler();
+
+    handler({ type: 'SUBSCRIBE', eventType: 'counter.changed' });
+
+    // bus.subscribe should have been called with the channeled event type
+    expect(bus.subscribe).toHaveBeenCalledWith(
+      'widget.teamB.counter.changed',
+      expect.any(Function),
+    );
+  });
+
+  it('channel bus subscriptions are cleaned up on unmount', () => {
+    const mockUnsub = vi.fn();
+    (bus.subscribe as ReturnType<typeof vi.fn>).mockReturnValue(mockUnsub);
+
+    const { unmount } = render(<WidgetFrame {...defaultProps} channel="cleanup" />);
+    const handler = getOnMessageHandler();
+
+    handler({ type: 'SUBSCRIBE', eventType: 'some.event' });
+
+    unmount();
+
+    expect(mockUnsub).toHaveBeenCalled();
   });
 });

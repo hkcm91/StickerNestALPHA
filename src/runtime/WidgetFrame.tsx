@@ -60,17 +60,30 @@ export interface WidgetFrameProps {
   width: number;
   /** Container height */
   height: number;
+  /** Optional channel namespace for event routing isolation */
+  channel?: string;
+}
+
+/**
+ * Computes the bus event type, optionally namespaced by channel.
+ * No channel = global: `widget.counter.changed`
+ * Channel "A" = isolated: `widget.A.counter.changed`
+ */
+function toBusEventType(channel: string | undefined, eventType: string): string {
+  return channel ? `widget.${channel}.${eventType}` : `widget.${eventType}`;
 }
 
 /**
  * Inner iframe component wrapped by error boundary.
  */
 const WidgetIframe: React.FC<WidgetFrameProps> = (props) => {
-  const { widgetId, instanceId, widgetHtml, config, theme, visible, width, height } = props;
+  const { widgetId, instanceId, widgetHtml, config, theme, visible, width, height, channel } = props;
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const bridgeRef = useRef<WidgetBridge | null>(null);
   const lifecycleRef = useRef<WidgetLifecycleManager | null>(null);
   const crossCanvasRouterRef = useRef<CrossCanvasRouter | null>(null);
+  // Track bus subscriptions per event type for cleanup
+  const busSubscriptionsRef = useRef<Map<string, () => void>>(new Map());
 
   // Memoize srcdoc — keyed on widgetId, widgetHtml, instanceId
   // Config and theme changes are delivered via postMessage, NOT srcdoc rebuild
@@ -117,8 +130,36 @@ const WidgetIframe: React.FC<WidgetFrameProps> = (props) => {
 
         case 'EMIT':
           // Forward to kernel event bus
-          bus.emit(`widget.${message.eventType}`, message.payload);
+          bus.emit(toBusEventType(channel, message.eventType), message.payload);
           break;
+
+        case 'SUBSCRIBE': {
+          const eventType = message.eventType;
+          const resolvedBusType = toBusEventType(channel, eventType);
+          // Only subscribe if not already subscribed to this event type
+          if (!busSubscriptionsRef.current.has(eventType)) {
+            const unsubscribe = bus.subscribe(resolvedBusType, (busEvent: unknown) => {
+              // Extract payload from BusEvent - bus delivers { type, payload, timestamp, ... }
+              const payload = (busEvent as { payload: unknown }).payload;
+              // Forward bus events to widget via EVENT message
+              bridge.send({
+                type: 'EVENT',
+                event: { type: eventType, payload },
+              });
+            });
+            busSubscriptionsRef.current.set(eventType, unsubscribe);
+          }
+          break;
+        }
+
+        case 'UNSUBSCRIBE': {
+          const unsubscribeFn = busSubscriptionsRef.current.get(message.eventType);
+          if (unsubscribeFn) {
+            unsubscribeFn();
+            busSubscriptionsRef.current.delete(message.eventType);
+          }
+          break;
+        }
 
         case 'SET_STATE': {
           try {
@@ -281,6 +322,11 @@ const WidgetIframe: React.FC<WidgetFrameProps> = (props) => {
         crossCanvasRouterRef.current.destroy();
         crossCanvasRouterRef.current = null;
       }
+      // Clean up all bus subscriptions
+      for (const unsubscribe of busSubscriptionsRef.current.values()) {
+        unsubscribe();
+      }
+      busSubscriptionsRef.current.clear();
       bridgeRef.current = null;
       lifecycleRef.current = null;
     };
