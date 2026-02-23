@@ -120,10 +120,16 @@ export function generateSDKTemplate(): string {
         break;
 
       case 'STATE_RESPONSE':
-        var pending = _pendingRequests[data.key];
+        var stateKey = 'state:' + data.key;
+        var userStateKey = 'userState:' + data.key;
+        var pending = _pendingRequests[stateKey] || _pendingRequests[userStateKey];
         if (pending) {
           pending.resolve(data.value);
-          delete _pendingRequests[data.key];
+          if (_pendingRequests[stateKey]) {
+            delete _pendingRequests[stateKey];
+          } else {
+            delete _pendingRequests[userStateKey];
+          }
         }
         break;
 
@@ -168,10 +174,15 @@ export function generateSDKTemplate(): string {
     },
 
     subscribe: function(type, handler) {
+      var isFirstHandler = !_eventHandlers[type] || _eventHandlers[type].length === 0;
       if (!_eventHandlers[type]) {
         _eventHandlers[type] = [];
       }
       _eventHandlers[type].push(handler);
+      // Notify host on first subscription to this event type
+      if (isFirstHandler) {
+        postToHost({ type: 'SUBSCRIBE', eventType: type });
+      }
     },
 
     unsubscribe: function(type, handler) {
@@ -183,6 +194,8 @@ export function generateSDKTemplate(): string {
         }
         if (handlers.length === 0) {
           delete _eventHandlers[type];
+          // Notify host when no handlers remain for this event type
+          postToHost({ type: 'UNSUBSCRIBE', eventType: type });
         }
       }
     },
@@ -193,8 +206,7 @@ export function generateSDKTemplate(): string {
 
     getState: function(key) {
       return new Promise(function(resolve, reject) {
-        var requestKey = '__state_' + (++_requestCounter) + '_' + key;
-        _pendingRequests[key] = { resolve: resolve, reject: reject };
+        _pendingRequests['state:' + key] = { resolve: resolve, reject: reject };
         postToHost({ type: 'GET_STATE', key: key });
       });
     },
@@ -205,8 +217,7 @@ export function generateSDKTemplate(): string {
 
     getUserState: function(key) {
       return new Promise(function(resolve, reject) {
-        var requestKey = '__ustate_' + (++_requestCounter) + '_' + key;
-        _pendingRequests[key] = { resolve: resolve, reject: reject };
+        _pendingRequests['userState:' + key] = { resolve: resolve, reject: reject };
         postToHost({ type: 'GET_USER_STATE', key: key });
       });
     },

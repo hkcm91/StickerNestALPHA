@@ -59,6 +59,7 @@ export {
   ShellEvents,
   SpatialEvents,
   MarketplaceEvents,
+  SocialGraphEvents,
   // JSON Schemas
   BusEventJSONSchema,
 } from './bus-event';
@@ -100,6 +101,7 @@ export {
   Transform3DSchema,
   CanvasEntityBaseSchema,
   StickerEntitySchema,
+  LottieEntitySchema,
   TextEntitySchema,
   WidgetContainerEntitySchema,
   ShapeTypeSchema,
@@ -114,6 +116,7 @@ export {
   type Transform3D,
   type CanvasEntityBase,
   type StickerEntity,
+  type LottieEntity,
   type TextEntity,
   type WidgetContainerEntity,
   type ShapeEntity,
@@ -123,6 +126,7 @@ export {
   type CanvasEntity,
   // JSON Schemas
   CanvasEntityBaseJSONSchema,
+  LottieEntityJSONSchema,
   CanvasEntityJSONSchema,
 } from './canvas-entity';
 
@@ -185,3 +189,71 @@ export {
   PipelineEdgeJSONSchema,
   PipelineJSONSchema,
 } from './pipeline';
+
+// =============================================================================
+// Social Graph Schemas
+// =============================================================================
+export {
+  // Profile Schemas
+  ProfileVisibilitySchema,
+  UserProfileSchema,
+  UpdateProfileInputSchema,
+  // Follow Schemas
+  FollowStatusSchema,
+  FollowRelationshipSchema,
+  // Post Schemas
+  PostVisibilitySchema,
+  PostContentTypeSchema,
+  PostAttachmentSchema,
+  PostSchema,
+  CreatePostInputSchema,
+  // Reaction Schemas
+  ReactionTypeSchema,
+  ReactionTargetTypeSchema,
+  ReactionSchema,
+  // Comment Schemas
+  CommentTargetTypeSchema,
+  CommentSchema,
+  CreateCommentInputSchema,
+  // Notification Schemas
+  NotificationTypeSchema,
+  NotificationSchema,
+  // Feed Schemas
+  FeedTypeSchema,
+  FeedCursorSchema,
+  FeedResponseSchema,
+  // Integration Query Types
+  SocialQueryTypeSchema,
+  SocialMutationTypeSchema,
+  // Types
+  type ProfileVisibility,
+  type UserProfile,
+  type UpdateProfileInput,
+  type FollowStatus,
+  type FollowRelationship,
+  type PostVisibility,
+  type PostContentType,
+  type PostAttachment,
+  type Post,
+  type CreatePostInput,
+  type ReactionType,
+  type ReactionTargetType,
+  type Reaction,
+  type CommentTargetType,
+  type Comment,
+  type CreateCommentInput,
+  type NotificationType,
+  type Notification,
+  type FeedType,
+  type FeedCursor,
+  type FeedResponse,
+  type SocialQueryType,
+  type SocialMutationType,
+  // JSON Schemas
+  UserProfileJSONSchema,
+  PostJSONSchema,
+  CommentJSONSchema,
+  ReactionJSONSchema,
+  NotificationJSONSchema,
+  FeedResponseJSONSchema,
+} from './social-graph';

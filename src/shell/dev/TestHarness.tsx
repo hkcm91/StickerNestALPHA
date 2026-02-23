@@ -28,9 +28,11 @@ import { bus } from '../../kernel/bus';
 
 import { CanvasCorePanel } from './panels/CanvasCorePanel';
 import { EventBusPanel } from './panels/EventBusPanel';
+import { ImageGenerationPanel } from './panels/ImageGenerationPanel';
 import { MultiEntityCanvas } from './panels/MultiEntityCanvas';
 import { PipelinePanel } from './panels/PipelinePanel';
 import { SpatialCanvasPanel } from './panels/SpatialCanvasPanel';
+import { VideoEditingPanel } from './panels/VideoEditingPanel';
 import { WidgetRuntimePanel } from './panels/WidgetRuntimePanel';
 import { type EntityType, createTestEntity } from './test-entity-factory';
 import { ThemeToggle } from './ThemeToggle';
@@ -153,6 +155,18 @@ export const TestHarness: React.FC = () => {
     setEntities([...sceneGraph.getAllEntities()]);
     bus.emit('canvas.entity.reordered', { entityId: selectedId, action: 'sendToBack' });
   };
+  const bringForward = () => {
+    if (!selectedId) return;
+    sceneGraph.bringForward(selectedId);
+    setEntities([...sceneGraph.getAllEntities()]);
+    bus.emit('canvas.entity.reordered', { entityId: selectedId, action: 'bringForward' });
+  };
+  const sendBackward = () => {
+    if (!selectedId) return;
+    sceneGraph.sendBackward(selectedId);
+    setEntities([...sceneGraph.getAllEntities()]);
+    bus.emit('canvas.entity.reordered', { entityId: selectedId, action: 'sendBackward' });
+  };
 
   // ---- Hit Testing ----
   const runHitTest = () => {
@@ -250,7 +264,8 @@ export const TestHarness: React.FC = () => {
           clearAllEntities={clearAllEntities}
           selectedEntity={selectedEntity} selectedId={selectedId}
           moveSelectedEntity={moveSelectedEntity} bringToFront={bringToFront}
-          sendToBack={sendToBack} removeEntity={removeEntity}
+          sendToBack={sendToBack} bringForward={bringForward}
+          sendBackward={sendBackward} removeEntity={removeEntity}
           entities={entities} selectEntity={selectEntity}
           hitTestCoords={hitTestCoords} setHitTestCoords={setHitTestCoords}
           runHitTest={runHitTest} hitTestResult={hitTestResult}
@@ -265,6 +280,8 @@ export const TestHarness: React.FC = () => {
           addPipelineNode={addPipelineNode} connectNodes={connectNodes}
           clearPipeline={() => { setPipelineNodes([]); setPipelineEdges([]); }}
         />
+        <VideoEditingPanel />
+        <ImageGenerationPanel />
         <MultiEntityCanvas />
         <SpatialCanvasPanel />
       </div>

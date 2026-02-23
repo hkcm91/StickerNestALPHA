@@ -45,6 +45,8 @@ export type WidgetMessage =
   | { type: 'READY' }
   | { type: 'REGISTER'; manifest: unknown }
   | { type: 'EMIT'; eventType: string; payload: unknown }
+  | { type: 'SUBSCRIBE'; eventType: string }
+  | { type: 'UNSUBSCRIBE'; eventType: string }
   | { type: 'SET_STATE'; key: string; value: unknown }
   | { type: 'GET_STATE'; key: string }
   | { type: 'SET_USER_STATE'; key: string; value: unknown }

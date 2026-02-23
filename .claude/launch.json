@@ -1,0 +1,29 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "dev",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["node_modules/vite/bin/vite.js"],
+      "port": 5173
+    },
+    {
+      "name": "storybook",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["node_modules/storybook/bin/index.cjs", "dev", "-p", "6006"],
+      "port": 6006
+    },
+    {
+      "name": "preview",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["node_modules/vite/bin/vite.js", "preview"],
+      "port": 4173
+    },
+    {
+      "name": "mcp-dev",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["--import", "tsx", "src/index.ts"],
+      "port": 3000
+    }
+  ]
+}

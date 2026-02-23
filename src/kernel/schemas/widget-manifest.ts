@@ -37,6 +37,8 @@ export const WidgetPermissionSchema = z.enum([
   'geolocation',
   /** Access to cross-canvas events */
   'cross-canvas',
+  /** Access to AI generation APIs (image, video, etc.) */
+  'ai',
 ]);
 
 export type WidgetPermission = z.infer<typeof WidgetPermissionSchema>;

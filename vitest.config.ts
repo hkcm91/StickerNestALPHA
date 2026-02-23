@@ -6,8 +6,8 @@ export default defineConfig({
     // Test file patterns
     include: ['**/*.test.ts', '**/*.test.tsx', '**/*.spec.ts', '**/*.spec.tsx'],
 
-    // Exclude patterns
-    exclude: ['node_modules', 'dist', '**/*.d.ts'],
+    // Exclude patterns (e2e tests run separately with Playwright)
+    exclude: ['node_modules', 'dist', '**/*.d.ts', 'e2e/**'],
 
     // Coverage configuration
     coverage: {
@@ -49,10 +49,12 @@ export default defineConfig({
     // TypeScript support via native ESM
     environment: 'node',
 
-    // Runtime tests need jsdom for React component + iframe testing
+    // Browser environment tests use happy-dom (better ESM compatibility than jsdom)
     environmentMatchGlobs: [
-      ['src/runtime/**/*.test.{ts,tsx}', 'jsdom'],
-      ['src/shell/**/*.test.{ts,tsx}', 'jsdom'],
+      ['src/runtime/**/*.test.{ts,tsx}', 'happy-dom'],
+      ['src/shell/**/*.test.{ts,tsx}', 'happy-dom'],
+      ['src/spatial/**/*.test.{ts,tsx}', 'happy-dom'],
+      ['src/social/**/*.test.{ts,tsx}', 'happy-dom'],
     ],
   },
 

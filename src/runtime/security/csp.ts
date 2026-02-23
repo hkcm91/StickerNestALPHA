@@ -3,7 +3,7 @@
  *
  * Generates the CSP meta tag for widget iframe srcdoc.
  * Default policy: no network, inline scripts/styles only,
- * data/blob URIs for images.
+ * data/blob URIs for images and media.
  *
  * @module runtime/security
  * @layer L3
@@ -18,6 +18,7 @@ export const DEFAULT_CSP = [
   "script-src 'unsafe-inline'",
   "style-src 'unsafe-inline'",
   'img-src data: blob:',
+  'media-src data: blob:',
   'font-src data:',
   "connect-src 'none'",
 ].join('; ');

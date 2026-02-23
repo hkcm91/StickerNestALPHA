@@ -28,6 +28,7 @@ export const CanvasEntityTypeSchema = z.enum([
   'drawing',
   'group',
   'docker',
+  'lottie',
 ]);
 
 export type CanvasEntityType = z.infer<typeof CanvasEntityTypeSchema>;
@@ -114,9 +115,38 @@ export const StickerEntitySchema = CanvasEntityBaseSchema.extend({
   altText: z.string().optional(),
   /** Aspect ratio lock */
   aspectLocked: z.boolean().default(true),
+  /** Bus event type emitted on click */
+  clickEventType: z.string().optional(),
+  /** Custom payload data attached to the click event */
+  clickEventPayload: z.record(z.string(), z.unknown()).optional(),
+  /** Hover effect style */
+  hoverEffect: z.enum(['none', 'scale', 'glow', 'opacity']).default('none'),
 });
 
 export type StickerEntity = z.infer<typeof StickerEntitySchema>;
+
+/**
+ * Lottie animation entity schema
+ */
+export const LottieEntitySchema = CanvasEntityBaseSchema.extend({
+  type: z.literal('lottie'),
+  /** URL to the .lottie or .json animation file */
+  assetUrl: z.string().url(),
+  /** Whether animation loops */
+  loop: z.boolean().default(true),
+  /** Playback speed multiplier (1.0 = normal) */
+  speed: z.number().positive().default(1),
+  /** Playback direction: 1 = forward, -1 = reverse */
+  direction: z.number().int().min(-1).max(1).default(1),
+  /** Whether animation starts playing immediately */
+  autoplay: z.boolean().default(true),
+  /** Alt text for accessibility */
+  altText: z.string().optional(),
+  /** Aspect ratio lock */
+  aspectLocked: z.boolean().default(true),
+});
+
+export type LottieEntity = z.infer<typeof LottieEntitySchema>;
 
 /**
  * Text entity schema
@@ -226,6 +256,7 @@ export type DockerEntity = z.infer<typeof DockerEntitySchema>;
  */
 export const CanvasEntitySchema = z.discriminatedUnion('type', [
   StickerEntitySchema,
+  LottieEntitySchema,
   TextEntitySchema,
   WidgetContainerEntitySchema,
   ShapeEntitySchema,
@@ -240,4 +271,5 @@ export type CanvasEntity = z.infer<typeof CanvasEntitySchema>;
  * JSON Schema exports for external validation
  */
 export const CanvasEntityBaseJSONSchema = CanvasEntityBaseSchema.toJSONSchema();
+export const LottieEntityJSONSchema = LottieEntitySchema.toJSONSchema();
 export const CanvasEntityJSONSchema = CanvasEntitySchema.toJSONSchema();

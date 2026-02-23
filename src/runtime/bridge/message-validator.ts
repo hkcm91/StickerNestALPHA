@@ -35,6 +35,8 @@ const WidgetMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('READY') }),
   z.object({ type: z.literal('REGISTER'), manifest: z.unknown() }),
   z.object({ type: z.literal('EMIT'), eventType: z.string(), payload: z.unknown() }),
+  z.object({ type: z.literal('SUBSCRIBE'), eventType: z.string() }),
+  z.object({ type: z.literal('UNSUBSCRIBE'), eventType: z.string() }),
   z.object({ type: z.literal('SET_STATE'), key: z.string(), value: z.unknown() }),
   z.object({ type: z.literal('GET_STATE'), key: z.string() }),
   z.object({ type: z.literal('SET_USER_STATE'), key: z.string(), value: z.unknown() }),

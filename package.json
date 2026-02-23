@@ -38,13 +38,14 @@
     "prepare": "husky"
   },
   "dependencies": {
+    "@lottiefiles/dotlottie-web": "^0.64.1",
     "@supabase/supabase-js": "^2.97.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-router-dom": "^7.13.0",
-    "three": "^0.183.0",
+    "three": "^0.183.1",
     "vite": "^5.4.21",
     "y-protocols": "^1.0.7",
     "yjs": "^13.6.29",
@@ -73,6 +74,7 @@
     "eslint-import-resolver-typescript": "^4.4.4",
     "eslint-plugin-boundaries": "^4.2.0",
     "eslint-plugin-import": "^2.31.0",
+    "happy-dom": "^20.6.3",
     "husky": "^9.0.0",
     "jsdom": "^28.1.0",
     "lint-staged": "^16.2.7",

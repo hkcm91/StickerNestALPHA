@@ -152,6 +152,40 @@ describe('StickerNest SDK Template', () => {
     await expect(promise).resolves.toBe('dark');
   });
 
+  it('getState() and getUserState() with same key do not collide', async () => {
+    // Call both concurrently with the same key name
+    const statePromise = sdk.getState('settings');
+    const userStatePromise = sdk.getUserState('settings');
+
+    // Verify both messages were posted
+    const stateCalls = parentPostMessage.mock.calls.filter(
+      (call: any[]) => call[0]?.type === 'GET_STATE' && call[0]?.key === 'settings',
+    );
+    const userStateCalls = parentPostMessage.mock.calls.filter(
+      (call: any[]) => call[0]?.type === 'GET_USER_STATE' && call[0]?.key === 'settings',
+    );
+    expect(stateCalls).toHaveLength(1);
+    expect(userStateCalls).toHaveLength(1);
+
+    // Simulate STATE_RESPONSE for getState (host responds synchronously first)
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        data: { type: 'STATE_RESPONSE', key: 'settings', value: 'instance-value' },
+      }),
+    );
+
+    // Simulate STATE_RESPONSE for getUserState (arrives second via bus)
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        data: { type: 'STATE_RESPONSE', key: 'settings', value: 'user-value' },
+      }),
+    );
+
+    // Both promises should resolve to their correct values
+    await expect(statePromise).resolves.toBe('instance-value');
+    await expect(userStatePromise).resolves.toBe('user-value');
+  });
+
   it('getConfig() returns config from last INIT', () => {
     // Before INIT, config should be empty
     expect(sdk.getConfig()).toEqual({});

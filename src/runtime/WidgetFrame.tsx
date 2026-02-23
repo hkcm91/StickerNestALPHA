@@ -20,8 +20,7 @@ import type { WidgetBridge } from './bridge/bridge';
 import type { ThemeTokens } from './bridge/message-types';
 import { createCrossCanvasRouter } from './cross-canvas/cross-canvas-router';
 import type { CrossCanvasRouter } from './cross-canvas/cross-canvas-router';
-import { createIntegrationProxy } from './integrations/integration-proxy';
-import type { IntegrationProxy } from './integrations/integration-proxy';
+import { getIntegrationProxy } from './integrations/singleton';
 import { WidgetErrorBoundary } from './lifecycle/error-boundary';
 import { createLifecycleManager } from './lifecycle/manager';
 import type { WidgetLifecycleManager } from './lifecycle/manager';
@@ -38,7 +37,7 @@ const MAX_USER_STATE_SIZE = 10_485_760;
 const READY_TIMEOUT_MS = 5_000;
 
 /** Shared integration proxy — host-side registry for proxied external calls */
-const integrationProxy: IntegrationProxy = createIntegrationProxy();
+const integrationProxy = getIntegrationProxy();
 
 /**
  * Props for the WidgetFrame component.

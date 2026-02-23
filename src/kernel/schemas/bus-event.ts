@@ -105,6 +105,9 @@ export const CanvasEvents = {
   PIPELINE_EDGE_DELETED: 'canvas.pipeline.edge.deleted',
   PIPELINE_NODE_ADDED: 'canvas.pipeline.node.added',
   PIPELINE_NODE_REMOVED: 'canvas.pipeline.node.removed',
+  ENTITY_GROUPED: 'canvas.entity.grouped',
+  ENTITY_UNGROUPED: 'canvas.entity.ungrouped',
+  GROUP_CHILDREN_CHANGED: 'canvas.group.children.changed',
 } as const;
 
 /**
@@ -150,6 +153,42 @@ export const MarketplaceEvents = {
   WIDGET_DEPRECATED: 'marketplace.widget.deprecated',
   PUBLISH_REQUEST: 'marketplace.publish.request',
   PUBLISH_RESPONSE: 'marketplace.publish.response',
+} as const;
+
+/**
+ * Event type constants for Social Graph (Layer 0 - Kernel infrastructure)
+ * The social graph is persistent data that widgets render via integration.
+ * NOT the same as SocialEvents (Layer 1 real-time collaboration).
+ */
+export const SocialGraphEvents = {
+  // Profile events
+  PROFILE_CREATED: 'kernel.socialgraph.profile.created',
+  PROFILE_UPDATED: 'kernel.socialgraph.profile.updated',
+
+  // Follow events
+  FOLLOW_CREATED: 'kernel.socialgraph.follow.created',
+  FOLLOW_DELETED: 'kernel.socialgraph.follow.deleted',
+  FOLLOW_ACCEPTED: 'kernel.socialgraph.follow.accepted',
+  FOLLOW_REJECTED: 'kernel.socialgraph.follow.rejected',
+
+  // Post events
+  POST_CREATED: 'kernel.socialgraph.post.created',
+  POST_UPDATED: 'kernel.socialgraph.post.updated',
+  POST_DELETED: 'kernel.socialgraph.post.deleted',
+
+  // Reaction events
+  REACTION_ADDED: 'kernel.socialgraph.reaction.added',
+  REACTION_REMOVED: 'kernel.socialgraph.reaction.removed',
+
+  // Comment events
+  COMMENT_CREATED: 'kernel.socialgraph.comment.created',
+  COMMENT_UPDATED: 'kernel.socialgraph.comment.updated',
+  COMMENT_DELETED: 'kernel.socialgraph.comment.deleted',
+
+  // Notification events
+  NOTIFICATION_CREATED: 'kernel.socialgraph.notification.created',
+  NOTIFICATION_READ: 'kernel.socialgraph.notification.read',
+  NOTIFICATIONS_ALL_READ: 'kernel.socialgraph.notifications.allRead',
 } as const;
 
 /**

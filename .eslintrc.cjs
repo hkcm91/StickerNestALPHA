@@ -16,6 +16,8 @@ module.exports = {
     '*.config.js',
     '*.config.cjs',
     'plop/',
+    'mcp-dev/**',
+    'supabase/functions/**',
   ],
   env: {
     browser: true,

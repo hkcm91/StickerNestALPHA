@@ -6,11 +6,12 @@
  */
 
 import React, { Suspense, useEffect } from 'react';
-import { Routes, Route, useLocation } from 'react-router-dom';
+import { Routes, Route, Link, useLocation } from 'react-router-dom';
 
 import { ShellEvents } from '@sn/types';
 
 import { bus } from '../../kernel/bus';
+import { TestHarness } from '../dev';
 
 import {
   DashboardPage,
@@ -50,15 +51,32 @@ function RouteChangeEmitter(): null {
 }
 
 /**
+ * Global navigation bar — visible on every page including login.
+ */
+const GlobalNav: React.FC = () => (
+  <nav data-testid="global-nav">
+    <Link to="/">Dashboard</Link>
+    <Link to="/canvas/demo">Canvas</Link>
+    <Link to="/lab">Lab</Link>
+    <Link to="/marketplace">Marketplace</Link>
+    <Link to="/settings">Settings</Link>
+    <Link to="/dev/test">Dev</Link>
+    <Link to="/login">Login</Link>
+  </nav>
+);
+
+/**
  * Main application router.
  * BrowserRouter must be provided by a parent (main.tsx).
  */
 export const AppRouter: React.FC = () => (
   <>
     <RouteChangeEmitter />
+    <GlobalNav />
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/invite/:token" element={<InvitePage />} />
+      <Route path="/dev/test" element={<TestHarness />} />
 
       <Route
         path="/"

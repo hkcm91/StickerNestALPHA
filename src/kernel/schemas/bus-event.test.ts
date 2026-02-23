@@ -190,6 +190,12 @@ describe('BusEvent Schemas', () => {
         expect(CanvasEvents.ENTITY_CONFIG_UPDATED).toBe('canvas.entity.config.updated');
       });
 
+      it('should have group/container events', () => {
+        expect(CanvasEvents.ENTITY_GROUPED).toBe('canvas.entity.grouped');
+        expect(CanvasEvents.ENTITY_UNGROUPED).toBe('canvas.entity.ungrouped');
+        expect(CanvasEvents.GROUP_CHILDREN_CHANGED).toBe('canvas.group.children.changed');
+      });
+
       it('should have mode events', () => {
         expect(CanvasEvents.MODE_CHANGED).toBe('canvas.mode.changed');
       });
@@ -237,6 +243,34 @@ describe('BusEvent Schemas', () => {
       it('should have entity events', () => {
         expect(SpatialEvents.ENTITY_PLACED).toBe('spatial.entity.placed');
       });
+    });
+  });
+
+  describe('Group/Container bus events', () => {
+    it('should create a valid entity.grouped event via factory', () => {
+      const event = createBusEvent(CanvasEvents.ENTITY_GROUPED, {
+        groupId: '550e8400-e29b-41d4-a716-446655440000',
+        childIds: [
+          '550e8400-e29b-41d4-a716-446655440001',
+          '550e8400-e29b-41d4-a716-446655440002',
+        ],
+      });
+
+      expect(event.type).toBe('canvas.entity.grouped');
+      expect(event.payload.groupId).toBeDefined();
+      expect(event.payload.childIds.length).toBe(2);
+    });
+
+    it('should create a valid group.children.changed event via factory', () => {
+      const event = createBusEvent(CanvasEvents.GROUP_CHILDREN_CHANGED, {
+        groupId: '550e8400-e29b-41d4-a716-446655440000',
+        added: ['550e8400-e29b-41d4-a716-446655440003'],
+        removed: [],
+      });
+
+      expect(event.type).toBe('canvas.group.children.changed');
+      expect(event.payload.added.length).toBe(1);
+      expect(event.payload.removed.length).toBe(0);
     });
   });
 

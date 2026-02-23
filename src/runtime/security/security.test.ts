@@ -41,6 +41,10 @@ describe('CSP', () => {
     expect(DEFAULT_CSP).toContain('img-src data: blob:');
   });
 
+  it('allows data: and blob: for media (video/audio)', () => {
+    expect(DEFAULT_CSP).toContain('media-src data: blob:');
+  });
+
   it('allows data: for fonts', () => {
     expect(DEFAULT_CSP).toContain('font-src data:');
   });

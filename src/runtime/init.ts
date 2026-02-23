@@ -16,6 +16,8 @@ import { bus } from '../kernel/bus';
 import { useWidgetStore } from '../kernel/stores/widget/widget.store';
 import type { WidgetRegistryEntry } from '../kernel/stores/widget/widget.store';
 
+import { createAiHandler } from './integrations/ai-handler';
+import { getIntegrationProxy } from './integrations/singleton';
 import { createIframePool, DEFAULT_WARMUP_COUNT } from './pool/iframe-pool';
 import type { IframePool } from './pool/iframe-pool';
 import { createRateLimiter } from './security/rate-limiter';
@@ -174,7 +176,11 @@ export function initRuntime(): void {
   // 3. Register built-in widgets
   registerBuiltInWidgets();
 
-  // 4. Subscribe to bus events relevant to runtime
+  // 4. Register integration handlers
+  const proxy = getIntegrationProxy();
+  proxy.register('ai', createAiHandler());
+
+  // 5. Subscribe to bus events relevant to runtime
   const unsubTheme = bus.subscribe('shell.theme.changed', (_event: BusEvent) => {
     // Theme changes are forwarded to individual WidgetFrame instances
     // via their useEffect on theme prop — no global action needed here
@@ -207,6 +213,9 @@ export function teardownRuntime(): void {
     unsub();
   }
   busUnsubscribes.length = 0;
+
+  // Unregister integration handlers
+  getIntegrationProxy().unregister('ai');
 
   // Destroy pool
   pool?.destroy();

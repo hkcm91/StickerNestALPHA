@@ -83,8 +83,8 @@ vi.mock('./sdk/sdk-builder', () => ({
   ),
 }));
 
-vi.mock('./integrations/integration-proxy', () => ({
-  createIntegrationProxy: vi.fn(() => ({
+vi.mock('./integrations/singleton', () => ({
+  getIntegrationProxy: vi.fn(() => ({
     register: vi.fn(),
     unregister: vi.fn(),
     query: vi.fn().mockResolvedValue(undefined),
@@ -111,6 +111,7 @@ import { useWidgetStore } from '../kernel/stores/widget/widget.store';
 
 import { createWidgetBridge } from './bridge/bridge';
 import type { ThemeTokens } from './bridge/message-types';
+import { createCrossCanvasRouter } from './cross-canvas/cross-canvas-router';
 import { createLifecycleManager } from './lifecycle/manager';
 import { buildSrcdoc } from './sdk/sdk-builder';
 import { SANDBOX_POLICY } from './security/sandbox-policy';
@@ -910,5 +911,400 @@ describe('WidgetFrame', () => {
     unmount();
 
     expect(mockUnsub).toHaveBeenCalled();
+  });
+
+  // -----------------------------------------------------------------------
+  // Cross-Canvas Routing
+  // -----------------------------------------------------------------------
+
+  describe('Cross-Canvas Routing', () => {
+    it('A1: CROSS_CANVAS_EMIT forwards to router', () => {
+      render(<WidgetFrame {...defaultProps} />);
+      const handler = getOnMessageHandler();
+
+      // Subscribe first to create the router
+      handler({ type: 'CROSS_CANVAS_SUBSCRIBE', channel: 'room-1' });
+
+      const mockRouter = vi.mocked(createCrossCanvasRouter).mock.results[0].value;
+
+      // Now emit
+      handler({ type: 'CROSS_CANVAS_EMIT', channel: 'room-1', payload: { x: 1 } });
+
+      expect(mockRouter.emit).toHaveBeenCalledWith('room-1', { x: 1 });
+    });
+
+    it('A2: CROSS_CANVAS_EMIT without router is no-op', () => {
+      render(<WidgetFrame {...defaultProps} />);
+      const handler = getOnMessageHandler();
+
+      // Emit before any subscribe — router does not exist yet
+      handler({ type: 'CROSS_CANVAS_EMIT', channel: 'room-1', payload: { x: 1 } });
+
+      expect(createCrossCanvasRouter).not.toHaveBeenCalled();
+      // No error thrown — test passes if it reaches here
+    });
+
+    it('A3: CROSS_CANVAS_SUBSCRIBE lazy-creates router', () => {
+      render(<WidgetFrame {...defaultProps} />);
+      const handler = getOnMessageHandler();
+
+      handler({ type: 'CROSS_CANVAS_SUBSCRIBE', channel: 'ch1' });
+
+      expect(createCrossCanvasRouter).toHaveBeenCalledOnce();
+
+      const mockRouter = vi.mocked(createCrossCanvasRouter).mock.results[0].value;
+      expect(mockRouter.subscribe).toHaveBeenCalledWith('ch1', expect.any(Function));
+    });
+
+    it('A4: CROSS_CANVAS_SUBSCRIBE reuses existing router', () => {
+      render(<WidgetFrame {...defaultProps} />);
+      const handler = getOnMessageHandler();
+
+      handler({ type: 'CROSS_CANVAS_SUBSCRIBE', channel: 'ch1' });
+      handler({ type: 'CROSS_CANVAS_SUBSCRIBE', channel: 'ch2' });
+
+      // Router created only once
+      expect(createCrossCanvasRouter).toHaveBeenCalledOnce();
+
+      const mockRouter = vi.mocked(createCrossCanvasRouter).mock.results[0].value;
+      // Subscribe called twice — once per channel
+      expect(mockRouter.subscribe).toHaveBeenCalledTimes(2);
+      expect(mockRouter.subscribe).toHaveBeenCalledWith('ch1', expect.any(Function));
+      expect(mockRouter.subscribe).toHaveBeenCalledWith('ch2', expect.any(Function));
+    });
+
+    it('A5: CROSS_CANVAS_SUBSCRIBE callback forwards events to widget via bridge', () => {
+      render(<WidgetFrame {...defaultProps} />);
+      const handler = getOnMessageHandler();
+
+      handler({ type: 'CROSS_CANVAS_SUBSCRIBE', channel: 'ch1' });
+
+      const mockRouter = vi.mocked(createCrossCanvasRouter).mock.results[0].value;
+
+      // Extract the callback passed to router.subscribe
+      const callback = mockRouter.subscribe.mock.calls[0][1];
+
+      // Invoke the callback as if a cross-canvas event arrived
+      callback({ data: 42 });
+
+      expect(mockBridge.send).toHaveBeenCalledWith({
+        type: 'CROSS_CANVAS_EVENT',
+        channel: 'ch1',
+        payload: { data: 42 },
+      });
+    });
+
+    it('A6: CROSS_CANVAS_UNSUBSCRIBE calls router.unsubscribe', () => {
+      render(<WidgetFrame {...defaultProps} />);
+      const handler = getOnMessageHandler();
+
+      // Subscribe first to create the router
+      handler({ type: 'CROSS_CANVAS_SUBSCRIBE', channel: 'ch1' });
+
+      const mockRouter = vi.mocked(createCrossCanvasRouter).mock.results[0].value;
+
+      // Now unsubscribe
+      handler({ type: 'CROSS_CANVAS_UNSUBSCRIBE', channel: 'ch1' });
+
+      expect(mockRouter.unsubscribe).toHaveBeenCalledWith('ch1');
+    });
+
+    it('A7: CROSS_CANVAS_UNSUBSCRIBE without router is no-op', () => {
+      render(<WidgetFrame {...defaultProps} />);
+      const handler = getOnMessageHandler();
+
+      // Unsubscribe before any subscribe — router does not exist yet
+      handler({ type: 'CROSS_CANVAS_UNSUBSCRIBE', channel: 'ch1' });
+
+      expect(createCrossCanvasRouter).not.toHaveBeenCalled();
+      // No error thrown — test passes if it reaches here
+    });
+
+    it('A8: Router destroyed on unmount', () => {
+      const { unmount } = render(<WidgetFrame {...defaultProps} />);
+      const handler = getOnMessageHandler();
+
+      // Subscribe to create the router
+      handler({ type: 'CROSS_CANVAS_SUBSCRIBE', channel: 'ch1' });
+
+      const mockRouter = vi.mocked(createCrossCanvasRouter).mock.results[0].value;
+
+      unmount();
+
+      expect(mockRouter.destroy).toHaveBeenCalled();
+    });
+
+    it('A9: No destroy call if router never created', () => {
+      const { unmount } = render(<WidgetFrame {...defaultProps} />);
+
+      // Unmount without any cross-canvas messages
+      unmount();
+
+      // Router was never created
+      expect(createCrossCanvasRouter).not.toHaveBeenCalled();
+      // No crash — test passes if it reaches here
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Multi-Widget Channel Isolation (Category B)
+  // -----------------------------------------------------------------------
+
+  describe('Multi-Widget Channel Isolation', () => {
+    // Per-instance bridge tracking
+    const bridgeInstances: Array<{
+      send: ReturnType<typeof vi.fn>;
+      onMessage: ReturnType<typeof vi.fn>;
+      isReady: ReturnType<typeof vi.fn>;
+      destroy: ReturnType<typeof vi.fn>;
+    }> = [];
+
+    // Live bus that actually delivers events
+    const busSubs = new Map<string, Set<(event: unknown) => void>>();
+
+    beforeEach(() => {
+      bridgeInstances.length = 0;
+      busSubs.clear();
+
+      // Each createWidgetBridge call returns a unique bridge
+      vi.mocked(createWidgetBridge).mockImplementation(() => {
+        const bridge = {
+          send: vi.fn(),
+          onMessage: vi.fn(),
+          isReady: vi.fn(() => false),
+          destroy: vi.fn(),
+        };
+        bridgeInstances.push(bridge);
+        return bridge as any;
+      });
+
+      // Live bus — subscribe stores callbacks, emit delivers
+      vi.mocked(bus.subscribe).mockImplementation((pattern: string, handler: any) => {
+        if (!busSubs.has(pattern)) busSubs.set(pattern, new Set());
+        busSubs.get(pattern)!.add(handler);
+        return vi.fn(() => { busSubs.get(pattern)?.delete(handler); });
+      });
+      vi.mocked(bus.emit).mockImplementation((type: string, payload: unknown) => {
+        busSubs.get(type)?.forEach(fn => fn({ type, payload }));
+      });
+    });
+
+    function getHandlerForBridge(bridgeIndex: number) {
+      return bridgeInstances[bridgeIndex].onMessage.mock.calls[0][0] as (msg: Record<string, unknown>) => void;
+    }
+
+    it('B1: two widgets on same channel both receive events', () => {
+      render(<WidgetFrame {...defaultProps} channel="room1" instanceId="w-a" />);
+      render(<WidgetFrame {...defaultProps} channel="room1" instanceId="w-b" />);
+
+      const handlerA = getHandlerForBridge(0);
+      const handlerB = getHandlerForBridge(1);
+
+      // Both widgets subscribe to the same event type
+      handlerA({ type: 'SUBSCRIBE', eventType: 'counter.update' });
+      handlerB({ type: 'SUBSCRIBE', eventType: 'counter.update' });
+
+      // Emit on the live bus via the channeled event type
+      bus.emit('widget.room1.counter.update', { count: 5 });
+
+      // Both bridges should have received the EVENT
+      expect(bridgeInstances[0].send).toHaveBeenCalledWith({
+        type: 'EVENT',
+        event: { type: 'counter.update', payload: { count: 5 } },
+      });
+      expect(bridgeInstances[1].send).toHaveBeenCalledWith({
+        type: 'EVENT',
+        event: { type: 'counter.update', payload: { count: 5 } },
+      });
+    });
+
+    it('B2: two widgets on different channels do not cross', () => {
+      render(<WidgetFrame {...defaultProps} channel="room1" instanceId="w-a" />);
+      render(<WidgetFrame {...defaultProps} channel="room2" instanceId="w-b" />);
+
+      const handlerA = getHandlerForBridge(0);
+      const handlerB = getHandlerForBridge(1);
+
+      // Both subscribe to the same event type name, but on different channels
+      handlerA({ type: 'SUBSCRIBE', eventType: 'counter.update' });
+      handlerB({ type: 'SUBSCRIBE', eventType: 'counter.update' });
+
+      // Emit only on room1 channel
+      bus.emit('widget.room1.counter.update', { count: 5 });
+
+      // Widget A (room1) should receive the EVENT
+      expect(bridgeInstances[0].send).toHaveBeenCalledWith({
+        type: 'EVENT',
+        event: { type: 'counter.update', payload: { count: 5 } },
+      });
+
+      // Widget B (room2) should NOT receive the EVENT
+      expect(bridgeInstances[1].send).not.toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'EVENT' }),
+      );
+    });
+
+    it('B3: global widget receives global events only, not channeled events', () => {
+      render(<WidgetFrame {...defaultProps} instanceId="w-a" />);
+      render(<WidgetFrame {...defaultProps} channel="room1" instanceId="w-b" />);
+
+      const handlerA = getHandlerForBridge(0);
+      const handlerB = getHandlerForBridge(1);
+
+      // Both subscribe to 'ping'
+      handlerA({ type: 'SUBSCRIBE', eventType: 'ping' });
+      handlerB({ type: 'SUBSCRIBE', eventType: 'ping' });
+
+      // Emit on the global (unchanneled) bus event type
+      bus.emit('widget.ping', {});
+
+      // Widget A (global) should receive the EVENT
+      expect(bridgeInstances[0].send).toHaveBeenCalledWith({
+        type: 'EVENT',
+        event: { type: 'ping', payload: {} },
+      });
+
+      // Widget B (room1) should NOT receive the EVENT —
+      // it subscribes to widget.room1.ping, not widget.ping
+      expect(bridgeInstances[1].send).not.toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'EVENT' }),
+      );
+    });
+
+    it('B4: channeled widget does not receive global events', () => {
+      render(<WidgetFrame {...defaultProps} channel="room1" instanceId="w-a" />);
+
+      const handlerA = getHandlerForBridge(0);
+
+      // Subscribe to 'ping' (resolves to widget.room1.ping)
+      handlerA({ type: 'SUBSCRIBE', eventType: 'ping' });
+
+      // Emit on the global (unchanneled) bus event type
+      bus.emit('widget.ping', {});
+
+      // Widget A (room1) should NOT receive the EVENT —
+      // it subscribes to widget.room1.ping, not widget.ping
+      expect(bridgeInstances[0].send).not.toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'EVENT' }),
+      );
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Multi-Widget Cross-Canvas Communication (Category C)
+  // -----------------------------------------------------------------------
+
+  describe('Multi-Widget Cross-Canvas Communication', () => {
+    // Per-instance bridge tracking
+    const bridgeInstances: Array<{
+      send: ReturnType<typeof vi.fn>;
+      onMessage: ReturnType<typeof vi.fn>;
+      isReady: ReturnType<typeof vi.fn>;
+      destroy: ReturnType<typeof vi.fn>;
+    }> = [];
+
+    // Live bus that actually delivers events
+    const busSubs = new Map<string, Set<(event: unknown) => void>>();
+
+    // Shared cross-canvas relay — all router instances share this
+    const crossCanvasSubs = new Map<string, Set<(payload: unknown) => void>>();
+
+    beforeEach(() => {
+      bridgeInstances.length = 0;
+      busSubs.clear();
+      crossCanvasSubs.clear();
+
+      // Each createWidgetBridge call returns a unique bridge
+      vi.mocked(createWidgetBridge).mockImplementation(() => {
+        const bridge = {
+          send: vi.fn(),
+          onMessage: vi.fn(),
+          isReady: vi.fn(() => false),
+          destroy: vi.fn(),
+        };
+        bridgeInstances.push(bridge);
+        return bridge as any;
+      });
+
+      // Live bus — subscribe stores callbacks, emit delivers
+      vi.mocked(bus.subscribe).mockImplementation((pattern: string, handler: any) => {
+        if (!busSubs.has(pattern)) busSubs.set(pattern, new Set());
+        busSubs.get(pattern)!.add(handler);
+        return vi.fn(() => { busSubs.get(pattern)?.delete(handler); });
+      });
+      vi.mocked(bus.emit).mockImplementation((type: string, payload: unknown) => {
+        busSubs.get(type)?.forEach(fn => fn({ type, payload }));
+      });
+
+      // Cross-canvas router mock — all instances share the same relay
+      vi.mocked(createCrossCanvasRouter).mockImplementation(() => ({
+        subscribe: vi.fn((channel: string, cb: (payload: unknown) => void) => {
+          if (!crossCanvasSubs.has(channel)) crossCanvasSubs.set(channel, new Set());
+          crossCanvasSubs.get(channel)!.add(cb);
+        }),
+        unsubscribe: vi.fn((channel: string) => {
+          crossCanvasSubs.get(channel)?.clear();
+        }),
+        emit: vi.fn((channel: string, payload: unknown) => {
+          crossCanvasSubs.get(channel)?.forEach(fn => fn(payload));
+        }),
+        destroy: vi.fn(),
+      } as any));
+    });
+
+    function getHandlerForBridge(bridgeIndex: number) {
+      return bridgeInstances[bridgeIndex].onMessage.mock.calls[0][0] as (msg: Record<string, unknown>) => void;
+    }
+
+    it('C1: Widget A emits cross-canvas, Widget B receives', () => {
+      render(<WidgetFrame {...defaultProps} instanceId="w-a" />);
+      render(<WidgetFrame {...defaultProps} instanceId="w-b" />);
+
+      const handlerA = getHandlerForBridge(0);
+      const handlerB = getHandlerForBridge(1);
+
+      // Widget B subscribes to a cross-canvas channel
+      handlerB({ type: 'CROSS_CANVAS_SUBSCRIBE', channel: 'shared' });
+
+      // Widget A emits on the same cross-canvas channel
+      handlerA({ type: 'CROSS_CANVAS_SUBSCRIBE', channel: 'shared' }); // create router first
+      handlerA({ type: 'CROSS_CANVAS_EMIT', channel: 'shared', payload: { msg: 'hello' } });
+
+      // Widget B's bridge should have received the cross-canvas event
+      expect(bridgeInstances[1].send).toHaveBeenCalledWith({
+        type: 'CROSS_CANVAS_EVENT',
+        channel: 'shared',
+        payload: { msg: 'hello' },
+      });
+    });
+
+    it('C2: different cross-canvas channels do not cross', () => {
+      render(<WidgetFrame {...defaultProps} instanceId="w-a" />);
+      render(<WidgetFrame {...defaultProps} instanceId="w-b" />);
+
+      const handlerA = getHandlerForBridge(0);
+      const handlerB = getHandlerForBridge(1);
+
+      // Widget A subscribes to 'alpha', Widget B subscribes to 'beta'
+      handlerA({ type: 'CROSS_CANVAS_SUBSCRIBE', channel: 'alpha' });
+      handlerB({ type: 'CROSS_CANVAS_SUBSCRIBE', channel: 'beta' });
+
+      // Widget A emits on 'alpha'
+      handlerA({ type: 'CROSS_CANVAS_EMIT', channel: 'alpha', payload: { x: 1 } });
+
+      // Widget A's bridge should have received the cross-canvas event for alpha
+      // (it subscribed to alpha, so it gets its own emit too via the shared relay)
+      expect(bridgeInstances[0].send).toHaveBeenCalledWith({
+        type: 'CROSS_CANVAS_EVENT',
+        channel: 'alpha',
+        payload: { x: 1 },
+      });
+
+      // Widget B's bridge should NOT have received any cross-canvas event
+      // (it is only subscribed to 'beta', not 'alpha')
+      expect(bridgeInstances[1].send).not.toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'CROSS_CANVAS_EVENT' }),
+      );
+    });
   });
 });
