@@ -133,12 +133,50 @@ export const ShellEvents = {
  * Event type constants for Spatial/VR layer
  */
 export const SpatialEvents = {
+  // Session lifecycle
   SESSION_STARTED: 'spatial.session.started',
   SESSION_ENDED: 'spatial.session.ended',
+
+  // Session mode events
+  SESSION_MODE_CHANGED: 'spatial.session.mode.changed',
+  SESSION_VISIBILITY_CHANGED: 'spatial.session.visibility.changed',
+
+  // Controller events
   CONTROLLER_SELECT: 'spatial.controller.select',
   CONTROLLER_GRAB: 'spatial.controller.grab',
   CONTROLLER_RELEASE: 'spatial.controller.release',
+
+  // Hand tracking events
+  HAND_TRACKING_STARTED: 'spatial.hand.tracking.started',
+  HAND_TRACKING_ENDED: 'spatial.hand.tracking.ended',
+  HAND_PINCH: 'spatial.hand.pinch',
+  HAND_GRAB: 'spatial.hand.grab',
+  HAND_RELEASE: 'spatial.hand.release',
+
+  // MR plane detection events
+  PLANE_DETECTED: 'spatial.plane.detected',
+  PLANE_UPDATED: 'spatial.plane.updated',
+  PLANE_REMOVED: 'spatial.plane.removed',
+
+  // MR mesh detection events
+  MESH_DETECTED: 'spatial.mesh.detected',
+  MESH_UPDATED: 'spatial.mesh.updated',
+  MESH_REMOVED: 'spatial.mesh.removed',
+
+  // Spatial anchor events
+  ANCHOR_CREATED: 'spatial.anchor.created',
+  ANCHOR_DELETED: 'spatial.anchor.deleted',
+
+  // Hit test events
+  HIT_TEST_RESULT: 'spatial.hitTest.result',
+
+  // Entity events (spatial-specific)
   ENTITY_PLACED: 'spatial.entity.placed',
+  ENTITY_TRANSFORMED: 'spatial.entity.transformed',
+  ENTITY_REMOVED: 'spatial.entity.removed',
+
+  // Locomotion events
+  TELEPORT_REQUESTED: 'spatial.teleport.requested',
 } as const;
 
 /**

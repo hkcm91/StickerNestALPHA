@@ -28,6 +28,11 @@ export {
   Size2DSchema,
   BoundingBox2DSchema,
   SpatialContextSchema,
+  XRSessionModeSchema,
+  DetectedPlaneSchema,
+  DetectedMeshSchema,
+  SpatialAnchorSchema,
+  HandJointSchema,
   // Types
   type Vector3,
   type Quaternion,
@@ -35,10 +40,19 @@ export {
   type Size2D,
   type BoundingBox2D,
   type SpatialContext,
+  type XRSessionMode,
+  type DetectedPlane,
+  type DetectedMesh,
+  type SpatialAnchor,
+  type HandJoint,
   // JSON Schemas
   Vector3JSONSchema,
   QuaternionJSONSchema,
   SpatialContextJSONSchema,
+  DetectedPlaneJSONSchema,
+  DetectedMeshJSONSchema,
+  SpatialAnchorJSONSchema,
+  HandJointJSONSchema,
 } from './spatial';
 
 // =============================================================================
@@ -118,6 +132,8 @@ export {
   DrawingEntitySchema,
   GroupEntitySchema,
   DockerEntitySchema,
+  AudioEntitySchema,
+  SvgEntitySchema,
   CanvasEntitySchema,
   // Types
   type CanvasEntityType,
@@ -135,10 +151,14 @@ export {
   type DrawingEntity,
   type GroupEntity,
   type DockerEntity,
+  type AudioEntity,
+  type SvgEntity,
   type CanvasEntity,
   // JSON Schemas
   CanvasEntityBaseJSONSchema,
   LottieEntityJSONSchema,
+  AudioEntityJSONSchema,
+  SvgEntityJSONSchema,
   CanvasEntityJSONSchema,
   WidgetIntrinsicSizeJSONSchema,
   WidgetScalingModeJSONSchema,
