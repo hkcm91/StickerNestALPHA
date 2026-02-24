@@ -232,6 +232,8 @@ describe('BusEvent Schemas', () => {
       it('should have session events', () => {
         expect(SpatialEvents.SESSION_STARTED).toBe('spatial.session.started');
         expect(SpatialEvents.SESSION_ENDED).toBe('spatial.session.ended');
+        expect(SpatialEvents.SESSION_MODE_CHANGED).toBe('spatial.session.mode.changed');
+        expect(SpatialEvents.SESSION_VISIBILITY_CHANGED).toBe('spatial.session.visibility.changed');
       });
 
       it('should have controller events', () => {
@@ -240,8 +242,43 @@ describe('BusEvent Schemas', () => {
         expect(SpatialEvents.CONTROLLER_RELEASE).toBe('spatial.controller.release');
       });
 
+      it('should have hand tracking events', () => {
+        expect(SpatialEvents.HAND_TRACKING_STARTED).toBe('spatial.hand.tracking.started');
+        expect(SpatialEvents.HAND_TRACKING_ENDED).toBe('spatial.hand.tracking.ended');
+        expect(SpatialEvents.HAND_PINCH).toBe('spatial.hand.pinch');
+        expect(SpatialEvents.HAND_GRAB).toBe('spatial.hand.grab');
+        expect(SpatialEvents.HAND_RELEASE).toBe('spatial.hand.release');
+      });
+
+      it('should have plane detection events', () => {
+        expect(SpatialEvents.PLANE_DETECTED).toBe('spatial.plane.detected');
+        expect(SpatialEvents.PLANE_UPDATED).toBe('spatial.plane.updated');
+        expect(SpatialEvents.PLANE_REMOVED).toBe('spatial.plane.removed');
+      });
+
+      it('should have mesh detection events', () => {
+        expect(SpatialEvents.MESH_DETECTED).toBe('spatial.mesh.detected');
+        expect(SpatialEvents.MESH_UPDATED).toBe('spatial.mesh.updated');
+        expect(SpatialEvents.MESH_REMOVED).toBe('spatial.mesh.removed');
+      });
+
+      it('should have anchor events', () => {
+        expect(SpatialEvents.ANCHOR_CREATED).toBe('spatial.anchor.created');
+        expect(SpatialEvents.ANCHOR_DELETED).toBe('spatial.anchor.deleted');
+      });
+
+      it('should have hit test events', () => {
+        expect(SpatialEvents.HIT_TEST_RESULT).toBe('spatial.hitTest.result');
+      });
+
       it('should have entity events', () => {
         expect(SpatialEvents.ENTITY_PLACED).toBe('spatial.entity.placed');
+        expect(SpatialEvents.ENTITY_TRANSFORMED).toBe('spatial.entity.transformed');
+        expect(SpatialEvents.ENTITY_REMOVED).toBe('spatial.entity.removed');
+      });
+
+      it('should have locomotion events', () => {
+        expect(SpatialEvents.TELEPORT_REQUESTED).toBe('spatial.teleport.requested');
       });
     });
   });

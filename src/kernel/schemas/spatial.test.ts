@@ -12,12 +12,22 @@ import {
   Size2DSchema,
   BoundingBox2DSchema,
   SpatialContextSchema,
+  XRSessionModeSchema,
+  DetectedPlaneSchema,
+  DetectedMeshSchema,
+  SpatialAnchorSchema,
+  HandJointSchema,
   Vector3JSONSchema,
   QuaternionJSONSchema,
   Point2DJSONSchema,
   Size2DJSONSchema,
   BoundingBox2DJSONSchema,
   SpatialContextJSONSchema,
+  DetectedPlaneJSONSchema,
+  DetectedMeshJSONSchema,
+  SpatialAnchorJSONSchema,
+  HandJointJSONSchema,
+  XRSessionModeJSONSchema,
   type Vector3,
   type Quaternion,
   type Point2D,
@@ -230,6 +240,172 @@ describe('Spatial Schemas', () => {
     it('should export SpatialContext JSON schema', () => {
       expect(SpatialContextJSONSchema).toBeDefined();
       expect(typeof SpatialContextJSONSchema).toBe('object');
+    });
+
+    it('should export MR JSON schemas', () => {
+      expect(DetectedPlaneJSONSchema).toBeDefined();
+      expect(DetectedMeshJSONSchema).toBeDefined();
+      expect(SpatialAnchorJSONSchema).toBeDefined();
+      expect(HandJointJSONSchema).toBeDefined();
+      expect(XRSessionModeJSONSchema).toBeDefined();
+    });
+  });
+
+  describe('XRSessionModeSchema', () => {
+    it('should accept immersive-vr', () => {
+      expect(XRSessionModeSchema.safeParse('immersive-vr').success).toBe(true);
+    });
+
+    it('should accept immersive-ar', () => {
+      expect(XRSessionModeSchema.safeParse('immersive-ar').success).toBe(true);
+    });
+
+    it('should accept inline', () => {
+      expect(XRSessionModeSchema.safeParse('inline').success).toBe(true);
+    });
+
+    it('should reject unknown mode', () => {
+      expect(XRSessionModeSchema.safeParse('immersive-mr').success).toBe(false);
+    });
+  });
+
+  describe('DetectedPlaneSchema', () => {
+    it('should parse valid plane with semantic label', () => {
+      const result = DetectedPlaneSchema.safeParse({
+        id: 'plane-1',
+        semanticLabel: 'floor',
+        position: { x: 0, y: 0, z: 0 },
+        rotation: { x: 0, y: 0, z: 0, w: 1 },
+        polygon: [{ x: -1, y: 0, z: -1 }, { x: 1, y: 0, z: -1 }, { x: 1, y: 0, z: 1 }],
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('should accept plane without semantic label', () => {
+      const result = DetectedPlaneSchema.safeParse({
+        id: 'plane-2',
+        position: { x: 0, y: 0, z: 0 },
+        rotation: { x: 0, y: 0, z: 0, w: 1 },
+        polygon: [],
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('should reject plane without polygon', () => {
+      const result = DetectedPlaneSchema.safeParse({
+        id: 'plane-3',
+        position: { x: 0, y: 0, z: 0 },
+        rotation: { x: 0, y: 0, z: 0, w: 1 },
+      });
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe('DetectedMeshSchema', () => {
+    it('should parse valid mesh with semantic label', () => {
+      const result = DetectedMeshSchema.safeParse({
+        id: 'mesh-1',
+        semanticLabel: 'table',
+        position: { x: 1, y: 0.5, z: -2 },
+        rotation: { x: 0, y: 0, z: 0, w: 1 },
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('should accept mesh without semantic label', () => {
+      const result = DetectedMeshSchema.safeParse({
+        id: 'mesh-2',
+        position: { x: 0, y: 0, z: 0 },
+        rotation: { x: 0, y: 0, z: 0, w: 1 },
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('should reject mesh without id', () => {
+      const result = DetectedMeshSchema.safeParse({
+        position: { x: 0, y: 0, z: 0 },
+        rotation: { x: 0, y: 0, z: 0, w: 1 },
+      });
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe('SpatialAnchorSchema', () => {
+    it('should parse valid persistent anchor', () => {
+      const result = SpatialAnchorSchema.safeParse({
+        id: 'anchor-1',
+        position: { x: 1, y: 1, z: -1 },
+        rotation: { x: 0, y: 0, z: 0, w: 1 },
+        persistent: true,
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.persistent).toBe(true);
+      }
+    });
+
+    it('should parse valid non-persistent anchor', () => {
+      const result = SpatialAnchorSchema.safeParse({
+        id: 'anchor-2',
+        position: { x: 0, y: 0, z: 0 },
+        rotation: { x: 0, y: 0, z: 0, w: 1 },
+        persistent: false,
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('should reject anchor without persistent flag', () => {
+      const result = SpatialAnchorSchema.safeParse({
+        id: 'anchor-3',
+        position: { x: 0, y: 0, z: 0 },
+        rotation: { x: 0, y: 0, z: 0, w: 1 },
+      });
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe('HandJointSchema', () => {
+    it('should parse valid left hand joint', () => {
+      const result = HandJointSchema.safeParse({
+        hand: 'left',
+        joint: 'index-finger-tip',
+        position: { x: 0.1, y: 1.2, z: -0.3 },
+        rotation: { x: 0, y: 0, z: 0, w: 1 },
+        radius: 0.008,
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('should parse valid right hand joint', () => {
+      const result = HandJointSchema.safeParse({
+        hand: 'right',
+        joint: 'wrist',
+        position: { x: -0.1, y: 1.0, z: -0.4 },
+        rotation: { x: 0, y: 0.3826834, z: 0, w: 0.9238795 },
+        radius: 0.025,
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('should reject invalid hand value', () => {
+      const result = HandJointSchema.safeParse({
+        hand: 'center',
+        joint: 'wrist',
+        position: { x: 0, y: 0, z: 0 },
+        rotation: { x: 0, y: 0, z: 0, w: 1 },
+        radius: 0.01,
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('should reject missing radius', () => {
+      const result = HandJointSchema.safeParse({
+        hand: 'left',
+        joint: 'thumb-tip',
+        position: { x: 0, y: 0, z: 0 },
+        rotation: { x: 0, y: 0, z: 0, w: 1 },
+      });
+      expect(result.success).toBe(false);
     });
   });
 });
