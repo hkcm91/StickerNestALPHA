@@ -35,6 +35,7 @@ import { CanvasOverlayLayer } from './CanvasOverlayLayer';
 import { CanvasToolLayer } from './CanvasToolLayer';
 import { CanvasViewportLayer } from './CanvasViewportLayer';
 import { SelectionOverlay } from './components';
+import { initAlignHandler } from './handlers';
 import { useActiveTool, useCanvasInput, useCanvasShortcuts, useSceneGraph, useSelection, useViewport } from './hooks';
 
 export interface CanvasWorkspaceProps {
@@ -92,6 +93,12 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
       unsubToggle();
     };
   }, []);
+
+  // Initialize alignment handler — subscribes to align/distribute bus events
+  useEffect(() => {
+    const teardown = initAlignHandler(() => sceneGraph);
+    return teardown;
+  }, [sceneGraph]);
 
   // Viewport state (pan/zoom)
   const { viewport, store: viewportStore } = useViewport();

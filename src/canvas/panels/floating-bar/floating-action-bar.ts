@@ -33,7 +33,21 @@ export function createFloatingActionBarController(): FloatingActionBarController
         { id: 'send-back', label: 'Send to Back', action: 'sendToBack' },
       ];
       if (selectedCount > 1) {
-        actions.push({ id: 'group', label: 'Group', action: 'group' });
+        actions.push(
+          { id: 'group', label: 'Group', action: 'group' },
+          { id: 'align-left', label: 'Align Left', action: 'alignLeft' },
+          { id: 'align-center-h', label: 'Align Center H', action: 'alignCenterH' },
+          { id: 'align-right', label: 'Align Right', action: 'alignRight' },
+          { id: 'align-top', label: 'Align Top', action: 'alignTop' },
+          { id: 'align-center-v', label: 'Align Center V', action: 'alignCenterV' },
+          { id: 'align-bottom', label: 'Align Bottom', action: 'alignBottom' },
+        );
+      }
+      if (selectedCount > 2) {
+        actions.push(
+          { id: 'distribute-h', label: 'Distribute H', action: 'distributeH' },
+          { id: 'distribute-v', label: 'Distribute V', action: 'distributeV' },
+        );
       }
       return actions;
     },
@@ -62,6 +76,30 @@ export function createFloatingActionBarController(): FloatingActionBarController
           break;
         case 'group':
           bus.emit('canvas.entity.group', { entityIds });
+          break;
+        case 'alignLeft':
+          bus.emit('canvas.align.left', { entityIds });
+          break;
+        case 'alignRight':
+          bus.emit('canvas.align.right', { entityIds });
+          break;
+        case 'alignTop':
+          bus.emit('canvas.align.top', { entityIds });
+          break;
+        case 'alignBottom':
+          bus.emit('canvas.align.bottom', { entityIds });
+          break;
+        case 'alignCenterH':
+          bus.emit('canvas.align.centerH', { entityIds });
+          break;
+        case 'alignCenterV':
+          bus.emit('canvas.align.centerV', { entityIds });
+          break;
+        case 'distributeH':
+          bus.emit('canvas.distribute.horizontal', { entityIds });
+          break;
+        case 'distributeV':
+          bus.emit('canvas.distribute.vertical', { entityIds });
           break;
       }
     },
