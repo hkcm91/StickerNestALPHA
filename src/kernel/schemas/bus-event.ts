@@ -156,6 +156,97 @@ export const MarketplaceEvents = {
 } as const;
 
 /**
+ * Event type constants for Grid layer (Canvas Core - L4A-1)
+ * Grid events are canvas-level, prefixed with `canvas.grid.*`
+ */
+export const GridEvents = {
+  /** A single cell was painted */
+  CELL_PAINTED: 'canvas.grid.cell.painted',
+  /** A single cell was cleared */
+  CELL_CLEARED: 'canvas.grid.cell.cleared',
+  /** Multiple cells were painted in a batch (stroke) */
+  CELLS_BATCH_PAINTED: 'canvas.grid.cells.batchPainted',
+  /** Grid configuration was changed */
+  CONFIG_CHANGED: 'canvas.grid.config.changed',
+  /** Grid was toggled on/off */
+  TOGGLED: 'canvas.grid.toggled',
+  /** All grid cells were cleared */
+  CLEARED: 'canvas.grid.cleared',
+} as const;
+
+/**
+ * Event type constants for Canvas Document (persistence)
+ * These events are emitted when canvas document state changes.
+ */
+export const CanvasDocumentEvents = {
+  /** Canvas document was loaded */
+  LOADED: 'canvas.document.loaded',
+  /** Canvas document was saved */
+  SAVED: 'canvas.document.saved',
+  /** Canvas document metadata was updated */
+  META_UPDATED: 'canvas.document.meta.updated',
+  /** Canvas viewport configuration changed */
+  VIEWPORT_CHANGED: 'canvas.document.viewport.changed',
+  /** Canvas background changed */
+  BACKGROUND_CHANGED: 'canvas.document.background.changed',
+  /** Canvas layout mode changed */
+  LAYOUT_MODE_CHANGED: 'canvas.document.layoutMode.changed',
+  /** Canvas document version migrated */
+  MIGRATED: 'canvas.document.migrated',
+} as const;
+
+/**
+ * Event type constants for Interaction Mode
+ * Controls how the canvas responds to user input.
+ */
+export const InteractionModeEvents = {
+  /** Interaction mode changed (edit/play) */
+  MODE_CHANGED: 'canvas.interaction.mode.changed',
+  /** Chrome mode changed (editor/clean) */
+  CHROME_MODE_CHANGED: 'canvas.interaction.chrome.changed',
+} as const;
+
+/**
+ * Event type constants for Input Layer
+ * Normalized input events from various input sources.
+ */
+export const InputEvents = {
+  // Pointer events (normalized from mouse/touch)
+  POINTER_DOWN: 'canvas.input.pointer.down',
+  POINTER_MOVE: 'canvas.input.pointer.move',
+  POINTER_UP: 'canvas.input.pointer.up',
+  POINTER_CANCEL: 'canvas.input.pointer.cancel',
+  // Gesture events (interpreted from touch)
+  GESTURE_PINCH: 'canvas.input.gesture.pinch',
+  GESTURE_PAN: 'canvas.input.gesture.pan',
+  GESTURE_DOUBLE_TAP: 'canvas.input.gesture.doubleTap',
+  GESTURE_LONG_PRESS: 'canvas.input.gesture.longPress',
+} as const;
+
+/**
+ * Event type constants for Layout Mode
+ * Events related to layout constraint system.
+ */
+export const LayoutModeEvents = {
+  /** Layout constraints were applied during move */
+  MOVE_CONSTRAINED: 'canvas.layout.move.constrained',
+  /** Layout constraints were applied during resize */
+  RESIZE_CONSTRAINED: 'canvas.layout.resize.constrained',
+  /** Snap points were calculated */
+  SNAP_POINTS_UPDATED: 'canvas.layout.snapPoints.updated',
+} as const;
+
+/**
+ * Event type constants for Background System
+ */
+export const BackgroundEvents = {
+  /** Background was rendered */
+  RENDERED: 'canvas.background.rendered',
+  /** Background was invalidated */
+  INVALIDATED: 'canvas.background.invalidated',
+} as const;
+
+/**
  * Event type constants for Social Graph (Layer 0 - Kernel infrastructure)
  * The social graph is persistent data that widgets render via integration.
  * NOT the same as SocialEvents (Layer 1 real-time collaboration).

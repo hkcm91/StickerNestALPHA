@@ -60,6 +60,12 @@ export {
   SpatialEvents,
   MarketplaceEvents,
   SocialGraphEvents,
+  GridEvents,
+  CanvasDocumentEvents,
+  InteractionModeEvents,
+  InputEvents,
+  LayoutModeEvents,
+  BackgroundEvents,
   // JSON Schemas
   BusEventJSONSchema,
 } from './bus-event';
@@ -104,6 +110,9 @@ export {
   LottieEntitySchema,
   TextEntitySchema,
   WidgetContainerEntitySchema,
+  WidgetIntrinsicSizeSchema,
+  WidgetScalingModeSchema,
+  WidgetCropConfigSchema,
   ShapeTypeSchema,
   ShapeEntitySchema,
   DrawingEntitySchema,
@@ -119,6 +128,9 @@ export {
   type LottieEntity,
   type TextEntity,
   type WidgetContainerEntity,
+  type WidgetIntrinsicSize,
+  type WidgetScalingMode,
+  type WidgetCropConfig,
   type ShapeEntity,
   type DrawingEntity,
   type GroupEntity,
@@ -128,6 +140,10 @@ export {
   CanvasEntityBaseJSONSchema,
   LottieEntityJSONSchema,
   CanvasEntityJSONSchema,
+  WidgetIntrinsicSizeJSONSchema,
+  WidgetScalingModeJSONSchema,
+  WidgetCropConfigJSONSchema,
+  WidgetContainerEntityJSONSchema,
 } from './canvas-entity';
 
 // =============================================================================
@@ -225,6 +241,9 @@ export {
   // Integration Query Types
   SocialQueryTypeSchema,
   SocialMutationTypeSchema,
+  // Integration Request Schemas (discriminated unions)
+  SocialGraphQuerySchema,
+  SocialGraphMutationSchema,
   // Types
   type ProfileVisibility,
   type UserProfile,
@@ -249,6 +268,8 @@ export {
   type FeedResponse,
   type SocialQueryType,
   type SocialMutationType,
+  type SocialGraphQuery,
+  type SocialGraphMutation,
   // JSON Schemas
   UserProfileJSONSchema,
   PostJSONSchema,
@@ -257,3 +278,160 @@ export {
   NotificationJSONSchema,
   FeedResponseJSONSchema,
 } from './social-graph';
+
+// =============================================================================
+// Notion Integration Schemas
+// =============================================================================
+export {
+  // Common Types
+  NotionColorSchema,
+  NotionRichTextSchema,
+  NotionParentSchema,
+  // Property Types
+  NotionPropertyValueSchema,
+  NotionFilterConditionSchema,
+  NotionFilterSchema,
+  NotionSortSchema,
+  // Response Schemas
+  NotionPageSchema,
+  NotionDatabaseSchema,
+  NotionDatabasePropertySchema,
+  NotionQueryResponseSchema,
+  NotionSearchResultSchema,
+  NotionSearchResponseSchema,
+  // Query/Mutation Schemas (for integration handler)
+  NotionQuerySchema,
+  NotionMutationSchema,
+  NotionPropertiesInputSchema,
+  // Types
+  type NotionColor,
+  type NotionRichText,
+  type NotionParent,
+  type NotionPropertyValue,
+  type NotionFilterCondition,
+  type NotionFilter,
+  type NotionSort,
+  type NotionPage,
+  type NotionDatabase,
+  type NotionDatabaseProperty,
+  type NotionQueryResponse,
+  type NotionSearchResult,
+  type NotionSearchResponse,
+  type NotionQuery,
+  type NotionMutation,
+  type NotionPropertiesInput,
+  // JSON Schemas
+  NotionPageJSONSchema,
+  NotionDatabaseJSONSchema,
+  NotionQueryResponseJSONSchema,
+} from './notion-integration';
+
+// =============================================================================
+// World Instance Schemas
+// =============================================================================
+export {
+  // Schemas
+  WorldModeSchema,
+  WorldStatusSchema,
+  WorldOptionsSchema,
+  PresenceSnapshotSchema,
+  WidgetInstanceSnapshotSchema,
+  HistorySnapshotSchema,
+  WorldSnapshotSchema,
+  // Types
+  type WorldMode,
+  type WorldStatus,
+  type WorldOptions,
+  type PresenceSnapshot,
+  type WidgetInstanceSnapshot,
+  type HistorySnapshot,
+  type WorldSnapshot,
+  // Event Constants
+  WorldEvents,
+  // JSON Schemas
+  WorldModeJSONSchema,
+  WorldStatusJSONSchema,
+  WorldOptionsJSONSchema,
+  WorldSnapshotJSONSchema,
+} from './world';
+
+// =============================================================================
+// Grid Layer Schemas
+// =============================================================================
+export {
+  // Cell Schemas
+  GridCellFillTypeSchema,
+  GridCellSchema,
+  // Config Schemas
+  GridSnapModeSchema,
+  GridProjectionModeSchema,
+  GridConfigSchema,
+  // State Schema
+  GridStateSchema,
+  // Event Payload Schemas
+  GridCellPaintedPayloadSchema,
+  GridCellClearedPayloadSchema,
+  GridCellsBatchPaintedPayloadSchema,
+  GridConfigChangedPayloadSchema,
+  GridClearedPayloadSchema,
+  // Types
+  type GridCellFillType,
+  type GridCell,
+  type GridSnapMode,
+  type GridProjectionMode,
+  type GridConfig,
+  type GridState,
+  type GridCellPaintedPayload,
+  type GridCellClearedPayload,
+  type GridCellsBatchPaintedPayload,
+  type GridConfigChangedPayload,
+  type GridClearedPayload,
+  // JSON Schema getters (lazy-evaluated)
+  getGridCellJSONSchema,
+  getGridConfigJSONSchema,
+  getGridStateJSONSchema,
+} from './grid';
+
+// =============================================================================
+// Canvas Document Schemas
+// =============================================================================
+export {
+  // Background Schemas
+  SolidBackgroundSchema,
+  GradientStopSchema,
+  GradientBackgroundSchema,
+  ImageBackgroundModeSchema,
+  ImageBackgroundSchema,
+  BackgroundSpecSchema,
+  DEFAULT_BACKGROUND,
+  // Viewport Config Schema
+  ViewportConfigSchema,
+  // Layout Mode Schema
+  LayoutModeSchema,
+  // Document Schemas
+  CanvasDocumentMetaSchema,
+  CanvasDocumentSchema,
+  CANVAS_DOCUMENT_VERSION,
+  // Input Schemas
+  CreateCanvasDocumentInputSchema,
+  UpdateCanvasDocumentInputSchema,
+  // Types
+  type SolidBackground,
+  type GradientStop,
+  type GradientBackground,
+  type ImageBackgroundMode,
+  type ImageBackground,
+  type BackgroundSpec,
+  type ViewportConfig,
+  type LayoutMode,
+  type CanvasDocumentMeta,
+  type CanvasDocument,
+  type CreateCanvasDocumentInput,
+  type UpdateCanvasDocumentInput,
+  // JSON Schemas
+  BackgroundSpecJSONSchema,
+  ViewportConfigJSONSchema,
+  LayoutModeJSONSchema,
+  CanvasDocumentMetaJSONSchema,
+  CanvasDocumentJSONSchema,
+} from './canvas-document';

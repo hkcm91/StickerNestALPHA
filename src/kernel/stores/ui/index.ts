@@ -10,6 +10,7 @@ export {
 
 export type {
   Toast,
+  ChromeMode,
   UIState,
   UIActions,
   UIStore,

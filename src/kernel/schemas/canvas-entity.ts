@@ -5,7 +5,7 @@
 
 import { z } from 'zod';
 
-import { Point2DSchema, Size2DSchema, Vector3Schema, QuaternionSchema } from './spatial';
+import { Point2DSchema, Size2DSchema, BoundingBox2DSchema, Vector3Schema, QuaternionSchema } from './spatial';
 
 /**
  * Entity type enum
@@ -169,6 +169,58 @@ export const TextEntitySchema = CanvasEntityBaseSchema.extend({
 
 export type TextEntity = z.infer<typeof TextEntitySchema>;
 
+// =============================================================================
+// Widget Extension Schemas (backwards compatible - all optional)
+// =============================================================================
+
+/**
+ * Widget intrinsic size - the natural dimensions of the widget content
+ *
+ * @remarks
+ * Used to calculate aspect ratio for proportional scaling and to determine
+ * when scrollbars are needed in fit mode.
+ */
+export const WidgetIntrinsicSizeSchema = z.object({
+  /** Natural width in pixels */
+  width: z.number().positive(),
+  /** Natural height in pixels */
+  height: z.number().positive(),
+});
+
+export type WidgetIntrinsicSize = z.infer<typeof WidgetIntrinsicSizeSchema>;
+
+/**
+ * Widget scaling mode
+ *
+ * @remarks
+ * Controls how the widget content scales within its container:
+ * - `proportional`: Maintains aspect ratio, scales to fit container
+ * - `orientation`: Scales differently for portrait vs landscape containers
+ * - `fit`: Content at natural size with scrollbars if needed
+ */
+export const WidgetScalingModeSchema = z.enum(['proportional', 'orientation', 'fit']);
+
+export type WidgetScalingMode = z.infer<typeof WidgetScalingModeSchema>;
+
+/**
+ * Widget crop configuration
+ *
+ * @remarks
+ * Allows displaying a portion of the widget content. The rect defines
+ * the visible area in the widget's intrinsic coordinate space.
+ */
+export const WidgetCropConfigSchema = z.object({
+  /** Whether cropping is enabled */
+  enabled: z.boolean().default(false),
+  /**
+   * Crop rectangle in widget intrinsic coordinates.
+   * x, y are the top-left corner; width, height define the visible area.
+   */
+  rect: BoundingBox2DSchema.optional(),
+});
+
+export type WidgetCropConfig = z.infer<typeof WidgetCropConfigSchema>;
+
 /**
  * Widget container entity schema
  */
@@ -180,6 +232,21 @@ export const WidgetContainerEntitySchema = CanvasEntityBaseSchema.extend({
   widgetId: z.string(),
   /** Widget configuration (shape defined by widget manifest) */
   config: z.record(z.string(), z.unknown()).default({}),
+  /**
+   * Widget intrinsic size for aspect ratio calculations.
+   * Optional - widgets without this use container dimensions directly.
+   */
+  intrinsicSize: WidgetIntrinsicSizeSchema.optional(),
+  /**
+   * Scaling mode for widget content.
+   * Optional - defaults to proportional scaling when intrinsicSize is set.
+   */
+  scalingMode: WidgetScalingModeSchema.optional(),
+  /**
+   * Crop configuration for showing a portion of widget content.
+   * Optional - no cropping when not specified.
+   */
+  crop: WidgetCropConfigSchema.optional(),
 });
 
 export type WidgetContainerEntity = z.infer<typeof WidgetContainerEntitySchema>;
@@ -273,3 +340,7 @@ export type CanvasEntity = z.infer<typeof CanvasEntitySchema>;
 export const CanvasEntityBaseJSONSchema = CanvasEntityBaseSchema.toJSONSchema();
 export const LottieEntityJSONSchema = LottieEntitySchema.toJSONSchema();
 export const CanvasEntityJSONSchema = CanvasEntitySchema.toJSONSchema();
+export const WidgetIntrinsicSizeJSONSchema = WidgetIntrinsicSizeSchema.toJSONSchema();
+export const WidgetScalingModeJSONSchema = WidgetScalingModeSchema.toJSONSchema();
+export const WidgetCropConfigJSONSchema = WidgetCropConfigSchema.toJSONSchema();
+export const WidgetContainerEntityJSONSchema = WidgetContainerEntitySchema.toJSONSchema();

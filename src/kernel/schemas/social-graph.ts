@@ -472,6 +472,264 @@ export const SocialMutationTypeSchema = z.enum([
 export type SocialMutationType = z.infer<typeof SocialMutationTypeSchema>;
 
 // =============================================================================
+// Pagination Options (common fields for paginated queries)
+// =============================================================================
+
+const PaginationOptionsSchema = z.object({
+  limit: z.number().int().min(1).max(100).optional(),
+  cursor: z.string().optional(),
+});
+
+// =============================================================================
+// Social Graph Query Schema (Discriminated Union)
+// =============================================================================
+
+/**
+ * All possible query request shapes for the social integration.
+ * Widgets call: StickerNest.integration('social').query(params)
+ */
+export const SocialGraphQuerySchema = z.discriminatedUnion('type', [
+  // Profile queries
+  z.object({
+    type: z.literal('getProfile'),
+    userId: z.string().uuid(),
+  }),
+  z.object({
+    type: z.literal('getProfileByUsername'),
+    username: z.string(),
+  }),
+  z.object({
+    type: z.literal('searchProfiles'),
+    query: z.string(),
+    limit: z.number().int().min(1).max(100).optional(),
+    cursor: z.string().optional(),
+  }),
+  z.object({
+    type: z.literal('isUsernameAvailable'),
+    username: z.string(),
+  }),
+
+  // Follow queries
+  z.object({
+    type: z.literal('getFollowers'),
+    userId: z.string().uuid(),
+    limit: z.number().int().min(1).max(100).optional(),
+    cursor: z.string().optional(),
+  }),
+  z.object({
+    type: z.literal('getFollowing'),
+    userId: z.string().uuid(),
+    limit: z.number().int().min(1).max(100).optional(),
+    cursor: z.string().optional(),
+  }),
+  z.object({
+    type: z.literal('isFollowing'),
+    userId: z.string().uuid(),
+  }),
+  z.object({
+    type: z.literal('getPendingFollowRequests'),
+    limit: z.number().int().min(1).max(100).optional(),
+    cursor: z.string().optional(),
+  }),
+
+  // Feed queries
+  z.object({
+    type: z.literal('getFeed'),
+    feedType: FeedTypeSchema,
+    limit: z.number().int().min(1).max(100).optional(),
+    cursor: z.string().optional(),
+    userId: z.string().uuid().optional(),
+  }),
+  z.object({
+    type: z.literal('getPost'),
+    postId: z.string().uuid(),
+  }),
+  z.object({
+    type: z.literal('getPostReplies'),
+    postId: z.string().uuid(),
+    limit: z.number().int().min(1).max(100).optional(),
+    cursor: z.string().optional(),
+  }),
+  z.object({
+    type: z.literal('searchPosts'),
+    query: z.string(),
+    limit: z.number().int().min(1).max(100).optional(),
+    cursor: z.string().optional(),
+  }),
+
+  // Reaction queries
+  z.object({
+    type: z.literal('getReactions'),
+    targetType: ReactionTargetTypeSchema,
+    targetId: z.string().uuid(),
+  }),
+  z.object({
+    type: z.literal('getReactionCounts'),
+    targetType: ReactionTargetTypeSchema,
+    targetId: z.string().uuid(),
+  }),
+  z.object({
+    type: z.literal('getUserReaction'),
+    targetType: ReactionTargetTypeSchema,
+    targetId: z.string().uuid(),
+  }),
+
+  // Comment queries
+  z.object({
+    type: z.literal('getComments'),
+    targetType: CommentTargetTypeSchema,
+    targetId: z.string().uuid(),
+    limit: z.number().int().min(1).max(100).optional(),
+    cursor: z.string().optional(),
+  }),
+  z.object({
+    type: z.literal('getCommentReplies'),
+    parentId: z.string().uuid(),
+    limit: z.number().int().min(1).max(100).optional(),
+    cursor: z.string().optional(),
+  }),
+  z.object({
+    type: z.literal('getCommentCount'),
+    targetType: CommentTargetTypeSchema,
+    targetId: z.string().uuid(),
+  }),
+
+  // Notification queries
+  z.object({
+    type: z.literal('getNotifications'),
+    limit: z.number().int().min(1).max(100).optional(),
+    cursor: z.string().optional(),
+    unreadOnly: z.boolean().optional(),
+  }),
+  z.object({
+    type: z.literal('getUnreadCount'),
+  }),
+]);
+
+export type SocialGraphQuery = z.infer<typeof SocialGraphQuerySchema>;
+
+// =============================================================================
+// Social Graph Mutation Schema (Discriminated Union)
+// =============================================================================
+
+/**
+ * Profile creation input (subset of UserProfile for creation)
+ */
+const CreateProfileInputSchema = z.object({
+  displayName: z.string().min(1).max(50),
+  username: z.string().min(3).max(30).regex(/^[a-zA-Z0-9_]+$/),
+  bio: z.string().max(500).optional(),
+  avatarUrl: z.string().url().optional(),
+  bannerUrl: z.string().url().optional(),
+  location: z.string().max(100).optional(),
+  websiteUrl: z.string().url().optional(),
+  visibility: ProfileVisibilitySchema.optional(),
+});
+
+/**
+ * All possible mutation request shapes for the social integration.
+ * Widgets call: StickerNest.integration('social').mutate(params)
+ */
+export const SocialGraphMutationSchema = z.discriminatedUnion('type', [
+  // Profile mutations
+  z.object({
+    type: z.literal('createProfile'),
+    profile: CreateProfileInputSchema,
+  }),
+  z.object({
+    type: z.literal('updateProfile'),
+    updates: UpdateProfileInputSchema,
+  }),
+
+  // Follow mutations
+  z.object({
+    type: z.literal('follow'),
+    userId: z.string().uuid(),
+  }),
+  z.object({
+    type: z.literal('unfollow'),
+    userId: z.string().uuid(),
+  }),
+  z.object({
+    type: z.literal('acceptFollowRequest'),
+    followerId: z.string().uuid(),
+  }),
+  z.object({
+    type: z.literal('rejectFollowRequest'),
+    followerId: z.string().uuid(),
+  }),
+
+  // Post mutations
+  z.object({
+    type: z.literal('createPost'),
+    post: CreatePostInputSchema,
+  }),
+  z.object({
+    type: z.literal('updatePost'),
+    postId: z.string().uuid(),
+    content: z.string().max(5000),
+  }),
+  z.object({
+    type: z.literal('deletePost'),
+    postId: z.string().uuid(),
+  }),
+  z.object({
+    type: z.literal('bookmark'),
+    postId: z.string().uuid(),
+  }),
+  z.object({
+    type: z.literal('unbookmark'),
+    postId: z.string().uuid(),
+  }),
+
+  // Reaction mutations
+  z.object({
+    type: z.literal('react'),
+    targetType: ReactionTargetTypeSchema,
+    targetId: z.string().uuid(),
+    reactionType: ReactionTypeSchema,
+  }),
+  z.object({
+    type: z.literal('unreact'),
+    targetType: ReactionTargetTypeSchema,
+    targetId: z.string().uuid(),
+  }),
+
+  // Comment mutations
+  z.object({
+    type: z.literal('createComment'),
+    comment: CreateCommentInputSchema,
+  }),
+  z.object({
+    type: z.literal('updateComment'),
+    commentId: z.string().uuid(),
+    content: z.string().max(2000),
+  }),
+  z.object({
+    type: z.literal('deleteComment'),
+    commentId: z.string().uuid(),
+  }),
+
+  // Notification mutations
+  z.object({
+    type: z.literal('markAsRead'),
+    notificationId: z.string().uuid(),
+  }),
+  z.object({
+    type: z.literal('markAllAsRead'),
+  }),
+  z.object({
+    type: z.literal('deleteNotification'),
+    notificationId: z.string().uuid(),
+  }),
+  z.object({
+    type: z.literal('deleteReadNotifications'),
+  }),
+]);
+
+export type SocialGraphMutation = z.infer<typeof SocialGraphMutationSchema>;
+
+// =============================================================================
 // JSON Schema Exports
 // =============================================================================
 

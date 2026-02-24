@@ -13,6 +13,9 @@ import {
   StickerEntitySchema,
   TextEntitySchema,
   WidgetContainerEntitySchema,
+  WidgetIntrinsicSizeSchema,
+  WidgetScalingModeSchema,
+  WidgetCropConfigSchema,
   ShapeTypeSchema,
   ShapeEntitySchema,
   DrawingEntitySchema,
@@ -21,9 +24,14 @@ import {
   CanvasEntitySchema,
   CanvasEntityBaseJSONSchema,
   CanvasEntityJSONSchema,
+  WidgetIntrinsicSizeJSONSchema,
+  WidgetScalingModeJSONSchema,
+  WidgetCropConfigJSONSchema,
   type CanvasEntityType,
   type Transform2D,
   type CanvasEntity,
+  type WidgetIntrinsicSize,
+  type WidgetScalingMode,
 } from './canvas-entity';
 
 describe('Canvas Entity Schemas', () => {
@@ -258,6 +266,166 @@ describe('Canvas Entity Schemas', () => {
         expect(result.data.widgetId).toBe('com.example.clock');
       }
     });
+
+    it('should accept optional intrinsicSize', () => {
+      const input = {
+        ...baseEntityData,
+        type: 'widget',
+        widgetInstanceId: '550e8400-e29b-41d4-a716-446655440003',
+        widgetId: 'com.example.clock',
+        intrinsicSize: { width: 400, height: 300 },
+      };
+      const result = WidgetContainerEntitySchema.safeParse(input);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.intrinsicSize?.width).toBe(400);
+        expect(result.data.intrinsicSize?.height).toBe(300);
+      }
+    });
+
+    it('should accept optional scalingMode', () => {
+      const input = {
+        ...baseEntityData,
+        type: 'widget',
+        widgetInstanceId: '550e8400-e29b-41d4-a716-446655440003',
+        widgetId: 'com.example.clock',
+        scalingMode: 'fit',
+      };
+      const result = WidgetContainerEntitySchema.safeParse(input);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.scalingMode).toBe('fit');
+      }
+    });
+
+    it('should accept optional crop configuration', () => {
+      const input = {
+        ...baseEntityData,
+        type: 'widget',
+        widgetInstanceId: '550e8400-e29b-41d4-a716-446655440003',
+        widgetId: 'com.example.clock',
+        crop: {
+          enabled: true,
+          rect: { x: 10, y: 20, width: 200, height: 150 },
+        },
+      };
+      const result = WidgetContainerEntitySchema.safeParse(input);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.crop?.enabled).toBe(true);
+        expect(result.data.crop?.rect?.width).toBe(200);
+      }
+    });
+
+    it('should accept widget with all extension fields', () => {
+      const input = {
+        ...baseEntityData,
+        type: 'widget',
+        widgetInstanceId: '550e8400-e29b-41d4-a716-446655440003',
+        widgetId: 'com.example.dashboard',
+        config: { theme: 'dark' },
+        intrinsicSize: { width: 800, height: 600 },
+        scalingMode: 'proportional',
+        crop: { enabled: false },
+      };
+      const result = WidgetContainerEntitySchema.safeParse(input);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.intrinsicSize?.width).toBe(800);
+        expect(result.data.scalingMode).toBe('proportional');
+        expect(result.data.crop?.enabled).toBe(false);
+      }
+    });
+  });
+
+  describe('WidgetIntrinsicSizeSchema', () => {
+    it('should parse valid intrinsic size', () => {
+      const input: WidgetIntrinsicSize = { width: 1920, height: 1080 };
+      const result = WidgetIntrinsicSizeSchema.safeParse(input);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.width).toBe(1920);
+        expect(result.data.height).toBe(1080);
+      }
+    });
+
+    it('should reject zero width', () => {
+      const input = { width: 0, height: 100 };
+      const result = WidgetIntrinsicSizeSchema.safeParse(input);
+
+      expect(result.success).toBe(false);
+    });
+
+    it('should reject negative dimensions', () => {
+      const input = { width: -100, height: 100 };
+      const result = WidgetIntrinsicSizeSchema.safeParse(input);
+
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe('WidgetScalingModeSchema', () => {
+    it('should accept proportional mode', () => {
+      const result = WidgetScalingModeSchema.safeParse('proportional');
+      expect(result.success).toBe(true);
+    });
+
+    it('should accept orientation mode', () => {
+      const result = WidgetScalingModeSchema.safeParse('orientation');
+      expect(result.success).toBe(true);
+    });
+
+    it('should accept fit mode', () => {
+      const result = WidgetScalingModeSchema.safeParse('fit');
+      expect(result.success).toBe(true);
+    });
+
+    it('should reject invalid mode', () => {
+      const result = WidgetScalingModeSchema.safeParse('stretch');
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe('WidgetCropConfigSchema', () => {
+    it('should parse disabled crop', () => {
+      const input = { enabled: false };
+      const result = WidgetCropConfigSchema.safeParse(input);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.enabled).toBe(false);
+        expect(result.data.rect).toBeUndefined();
+      }
+    });
+
+    it('should parse enabled crop with rect', () => {
+      const input = {
+        enabled: true,
+        rect: { x: 0, y: 0, width: 100, height: 100 },
+      };
+      const result = WidgetCropConfigSchema.safeParse(input);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.enabled).toBe(true);
+        expect(result.data.rect?.x).toBe(0);
+      }
+    });
+
+    it('should default enabled to false', () => {
+      const input = {};
+      const result = WidgetCropConfigSchema.safeParse(input);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.enabled).toBe(false);
+      }
+    });
   });
 
   describe('ShapeEntitySchema', () => {
@@ -421,6 +589,21 @@ describe('Canvas Entity Schemas', () => {
     it('should export CanvasEntity JSON schema', () => {
       expect(CanvasEntityJSONSchema).toBeDefined();
       expect(typeof CanvasEntityJSONSchema).toBe('object');
+    });
+
+    it('should export WidgetIntrinsicSize JSON schema', () => {
+      expect(WidgetIntrinsicSizeJSONSchema).toBeDefined();
+      expect(typeof WidgetIntrinsicSizeJSONSchema).toBe('object');
+    });
+
+    it('should export WidgetScalingMode JSON schema', () => {
+      expect(WidgetScalingModeJSONSchema).toBeDefined();
+      expect(typeof WidgetScalingModeJSONSchema).toBe('object');
+    });
+
+    it('should export WidgetCropConfig JSON schema', () => {
+      expect(WidgetCropConfigJSONSchema).toBeDefined();
+      expect(typeof WidgetCropConfigJSONSchema).toBe('object');
     });
   });
 });

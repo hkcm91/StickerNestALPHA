@@ -7,7 +7,7 @@ import { create } from 'zustand';
 import { devtools, subscribeWithSelector } from 'zustand/middleware';
 
 import type { BusEvent } from '@sn/types';
-import { CanvasEvents, ShellEvents } from '@sn/types';
+import { CanvasEvents, ShellEvents, InteractionModeEvents } from '@sn/types';
 
 import { bus } from '../../bus';
 
@@ -18,9 +18,21 @@ export interface Toast {
   duration?: number;
 }
 
+/**
+ * Chrome mode controls UI chrome visibility
+ * - 'editor': Full editing UI with toolbars, panels, sidebars
+ * - 'clean': Minimal UI for viewing/playing (public slugs, embeds)
+ */
+export type ChromeMode = 'editor' | 'clean';
+
 export interface UIState {
   /** Canvas interaction mode — NEVER persisted, always derived from role + URL context on load */
   canvasInteractionMode: 'edit' | 'preview';
+  /**
+   * Chrome mode controls UI chrome visibility.
+   * Independent of canvasInteractionMode — you can have editor chrome with preview interaction.
+   */
+  chromeMode: ChromeMode;
   activeTool: string;
   sidebarLeftOpen: boolean;
   sidebarRightOpen: boolean;
@@ -32,6 +44,7 @@ export interface UIState {
 
 export interface UIActions {
   setCanvasInteractionMode: (mode: 'edit' | 'preview') => void;
+  setChromeMode: (mode: ChromeMode) => void;
   setActiveTool: (tool: string) => void;
   toggleSidebarLeft: () => void;
   toggleSidebarRight: () => void;
@@ -47,6 +60,7 @@ export type UIStore = UIState & UIActions;
 
 const initialState: UIState = {
   canvasInteractionMode: 'edit',
+  chromeMode: 'editor',
   activeTool: 'select',
   sidebarLeftOpen: true,
   sidebarRightOpen: true,
@@ -63,6 +77,8 @@ export const useUIStore = create<UIStore>()(
 
       setCanvasInteractionMode: (canvasInteractionMode) =>
         set({ canvasInteractionMode }),
+
+      setChromeMode: (chromeMode) => set({ chromeMode }),
 
       setActiveTool: (activeTool) => set({ activeTool }),
 
@@ -117,6 +133,14 @@ export function setupUIBusSubscriptions(): void {
         payload.theme === 'high-contrast')
     ) {
       useUIStore.getState().setTheme(payload.theme);
+    }
+  });
+
+  // Chrome mode changed — update chrome visibility
+  bus.subscribe(InteractionModeEvents.CHROME_MODE_CHANGED, (event: BusEvent) => {
+    const payload = event.payload as { mode: ChromeMode } | null;
+    if (payload && (payload.mode === 'editor' || payload.mode === 'clean')) {
+      useUIStore.getState().setChromeMode(payload.mode);
     }
   });
 }
