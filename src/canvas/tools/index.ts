@@ -13,7 +13,17 @@ export type { SelectTool } from './select';
 
 export { createMoveTool } from './move';
 export type { MoveToolOptions } from './move';
-export { snapToGrid, findAlignmentGuides } from './move';
+export {
+  snapToGrid,
+  findAlignmentGuides,
+  snapToGridCell,
+  positionToGridCell,
+  gridCellToPosition,
+  getGridCellBounds,
+  getGridCellCenter,
+  widgetFitsInCell,
+  widgetCellSpan,
+} from './move';
 export type { AlignmentGuide } from './move';
 
 export { createResizeTool, getResizeHandles, computeResize } from './resize';
@@ -25,6 +35,9 @@ export { createShapeTool } from './shape';
 export type { ShapeMode } from './shape';
 export { createStickerTool } from './sticker';
 export { createWidgetTool } from './widget';
+
+export { createGridPaintTool, createGridPaintToolWithController } from './grid-paint';
+export type { GridPaintToolOptions, GridPaintToolController } from './grid-paint';
 
 export { initCanvasTools, teardownCanvasTools, isCanvasToolsInitialized } from './init';
 export type { CanvasToolsContext } from './init';

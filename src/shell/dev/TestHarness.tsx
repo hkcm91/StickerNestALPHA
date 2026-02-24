@@ -28,6 +28,7 @@ import { bus } from '../../kernel/bus';
 
 import { CanvasCorePanel } from './panels/CanvasCorePanel';
 import { EventBusPanel } from './panels/EventBusPanel';
+import { GridLayerPanel } from './panels/GridLayerPanel';
 import { ImageGenerationPanel } from './panels/ImageGenerationPanel';
 import { MultiEntityCanvas } from './panels/MultiEntityCanvas';
 import { PipelinePanel } from './panels/PipelinePanel';
@@ -284,6 +285,7 @@ export const TestHarness: React.FC = () => {
         <ImageGenerationPanel />
         <MultiEntityCanvas />
         <SpatialCanvasPanel />
+        <GridLayerPanel />
       </div>
     </div>
   );

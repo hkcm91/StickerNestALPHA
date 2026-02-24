@@ -1,0 +1,328 @@
+/**
+ * Grid Renderer — HTML5 Canvas 2D rendering for the grid layer
+ *
+ * @module canvas/core/grid
+ * @layer L4A-1
+ *
+ * @remarks
+ * Renders the paintable grid layer using the 2D Canvas API.
+ * Performs viewport culling for efficient rendering of large grids.
+ */
+
+import type { GridCell, GridConfig } from '@sn/types';
+
+import type { ViewportState } from '../viewport';
+import { canvasToScreen, getVisibleBounds } from '../viewport';
+
+import {
+  type GridCellStore,
+  type CellBounds,
+  getVisibleCellBounds,
+  cellToPosition,
+  getIsometricCellCorners,
+} from './grid-cell-store';
+
+/**
+ * Grid Renderer interface
+ */
+export interface GridRenderer {
+  /** Set the canvas element to render to */
+  setCanvas(canvas: HTMLCanvasElement): void;
+
+  /** Update the viewport state */
+  setViewport(viewport: ViewportState): void;
+
+  /** Update the grid configuration */
+  setConfig(config: GridConfig): void;
+
+  /** Render the grid (called on each frame) */
+  render(): void;
+
+  /** Force a full redraw */
+  invalidate(): void;
+
+  /** Get the current canvas element */
+  getCanvas(): HTMLCanvasElement | null;
+}
+
+/**
+ * Create a grid renderer
+ */
+export function createGridRenderer(cellStore: GridCellStore): GridRenderer {
+  let canvas: HTMLCanvasElement | null = null;
+  let ctx: CanvasRenderingContext2D | null = null;
+  let viewport: ViewportState | null = null;
+  let config: GridConfig | null = null;
+  let needsRedraw = true;
+
+  function ensureContext(): CanvasRenderingContext2D | null {
+    if (!canvas) return null;
+    if (!ctx) {
+      ctx = canvas.getContext('2d');
+    }
+    return ctx;
+  }
+
+  function clearCanvas(): void {
+    const context = ensureContext();
+    if (!context || !canvas || !config) return;
+
+    // Fill with default background
+    context.fillStyle = config.defaultBackground;
+    context.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
+  /**
+   * Render an orthogonal (square) cell
+   */
+  function renderOrthogonalCell(
+    context: CanvasRenderingContext2D,
+    cell: GridCell,
+    _viewport: ViewportState,
+    _config: GridConfig
+  ): void {
+    const canvasPos = cellToPosition(cell.col, cell.row, _config);
+    const screenPos = canvasToScreen(canvasPos, _viewport);
+    const screenSize = _config.cellSize * _viewport.zoom;
+
+    context.fillRect(screenPos.x, screenPos.y, screenSize, screenSize);
+  }
+
+  /**
+   * Render an isometric (diamond) cell
+   */
+  function renderIsometricCell(
+    context: CanvasRenderingContext2D,
+    cell: GridCell,
+    _viewport: ViewportState,
+    _config: GridConfig
+  ): void {
+    const corners = getIsometricCellCorners(cell.col, cell.row, _config);
+
+    // Transform canvas coords to screen coords
+    const top = canvasToScreen(corners.top, _viewport);
+    const right = canvasToScreen(corners.right, _viewport);
+    const bottom = canvasToScreen(corners.bottom, _viewport);
+    const left = canvasToScreen(corners.left, _viewport);
+
+    // Draw diamond path
+    context.beginPath();
+    context.moveTo(top.x, top.y);
+    context.lineTo(right.x, right.y);
+    context.lineTo(bottom.x, bottom.y);
+    context.lineTo(left.x, left.y);
+    context.closePath();
+    context.fill();
+  }
+
+  function renderCells(visibleCellBounds: CellBounds): void {
+    const context = ensureContext();
+    if (!context || !viewport || !config) return;
+
+    const cells = cellStore.getCellsInBounds(visibleCellBounds);
+    const isIsometric = config.projection === 'isometric';
+
+    // Group cells by color for batched rendering
+    const colorGroups = new Map<string, GridCell[]>();
+    for (const cell of cells) {
+      const color = cell.color ?? config.defaultBackground;
+      let group = colorGroups.get(color);
+      if (!group) {
+        group = [];
+        colorGroups.set(color, group);
+      }
+      group.push(cell);
+    }
+
+    // Render each color group
+    for (const [color, groupCells] of colorGroups) {
+      context.fillStyle = color;
+      for (const cell of groupCells) {
+        if (isIsometric) {
+          renderIsometricCell(context, cell, viewport, config);
+        } else {
+          renderOrthogonalCell(context, cell, viewport, config);
+        }
+      }
+    }
+  }
+
+  /**
+   * Render orthogonal grid lines (horizontal and vertical)
+   */
+  function renderOrthogonalGridLines(
+    context: CanvasRenderingContext2D,
+    visibleCellBounds: CellBounds,
+    _viewport: ViewportState,
+    _config: GridConfig,
+    _canvas: HTMLCanvasElement
+  ): void {
+    context.beginPath();
+
+    // Vertical lines
+    for (let col = visibleCellBounds.minCol; col <= visibleCellBounds.maxCol + 1; col++) {
+      const canvasPos = cellToPosition(col, 0, _config);
+      const screenX = canvasToScreen({ x: canvasPos.x, y: 0 }, _viewport).x;
+
+      // Skip if outside canvas
+      if (screenX < 0 || screenX > _canvas.width) continue;
+
+      context.moveTo(screenX, 0);
+      context.lineTo(screenX, _canvas.height);
+    }
+
+    // Horizontal lines
+    for (let row = visibleCellBounds.minRow; row <= visibleCellBounds.maxRow + 1; row++) {
+      const canvasPos = cellToPosition(0, row, _config);
+      const screenY = canvasToScreen({ x: 0, y: canvasPos.y }, _viewport).y;
+
+      // Skip if outside canvas
+      if (screenY < 0 || screenY > _canvas.height) continue;
+
+      context.moveTo(0, screenY);
+      context.lineTo(_canvas.width, screenY);
+    }
+
+    context.stroke();
+  }
+
+  /**
+   * Render isometric grid lines (diagonal)
+   */
+  function renderIsometricGridLines(
+    context: CanvasRenderingContext2D,
+    visibleCellBounds: CellBounds,
+    _viewport: ViewportState,
+    _config: GridConfig,
+    _canvas: HTMLCanvasElement
+  ): void {
+    context.beginPath();
+
+    // In isometric, we draw lines along the two diagonal directions
+    // Lines going from top-left to bottom-right (constant col)
+    for (let col = visibleCellBounds.minCol; col <= visibleCellBounds.maxCol + 1; col++) {
+      // Start at the top of the visible area
+      const startCorners = getIsometricCellCorners(col, visibleCellBounds.minRow, _config);
+      const endCorners = getIsometricCellCorners(col, visibleCellBounds.maxRow + 1, _config);
+
+      const start = canvasToScreen(startCorners.top, _viewport);
+      const end = canvasToScreen(endCorners.top, _viewport);
+
+      context.moveTo(start.x, start.y);
+      context.lineTo(end.x, end.y);
+    }
+
+    // Lines going from top-right to bottom-left (constant row)
+    for (let row = visibleCellBounds.minRow; row <= visibleCellBounds.maxRow + 1; row++) {
+      const startCorners = getIsometricCellCorners(visibleCellBounds.minCol, row, _config);
+      const endCorners = getIsometricCellCorners(visibleCellBounds.maxCol + 1, row, _config);
+
+      const start = canvasToScreen(startCorners.top, _viewport);
+      const end = canvasToScreen(endCorners.top, _viewport);
+
+      context.moveTo(start.x, start.y);
+      context.lineTo(end.x, end.y);
+    }
+
+    context.stroke();
+  }
+
+  function renderGridLines(visibleCellBounds: CellBounds): void {
+    const context = ensureContext();
+    if (!context || !viewport || !config || !canvas) return;
+
+    // Skip grid lines if cells are too small on screen
+    const screenCellSize = config.cellSize * viewport.zoom;
+    if (screenCellSize < config.minCellScreenSize) return;
+
+    context.strokeStyle = config.gridLineColor;
+    context.lineWidth = config.gridLineWidth;
+
+    if (config.projection === 'isometric') {
+      renderIsometricGridLines(context, visibleCellBounds, viewport, config, canvas);
+    } else {
+      renderOrthogonalGridLines(context, visibleCellBounds, viewport, config, canvas);
+    }
+  }
+
+  return {
+    setCanvas(c: HTMLCanvasElement): void {
+      canvas = c;
+      ctx = null; // Reset context
+      needsRedraw = true;
+    },
+
+    setViewport(vp: ViewportState): void {
+      viewport = vp;
+      needsRedraw = true;
+    },
+
+    setConfig(cfg: GridConfig): void {
+      config = cfg;
+      needsRedraw = true;
+    },
+
+    render(): void {
+      if (!needsRedraw) return;
+      if (!canvas || !viewport || !config) return;
+
+      const context = ensureContext();
+      if (!context) return;
+
+      // Clear canvas
+      clearCanvas();
+
+      if (!config.enabled) {
+        needsRedraw = false;
+        return;
+      }
+
+      // Calculate visible bounds
+      const visibleBounds = getVisibleBounds(viewport);
+      const visibleCellBounds = getVisibleCellBounds(visibleBounds, config);
+
+      // Render painted cells
+      renderCells(visibleCellBounds);
+
+      // Render grid lines (on top of cells)
+      if (config.showGridLines) {
+        renderGridLines(visibleCellBounds);
+      }
+
+      needsRedraw = false;
+    },
+
+    invalidate(): void {
+      needsRedraw = true;
+    },
+
+    getCanvas(): HTMLCanvasElement | null {
+      return canvas;
+    },
+  };
+}
+
+// =============================================================================
+// Utility Functions for Grid Rendering
+// =============================================================================
+
+/**
+ * Calculate the number of cells visible in the viewport
+ */
+export function countVisibleCells(viewport: ViewportState, config: GridConfig): number {
+  const visibleBounds = getVisibleBounds(viewport);
+  const cellBounds = getVisibleCellBounds(visibleBounds, config);
+
+  const cols = cellBounds.maxCol - cellBounds.minCol + 1;
+  const rows = cellBounds.maxRow - cellBounds.minRow + 1;
+
+  return cols * rows;
+}
+
+/**
+ * Check if grid lines should be visible at the current zoom level
+ */
+export function areGridLinesVisible(viewport: ViewportState, config: GridConfig): boolean {
+  const screenCellSize = config.cellSize * viewport.zoom;
+  return screenCellSize >= config.minCellScreenSize;
+}
