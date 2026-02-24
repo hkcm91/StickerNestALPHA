@@ -76,7 +76,7 @@ export function createSpatialScene(): SpatialScene {
     },
 
     dispose() {
-      for (const [id, mesh] of entities) {
+      for (const [, mesh] of entities) {
         scene.remove(mesh);
         mesh.geometry.dispose();
         (mesh.material as MeshBasicMaterial).dispose();

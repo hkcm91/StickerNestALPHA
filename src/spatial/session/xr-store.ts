@@ -28,14 +28,14 @@ export type ImmersiveXRMode = 'immersive-vr' | 'immersive-ar';
  * runtime does not support hand-tracking, plane detection, etc.
  */
 export const xrStore = createXRStore({
-  requiredFeatures: ['local-floor'],
-  optionalFeatures: [
-    'hand-tracking',
-    'plane-detection',
-    'mesh-detection',
-    'anchors',
-    'hit-test',
-  ],
+  handTracking: true,
+  planeDetection: true,
+  meshDetection: true,
+  anchors: true,
+  hitTest: true,
+  customSessionInit: {
+    requiredFeatures: ['local-floor'],
+  },
 });
 
 /**

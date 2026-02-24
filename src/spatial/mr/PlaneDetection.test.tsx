@@ -168,7 +168,7 @@ describe('PlaneDetection', () => {
     const { result } = renderHook(() => PlaneDetection());
 
     // Verify both planes are rendered
-    const element = result.current as React.ReactElement;
+    const element = result.current as React.ReactElement<{ children: unknown[] }>;
     expect(element).not.toBeNull();
     expect(element.props.children).toHaveLength(2);
   });

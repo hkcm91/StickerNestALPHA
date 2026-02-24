@@ -149,7 +149,7 @@ describe('MeshDetection', () => {
 
     const { result } = renderHook(() => MeshDetection());
 
-    const element = result.current as React.ReactElement;
+    const element = result.current as React.ReactElement<{ children: unknown[] }>;
     expect(element.props.children).toHaveLength(2);
   });
 

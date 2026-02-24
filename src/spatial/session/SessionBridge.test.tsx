@@ -1,5 +1,5 @@
 import { renderHook, act } from '@testing-library/react';
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { SpatialEvents } from '@sn/types';
@@ -60,10 +60,6 @@ import { SessionBridge } from './SessionBridge';
 // ---------------------------------------------------------------------------
 // Wrapper that renders SessionBridge and allows state updates
 // ---------------------------------------------------------------------------
-
-function SessionBridgeWrapper() {
-  return <SessionBridge />;
-}
 
 // ---------------------------------------------------------------------------
 // Tests

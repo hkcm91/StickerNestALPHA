@@ -41,11 +41,9 @@ vi.mock('./RATKProvider', () => ({
 // Mock @react-three/fiber
 // ---------------------------------------------------------------------------
 
-let mockUseFrameCallback: ((state: unknown, delta: number) => void) | null = null;
-
 vi.mock('@react-three/fiber', () => ({
-  useFrame: (cb: (state: unknown, delta: number) => void) => {
-    mockUseFrameCallback = cb;
+  useFrame: (_cb: (state: unknown, delta: number) => void) => {
+    // Captured for test use if needed
   },
 }));
 
@@ -73,7 +71,6 @@ describe('Anchors', () => {
     vi.clearAllMocks();
     bus.unsubscribeAll();
     mockRATKInstance = null;
-    mockUseFrameCallback = null;
     uuidCounter = 0;
   });
 

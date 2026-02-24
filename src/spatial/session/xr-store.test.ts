@@ -91,14 +91,14 @@ describe('xr-store', () => {
 
   it('createXRStore was called with correct features', () => {
     expect(mockCreateXRStore).toHaveBeenCalledWith({
-      requiredFeatures: ['local-floor'],
-      optionalFeatures: [
-        'hand-tracking',
-        'plane-detection',
-        'mesh-detection',
-        'anchors',
-        'hit-test',
-      ],
+      handTracking: true,
+      planeDetection: true,
+      meshDetection: true,
+      anchors: true,
+      hitTest: true,
+      customSessionInit: {
+        requiredFeatures: ['local-floor'],
+      },
     });
   });
 });

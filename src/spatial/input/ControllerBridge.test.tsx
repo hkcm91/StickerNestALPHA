@@ -15,16 +15,15 @@ import { bus } from '../../kernel/bus';
 // the requested hand, or undefined if not connected.
 // ---------------------------------------------------------------------------
 
-interface MockGamepadButton {
-  pressed: boolean;
-  touched: boolean;
-  value: number;
+interface MockGamepadComponentState {
+  state: 'default' | 'touched' | 'pressed';
+  button?: number;
+  xAxis?: number;
+  yAxis?: number;
 }
 
 interface MockControllerState {
-  gamepad: {
-    buttons: MockGamepadButton[];
-  } | null;
+  gamepad: Record<string, MockGamepadComponentState | undefined> | null;
   inputSource: {
     gripSpace: unknown;
     targetRaySpace: unknown;
@@ -55,10 +54,6 @@ function setMockInputState(patch: Partial<MockXRInputState>): void {
   }
 }
 
-function createMockButton(pressed: boolean): MockGamepadButton {
-  return { pressed, touched: pressed, value: pressed ? 1 : 0 };
-}
-
 function createMockControllerState(
   selectPressed = false,
   squeezePressed = false,
@@ -66,10 +61,8 @@ function createMockControllerState(
 ): MockControllerState {
   return {
     gamepad: {
-      buttons: [
-        createMockButton(selectPressed),   // button 0: select (trigger)
-        createMockButton(squeezePressed),   // button 1: squeeze (grip)
-      ],
+      'xr-standard-trigger': { state: selectPressed ? 'pressed' : 'default' },
+      'xr-standard-squeeze': { state: squeezePressed ? 'pressed' : 'default' },
     },
     inputSource: {
       gripSpace: {},

@@ -110,9 +110,12 @@ function useControllerHand(hand: 'left' | 'right'): void {
     const gamepad = controllerState.gamepad;
     if (!gamepad) return;
 
-    // Standard mapping: button 0 = select (trigger), button 1 = squeeze (grip)
-    const selectPressed = gamepad.buttons.length > 0 && gamepad.buttons[0].pressed;
-    const squeezePressed = gamepad.buttons.length > 1 && gamepad.buttons[1].pressed;
+    // Standard mapping: trigger = select, squeeze = grip
+    // In @react-three/xr v6, gamepad is Record<string, XRControllerGamepadComponentState | undefined>
+    const triggerState = gamepad['xr-standard-trigger'];
+    const squeezeState = gamepad['xr-standard-squeeze'];
+    const selectPressed = triggerState?.state === 'pressed';
+    const squeezePressed = squeezeState?.state === 'pressed';
 
     const prevSelect = prevSelectRef.current;
     const prevSqueeze = prevSqueezeRef.current;

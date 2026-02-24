@@ -13,8 +13,8 @@
 
 import { useXRInputSourceState } from '@react-three/xr';
 import React, { useMemo, useRef } from 'react';
-import { BufferGeometry, Float32BufferAttribute } from 'three';
 import type { Line as ThreeLine } from 'three';
+import { BufferGeometry, Float32BufferAttribute } from 'three';
 
 /**
  * Props for the Pointer component.
@@ -76,6 +76,7 @@ export function Pointer({
 
   return (
     <group>
+      {/* @ts-expect-error R3F <line> maps to THREE.Line, not SVGLineElement */}
       <line ref={lineRef} geometry={geometry}>
         <lineBasicMaterial color={color} linewidth={lineWidth} />
       </line>

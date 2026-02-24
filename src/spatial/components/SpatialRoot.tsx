@@ -108,7 +108,7 @@ export function SpatialRoot({
         {/* Input bridges */}
         <ControllerBridge />
         {enableHands && <HandBridge />}
-        <Pointer />
+        <Pointer hand="right" />
 
         {/* Entity rendering */}
         <EntityManager />

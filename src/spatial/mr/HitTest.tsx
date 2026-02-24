@@ -119,8 +119,10 @@ export function HitTest({
       if (!hasHit) setHasHit(true);
 
       // Use the first (closest) hit test result
+      // Invoke getPose to ensure the hit test result is processed,
+      // but we use the target's world position directly (updated by RATK)
       const result = target.hitTestResults[0];
-      const pose = result.getPose?.(
+      result.getPose?.(
         (target as unknown as { _referenceSpace?: XRReferenceSpace })._referenceSpace!,
       );
 

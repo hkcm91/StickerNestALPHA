@@ -125,7 +125,6 @@ function useHandTracking(hand: 'left' | 'right'): void {
     let spatial: SpatialContext | undefined;
 
     if (handState && handState.inputSource?.hand) {
-      const xrHand = handState.inputSource.hand;
       // Access joint objects if available through the R3F hand state
       const thumbJoint = handState.object?.getObjectByName('thumb-tip');
       const indexJoint = handState.object?.getObjectByName('index-finger-tip');
