@@ -27,7 +27,7 @@ import type { SpatialContext } from '@sn/types';
 
 import { bus } from '../../../kernel/bus';
 import { createSpatialScene } from '../../../spatial';
-import type { SpatialScene } from '../../../spatial';
+import type { SpatialSceneAPI as SpatialScene } from '../../../spatial';
 
 type EmitterType = 'cube' | 'sphere' | 'torus';
 

@@ -1,47 +1,83 @@
 /**
- * Spatial — initialization
+ * Spatial -- initialization
  *
- * @module spatial
+ * Provides programmatic control over the spatial layer for the shell to
+ * call during application startup. The actual rendering is handled by
+ * `<SpatialRoot>`, a React component that composes all spatial sub-modules.
+ *
+ * This module exposes imperative helpers for entering/exiting XR sessions
+ * and checking WebXR availability. The heavy lifting is done declaratively
+ * by the R3F component tree mounted via `<SpatialRoot>`.
+ *
+ * @module spatial/init
  * @layer L4B
  */
 
-import { createControllerInput } from './controller';
-import type { ControllerInput } from './controller';
-import { createEntityMapper } from './entity-mapping';
-import type { EntityMapper } from './entity-mapping';
-import { createSpatialScene } from './scene';
-import type { SpatialScene } from './scene';
-import { createXRSessionManager } from './xr-session';
-import type { XRSessionManager } from './xr-session';
+import { enterXR, exitXR } from './session/xr-store';
+import type { ImmersiveXRMode } from './session/xr-store';
 
-export interface SpatialContext {
-  scene: SpatialScene;
-  xrSession: XRSessionManager;
-  controller: ControllerInput;
-  entityMapper: EntityMapper;
-}
+// ---------------------------------------------------------------------------
+// WebXR feature detection
+// ---------------------------------------------------------------------------
 
-let context: SpatialContext | null = null;
-
-export function initSpatial(): SpatialContext {
-  if (context) return context;
-
-  const scene = createSpatialScene();
-  const xrSession = createXRSessionManager();
-  const controller = createControllerInput();
-  const entityMapper = createEntityMapper(scene);
-
-  context = { scene, xrSession, controller, entityMapper };
-  return context;
-}
-
-export function teardownSpatial(): void {
-  if (context) {
-    context.scene.dispose();
+/**
+ * Check whether the current browser supports a given XR session mode.
+ *
+ * @param mode - The XR session mode to check. Defaults to `'immersive-vr'`.
+ * @returns A promise that resolves to `true` if supported, `false` otherwise.
+ */
+export async function isXRSupported(
+  mode: ImmersiveXRMode = 'immersive-vr',
+): Promise<boolean> {
+  if (typeof navigator === 'undefined' || !navigator.xr) {
+    return false;
   }
-  context = null;
+  try {
+    return await navigator.xr.isSessionSupported(mode);
+  } catch {
+    return false;
+  }
 }
 
+// ---------------------------------------------------------------------------
+// Session helpers (thin wrappers re-exported for convenience)
+// ---------------------------------------------------------------------------
+
+export { enterXR, exitXR };
+export type { ImmersiveXRMode };
+
+// ---------------------------------------------------------------------------
+// Legacy compatibility -- remove after imperative callers are migrated
+// ---------------------------------------------------------------------------
+
+/**
+ * @deprecated Use `<SpatialRoot>` component instead.
+ * Kept for backward compatibility during the migration period.
+ * Returns a stub context -- the real spatial layer is managed by R3F.
+ */
+export function initSpatial(): { initialized: true } {
+  // eslint-disable-next-line no-console
+  console.warn(
+    '[StickerNest] initSpatial() is deprecated. Use <SpatialRoot> component instead.',
+  );
+  return { initialized: true };
+}
+
+/**
+ * @deprecated Use `exitXR()` instead or unmount `<SpatialRoot>`.
+ */
+export function teardownSpatial(): void {
+  // eslint-disable-next-line no-console
+  console.warn(
+    '[StickerNest] teardownSpatial() is deprecated. Unmount <SpatialRoot> or call exitXR().',
+  );
+  exitXR();
+}
+
+/**
+ * @deprecated The spatial layer is always available when `<SpatialRoot>` is mounted.
+ * Returns `true` unconditionally.
+ */
 export function isSpatialInitialized(): boolean {
-  return context !== null;
+  return true;
 }
