@@ -13,11 +13,15 @@ import type { BusEvent } from '@sn/types';
 import { MarketplaceEvents } from '@sn/types';
 
 import { bus } from '../kernel/bus';
+import { useAuthStore } from '../kernel/stores/auth/auth.store';
 import { useWidgetStore } from '../kernel/stores/widget/widget.store';
 import type { WidgetRegistryEntry } from '../kernel/stores/widget/widget.store';
 
+
 import { createAiHandler } from './integrations/ai-handler';
+import { createNotionHandler } from './integrations/notion-handler';
 import { getIntegrationProxy } from './integrations/singleton';
+import { createSocialHandler } from './integrations/social-handler';
 import { createIframePool, DEFAULT_WARMUP_COUNT } from './pool/iframe-pool';
 import type { IframePool } from './pool/iframe-pool';
 import { createRateLimiter } from './security/rate-limiter';
@@ -145,6 +149,118 @@ const BUILTIN_WIDGETS: WidgetRegistryEntry[] = [
     isBuiltIn: true,
     installedAt: new Date().toISOString(),
   },
+  {
+    widgetId: 'sn.builtin.social-feed',
+    manifest: {
+      id: 'sn.builtin.social-feed',
+      name: 'Social Feed',
+      version: '1.0.0',
+      description: 'A social feed widget showing posts from followed users',
+      author: { name: 'StickerNest', url: 'https://stickernest.com' },
+      license: 'MIT',
+      tags: ['social'],
+      category: 'social',
+      permissions: ['social'],
+      events: {
+        emits: [
+          { name: 'social.post.liked', description: 'User liked a post' },
+          { name: 'social.post.unliked', description: 'User unliked a post' },
+        ],
+        subscribes: [],
+      },
+      config: {
+        fields: [
+          { name: 'feedType', type: 'string', label: 'Feed Type', default: 'home', required: false },
+        ],
+      },
+      size: { minWidth: 300, minHeight: 400, maxWidth: 600, maxHeight: 800, defaultWidth: 400, defaultHeight: 600, aspectLocked: false },
+      entry: 'inline',
+      spatialSupport: false,
+    },
+    htmlContent: `<style>
+*{box-sizing:border-box;margin:0;padding:0}
+.feed{font-family:var(--sn-font-family,sans-serif);color:var(--sn-text,#333);background:var(--sn-surface,#fff);height:100%;overflow-y:auto;padding:12px}
+.header{display:flex;justify-content:space-between;align-items:center;padding-bottom:12px;border-bottom:1px solid var(--sn-border,#e5e5e5);margin-bottom:12px}
+.header h2{font-size:18px;font-weight:600}
+.badge{background:var(--sn-accent,#3b82f6);color:#fff;border-radius:12px;padding:2px 8px;font-size:12px}
+.post{padding:12px;border:1px solid var(--sn-border,#e5e5e5);border-radius:8px;margin-bottom:12px}
+.post-header{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--sn-accent,#3b82f6);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600}
+.author{font-weight:600;font-size:14px}
+.time{color:var(--sn-text-muted,#888);font-size:12px}
+.content{font-size:14px;line-height:1.5;margin-bottom:8px}
+.actions{display:flex;gap:16px}
+.btn{background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;color:var(--sn-text-muted,#888);font-size:13px}
+.btn:hover{color:var(--sn-accent,#3b82f6)}
+.btn.liked{color:#ef4444}
+.empty{text-align:center;padding:40px;color:var(--sn-text-muted,#888)}
+.loading{text-align:center;padding:20px}
+</style>
+<div class="feed">
+<div class="header"><h2>Feed</h2><span class="badge" id="notif">0</span></div>
+<div id="posts"><div class="loading">Loading...</div></div>
+</div>
+<script>
+var social=StickerNest.integration("social");
+var posts=[];
+var likedPosts={};
+function init(){
+loadFeed();
+loadNotifCount();
+}
+function loadFeed(){
+var cfg=StickerNest.getConfig();
+var feedType=cfg.feedType||"home";
+social.query({type:"getFeed",feedType:feedType,limit:20}).then(function(res){
+posts=res.items||[];
+render();
+}).catch(function(e){
+document.getElementById("posts").innerHTML='<div class="empty">'+e.message+'</div>';
+});
+}
+function loadNotifCount(){
+social.query({type:"getUnreadCount"}).then(function(count){
+document.getElementById("notif").textContent=count||0;
+}).catch(function(){});
+}
+function render(){
+var el=document.getElementById("posts");
+if(!posts.length){el.innerHTML='<div class="empty">No posts yet. Follow some users!</div>';return;}
+el.innerHTML=posts.map(function(p){
+var liked=likedPosts[p.id];
+return '<div class="post" data-id="'+p.id+'">'+
+'<div class="post-header"><div class="avatar">'+p.authorId.charAt(0).toUpperCase()+'</div>'+
+'<div><div class="author">User '+p.authorId.slice(0,8)+'</div>'+
+'<div class="time">'+new Date(p.createdAt).toLocaleDateString()+'</div></div></div>'+
+'<div class="content">'+escapeHtml(p.content)+'</div>'+
+'<div class="actions"><button class="btn'+(liked?" liked":"")+'" onclick="toggleLike(\\''+p.id+'\\')">'+
+(liked?"♥":"♡")+' '+(p.reactionCount||0)+'</button></div></div>';
+}).join("");
+}
+function escapeHtml(s){var d=document.createElement("div");d.textContent=s;return d.innerHTML;}
+function toggleLike(postId){
+var liked=likedPosts[postId];
+if(liked){
+social.mutate({type:"unreact",targetType:"post",targetId:postId}).then(function(){
+likedPosts[postId]=false;
+StickerNest.emit("social.post.unliked",{postId:postId});
+loadFeed();
+}).catch(function(e){console.error(e);});
+}else{
+social.mutate({type:"react",targetType:"post",targetId:postId,reactionType:"like"}).then(function(){
+likedPosts[postId]=true;
+StickerNest.emit("social.post.liked",{postId:postId});
+loadFeed();
+}).catch(function(e){console.error(e);});
+}
+}
+StickerNest.register({id:"sn.builtin.social-feed",name:"Social Feed",version:"1.0.0",events:{emits:[{name:"social.post.liked"},{name:"social.post.unliked"}],subscribes:[]}});
+init();
+StickerNest.ready();
+</script>`,
+    isBuiltIn: true,
+    installedAt: new Date().toISOString(),
+  },
 ];
 
 /**
@@ -179,6 +295,14 @@ export function initRuntime(): void {
   // 4. Register integration handlers
   const proxy = getIntegrationProxy();
   proxy.register('ai', createAiHandler());
+  proxy.register('social', createSocialHandler(() => useAuthStore.getState().user?.id ?? null));
+  proxy.register(
+    'notion',
+    createNotionHandler(() => ({
+      userId: useAuthStore.getState().user?.id ?? null,
+      // widgetId and instanceId are set per-request by WidgetFrame
+    })),
+  );
 
   // 5. Subscribe to bus events relevant to runtime
   const unsubTheme = bus.subscribe('shell.theme.changed', (_event: BusEvent) => {
@@ -216,6 +340,8 @@ export function teardownRuntime(): void {
 
   // Unregister integration handlers
   getIntegrationProxy().unregister('ai');
+  getIntegrationProxy().unregister('social');
+  getIntegrationProxy().unregister('notion');
 
   // Destroy pool
   pool?.destroy();
