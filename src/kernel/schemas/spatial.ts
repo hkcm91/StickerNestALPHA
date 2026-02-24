@@ -188,3 +188,4 @@ export const DetectedPlaneJSONSchema = DetectedPlaneSchema.toJSONSchema();
 export const DetectedMeshJSONSchema = DetectedMeshSchema.toJSONSchema();
 export const SpatialAnchorJSONSchema = SpatialAnchorSchema.toJSONSchema();
 export const HandJointJSONSchema = HandJointSchema.toJSONSchema();
+export const XRSessionModeJSONSchema = XRSessionModeSchema.toJSONSchema();

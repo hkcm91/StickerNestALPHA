@@ -53,6 +53,7 @@ export {
   DetectedMeshJSONSchema,
   SpatialAnchorJSONSchema,
   HandJointJSONSchema,
+  XRSessionModeJSONSchema,
 } from './spatial';
 
 // =============================================================================
