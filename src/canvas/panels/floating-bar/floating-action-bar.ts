@@ -31,6 +31,7 @@ export function createFloatingActionBarController(): FloatingActionBarController
         { id: 'duplicate', label: 'Duplicate', action: 'duplicate' },
         { id: 'bring-front', label: 'Bring to Front', action: 'bringToFront' },
         { id: 'send-back', label: 'Send to Back', action: 'sendToBack' },
+        { id: 'ungroup', label: 'Ungroup', action: 'ungroup' },
       ];
       if (selectedCount > 1) {
         actions.push(
@@ -76,6 +77,9 @@ export function createFloatingActionBarController(): FloatingActionBarController
           break;
         case 'group':
           bus.emit('canvas.entity.group', { entityIds });
+          break;
+        case 'ungroup':
+          bus.emit('canvas.entity.ungroup', { entityIds });
           break;
         case 'alignLeft':
           bus.emit('canvas.align.left', { entityIds });

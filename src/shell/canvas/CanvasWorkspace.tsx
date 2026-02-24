@@ -35,7 +35,7 @@ import { CanvasOverlayLayer } from './CanvasOverlayLayer';
 import { CanvasToolLayer } from './CanvasToolLayer';
 import { CanvasViewportLayer } from './CanvasViewportLayer';
 import { SelectionOverlay } from './components';
-import { initAlignHandler } from './handlers';
+import { initAlignHandler, initGroupHandler } from './handlers';
 import { useActiveTool, useCanvasInput, useCanvasShortcuts, useSceneGraph, useSelection, useViewport } from './hooks';
 
 export interface CanvasWorkspaceProps {
@@ -97,6 +97,12 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   // Initialize alignment handler — subscribes to align/distribute bus events
   useEffect(() => {
     const teardown = initAlignHandler(() => sceneGraph);
+    return teardown;
+  }, [sceneGraph]);
+
+  // Initialize group handler — subscribes to group/ungroup bus events
+  useEffect(() => {
+    const teardown = initGroupHandler(() => sceneGraph);
     return teardown;
   }, [sceneGraph]);
 

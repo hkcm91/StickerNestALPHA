@@ -6,3 +6,4 @@
  */
 
 export { initAlignHandler, AlignEvents } from './alignHandler';
+export { initGroupHandler, GroupEvents } from './groupHandler';
