@@ -143,11 +143,15 @@ describe('GroupEntity in SceneGraph', () => {
     expect(scene.getEntity(group.id)).toBeUndefined();
   });
 
-  it('removing child does NOT update group.children (no referential integrity)', () => {
+  it('removing child with parentId updates group.children (referential integrity)', () => {
     const scene = createSceneGraph();
     const childA = makeShape(nextId(), 10, 10, 50, 50, 1);
     const childB = makeShape(nextId(), 70, 10, 50, 50, 2);
     const group = makeGroup(nextId(), [childA.id, childB.id], 0, 0, 200, 200, 3);
+
+    // Set parentId on children to enable referential integrity
+    (childA as Record<string, unknown>).parentId = group.id;
+    (childB as Record<string, unknown>).parentId = group.id;
 
     scene.addEntity(childA);
     scene.addEntity(childB);
@@ -155,10 +159,11 @@ describe('GroupEntity in SceneGraph', () => {
     scene.removeEntity(childA.id);
 
     const retrieved = scene.getEntity(group.id) as GroupEntity;
-    // children array still references the removed child — scene graph is flat
-    expect(retrieved.children).toContain(childA.id);
-    expect(retrieved.children.length).toBe(2);
-    // But the child itself is gone
+    // children array is updated — childA removed
+    expect(retrieved.children).not.toContain(childA.id);
+    expect(retrieved.children.length).toBe(1);
+    expect(retrieved.children).toContain(childB.id);
+    // The child itself is gone
     expect(scene.getEntity(childA.id)).toBeUndefined();
   });
 
@@ -366,6 +371,131 @@ describe('Nested Containers', () => {
     // Parent (z=1) comes before child (z=100) — z is per-entity, not inherited
     expect(ordered[0].id).toBe(parent.id);
     expect(ordered[1].id).toBe(child.id);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Parent/Child Query Helpers
+// ---------------------------------------------------------------------------
+
+describe('Parent/Child Query Helpers', () => {
+  it('getChildren returns entities with matching parentId', () => {
+    const scene = createSceneGraph();
+    const childA = makeShape(nextId(), 10, 10, 50, 50, 1);
+    const childB = makeShape(nextId(), 70, 10, 50, 50, 2);
+    const unrelated = makeShape(nextId(), 200, 200, 50, 50, 3);
+    const group = makeGroup(nextId(), [childA.id, childB.id], 0, 0, 200, 200, 4);
+
+    (childA as Record<string, unknown>).parentId = group.id;
+    (childB as Record<string, unknown>).parentId = group.id;
+
+    scene.addEntity(childA);
+    scene.addEntity(childB);
+    scene.addEntity(unrelated);
+    scene.addEntity(group);
+
+    const children = scene.getChildren(group.id);
+    expect(children.length).toBe(2);
+    expect(children.map((c) => c.id)).toContain(childA.id);
+    expect(children.map((c) => c.id)).toContain(childB.id);
+    expect(children.map((c) => c.id)).not.toContain(unrelated.id);
+  });
+
+  it('getChildren returns empty array when no children exist', () => {
+    const scene = createSceneGraph();
+    const group = makeGroup(nextId(), [], 0, 0, 200, 200, 1);
+    scene.addEntity(group);
+
+    expect(scene.getChildren(group.id)).toEqual([]);
+  });
+
+  it('getParent returns the parent group for a child', () => {
+    const scene = createSceneGraph();
+    const child = makeShape(nextId(), 10, 10, 50, 50, 1);
+    const group = makeGroup(nextId(), [child.id], 0, 0, 200, 200, 2);
+
+    (child as Record<string, unknown>).parentId = group.id;
+
+    scene.addEntity(child);
+    scene.addEntity(group);
+
+    const parent = scene.getParent(child.id);
+    expect(parent).toBeDefined();
+    expect(parent!.id).toBe(group.id);
+  });
+
+  it('getParent returns undefined for entities without parentId', () => {
+    const scene = createSceneGraph();
+    const shape = makeShape(nextId(), 10, 10, 50, 50, 1);
+    scene.addEntity(shape);
+
+    expect(scene.getParent(shape.id)).toBeUndefined();
+  });
+
+  it('getDescendants returns full tree for nested groups', () => {
+    const scene = createSceneGraph();
+    const leaf = makeShape(nextId(), 10, 10, 20, 20, 1);
+    const innerGroup = makeGroup(nextId(), [leaf.id], 0, 0, 50, 50, 2);
+    const outerGroup = makeGroup(nextId(), [innerGroup.id], 0, 0, 100, 100, 3);
+
+    (leaf as Record<string, unknown>).parentId = innerGroup.id;
+    (innerGroup as Record<string, unknown>).parentId = outerGroup.id;
+
+    scene.addEntity(leaf);
+    scene.addEntity(innerGroup);
+    scene.addEntity(outerGroup);
+
+    const descendants = scene.getDescendants(outerGroup.id);
+    expect(descendants.length).toBe(2);
+    expect(descendants.map((d) => d.id)).toContain(innerGroup.id);
+    expect(descendants.map((d) => d.id)).toContain(leaf.id);
+  });
+
+  it('getDescendants returns empty array for leaf entities', () => {
+    const scene = createSceneGraph();
+    const leaf = makeShape(nextId(), 10, 10, 20, 20, 1);
+    scene.addEntity(leaf);
+
+    expect(scene.getDescendants(leaf.id)).toEqual([]);
+  });
+
+  it('removing group clears parentId on children', () => {
+    const scene = createSceneGraph();
+    const childA = makeShape(nextId(), 10, 10, 50, 50, 1);
+    const childB = makeShape(nextId(), 70, 10, 50, 50, 2);
+    const group = makeGroup(nextId(), [childA.id, childB.id], 0, 0, 200, 200, 3);
+
+    (childA as Record<string, unknown>).parentId = group.id;
+    (childB as Record<string, unknown>).parentId = group.id;
+
+    scene.addEntity(childA);
+    scene.addEntity(childB);
+    scene.addEntity(group);
+    scene.removeEntity(group.id);
+
+    // Children still exist but parentId is cleared
+    const retrievedA = scene.getEntity(childA.id)!;
+    const retrievedB = scene.getEntity(childB.id)!;
+    expect(retrievedA.parentId).toBeUndefined();
+    expect(retrievedB.parentId).toBeUndefined();
+  });
+
+  it('updating parentId makes entity visible via getChildren', () => {
+    const scene = createSceneGraph();
+    const child = makeShape(nextId(), 10, 10, 50, 50, 1);
+    const group = makeGroup(nextId(), [child.id], 0, 0, 200, 200, 2);
+
+    scene.addEntity(child);
+    scene.addEntity(group);
+
+    // Initially no parentId — getChildren returns empty
+    expect(scene.getChildren(group.id)).toEqual([]);
+
+    // Set parentId
+    scene.updateEntity(child.id, { parentId: group.id } as Partial<CanvasEntity>);
+    const children = scene.getChildren(group.id);
+    expect(children.length).toBe(1);
+    expect(children[0].id).toBe(child.id);
   });
 });
 

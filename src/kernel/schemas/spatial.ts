@@ -49,13 +49,11 @@ export const Size2DSchema = z.object({
 export type Size2D = z.infer<typeof Size2DSchema>;
 
 /**
- * 2D Bounding box
+ * 2D Bounding box (min/max corners)
  */
 export const BoundingBox2DSchema = z.object({
-  x: z.number(),
-  y: z.number(),
-  width: z.number().nonnegative(),
-  height: z.number().nonnegative(),
+  min: Point2DSchema,
+  max: Point2DSchema,
 });
 
 export type BoundingBox2D = z.infer<typeof BoundingBox2DSchema>;

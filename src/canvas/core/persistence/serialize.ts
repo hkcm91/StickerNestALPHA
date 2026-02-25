@@ -13,9 +13,8 @@ import type {
   CanvasEntity,
   ViewportConfig,
   LayoutMode,
-  BackgroundSpec,
 } from '@sn/types';
-import { DEFAULT_BACKGROUND, CANVAS_DOCUMENT_VERSION } from '@sn/types';
+import { DEFAULT_BACKGROUND } from '@sn/types';
 
 import type { SceneGraph } from '../scene';
 

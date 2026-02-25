@@ -1,9 +1,13 @@
 /**
- * SelectionOverlay — renders interactive resize handles on selected entities.
+ * SelectionOverlay — renders interactive resize and crop handles on selected entities.
  *
  * Mounted inside CanvasViewportLayer so handles transform with the viewport.
  * In edit mode with exactly 1 entity selected, renders 8 resize handles
  * at bounding box corners and edge midpoints.
+ *
+ * When an entity is in crop mode (toggled via 'C' shortcut), renders 4 edge
+ * crop handles instead of resize handles. Dragging crop handles adjusts the
+ * percentage-based crop inset for that edge.
  *
  * @module shell/canvas/components
  * @layer L6
@@ -11,11 +15,13 @@
 
 import React, { useRef, useState } from 'react';
 
-import type { CanvasEntity, BoundingBox2D, Point2D, Size2D } from '@sn/types';
+import type { CanvasEntity, BoundingBox2D, CropRect, Point2D, Size2D } from '@sn/types';
 import { CanvasEvents } from '@sn/types';
 
 import type { SceneGraph } from '../../../canvas/core';
 import { bus } from '../../../kernel/bus';
+import { CropEvents } from '../handlers';
+import { useCropMode } from '../hooks';
 import type { HandlePosition } from '../utils/resize';
 import { computeResize, getResizeHandles } from '../utils/resize';
 
@@ -27,6 +33,14 @@ const HANDLE_SIZE = 8;
 const HALF_HANDLE = HANDLE_SIZE / 2;
 const MIN_ENTITY_SIZE = 20;
 const SELECTION_BORDER_WIDTH = 1;
+
+/** Width of the crop edge handle bar. */
+const CROP_HANDLE_THICKNESS = 6;
+
+/** Minimum gap between opposite crop edges (prevents inverting). */
+const MIN_CROP_GAP = 0.05;
+
+type CropEdge = 'top' | 'right' | 'bottom' | 'left';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -49,9 +63,64 @@ interface DragState {
   originalTransform: CanvasEntity['transform'];
 }
 
+interface CropDragState {
+  edge: CropEdge;
+  entityId: string;
+  startPointer: Point2D;
+  originalCrop: CropRect;
+  entitySize: Size2D;
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+/**
+ * Compute a new CropRect from a crop edge drag.
+ * Clamps values to [0, 1-oppositeEdge-MIN_CROP_GAP].
+ */
+function computeCropFromDrag(
+  state: CropDragState,
+  clientX: number,
+  clientY: number,
+): CropRect {
+  const dx = clientX - state.startPointer.x;
+  const dy = clientY - state.startPointer.y;
+  const { edge, originalCrop, entitySize } = state;
+
+  const crop = { ...originalCrop };
+
+  switch (edge) {
+    case 'top': {
+      const delta = dy / entitySize.height;
+      crop.top = clampCropValue(originalCrop.top + delta, crop.bottom);
+      break;
+    }
+    case 'bottom': {
+      const delta = -dy / entitySize.height;
+      crop.bottom = clampCropValue(originalCrop.bottom + delta, crop.top);
+      break;
+    }
+    case 'left': {
+      const delta = dx / entitySize.width;
+      crop.left = clampCropValue(originalCrop.left + delta, crop.right);
+      break;
+    }
+    case 'right': {
+      const delta = -dx / entitySize.width;
+      crop.right = clampCropValue(originalCrop.right + delta, crop.left);
+      break;
+    }
+  }
+
+  return crop;
+}
+
+/** Clamp a crop edge value to [0, 1 - oppositeEdge - MIN_CROP_GAP]. */
+function clampCropValue(value: number, oppositeEdge: number): number {
+  const max = 1 - oppositeEdge - MIN_CROP_GAP;
+  return Math.max(0, Math.min(max, value));
+}
 
 /** Get the pixel position for a resize handle relative to the entity. */
 function getHandleOffset(
@@ -99,6 +168,12 @@ export const SelectionOverlay: React.FC<SelectionOverlayProps> = ({
   } | null>(null);
   const dragRef = useRef<DragState | null>(null);
 
+  // Crop mode state
+  const cropModeIds = useCropMode();
+  const [_cropDragState, setCropDragState] = useState<CropDragState | null>(null);
+  const [liveCrop, setLiveCrop] = useState<CropRect | null>(null);
+  const cropDragRef = useRef<CropDragState | null>(null);
+
   // Only render in edit mode
   if (interactionMode !== 'edit') return null;
   if (selectedIds.size === 0) return null;
@@ -117,6 +192,10 @@ export const SelectionOverlay: React.FC<SelectionOverlayProps> = ({
 
   // For resize: only enable handles when exactly 1 entity is selected
   const canResize = selectedEntities.length === 1 && !selectedEntities[0].locked;
+
+  // Determine if the single selected entity is in crop mode
+  const isCropMode =
+    selectedEntities.length === 1 && cropModeIds.has(selectedEntities[0].id);
 
   // Compute bounding box encompassing all selected entities
   let minX = Infinity;
@@ -225,13 +304,15 @@ export const SelectionOverlay: React.FC<SelectionOverlayProps> = ({
       height: Math.max(MIN_ENTITY_SIZE, result.size.height),
     };
 
-    // Emit resize event with full transform to avoid shallow merge issues
+    // Emit resize event with full transform wrapped in updates
     bus.emit(CanvasEvents.ENTITY_UPDATED, {
       id: state.entityId,
-      transform: {
-        ...state.originalTransform,
-        position: result.position,
-        size: clampedSize,
+      updates: {
+        transform: {
+          ...state.originalTransform,
+          position: result.position,
+          size: clampedSize,
+        },
       },
     });
 
@@ -240,6 +321,77 @@ export const SelectionOverlay: React.FC<SelectionOverlayProps> = ({
     setDragState(null);
     setLivePreview(null);
   };
+
+  // --- Pointer handlers for crop ---
+
+  const handleCropPointerDown = (
+    e: React.PointerEvent,
+    edge: CropEdge,
+  ) => {
+    if (!isCropMode) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    const entity = selectedEntities[0];
+    const currentCrop: CropRect = entity.cropRect ?? {
+      top: 0,
+      right: 0,
+      bottom: 0,
+      left: 0,
+    };
+
+    const state: CropDragState = {
+      edge,
+      entityId: entity.id,
+      startPointer: { x: e.clientX, y: e.clientY },
+      originalCrop: { ...currentCrop },
+      entitySize: { ...entity.transform.size },
+    };
+
+    cropDragRef.current = state;
+    setCropDragState(state);
+
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  };
+
+  const handleCropPointerMove = (e: React.PointerEvent) => {
+    const state = cropDragRef.current;
+    if (!state) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const newCrop = computeCropFromDrag(state, e.clientX, e.clientY);
+    setLiveCrop(newCrop);
+  };
+
+  const handleCropPointerUp = (e: React.PointerEvent) => {
+    const state = cropDragRef.current;
+    if (!state) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+
+    const finalCrop = computeCropFromDrag(state, e.clientX, e.clientY);
+
+    // Emit crop apply
+    bus.emit(CropEvents.APPLY, {
+      entityId: state.entityId,
+      cropRect: finalCrop,
+    });
+
+    cropDragRef.current = null;
+    setCropDragState(null);
+    setLiveCrop(null);
+  };
+
+  // Current crop values for crop mode overlay
+  const activeCrop: CropRect = isCropMode
+    ? liveCrop ??
+      selectedEntities[0].cropRect ?? { top: 0, right: 0, bottom: 0, left: 0 }
+    : { top: 0, right: 0, bottom: 0, left: 0 };
 
   return (
     <>
@@ -252,14 +404,194 @@ export const SelectionOverlay: React.FC<SelectionOverlayProps> = ({
           top: displayPosition.y,
           width: displaySize.width,
           height: displaySize.height,
-          border: `${SELECTION_BORDER_WIDTH}px solid #4a90d9`,
+          border: `${SELECTION_BORDER_WIDTH}px solid ${isCropMode ? '#e17055' : '#4a90d9'}`,
           pointerEvents: 'none',
           boxSizing: 'border-box',
         }}
       />
 
-      {/* Resize handles — only for single selection on non-locked entity */}
+      {/* Crop mode: dimmed overlay + edge crop handles */}
+      {isCropMode && (
+        <>
+          {/* Dimmed areas outside the crop region */}
+          {/* Top dim */}
+          {activeCrop.top > 0 && (
+            <div
+              data-testid="crop-dim-top"
+              style={{
+                position: 'absolute',
+                left: displayPosition.x,
+                top: displayPosition.y,
+                width: displaySize.width,
+                height: displaySize.height * activeCrop.top,
+                background: 'rgba(0, 0, 0, 0.4)',
+                pointerEvents: 'none',
+              }}
+            />
+          )}
+          {/* Bottom dim */}
+          {activeCrop.bottom > 0 && (
+            <div
+              data-testid="crop-dim-bottom"
+              style={{
+                position: 'absolute',
+                left: displayPosition.x,
+                top:
+                  displayPosition.y +
+                  displaySize.height * (1 - activeCrop.bottom),
+                width: displaySize.width,
+                height: displaySize.height * activeCrop.bottom,
+                background: 'rgba(0, 0, 0, 0.4)',
+                pointerEvents: 'none',
+              }}
+            />
+          )}
+          {/* Left dim */}
+          {activeCrop.left > 0 && (
+            <div
+              data-testid="crop-dim-left"
+              style={{
+                position: 'absolute',
+                left: displayPosition.x,
+                top:
+                  displayPosition.y + displaySize.height * activeCrop.top,
+                width: displaySize.width * activeCrop.left,
+                height:
+                  displaySize.height *
+                  (1 - activeCrop.top - activeCrop.bottom),
+                background: 'rgba(0, 0, 0, 0.4)',
+                pointerEvents: 'none',
+              }}
+            />
+          )}
+          {/* Right dim */}
+          {activeCrop.right > 0 && (
+            <div
+              data-testid="crop-dim-right"
+              style={{
+                position: 'absolute',
+                left:
+                  displayPosition.x +
+                  displaySize.width * (1 - activeCrop.right),
+                top:
+                  displayPosition.y + displaySize.height * activeCrop.top,
+                width: displaySize.width * activeCrop.right,
+                height:
+                  displaySize.height *
+                  (1 - activeCrop.top - activeCrop.bottom),
+                background: 'rgba(0, 0, 0, 0.4)',
+                pointerEvents: 'none',
+              }}
+            />
+          )}
+
+          {/* Crop edge handles */}
+          {/* Top handle */}
+          <div
+            data-testid="crop-handle-top"
+            onPointerDown={(e) => handleCropPointerDown(e, 'top')}
+            onPointerMove={handleCropPointerMove}
+            onPointerUp={handleCropPointerUp}
+            style={{
+              position: 'absolute',
+              left: displayPosition.x + displaySize.width * activeCrop.left,
+              top:
+                displayPosition.y +
+                displaySize.height * activeCrop.top -
+                CROP_HANDLE_THICKNESS / 2,
+              width:
+                displaySize.width *
+                (1 - activeCrop.left - activeCrop.right),
+              height: CROP_HANDLE_THICKNESS,
+              background: '#e17055',
+              cursor: 'ns-resize',
+              pointerEvents: 'auto',
+              borderRadius: 2,
+              opacity: 0.9,
+              zIndex: 2,
+            }}
+          />
+          {/* Bottom handle */}
+          <div
+            data-testid="crop-handle-bottom"
+            onPointerDown={(e) => handleCropPointerDown(e, 'bottom')}
+            onPointerMove={handleCropPointerMove}
+            onPointerUp={handleCropPointerUp}
+            style={{
+              position: 'absolute',
+              left: displayPosition.x + displaySize.width * activeCrop.left,
+              top:
+                displayPosition.y +
+                displaySize.height * (1 - activeCrop.bottom) -
+                CROP_HANDLE_THICKNESS / 2,
+              width:
+                displaySize.width *
+                (1 - activeCrop.left - activeCrop.right),
+              height: CROP_HANDLE_THICKNESS,
+              background: '#e17055',
+              cursor: 'ns-resize',
+              pointerEvents: 'auto',
+              borderRadius: 2,
+              opacity: 0.9,
+              zIndex: 2,
+            }}
+          />
+          {/* Left handle */}
+          <div
+            data-testid="crop-handle-left"
+            onPointerDown={(e) => handleCropPointerDown(e, 'left')}
+            onPointerMove={handleCropPointerMove}
+            onPointerUp={handleCropPointerUp}
+            style={{
+              position: 'absolute',
+              left:
+                displayPosition.x +
+                displaySize.width * activeCrop.left -
+                CROP_HANDLE_THICKNESS / 2,
+              top: displayPosition.y + displaySize.height * activeCrop.top,
+              width: CROP_HANDLE_THICKNESS,
+              height:
+                displaySize.height *
+                (1 - activeCrop.top - activeCrop.bottom),
+              background: '#e17055',
+              cursor: 'ew-resize',
+              pointerEvents: 'auto',
+              borderRadius: 2,
+              opacity: 0.9,
+              zIndex: 2,
+            }}
+          />
+          {/* Right handle */}
+          <div
+            data-testid="crop-handle-right"
+            onPointerDown={(e) => handleCropPointerDown(e, 'right')}
+            onPointerMove={handleCropPointerMove}
+            onPointerUp={handleCropPointerUp}
+            style={{
+              position: 'absolute',
+              left:
+                displayPosition.x +
+                displaySize.width * (1 - activeCrop.right) -
+                CROP_HANDLE_THICKNESS / 2,
+              top: displayPosition.y + displaySize.height * activeCrop.top,
+              width: CROP_HANDLE_THICKNESS,
+              height:
+                displaySize.height *
+                (1 - activeCrop.top - activeCrop.bottom),
+              background: '#e17055',
+              cursor: 'ew-resize',
+              pointerEvents: 'auto',
+              borderRadius: 2,
+              opacity: 0.9,
+              zIndex: 2,
+            }}
+          />
+        </>
+      )}
+
+      {/* Resize handles — only for single selection on non-locked entity, NOT in crop mode */}
       {canResize &&
+        !isCropMode &&
         handles.map((h) => {
           const offset = getHandleOffset(
             h.position,

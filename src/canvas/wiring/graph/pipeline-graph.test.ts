@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import type { PipelineNode, PipelineEdge, PipelinePort } from '@sn/types';
+import type { PipelineNode, PipelinePort } from '@sn/types';
 
 import { createPipelineGraph } from './pipeline-graph';
 

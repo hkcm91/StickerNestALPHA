@@ -19,7 +19,10 @@ import {
   type CellBounds,
   getVisibleCellBounds,
   cellToPosition,
+  cellCenter,
   getIsometricCellCorners,
+  getTriangularCellCorners,
+  getHexagonalCellCorners,
 } from './grid-cell-store';
 
 /**
@@ -115,12 +118,53 @@ export function createGridRenderer(cellStore: GridCellStore): GridRenderer {
     context.fill();
   }
 
+  /**
+   * Render a triangular cell
+   */
+  function renderTriangularCell(
+    context: CanvasRenderingContext2D,
+    cell: GridCell,
+    _viewport: ViewportState,
+    _config: GridConfig
+  ): void {
+    const corners = getTriangularCellCorners(cell.col, cell.row, _config);
+    const [a, b, c] = corners.map(p => canvasToScreen(p, _viewport));
+
+    context.beginPath();
+    context.moveTo(a.x, a.y);
+    context.lineTo(b.x, b.y);
+    context.lineTo(c.x, c.y);
+    context.closePath();
+    context.fill();
+  }
+
+  /**
+   * Render a hexagonal cell
+   */
+  function renderHexagonalCell(
+    context: CanvasRenderingContext2D,
+    cell: GridCell,
+    _viewport: ViewportState,
+    _config: GridConfig
+  ): void {
+    const corners = getHexagonalCellCorners(cell.col, cell.row, _config);
+    const screenCorners = corners.map(p => canvasToScreen(p, _viewport));
+
+    context.beginPath();
+    context.moveTo(screenCorners[0].x, screenCorners[0].y);
+    for (let i = 1; i < 6; i++) {
+      context.lineTo(screenCorners[i].x, screenCorners[i].y);
+    }
+    context.closePath();
+    context.fill();
+  }
+
   function renderCells(visibleCellBounds: CellBounds): void {
     const context = ensureContext();
     if (!context || !viewport || !config) return;
 
     const cells = cellStore.getCellsInBounds(visibleCellBounds);
-    const isIsometric = config.projection === 'isometric';
+    const projection = config.projection;
 
     // Group cells by color for batched rendering
     const colorGroups = new Map<string, GridCell[]>();
@@ -138,10 +182,19 @@ export function createGridRenderer(cellStore: GridCellStore): GridRenderer {
     for (const [color, groupCells] of colorGroups) {
       context.fillStyle = color;
       for (const cell of groupCells) {
-        if (isIsometric) {
-          renderIsometricCell(context, cell, viewport, config);
-        } else {
-          renderOrthogonalCell(context, cell, viewport, config);
+        switch (projection) {
+          case 'isometric':
+            renderIsometricCell(context, cell, viewport, config);
+            break;
+          case 'triangular':
+            renderTriangularCell(context, cell, viewport, config);
+            break;
+          case 'hexagonal':
+            renderHexagonalCell(context, cell, viewport, config);
+            break;
+          default:
+            renderOrthogonalCell(context, cell, viewport, config);
+            break;
         }
       }
     }
@@ -227,6 +280,63 @@ export function createGridRenderer(cellStore: GridCellStore): GridRenderer {
     context.stroke();
   }
 
+  /**
+   * Render triangular grid lines
+   * Draws outlines of each triangle in the visible range.
+   */
+  function renderTriangularGridLines(
+    context: CanvasRenderingContext2D,
+    visibleCellBounds: CellBounds,
+    _viewport: ViewportState,
+    _config: GridConfig,
+    _canvas: HTMLCanvasElement
+  ): void {
+    context.beginPath();
+
+    for (let row = visibleCellBounds.minRow; row <= visibleCellBounds.maxRow; row++) {
+      for (let col = visibleCellBounds.minCol; col <= visibleCellBounds.maxCol; col++) {
+        const corners = getTriangularCellCorners(col, row, _config);
+        const [a, b, c] = corners.map(p => canvasToScreen(p, _viewport));
+
+        context.moveTo(a.x, a.y);
+        context.lineTo(b.x, b.y);
+        context.lineTo(c.x, c.y);
+        context.closePath();
+      }
+    }
+
+    context.stroke();
+  }
+
+  /**
+   * Render hexagonal grid lines
+   * Draws outlines of each hexagon in the visible range.
+   */
+  function renderHexagonalGridLines(
+    context: CanvasRenderingContext2D,
+    visibleCellBounds: CellBounds,
+    _viewport: ViewportState,
+    _config: GridConfig,
+    _canvas: HTMLCanvasElement
+  ): void {
+    context.beginPath();
+
+    for (let row = visibleCellBounds.minRow; row <= visibleCellBounds.maxRow; row++) {
+      for (let col = visibleCellBounds.minCol; col <= visibleCellBounds.maxCol; col++) {
+        const corners = getHexagonalCellCorners(col, row, _config);
+        const screenCorners = corners.map(p => canvasToScreen(p, _viewport));
+
+        context.moveTo(screenCorners[0].x, screenCorners[0].y);
+        for (let i = 1; i < 6; i++) {
+          context.lineTo(screenCorners[i].x, screenCorners[i].y);
+        }
+        context.closePath();
+      }
+    }
+
+    context.stroke();
+  }
+
   function renderGridLines(visibleCellBounds: CellBounds): void {
     const context = ensureContext();
     if (!context || !viewport || !config || !canvas) return;
@@ -238,10 +348,19 @@ export function createGridRenderer(cellStore: GridCellStore): GridRenderer {
     context.strokeStyle = config.gridLineColor;
     context.lineWidth = config.gridLineWidth;
 
-    if (config.projection === 'isometric') {
-      renderIsometricGridLines(context, visibleCellBounds, viewport, config, canvas);
-    } else {
-      renderOrthogonalGridLines(context, visibleCellBounds, viewport, config, canvas);
+    switch (config.projection) {
+      case 'isometric':
+        renderIsometricGridLines(context, visibleCellBounds, viewport, config, canvas);
+        break;
+      case 'triangular':
+        renderTriangularGridLines(context, visibleCellBounds, viewport, config, canvas);
+        break;
+      case 'hexagonal':
+        renderHexagonalGridLines(context, visibleCellBounds, viewport, config, canvas);
+        break;
+      default:
+        renderOrthogonalGridLines(context, visibleCellBounds, viewport, config, canvas);
+        break;
     }
   }
 

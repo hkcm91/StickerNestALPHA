@@ -13,7 +13,7 @@ import { create } from 'zustand';
 import { devtools, subscribeWithSelector } from 'zustand/middleware';
 
 import type { BusEvent } from '@sn/types';
-import { InteractionModeEvents, createBusEvent } from '@sn/types';
+import { InteractionModeEvents } from '@sn/types';
 
 import { bus } from '../../../kernel/bus';
 
@@ -88,9 +88,7 @@ export const useInteractionStore = create<InteractionStore>()(
         });
 
         // Emit bus event for cross-layer coordination
-        bus.emit(
-          createBusEvent(InteractionModeEvents.MODE_CHANGED, { mode })
-        );
+        bus.emit(InteractionModeEvents.MODE_CHANGED, { mode });
       },
 
       toggleMode: () => {

@@ -1,0 +1,26 @@
+const config = {
+    stories: ['../src/**/*.stories.@(js|jsx|ts|tsx|mdx)'],
+    addons: [
+        '@storybook/addon-essentials',
+        '@storybook/addon-interactions',
+    ],
+    framework: {
+        name: '@storybook/react-vite',
+        options: {},
+    },
+    viteFinal: async (config) => {
+        // Ensure Vite config is compatible with Storybook
+        return {
+            ...config,
+            resolve: {
+                ...config.resolve,
+                alias: {
+                    ...config.resolve?.alias,
+                    '@sn/types': '/src/kernel/schemas/index.ts',
+                },
+            },
+        };
+    },
+};
+export default config;
+//# sourceMappingURL=main.js.map

@@ -28,11 +28,6 @@ import {
   SpatialAnchorJSONSchema,
   HandJointJSONSchema,
   XRSessionModeJSONSchema,
-  type Vector3,
-  type Quaternion,
-  type Point2D,
-  type Size2D,
-  type BoundingBox2D,
   type SpatialContext,
 } from './spatial';
 
@@ -158,24 +153,24 @@ describe('Spatial Schemas', () => {
 
   describe('BoundingBox2DSchema', () => {
     it('should parse valid bounding box', () => {
-      const input = { x: 10, y: 20, width: 100, height: 50 };
+      const input = { min: { x: 10, y: 20 }, max: { x: 110, y: 70 } };
       const result = BoundingBox2DSchema.safeParse(input);
 
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data).toEqual({ x: 10, y: 20, width: 100, height: 50 });
+        expect(result.data).toEqual({ min: { x: 10, y: 20 }, max: { x: 110, y: 70 } });
       }
     });
 
-    it('should accept negative position', () => {
-      const input = { x: -10, y: -20, width: 100, height: 50 };
+    it('should accept negative coordinates', () => {
+      const input = { min: { x: -10, y: -20 }, max: { x: 90, y: 30 } };
       const result = BoundingBox2DSchema.safeParse(input);
 
       expect(result.success).toBe(true);
     });
 
-    it('should reject negative dimensions', () => {
-      const input = { x: 10, y: 20, width: -100, height: 50 };
+    it('should reject missing min or max', () => {
+      const input = { min: { x: 10, y: 20 } };
       const result = BoundingBox2DSchema.safeParse(input);
 
       expect(result.success).toBe(false);

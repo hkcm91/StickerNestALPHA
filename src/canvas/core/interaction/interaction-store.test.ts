@@ -73,10 +73,8 @@ describe('Interaction Store', () => {
       useInteractionStore.getState().setMode('play');
 
       expect(emitSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: InteractionModeEvents.MODE_CHANGED,
-          payload: { mode: 'play' },
-        })
+        InteractionModeEvents.MODE_CHANGED,
+        { mode: 'play' },
       );
 
       emitSpy.mockRestore();
@@ -162,20 +160,14 @@ describe('Interaction Store', () => {
 
     it('should update mode when receiving bus event', () => {
       // Emit from external source (simulating kernel uiStore)
-      bus.emit({
-        type: InteractionModeEvents.MODE_CHANGED,
-        payload: { mode: 'play' as InteractionMode },
-      });
+      bus.emit(InteractionModeEvents.MODE_CHANGED, { mode: 'play' as InteractionMode });
 
       // Wait for subscription to process
       expect(useInteractionStore.getState().mode).toBe('play');
     });
 
     it('should ignore invalid mode values', () => {
-      bus.emit({
-        type: InteractionModeEvents.MODE_CHANGED,
-        payload: { mode: 'invalid' },
-      });
+      bus.emit(InteractionModeEvents.MODE_CHANGED, { mode: 'invalid' });
 
       expect(useInteractionStore.getState().mode).toBe('edit');
     });
@@ -184,14 +176,11 @@ describe('Interaction Store', () => {
       const emitSpy = vi.spyOn(bus, 'emit');
 
       // Already in edit mode, emit edit mode event
-      bus.emit({
-        type: InteractionModeEvents.MODE_CHANGED,
-        payload: { mode: 'edit' as InteractionMode },
-      });
+      bus.emit(InteractionModeEvents.MODE_CHANGED, { mode: 'edit' as InteractionMode });
 
       // Should not emit another event
       const editEmits = emitSpy.mock.calls.filter(
-        (call) => call[0].type === InteractionModeEvents.MODE_CHANGED
+        (call) => call[0] === InteractionModeEvents.MODE_CHANGED
       );
       expect(editEmits.length).toBe(1); // Only the one we emitted
 

@@ -25,7 +25,6 @@ import {
   getInputSource,
   mapMouseButton,
   getButtonsHeld,
-  createDefaultModifiers,
 } from './input-event';
 
 /**

@@ -48,6 +48,9 @@ export {
   createGridLayer,
   connectToRenderLoop,
   DEFAULT_GRID_CONFIG,
+  getIsometricCellCorners,
+  getTriangularCellCorners,
+  getHexagonalCellCorners,
 } from './grid';
 export type {
   GridCellStore,
@@ -162,6 +165,19 @@ export {
   getBackgroundCSSProperties,
 } from './background';
 export type { BackgroundRenderer } from './background';
+
+// Geometry (Bezier math)
+export {
+  evaluateCubicBezier,
+  splitCubicBezier,
+  cubicBezierBounds,
+  distanceToCubicBezier,
+  anchorsToSvgPath,
+  pathBounds,
+  mirrorHandle,
+  enforceSmooth,
+  enforceSymmetric,
+} from './geometry';
 
 // Input
 export type {

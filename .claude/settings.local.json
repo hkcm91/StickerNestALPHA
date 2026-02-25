@@ -61,7 +61,30 @@
       "Bash(taskkill:*)",
       "Bash(findstr:*)",
       "Bash(find:*)",
-      "Bash(npm run test:*)"
+      "Bash(npm run test:*)",
+      "Bash(git log:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:pmndrs.github.io)",
+      "WebFetch(domain:meta-quest.github.io)",
+      "Bash(git checkout:*)",
+      "Bash(npm run typecheck:*)",
+      "Bash(node -e:*)",
+      "mcp__Command_Center__cc_register",
+      "Bash(npm run lint:*)",
+      "Bash(git status:*)",
+      "Bash(xargs rm:*)",
+      "Bash(npx tsx:*)",
+      "Bash(while read jsfile)",
+      "Bash(do)",
+      "Bash(base=\"$jsfile%.js\")",
+      "Bash(if [ -f \"$base.ts\" ])",
+      "Bash([ -f \"$base.tsx\" ])",
+      "Bash(then)",
+      "Bash(fi)",
+      "Bash(done)",
+      "Bash(while read dts)",
+      "Bash(base=\"$dts%.d.ts\")",
+      "Bash(pkill:*)"
     ]
   }
 }

@@ -17,7 +17,6 @@ import {
   BusEventJSONSchema,
   type BusEvent,
 } from './bus-event';
-import { SpatialContextSchema } from './spatial';
 
 describe('BusEvent Schemas', () => {
   describe('BusEventSchema', () => {

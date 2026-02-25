@@ -68,12 +68,14 @@ function applyResults(
       continue;
     }
 
-    // Full transform spread to avoid shallow merge issues
+    // Full transform spread wrapped in updates for init.ts subscriber
     bus.emit(CanvasEvents.ENTITY_UPDATED, {
       id: result.id,
-      transform: {
-        ...entity.transform,
-        position: result.position,
+      updates: {
+        transform: {
+          ...entity.transform,
+          position: result.position,
+        },
       },
     });
   }

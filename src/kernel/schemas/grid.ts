@@ -40,7 +40,7 @@ export const GridCellSchema = z.object({
   /** URL of texture image for texture fills */
   textureUrl: z.string().url().optional(),
   /** Optional metadata for custom cell types */
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type GridCell = z.infer<typeof GridCellSchema>;
@@ -58,7 +58,7 @@ export type GridSnapMode = z.infer<typeof GridSnapModeSchema>;
 /**
  * Grid projection mode
  */
-export const GridProjectionModeSchema = z.enum(['orthogonal', 'isometric']);
+export const GridProjectionModeSchema = z.enum(['orthogonal', 'isometric', 'triangular', 'hexagonal']);
 export type GridProjectionMode = z.infer<typeof GridProjectionModeSchema>;
 
 /**

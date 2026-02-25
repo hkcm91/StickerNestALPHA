@@ -472,15 +472,6 @@ export const SocialMutationTypeSchema = z.enum([
 export type SocialMutationType = z.infer<typeof SocialMutationTypeSchema>;
 
 // =============================================================================
-// Pagination Options (common fields for paginated queries)
-// =============================================================================
-
-const PaginationOptionsSchema = z.object({
-  limit: z.number().int().min(1).max(100).optional(),
-  cursor: z.string().optional(),
-});
-
-// =============================================================================
 // Social Graph Query Schema (Discriminated Union)
 // =============================================================================
 

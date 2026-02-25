@@ -38,7 +38,7 @@ import {
 
 const createContext = (overrides: Partial<ConstraintContext> = {}): ConstraintContext => ({
   entityId: 'test-entity',
-  currentBounds: { x: 0, y: 0, width: 100, height: 100 },
+  currentBounds: { min: { x: 0, y: 0 }, max: { x: 100, y: 100 } },
   viewport: { pan: { x: 0, y: 0 }, zoom: 1 },
   ...overrides,
 });
@@ -114,7 +114,7 @@ describe('Freeform Layout', () => {
 
     it('should return entity snap points when other entities present', () => {
       const ctx = createContext({
-        otherEntities: [{ x: 200, y: 200, width: 100, height: 100 }],
+        otherEntities: [{ min: { x: 200, y: 200 }, max: { x: 300, y: 300 } }],
       });
       const points = freeformLayout.getSnapPoints!(ctx);
 
@@ -269,7 +269,7 @@ describe('Desktop Layout', () => {
   describe('applyMoveConstraints', () => {
     it('should snap to other entity edges', () => {
       const ctx = createContext({
-        otherEntities: [{ x: 200, y: 100, width: 100, height: 100 }],
+        otherEntities: [{ min: { x: 200, y: 100 }, max: { x: 300, y: 200 } }],
       });
       // Try to place near the left edge of other entity
       const result = desktopLayout.applyMoveConstraints({ x: 195, y: 50 }, ctx);
@@ -316,7 +316,7 @@ describe('Desktop Layout', () => {
 
     it('should offset from last window', () => {
       const windows: BoundingBox2D[] = [
-        { x: 50, y: 50, width: 200, height: 150 },
+        { min: { x: 50, y: 50 }, max: { x: 250, y: 200 } },
       ];
       const pos = getCascadedPosition(windows);
 
@@ -326,7 +326,7 @@ describe('Desktop Layout', () => {
   });
 
   describe('detectDockingZone', () => {
-    const viewport: BoundingBox2D = { x: 0, y: 0, width: 1000, height: 800 };
+    const viewport: BoundingBox2D = { min: { x: 0, y: 0 }, max: { x: 1000, y: 800 } };
 
     it('should detect left zone', () => {
       const zone = detectDockingZone({ x: 10, y: 400 }, viewport, 50);

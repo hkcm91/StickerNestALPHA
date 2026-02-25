@@ -7,7 +7,7 @@
  * @layer L4A-1
  */
 
-import type { CanvasDocument, CanvasEntity } from '@sn/types';
+import type { CanvasDocument } from '@sn/types';
 import { CanvasDocumentSchema } from '@sn/types';
 
 import type { SceneGraph } from '../scene';
@@ -61,7 +61,7 @@ function validateDocument(input: unknown): { valid: boolean; document?: CanvasDo
     return { valid: true, document: result.data };
   }
 
-  const errorMessages = result.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`);
+  const errorMessages = result.error.issues.map((e) => `${e.path.join('.')}: ${e.message}`);
   return {
     valid: false,
     error: `Document validation failed: ${errorMessages.join('; ')}`,

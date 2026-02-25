@@ -136,12 +136,14 @@ export function registerDefaultShortcuts(registry: ShortcutRegistry): void {
     busEvent: 'shell.shortcut.save',
   });
 
+  // NOTE: Ctrl+[ and Ctrl+] are reserved for z-order control in canvas.
+  // Sidebar toggles moved to Alt+[ and Alt+] to avoid conflict.
   registry.register({
     id: 'toggle-sidebar-left',
     key: '[',
-    ctrl: true,
+    ctrl: false,
     shift: false,
-    alt: false,
+    alt: true,
     scope: 'canvas',
     busEvent: 'shell.shortcut.toggle-sidebar-left',
   });
@@ -149,9 +151,9 @@ export function registerDefaultShortcuts(registry: ShortcutRegistry): void {
   registry.register({
     id: 'toggle-sidebar-right',
     key: ']',
-    ctrl: true,
+    ctrl: false,
     shift: false,
-    alt: false,
+    alt: true,
     scope: 'canvas',
     busEvent: 'shell.shortcut.toggle-sidebar-right',
   });

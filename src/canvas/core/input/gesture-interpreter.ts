@@ -337,7 +337,7 @@ export class GestureInterpreter {
     this.emitPinchEvent('start', 1, 0);
   }
 
-  private updatePinchGesture(timestamp: number): void {
+  private updatePinchGesture(_timestamp: number): void {
     if (this.activePointers.size !== 2) return;
 
     const [p1, p2] = Array.from(this.activePointers.values());
@@ -351,12 +351,12 @@ export class GestureInterpreter {
     }
   }
 
-  private endPinchGesture(timestamp: number): void {
+  private endPinchGesture(_timestamp: number): void {
     this.emitPinchEvent('end', this.lastPinchScale, 0);
     this.gestureState = 'idle';
   }
 
-  private cancelPinchGesture(timestamp: number): void {
+  private cancelPinchGesture(_timestamp: number): void {
     this.emitPinchEvent('cancel', this.lastPinchScale, 0);
     this.gestureState = 'idle';
   }

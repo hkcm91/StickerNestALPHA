@@ -16,7 +16,6 @@ import {
   WidgetIntrinsicSizeSchema,
   WidgetScalingModeSchema,
   WidgetCropConfigSchema,
-  ShapeTypeSchema,
   ShapeEntitySchema,
   DrawingEntitySchema,
   GroupEntitySchema,
@@ -29,9 +28,7 @@ import {
   WidgetCropConfigJSONSchema,
   type CanvasEntityType,
   type Transform2D,
-  type CanvasEntity,
   type WidgetIntrinsicSize,
-  type WidgetScalingMode,
 } from './canvas-entity';
 
 describe('Canvas Entity Schemas', () => {
@@ -165,6 +162,44 @@ describe('Canvas Entity Schemas', () => {
       if (result.success) {
         expect(result.data.spatialTransform).toBeDefined();
       }
+    });
+
+    it('should accept optional parentId', () => {
+      const input = {
+        ...baseEntityData,
+        type: 'sticker',
+        parentId: '550e8400-e29b-41d4-a716-446655440099',
+      };
+      const result = CanvasEntityBaseSchema.safeParse(input);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.parentId).toBe('550e8400-e29b-41d4-a716-446655440099');
+      }
+    });
+
+    it('should allow parentId to be undefined', () => {
+      const input = {
+        ...baseEntityData,
+        type: 'sticker',
+      };
+      const result = CanvasEntityBaseSchema.safeParse(input);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.parentId).toBeUndefined();
+      }
+    });
+
+    it('should reject invalid parentId (not a UUID)', () => {
+      const input = {
+        ...baseEntityData,
+        type: 'sticker',
+        parentId: 'not-a-uuid',
+      };
+      const result = CanvasEntityBaseSchema.safeParse(input);
+
+      expect(result.success).toBe(false);
     });
 
     it('should reject invalid UUID', () => {
@@ -308,7 +343,7 @@ describe('Canvas Entity Schemas', () => {
         widgetId: 'com.example.clock',
         crop: {
           enabled: true,
-          rect: { x: 10, y: 20, width: 200, height: 150 },
+          rect: { min: { x: 10, y: 20 }, max: { x: 210, y: 170 } },
         },
       };
       const result = WidgetContainerEntitySchema.safeParse(input);
@@ -316,7 +351,7 @@ describe('Canvas Entity Schemas', () => {
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.data.crop?.enabled).toBe(true);
-        expect(result.data.crop?.rect?.width).toBe(200);
+        expect(result.data.crop?.rect?.max.x).toBe(210);
       }
     });
 
@@ -406,14 +441,14 @@ describe('Canvas Entity Schemas', () => {
     it('should parse enabled crop with rect', () => {
       const input = {
         enabled: true,
-        rect: { x: 0, y: 0, width: 100, height: 100 },
+        rect: { min: { x: 0, y: 0 }, max: { x: 100, y: 100 } },
       };
       const result = WidgetCropConfigSchema.safeParse(input);
 
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.data.enabled).toBe(true);
-        expect(result.data.rect?.x).toBe(0);
+        expect(result.data.rect?.min.x).toBe(0);
       }
     });
 

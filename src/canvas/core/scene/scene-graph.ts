@@ -5,7 +5,7 @@
  * @layer L4A-1
  */
 
-import type { CanvasEntity, Point2D, BoundingBox2D } from '@sn/types';
+import type { CanvasEntity, GroupEntity, DockerEntity, Point2D, BoundingBox2D } from '@sn/types';
 
 import { createSpatialIndex } from './spatial-index';
 import type { SpatialIndex } from './spatial-index';
@@ -21,8 +21,12 @@ export interface SceneGraph {
   sendToBack(id: string): void;
   bringForward(id: string): void;
   sendBackward(id: string): void;
+  getChildren(parentId: string): CanvasEntity[];
+  getParent(childId: string): CanvasEntity | undefined;
+  getDescendants(rootId: string): CanvasEntity[];
   queryRegion(bounds: BoundingBox2D): CanvasEntity[];
   queryPoint(point: Point2D): CanvasEntity[];
+  clear(): void;
   readonly entityCount: number;
   readonly spatialIndex: SpatialIndex;
 }
@@ -57,6 +61,34 @@ export function createSceneGraph(): SceneGraph {
     },
 
     removeEntity(id: string) {
+      const entity = entities.get(id);
+      if (!entity) return;
+
+      // Referential integrity: if entity has a parent, remove it from parent's children array
+      if (entity.parentId) {
+        const parent = entities.get(entity.parentId);
+        if (parent && 'children' in parent) {
+          const parentWithChildren = parent as GroupEntity | DockerEntity;
+          const updated = {
+            ...parent,
+            children: parentWithChildren.children.filter((cid) => cid !== id),
+          } as CanvasEntity;
+          entities.set(parent.id, updated);
+        }
+      }
+
+      // Referential integrity: if entity is a group/docker, clear parentId on children
+      if ('children' in entity) {
+        const container = entity as GroupEntity | DockerEntity;
+        for (const childId of container.children) {
+          const child = entities.get(childId);
+          if (child && child.parentId === id) {
+            const updated = { ...child, parentId: undefined } as CanvasEntity;
+            entities.set(childId, updated);
+          }
+        }
+      }
+
       entities.delete(id);
       index.remove(id);
       zOrderedIds = zOrderedIds.filter((eid) => eid !== id);
@@ -123,6 +155,37 @@ export function createSceneGraph(): SceneGraph {
       scene.updateEntity(id, { zIndex: below.zIndex - 1 } as Partial<CanvasEntity>);
     },
 
+    getChildren(parentId: string) {
+      const result: CanvasEntity[] = [];
+      for (const entity of entities.values()) {
+        if (entity.parentId === parentId) {
+          result.push(entity);
+        }
+      }
+      return result;
+    },
+
+    getParent(childId: string) {
+      const child = entities.get(childId);
+      if (!child || !child.parentId) return undefined;
+      return entities.get(child.parentId);
+    },
+
+    getDescendants(rootId: string) {
+      const result: CanvasEntity[] = [];
+      const queue = [rootId];
+      while (queue.length > 0) {
+        const currentId = queue.shift()!;
+        for (const entity of entities.values()) {
+          if (entity.parentId === currentId) {
+            result.push(entity);
+            queue.push(entity.id);
+          }
+        }
+      }
+      return result;
+    },
+
     queryRegion(bounds: BoundingBox2D) {
       const ids = index.queryRegion(bounds);
       return ids.map((id) => entities.get(id)!).filter(Boolean);
@@ -133,6 +196,14 @@ export function createSceneGraph(): SceneGraph {
       const result = ids.map((id) => entities.get(id)!).filter(Boolean);
       result.sort((a, b) => b.zIndex - a.zIndex);
       return result;
+    },
+
+    clear() {
+      for (const id of Array.from(entities.keys())) {
+        index.remove(id);
+      }
+      entities.clear();
+      zOrderedIds = [];
     },
 
     get entityCount() {

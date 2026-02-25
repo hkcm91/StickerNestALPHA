@@ -11,7 +11,7 @@
 import { createGestureInterpreter } from './gesture-interpreter';
 import type { GestureConfig , GestureInterpreter} from './gesture-interpreter';
 import type { InputAdapterConfig } from './input-adapter';
-import type { InputEvent, GestureEvent, PointerDownEvent, PointerMoveEvent, PointerUpEvent, PointerCancelEvent } from './input-event';
+import type { PointerDownEvent, PointerMoveEvent, PointerUpEvent, PointerCancelEvent } from './input-event';
 import { PointerAdapter } from './pointer-adapter';
 
 /**

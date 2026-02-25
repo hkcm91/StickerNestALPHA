@@ -34,6 +34,8 @@ export interface UIState {
    */
   chromeMode: ChromeMode;
   activeTool: string;
+  /** Metadata from the last TOOL_CHANGED event (e.g., widgetId, assetId) */
+  pendingToolData: Record<string, unknown> | null;
   sidebarLeftOpen: boolean;
   sidebarRightOpen: boolean;
   panels: Record<string, boolean>;
@@ -46,6 +48,7 @@ export interface UIActions {
   setCanvasInteractionMode: (mode: 'edit' | 'preview') => void;
   setChromeMode: (mode: ChromeMode) => void;
   setActiveTool: (tool: string) => void;
+  setPendingToolData: (data: Record<string, unknown> | null) => void;
   toggleSidebarLeft: () => void;
   toggleSidebarRight: () => void;
   setPanelOpen: (panelId: string, open: boolean) => void;
@@ -62,6 +65,7 @@ const initialState: UIState = {
   canvasInteractionMode: 'edit',
   chromeMode: 'editor',
   activeTool: 'select',
+  pendingToolData: null,
   sidebarLeftOpen: true,
   sidebarRightOpen: true,
   panels: {},
@@ -81,6 +85,8 @@ export const useUIStore = create<UIStore>()(
       setChromeMode: (chromeMode) => set({ chromeMode }),
 
       setActiveTool: (activeTool) => set({ activeTool }),
+
+      setPendingToolData: (pendingToolData) => set({ pendingToolData }),
 
       toggleSidebarLeft: () =>
         set((state) => ({ sidebarLeftOpen: !state.sidebarLeftOpen })),
@@ -141,6 +147,16 @@ export function setupUIBusSubscriptions(): void {
     const payload = event.payload as { mode: ChromeMode } | null;
     if (payload && (payload.mode === 'editor' || payload.mode === 'clean')) {
       useUIStore.getState().setChromeMode(payload.mode);
+    }
+  });
+
+  // Tool changed — update active tool + pending tool data (from AssetPanel, etc.)
+  bus.subscribe(CanvasEvents.TOOL_CHANGED, (event: BusEvent) => {
+    const payload = event.payload as { tool: string; [key: string]: unknown } | null;
+    if (payload && typeof payload.tool === 'string') {
+      const { tool, ...rest } = payload;
+      useUIStore.getState().setActiveTool(tool);
+      useUIStore.getState().setPendingToolData(Object.keys(rest).length > 0 ? rest : null);
     }
   });
 }

@@ -11,7 +11,6 @@ import {
   EventPortSchema,
   WidgetEventContractSchema,
   WidgetConfigFieldSchema,
-  WidgetConfigSchema,
   WidgetSizeConstraintsSchema,
   WidgetAuthorSchema,
   WidgetLicenseSchema,
@@ -308,7 +307,7 @@ describe('Widget Manifest Schemas', () => {
         },
         config: {
           fields: [
-            { name: 'timezone', type: 'string', label: 'Timezone' },
+            { name: 'timezone', type: 'string', label: 'Timezone', required: false },
           ],
         },
         size: {

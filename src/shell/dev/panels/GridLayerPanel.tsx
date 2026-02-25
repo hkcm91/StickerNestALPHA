@@ -19,6 +19,8 @@ import {
   panBy,
   zoomTo,
   getIsometricCellCorners,
+  getTriangularCellCorners,
+  getHexagonalCellCorners,
 } from '../../../canvas/core';
 
 // Color presets for quick selection
@@ -50,6 +52,8 @@ const SNAP_MODE_OPTIONS: { value: GridSnapMode; label: string }[] = [
 const PROJECTION_MODE_OPTIONS: { value: GridProjectionMode; label: string }[] = [
   { value: 'orthogonal', label: 'Orthogonal' },
   { value: 'isometric', label: 'Isometric' },
+  { value: 'triangular', label: 'Triangular' },
+  { value: 'hexagonal', label: 'Hexagonal' },
 ];
 
 // Isometric ratio presets
@@ -117,7 +121,7 @@ export const GridLayerPanel: React.FC = () => {
 
     let rafId: number;
     const config = gridLayer.getConfig();
-    const isIsometric = projection === 'isometric';
+    const isNonOrthogonal = projection !== 'orthogonal';
 
     const render = () => {
       // Clear
@@ -129,11 +133,11 @@ export const GridLayerPanel: React.FC = () => {
         return;
       }
 
-      // Calculate visible cells (use larger bounds for isometric)
+      // Calculate visible cells (use larger bounds for non-orthogonal projections)
       const topLeft = screenToCanvas({ x: 0, y: 0 }, viewport);
       const bottomRight = screenToCanvas({ x: canvas.width, y: canvas.height }, viewport);
 
-      const buffer = isIsometric ? 3 : 1;
+      const buffer = isNonOrthogonal ? 3 : 1;
       const minCol = Math.floor(topLeft.x / cellSize) - buffer - 5;
       const maxCol = Math.ceil(bottomRight.x / cellSize) + buffer + 5;
       const minRow = Math.floor(topLeft.y / cellSize) - buffer - 5;
@@ -142,32 +146,57 @@ export const GridLayerPanel: React.FC = () => {
       // Render painted cells
       const cellStore = gridLayer.getCellStore();
       const cells = cellStore.getCellsInBounds({ minCol, maxCol, minRow, maxRow });
+      const currentConfig = { ...config, cellSize, isometricRatio, projection };
 
       for (const cell of cells) {
         ctx.fillStyle = cell.color ?? '#4CAF50';
 
-        if (isIsometric) {
-          // Draw diamond for isometric
-          const currentConfig = { ...config, cellSize, isometricRatio, projection };
-          const corners = getIsometricCellCorners(cell.col, cell.row, currentConfig);
-          const top = canvasToScreen(corners.top, viewport);
-          const right = canvasToScreen(corners.right, viewport);
-          const bottom = canvasToScreen(corners.bottom, viewport);
-          const left = canvasToScreen(corners.left, viewport);
-
-          ctx.beginPath();
-          ctx.moveTo(top.x, top.y);
-          ctx.lineTo(right.x, right.y);
-          ctx.lineTo(bottom.x, bottom.y);
-          ctx.lineTo(left.x, left.y);
-          ctx.closePath();
-          ctx.fill();
-        } else {
-          // Draw rectangle for orthogonal
-          const pos = gridLayer.cellToPosition(cell.col, cell.row);
-          const screenPos = canvasToScreen(pos, viewport);
-          const screenSize = cellSize * viewport.zoom;
-          ctx.fillRect(screenPos.x, screenPos.y, screenSize, screenSize);
+        switch (projection) {
+          case 'isometric': {
+            const corners = getIsometricCellCorners(cell.col, cell.row, currentConfig);
+            const top = canvasToScreen(corners.top, viewport);
+            const right = canvasToScreen(corners.right, viewport);
+            const bottom = canvasToScreen(corners.bottom, viewport);
+            const left = canvasToScreen(corners.left, viewport);
+            ctx.beginPath();
+            ctx.moveTo(top.x, top.y);
+            ctx.lineTo(right.x, right.y);
+            ctx.lineTo(bottom.x, bottom.y);
+            ctx.lineTo(left.x, left.y);
+            ctx.closePath();
+            ctx.fill();
+            break;
+          }
+          case 'triangular': {
+            const triCorners = getTriangularCellCorners(cell.col, cell.row, currentConfig);
+            const [a, b, c] = triCorners.map(p => canvasToScreen(p, viewport));
+            ctx.beginPath();
+            ctx.moveTo(a.x, a.y);
+            ctx.lineTo(b.x, b.y);
+            ctx.lineTo(c.x, c.y);
+            ctx.closePath();
+            ctx.fill();
+            break;
+          }
+          case 'hexagonal': {
+            const hexCorners = getHexagonalCellCorners(cell.col, cell.row, currentConfig);
+            const screenHex = hexCorners.map(p => canvasToScreen(p, viewport));
+            ctx.beginPath();
+            ctx.moveTo(screenHex[0].x, screenHex[0].y);
+            for (let i = 1; i < 6; i++) {
+              ctx.lineTo(screenHex[i].x, screenHex[i].y);
+            }
+            ctx.closePath();
+            ctx.fill();
+            break;
+          }
+          default: {
+            const pos = gridLayer.cellToPosition(cell.col, cell.row);
+            const screenPos = canvasToScreen(pos, viewport);
+            const screenSize = cellSize * viewport.zoom;
+            ctx.fillRect(screenPos.x, screenPos.y, screenSize, screenSize);
+            break;
+          }
         }
       }
 
@@ -175,49 +204,78 @@ export const GridLayerPanel: React.FC = () => {
       if (showGridLines && cellSize * viewport.zoom >= 4) {
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
         ctx.lineWidth = 1;
-        ctx.beginPath();
 
-        if (isIsometric) {
-          // Draw diagonal grid lines for isometric
-          const currentConfig = { ...config, cellSize, isometricRatio, projection };
-
-          // Lines in one diagonal direction (constant col)
-          for (let col = minCol; col <= maxCol + 1; col++) {
-            const startCorners = getIsometricCellCorners(col, minRow, currentConfig);
-            const endCorners = getIsometricCellCorners(col, maxRow + 1, currentConfig);
-            const start = canvasToScreen(startCorners.top, viewport);
-            const end = canvasToScreen(endCorners.top, viewport);
-            ctx.moveTo(start.x, start.y);
-            ctx.lineTo(end.x, end.y);
+        switch (projection) {
+          case 'isometric': {
+            ctx.beginPath();
+            for (let col = minCol; col <= maxCol + 1; col++) {
+              const startCorners = getIsometricCellCorners(col, minRow, currentConfig);
+              const endCorners = getIsometricCellCorners(col, maxRow + 1, currentConfig);
+              const start = canvasToScreen(startCorners.top, viewport);
+              const end = canvasToScreen(endCorners.top, viewport);
+              ctx.moveTo(start.x, start.y);
+              ctx.lineTo(end.x, end.y);
+            }
+            for (let row = minRow; row <= maxRow + 1; row++) {
+              const startCorners = getIsometricCellCorners(minCol, row, currentConfig);
+              const endCorners = getIsometricCellCorners(maxCol + 1, row, currentConfig);
+              const start = canvasToScreen(startCorners.top, viewport);
+              const end = canvasToScreen(endCorners.top, viewport);
+              ctx.moveTo(start.x, start.y);
+              ctx.lineTo(end.x, end.y);
+            }
+            ctx.stroke();
+            break;
           }
-
-          // Lines in the other diagonal direction (constant row)
-          for (let row = minRow; row <= maxRow + 1; row++) {
-            const startCorners = getIsometricCellCorners(minCol, row, currentConfig);
-            const endCorners = getIsometricCellCorners(maxCol + 1, row, currentConfig);
-            const start = canvasToScreen(startCorners.top, viewport);
-            const end = canvasToScreen(endCorners.top, viewport);
-            ctx.moveTo(start.x, start.y);
-            ctx.lineTo(end.x, end.y);
+          case 'triangular': {
+            ctx.beginPath();
+            for (let row = minRow; row <= maxRow; row++) {
+              for (let col = minCol; col <= maxCol; col++) {
+                const triCorners = getTriangularCellCorners(col, row, currentConfig);
+                const [a, b, c] = triCorners.map(p => canvasToScreen(p, viewport));
+                ctx.moveTo(a.x, a.y);
+                ctx.lineTo(b.x, b.y);
+                ctx.lineTo(c.x, c.y);
+                ctx.closePath();
+              }
+            }
+            ctx.stroke();
+            break;
           }
-        } else {
-          // Draw orthogonal grid lines
-          for (let col = minCol; col <= maxCol + 1; col++) {
-            const canvasX = col * cellSize;
-            const screenX = canvasToScreen({ x: canvasX, y: 0 }, viewport).x;
-            ctx.moveTo(screenX, 0);
-            ctx.lineTo(screenX, canvas.height);
+          case 'hexagonal': {
+            ctx.beginPath();
+            for (let row = minRow; row <= maxRow; row++) {
+              for (let col = minCol; col <= maxCol; col++) {
+                const hexCorners = getHexagonalCellCorners(col, row, currentConfig);
+                const screenHex = hexCorners.map(p => canvasToScreen(p, viewport));
+                ctx.moveTo(screenHex[0].x, screenHex[0].y);
+                for (let i = 1; i < 6; i++) {
+                  ctx.lineTo(screenHex[i].x, screenHex[i].y);
+                }
+                ctx.closePath();
+              }
+            }
+            ctx.stroke();
+            break;
           }
-
-          for (let row = minRow; row <= maxRow + 1; row++) {
-            const canvasY = row * cellSize;
-            const screenY = canvasToScreen({ x: 0, y: canvasY }, viewport).y;
-            ctx.moveTo(0, screenY);
-            ctx.lineTo(canvas.width, screenY);
+          default: {
+            ctx.beginPath();
+            for (let col = minCol; col <= maxCol + 1; col++) {
+              const canvasX = col * cellSize;
+              const screenX = canvasToScreen({ x: canvasX, y: 0 }, viewport).x;
+              ctx.moveTo(screenX, 0);
+              ctx.lineTo(screenX, canvas.height);
+            }
+            for (let row = minRow; row <= maxRow + 1; row++) {
+              const canvasY = row * cellSize;
+              const screenY = canvasToScreen({ x: 0, y: canvasY }, viewport).y;
+              ctx.moveTo(0, screenY);
+              ctx.lineTo(canvas.width, screenY);
+            }
+            ctx.stroke();
+            break;
           }
         }
-
-        ctx.stroke();
       }
 
       rafId = requestAnimationFrame(render);
@@ -524,6 +582,8 @@ export const GridLayerPanel: React.FC = () => {
       <div style={{ marginTop: 5, fontSize: 10, color: '#888' }}>
         Click/drag to paint. Hold Alt to erase. Pan/zoom with buttons above.
         {projection === 'isometric' && ' Isometric mode: cells are diamond-shaped.'}
+        {projection === 'triangular' && ' Triangular mode: cells are equilateral triangles.'}
+        {projection === 'hexagonal' && ' Hexagonal mode: cells are pointy-top hexagons.'}
       </div>
     </section>
   );

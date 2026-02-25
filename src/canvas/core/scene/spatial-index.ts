@@ -27,6 +27,8 @@ export function createSpatialIndex(cellSize: number = DEFAULT_CELL_SIZE): Spatia
   const grid = new Map<string, Set<string>>();
   // Maps entity ID → set of cell keys it occupies
   const entityCells = new Map<string, Set<string>>();
+  // Maps entity ID → its bounding box (for precise point-in-bounds checks)
+  const entityBounds = new Map<string, BoundingBox2D>();
 
   function getCells(bounds: BoundingBox2D): string[] {
     const minCX = Math.floor(bounds.min.x / cellSize);
@@ -57,6 +59,7 @@ export function createSpatialIndex(cellSize: number = DEFAULT_CELL_SIZE): Spatia
         entityCellSet.add(key);
       }
       entityCells.set(id, entityCellSet);
+      entityBounds.set(id, bounds);
     },
 
     remove(id: string) {
@@ -70,6 +73,7 @@ export function createSpatialIndex(cellSize: number = DEFAULT_CELL_SIZE): Spatia
         }
       }
       entityCells.delete(id);
+      entityBounds.delete(id);
     },
 
     update(id: string, bounds: BoundingBox2D) {
@@ -95,12 +99,22 @@ export function createSpatialIndex(cellSize: number = DEFAULT_CELL_SIZE): Spatia
         Math.floor(point.y / cellSize),
       );
       const bucket = grid.get(key);
-      return bucket ? Array.from(bucket) : [];
+      if (!bucket) return [];
+      const result: string[] = [];
+      for (const id of bucket) {
+        const b = entityBounds.get(id);
+        if (b && point.x >= b.min.x && point.x <= b.max.x &&
+                 point.y >= b.min.y && point.y <= b.max.y) {
+          result.push(id);
+        }
+      }
+      return result;
     },
 
     clear() {
       grid.clear();
       entityCells.clear();
+      entityBounds.clear();
     },
   };
 }

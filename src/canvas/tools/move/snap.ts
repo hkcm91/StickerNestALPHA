@@ -5,7 +5,8 @@
  * @layer L4A-2
  */
 
-import type { Point2D, BoundingBox2D, GridConfig, GridSnapMode } from '@sn/types';
+import type { Point2D, BoundingBox2D, GridConfig } from '@sn/types';
+import { positionToCell, cellCenter } from '../../core/grid';
 
 export function snapToGrid(position: Point2D, gridSize: number): Point2D {
   return {
@@ -31,13 +32,27 @@ export function snapToGridCell(
   gridConfig: GridConfig,
   widgetSize?: { width: number; height: number }
 ): Point2D {
-  const { cellSize, origin, snapMode } = gridConfig;
+  const { cellSize, origin, snapMode, projection } = gridConfig;
 
   if (snapMode === 'none') {
     return position;
   }
 
-  // Get cell coordinates for the position
+  // For triangular and hexagonal grids, snap to the nearest cell center
+  // since these grids don't have axis-aligned corners or edges
+  if (projection === 'triangular' || projection === 'hexagonal') {
+    const cell = positionToCell(position.x, position.y, gridConfig);
+    const center = cellCenter(cell.col, cell.row, gridConfig);
+    if (widgetSize) {
+      return {
+        x: center.x - widgetSize.width / 2,
+        y: center.y - widgetSize.height / 2,
+      };
+    }
+    return center;
+  }
+
+  // Orthogonal (and isometric fallback) snapping
   const col = Math.floor((position.x - origin.x) / cellSize);
   const row = Math.floor((position.y - origin.y) / cellSize);
 

@@ -33,6 +33,12 @@ export function createFloatingActionBarController(): FloatingActionBarController
         { id: 'send-back', label: 'Send to Back', action: 'sendToBack' },
         { id: 'ungroup', label: 'Ungroup', action: 'ungroup' },
       ];
+      if (selectedCount === 1) {
+        actions.push(
+          { id: 'crop', label: 'Crop', action: 'crop' },
+          { id: 'reset-crop', label: 'Reset Crop', action: 'resetCrop' },
+        );
+      }
       if (selectedCount > 1) {
         actions.push(
           { id: 'group', label: 'Group', action: 'group' },
@@ -80,6 +86,12 @@ export function createFloatingActionBarController(): FloatingActionBarController
           break;
         case 'ungroup':
           bus.emit('canvas.entity.ungroup', { entityIds });
+          break;
+        case 'crop':
+          bus.emit('canvas.crop.toggle', { entityIds });
+          break;
+        case 'resetCrop':
+          bus.emit('canvas.crop.reset', { entityIds });
           break;
         case 'alignLeft':
           bus.emit('canvas.align.left', { entityIds });

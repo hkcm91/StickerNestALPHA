@@ -108,6 +108,9 @@ export const CanvasEvents = {
   ENTITY_GROUPED: 'canvas.entity.grouped',
   ENTITY_UNGROUPED: 'canvas.entity.ungrouped',
   GROUP_CHILDREN_CHANGED: 'canvas.group.children.changed',
+  PATH_POINT_ADDED: 'canvas.path.point.added',
+  PATH_CLOSED: 'canvas.path.closed',
+  PATH_POINT_CONVERTED: 'canvas.path.point.converted',
 } as const;
 
 /**

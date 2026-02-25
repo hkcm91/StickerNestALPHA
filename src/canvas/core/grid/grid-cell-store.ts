@@ -176,19 +176,234 @@ function isometricPositionToCell(
   return { col, row };
 }
 
+// =============================================================================
+// Triangular Grid Coordinate Functions
+// =============================================================================
+
+const SQRT3 = Math.sqrt(3);
+
 /**
- * Convert canvas position to grid cell coordinates
- * Handles both orthogonal and isometric projections
+ * Convert canvas position to triangular grid cell coordinates.
+ *
+ * Uses nearest-centroid algorithm — the Voronoi cells of equilateral
+ * triangle centroids exactly match the triangles themselves, so picking
+ * the nearest centroid always gives the correct containing triangle.
+ *
+ * Addressing: even col = UP triangle (▲), odd col = DOWN triangle (▽).
+ * col = 2*k for UP at position k, col = 2*k+1 for DOWN at position k.
+ */
+function triangularPositionToCell(
+  x: number,
+  y: number,
+  config: GridConfig
+): { col: number; row: number } {
+  const { cellSize, origin } = config;
+  const h = cellSize * SQRT3 / 2;
+
+  const tx = x - origin.x;
+  const ty = y - origin.y;
+
+  const baseRow = Math.floor(ty / h);
+  const baseK = Math.floor(tx / cellSize);
+
+  let bestCol = 0;
+  let bestRow = baseRow;
+  let bestDist = Infinity;
+
+  for (let rr = baseRow - 1; rr <= baseRow + 1; rr++) {
+    for (let dk = -1; dk <= 1; dk++) {
+      const k = baseK + dk;
+
+      // UP triangle at col 2*k: center at ((k+0.5)*s, rr*h + 2h/3)
+      const upCx = (k + 0.5) * cellSize;
+      const upCy = rr * h + 2 * h / 3;
+      const upDist = (tx - upCx) * (tx - upCx) + (ty - upCy) * (ty - upCy);
+      if (upDist < bestDist) {
+        bestDist = upDist;
+        bestCol = 2 * k;
+        bestRow = rr;
+      }
+
+      // DOWN triangle at col 2*k+1: center at ((k+1)*s, rr*h + h/3)
+      const downCx = (k + 1) * cellSize;
+      const downCy = rr * h + h / 3;
+      const downDist = (tx - downCx) * (tx - downCx) + (ty - downCy) * (ty - downCy);
+      if (downDist < bestDist) {
+        bestDist = downDist;
+        bestCol = 2 * k + 1;
+        bestRow = rr;
+      }
+    }
+  }
+
+  return { col: bestCol, row: bestRow };
+}
+
+/**
+ * Convert triangular grid cell to canvas position (center of triangle)
+ */
+function triangularCellToPosition(
+  col: number,
+  row: number,
+  config: GridConfig
+): { x: number; y: number } {
+  const { cellSize, origin } = config;
+  const h = cellSize * SQRT3 / 2;
+  const isUp = (col & 1) === 0;
+  const k = Math.floor(col / 2);
+
+  if (isUp) {
+    return {
+      x: (k + 0.5) * cellSize + origin.x,
+      y: row * h + 2 * h / 3 + origin.y,
+    };
+  } else {
+    return {
+      x: (k + 1) * cellSize + origin.x,
+      y: row * h + h / 3 + origin.y,
+    };
+  }
+}
+
+/**
+ * Get the 3 corners of a triangular cell.
+ * Returns vertices in order suitable for canvas path drawing.
+ * UP (▲): [bottom-left, bottom-right, top]
+ * DOWN (▽): [top-left, top-right, bottom]
+ */
+export function getTriangularCellCorners(
+  col: number,
+  row: number,
+  config: GridConfig
+): [{ x: number; y: number }, { x: number; y: number }, { x: number; y: number }] {
+  const { cellSize, origin } = config;
+  const h = cellSize * SQRT3 / 2;
+  const isUp = (col & 1) === 0;
+  const k = Math.floor(col / 2);
+
+  const baseX = origin.x;
+  const baseY = row * h + origin.y;
+
+  if (isUp) {
+    return [
+      { x: k * cellSize + baseX, y: baseY + h },             // bottom-left
+      { x: (k + 1) * cellSize + baseX, y: baseY + h },       // bottom-right
+      { x: (k + 0.5) * cellSize + baseX, y: baseY },         // top (apex)
+    ];
+  } else {
+    return [
+      { x: (k + 0.5) * cellSize + baseX, y: baseY },         // top-left
+      { x: (k + 1.5) * cellSize + baseX, y: baseY },         // top-right
+      { x: (k + 1) * cellSize + baseX, y: baseY + h },       // bottom (apex)
+    ];
+  }
+}
+
+// =============================================================================
+// Hexagonal Grid Coordinate Functions (Pointy-Top, Axial Coordinates)
+// =============================================================================
+
+/**
+ * Convert canvas position to hexagonal grid cell coordinates.
+ * Uses cube-rounding algorithm for pixel-to-axial conversion.
+ * col = q (axial), row = r (axial).
+ */
+function hexagonalPositionToCell(
+  x: number,
+  y: number,
+  config: GridConfig
+): { col: number; row: number } {
+  const { cellSize, origin } = config;
+
+  const tx = x - origin.x;
+  const ty = y - origin.y;
+
+  // Pixel to fractional axial (inverse of pointy-top forward transform)
+  const qFrac = (SQRT3 / 3 * tx - ty / 3) / cellSize;
+  const rFrac = (2 / 3 * ty) / cellSize;
+
+  // Cube rounding
+  const sFrac = -qFrac - rFrac;
+
+  let rq = Math.round(qFrac);
+  let rr = Math.round(rFrac);
+  const rs = Math.round(sFrac);
+
+  const qDiff = Math.abs(rq - qFrac);
+  const rDiff = Math.abs(rr - rFrac);
+  const sDiff = Math.abs(rs - sFrac);
+
+  if (qDiff > rDiff && qDiff > sDiff) {
+    rq = -rr - rs;
+  } else if (rDiff > sDiff) {
+    rr = -rq - rs;
+  }
+  // else: rs = -rq - rr (we don't need s)
+
+  return { col: rq, row: rr };
+}
+
+/**
+ * Convert hexagonal grid cell to canvas position (center of hexagon).
+ * Pointy-top layout: x = size * sqrt(3) * (q + r/2), y = size * 3/2 * r
+ */
+function hexagonalCellToPosition(
+  col: number,
+  row: number,
+  config: GridConfig
+): { x: number; y: number } {
+  const { cellSize, origin } = config;
+
+  return {
+    x: cellSize * SQRT3 * (col + row / 2) + origin.x,
+    y: cellSize * 1.5 * row + origin.y,
+  };
+}
+
+/**
+ * Get the 6 corners of a pointy-top hexagonal cell.
+ * Returns vertices starting from the upper-right, going clockwise.
+ */
+export function getHexagonalCellCorners(
+  col: number,
+  row: number,
+  config: GridConfig
+): [{ x: number; y: number }, { x: number; y: number }, { x: number; y: number }, { x: number; y: number }, { x: number; y: number }, { x: number; y: number }] {
+  const center = hexagonalCellToPosition(col, row, config);
+  const size = config.cellSize;
+
+  const corners: { x: number; y: number }[] = [];
+  for (let i = 0; i < 6; i++) {
+    const angleDeg = 60 * i - 30; // pointy-top: -30, 30, 90, 150, 210, 270
+    const angleRad = (Math.PI / 180) * angleDeg;
+    corners.push({
+      x: center.x + size * Math.cos(angleRad),
+      y: center.y + size * Math.sin(angleRad),
+    });
+  }
+
+  return corners as [{ x: number; y: number }, { x: number; y: number }, { x: number; y: number }, { x: number; y: number }, { x: number; y: number }, { x: number; y: number }];
+}
+
+/**
+ * Convert canvas position to grid cell coordinates.
+ * Handles all projection modes.
  */
 export function positionToCell(
   x: number,
   y: number,
   config: GridConfig
 ): { col: number; row: number } {
-  if (config.projection === 'isometric') {
-    return isometricPositionToCell(x, y, config);
+  switch (config.projection) {
+    case 'isometric':
+      return isometricPositionToCell(x, y, config);
+    case 'triangular':
+      return triangularPositionToCell(x, y, config);
+    case 'hexagonal':
+      return hexagonalPositionToCell(x, y, config);
+    default:
+      return orthogonalPositionToCell(x, y, config);
   }
-  return orthogonalPositionToCell(x, y, config);
 }
 
 /**
@@ -233,17 +448,23 @@ function isometricCellToPosition(
 /**
  * Convert grid cell to canvas position
  * For orthogonal: returns top-left corner
- * For isometric: returns center of diamond
+ * For isometric/triangular/hexagonal: returns center
  */
 export function cellToPosition(
   col: number,
   row: number,
   config: GridConfig
 ): { x: number; y: number } {
-  if (config.projection === 'isometric') {
-    return isometricCellToPosition(col, row, config);
+  switch (config.projection) {
+    case 'isometric':
+      return isometricCellToPosition(col, row, config);
+    case 'triangular':
+      return triangularCellToPosition(col, row, config);
+    case 'hexagonal':
+      return hexagonalCellToPosition(col, row, config);
+    default:
+      return orthogonalCellToPosition(col, row, config);
   }
-  return orthogonalCellToPosition(col, row, config);
 }
 
 /**
@@ -277,23 +498,52 @@ export function getCellBounds(
   row: number,
   config: GridConfig
 ): { x: number; y: number; width: number; height: number } {
-  if (config.projection === 'isometric') {
-    const corners = getIsometricCellCorners(col, row, config);
-    return {
-      x: corners.left.x,
-      y: corners.top.y,
-      width: config.cellSize,
-      height: config.cellSize / config.isometricRatio,
-    };
+  switch (config.projection) {
+    case 'isometric': {
+      const corners = getIsometricCellCorners(col, row, config);
+      return {
+        x: corners.left.x,
+        y: corners.top.y,
+        width: config.cellSize,
+        height: config.cellSize / config.isometricRatio,
+      };
+    }
+    case 'triangular': {
+      const triCorners = getTriangularCellCorners(col, row, config);
+      const xs = triCorners.map(c => c.x);
+      const ys = triCorners.map(c => c.y);
+      const minX = Math.min(...xs);
+      const minY = Math.min(...ys);
+      return {
+        x: minX,
+        y: minY,
+        width: Math.max(...xs) - minX,
+        height: Math.max(...ys) - minY,
+      };
+    }
+    case 'hexagonal': {
+      const hexCorners = getHexagonalCellCorners(col, row, config);
+      const hxs = hexCorners.map(c => c.x);
+      const hys = hexCorners.map(c => c.y);
+      const hMinX = Math.min(...hxs);
+      const hMinY = Math.min(...hys);
+      return {
+        x: hMinX,
+        y: hMinY,
+        width: Math.max(...hxs) - hMinX,
+        height: Math.max(...hys) - hMinY,
+      };
+    }
+    default: {
+      const pos = orthogonalCellToPosition(col, row, config);
+      return {
+        x: pos.x,
+        y: pos.y,
+        width: config.cellSize,
+        height: config.cellSize,
+      };
+    }
   }
-
-  const pos = orthogonalCellToPosition(col, row, config);
-  return {
-    x: pos.x,
-    y: pos.y,
-    width: config.cellSize,
-    height: config.cellSize,
-  };
 }
 
 /**
@@ -304,16 +554,21 @@ export function cellCenter(
   row: number,
   config: GridConfig
 ): { x: number; y: number } {
-  if (config.projection === 'isometric') {
-    // For isometric, cellToPosition already returns the center
-    return isometricCellToPosition(col, row, config);
+  switch (config.projection) {
+    case 'isometric':
+      return isometricCellToPosition(col, row, config);
+    case 'triangular':
+      return triangularCellToPosition(col, row, config);
+    case 'hexagonal':
+      return hexagonalCellToPosition(col, row, config);
+    default: {
+      const pos = orthogonalCellToPosition(col, row, config);
+      return {
+        x: pos.x + config.cellSize / 2,
+        y: pos.y + config.cellSize / 2,
+      };
+    }
   }
-
-  const pos = orthogonalCellToPosition(col, row, config);
-  return {
-    x: pos.x + config.cellSize / 2,
-    y: pos.y + config.cellSize / 2,
-  };
 }
 
 /**
@@ -324,14 +579,17 @@ export function getVisibleCellBounds(
   config: GridConfig,
   buffer: number = 1
 ): CellBounds {
-  // For isometric, we need a larger buffer due to diamond orientation
-  const effectiveBuffer = config.projection === 'isometric' ? buffer + 1 : buffer;
+  // Non-orthogonal projections need larger buffers due to non-axis-aligned cells
+  const needsCornerCheck =
+    config.projection === 'isometric' ||
+    config.projection === 'triangular' ||
+    config.projection === 'hexagonal';
+  const effectiveBuffer = needsCornerCheck ? buffer + 2 : buffer;
 
   const minCell = positionToCell(visibleBounds.min.x, visibleBounds.min.y, config);
   const maxCell = positionToCell(visibleBounds.max.x, visibleBounds.max.y, config);
 
-  // For isometric, check corners of viewport as well
-  if (config.projection === 'isometric') {
+  if (needsCornerCheck) {
     const topRight = positionToCell(visibleBounds.max.x, visibleBounds.min.y, config);
     const bottomLeft = positionToCell(visibleBounds.min.x, visibleBounds.max.y, config);
 

@@ -55,14 +55,16 @@ function detectDockingZone(
   viewportBounds: BoundingBox2D,
   dockingZoneSize: number
 ): DockingZone {
-  const relX = position.x - viewportBounds.x;
-  const relY = position.y - viewportBounds.y;
+  const boundsWidth = viewportBounds.max.x - viewportBounds.min.x;
+  const boundsHeight = viewportBounds.max.y - viewportBounds.min.y;
+  const relX = position.x - viewportBounds.min.x;
+  const relY = position.y - viewportBounds.min.y;
 
   // Check if near edges
   const nearLeft = relX < dockingZoneSize;
-  const nearRight = relX > viewportBounds.width - dockingZoneSize;
+  const nearRight = relX > boundsWidth - dockingZoneSize;
   const nearTop = relY < dockingZoneSize;
-  const nearBottom = relY > viewportBounds.height - dockingZoneSize;
+  const nearBottom = relY > boundsHeight - dockingZoneSize;
 
   // Corners are treated as edge docks
   if (nearLeft) return 'left';
@@ -79,34 +81,37 @@ function detectDockingZone(
 function getDockedBounds(
   zone: DockingZone,
   viewportBounds: BoundingBox2D,
-  originalSize: Size2D
+  _originalSize: Size2D
 ): { position: Point2D; size: Size2D } | null {
+  const boundsWidth = viewportBounds.max.x - viewportBounds.min.x;
+  const boundsHeight = viewportBounds.max.y - viewportBounds.min.y;
+
   switch (zone) {
     case 'left':
       return {
-        position: { x: viewportBounds.x, y: viewportBounds.y },
-        size: { width: viewportBounds.width / 2, height: viewportBounds.height },
+        position: { x: viewportBounds.min.x, y: viewportBounds.min.y },
+        size: { width: boundsWidth / 2, height: boundsHeight },
       };
     case 'right':
       return {
-        position: { x: viewportBounds.x + viewportBounds.width / 2, y: viewportBounds.y },
-        size: { width: viewportBounds.width / 2, height: viewportBounds.height },
+        position: { x: viewportBounds.min.x + boundsWidth / 2, y: viewportBounds.min.y },
+        size: { width: boundsWidth / 2, height: boundsHeight },
       };
     case 'top':
       return {
-        position: { x: viewportBounds.x, y: viewportBounds.y },
-        size: { width: viewportBounds.width, height: viewportBounds.height / 2 },
+        position: { x: viewportBounds.min.x, y: viewportBounds.min.y },
+        size: { width: boundsWidth, height: boundsHeight / 2 },
       };
     case 'bottom':
       return {
-        position: { x: viewportBounds.x, y: viewportBounds.y + viewportBounds.height / 2 },
-        size: { width: viewportBounds.width, height: viewportBounds.height / 2 },
+        position: { x: viewportBounds.min.x, y: viewportBounds.min.y + boundsHeight / 2 },
+        size: { width: boundsWidth, height: boundsHeight / 2 },
       };
     case 'center':
       // Maximize
       return {
-        position: { x: viewportBounds.x, y: viewportBounds.y },
-        size: { width: viewportBounds.width, height: viewportBounds.height },
+        position: { x: viewportBounds.min.x, y: viewportBounds.min.y },
+        size: { width: boundsWidth, height: boundsHeight },
       };
     default:
       return null;
@@ -131,58 +136,62 @@ export function createDesktopLayout(config: Partial<DesktopConfig> = {}): Layout
       let { x, y } = newPosition;
       let wasConstrained = false;
       const activeSnaps: SnapPoint[] = [];
+      const currentWidth = ctx.currentBounds.max.x - ctx.currentBounds.min.x;
+      const currentHeight = ctx.currentBounds.max.y - ctx.currentBounds.min.y;
 
       // Edge snapping to other entities
       if (mergedConfig.edgeSnapEnabled && ctx.otherEntities) {
         for (const other of ctx.otherEntities) {
+          const otherWidth = other.max.x - other.min.x;
+          const otherHeight = other.max.y - other.min.y;
           // Snap to left edge of other
-          if (Math.abs(x - other.x) < mergedConfig.snapThreshold) {
-            x = other.x;
+          if (Math.abs(x - other.min.x) < mergedConfig.snapThreshold) {
+            x = other.min.x;
             wasConstrained = true;
             activeSnaps.push({ value: x, axis: 'x', type: 'edge' });
           }
           // Snap to right edge of other
-          if (Math.abs(x - (other.x + other.width)) < mergedConfig.snapThreshold) {
-            x = other.x + other.width;
+          if (Math.abs(x - other.max.x) < mergedConfig.snapThreshold) {
+            x = other.max.x;
             wasConstrained = true;
             activeSnaps.push({ value: x, axis: 'x', type: 'edge' });
           }
           // Snap our right edge to other's left edge
-          if (Math.abs((x + ctx.currentBounds.width) - other.x) < mergedConfig.snapThreshold) {
-            x = other.x - ctx.currentBounds.width;
+          if (Math.abs((x + currentWidth) - other.min.x) < mergedConfig.snapThreshold) {
+            x = other.min.x - currentWidth;
             wasConstrained = true;
-            activeSnaps.push({ value: other.x, axis: 'x', type: 'edge' });
+            activeSnaps.push({ value: other.min.x, axis: 'x', type: 'edge' });
           }
           // Snap to top edge of other
-          if (Math.abs(y - other.y) < mergedConfig.snapThreshold) {
-            y = other.y;
+          if (Math.abs(y - other.min.y) < mergedConfig.snapThreshold) {
+            y = other.min.y;
             wasConstrained = true;
             activeSnaps.push({ value: y, axis: 'y', type: 'edge' });
           }
           // Snap to bottom edge of other
-          if (Math.abs(y - (other.y + other.height)) < mergedConfig.snapThreshold) {
-            y = other.y + other.height;
+          if (Math.abs(y - other.max.y) < mergedConfig.snapThreshold) {
+            y = other.max.y;
             wasConstrained = true;
             activeSnaps.push({ value: y, axis: 'y', type: 'edge' });
           }
           // Snap our bottom edge to other's top edge
-          if (Math.abs((y + ctx.currentBounds.height) - other.y) < mergedConfig.snapThreshold) {
-            y = other.y - ctx.currentBounds.height;
+          if (Math.abs((y + currentHeight) - other.min.y) < mergedConfig.snapThreshold) {
+            y = other.min.y - currentHeight;
             wasConstrained = true;
-            activeSnaps.push({ value: other.y, axis: 'y', type: 'edge' });
+            activeSnaps.push({ value: other.min.y, axis: 'y', type: 'edge' });
           }
           // Center alignment
-          const ourCenterX = x + ctx.currentBounds.width / 2;
-          const otherCenterX = other.x + other.width / 2;
+          const ourCenterX = x + currentWidth / 2;
+          const otherCenterX = other.min.x + otherWidth / 2;
           if (Math.abs(ourCenterX - otherCenterX) < mergedConfig.snapThreshold) {
-            x = otherCenterX - ctx.currentBounds.width / 2;
+            x = otherCenterX - currentWidth / 2;
             wasConstrained = true;
             activeSnaps.push({ value: otherCenterX, axis: 'x', type: 'center' });
           }
-          const ourCenterY = y + ctx.currentBounds.height / 2;
-          const otherCenterY = other.y + other.height / 2;
+          const ourCenterY = y + currentHeight / 2;
+          const otherCenterY = other.min.y + otherHeight / 2;
           if (Math.abs(ourCenterY - otherCenterY) < mergedConfig.snapThreshold) {
-            y = otherCenterY - ctx.currentBounds.height / 2;
+            y = otherCenterY - currentHeight / 2;
             wasConstrained = true;
             activeSnaps.push({ value: otherCenterY, axis: 'y', type: 'center' });
           }
@@ -232,14 +241,16 @@ export function createDesktopLayout(config: Partial<DesktopConfig> = {}): Layout
 
       if (ctx.otherEntities) {
         for (const other of ctx.otherEntities) {
+          const otherWidth = other.max.x - other.min.x;
+          const otherHeight = other.max.y - other.min.y;
           // Add edge snap points
           snapPoints.push(
-            { value: other.x, axis: 'x', type: 'edge' },
-            { value: other.x + other.width, axis: 'x', type: 'edge' },
-            { value: other.x + other.width / 2, axis: 'x', type: 'center' },
-            { value: other.y, axis: 'y', type: 'edge' },
-            { value: other.y + other.height, axis: 'y', type: 'edge' },
-            { value: other.y + other.height / 2, axis: 'y', type: 'center' }
+            { value: other.min.x, axis: 'x', type: 'edge' },
+            { value: other.max.x, axis: 'x', type: 'edge' },
+            { value: other.min.x + otherWidth / 2, axis: 'x', type: 'center' },
+            { value: other.min.y, axis: 'y', type: 'edge' },
+            { value: other.max.y, axis: 'y', type: 'edge' },
+            { value: other.min.y + otherHeight / 2, axis: 'y', type: 'center' }
           );
         }
       }
@@ -283,8 +294,8 @@ export function getCascadedPosition(
   // Find the last window position and cascade from there
   const lastWindow = existingWindows[existingWindows.length - 1];
   return {
-    x: lastWindow.x + mergedConfig.cascadeOffset,
-    y: lastWindow.y + mergedConfig.cascadeOffset,
+    x: lastWindow.min.x + mergedConfig.cascadeOffset,
+    y: lastWindow.min.y + mergedConfig.cascadeOffset,
   };
 }
 

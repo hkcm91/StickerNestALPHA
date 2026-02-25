@@ -16,6 +16,8 @@ export {
   cellCenter,
   getVisibleCellBounds,
   getIsometricCellCorners,
+  getTriangularCellCorners,
+  getHexagonalCellCorners,
 } from './grid-cell-store';
 export type { GridCellStore, CellBounds } from './grid-cell-store';
 

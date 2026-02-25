@@ -234,6 +234,7 @@ export const WidgetManifestSchema = z.object({
   size: WidgetSizeConstraintsSchema.default({
     defaultWidth: 200,
     defaultHeight: 150,
+    aspectLocked: false,
   }),
   /** Entry point path (relative to manifest) */
   entry: z.string().default('index.html'),

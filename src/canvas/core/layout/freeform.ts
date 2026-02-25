@@ -132,18 +132,20 @@ export const freeformLayout: LayoutMode = {
     // Add snap points from other entities (edges and centers)
     if (ctx.otherEntities) {
       for (const bounds of ctx.otherEntities) {
+        const boundsWidth = bounds.max.x - bounds.min.x;
+        const boundsHeight = bounds.max.y - bounds.min.y;
         // Left edge
-        snapPoints.push({ value: bounds.x, axis: 'x', type: 'edge' });
+        snapPoints.push({ value: bounds.min.x, axis: 'x', type: 'edge' });
         // Right edge
-        snapPoints.push({ value: bounds.x + bounds.width, axis: 'x', type: 'edge' });
+        snapPoints.push({ value: bounds.max.x, axis: 'x', type: 'edge' });
         // Center X
-        snapPoints.push({ value: bounds.x + bounds.width / 2, axis: 'x', type: 'center' });
+        snapPoints.push({ value: bounds.min.x + boundsWidth / 2, axis: 'x', type: 'center' });
         // Top edge
-        snapPoints.push({ value: bounds.y, axis: 'y', type: 'edge' });
+        snapPoints.push({ value: bounds.min.y, axis: 'y', type: 'edge' });
         // Bottom edge
-        snapPoints.push({ value: bounds.y + bounds.height, axis: 'y', type: 'edge' });
+        snapPoints.push({ value: bounds.max.y, axis: 'y', type: 'edge' });
         // Center Y
-        snapPoints.push({ value: bounds.y + bounds.height / 2, axis: 'y', type: 'center' });
+        snapPoints.push({ value: bounds.min.y + boundsHeight / 2, axis: 'y', type: 'center' });
       }
     }
 

@@ -12,7 +12,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { GestureInterpreter, createGestureInterpreter, DEFAULT_GESTURE_CONFIG } from './gesture-interpreter';
 import { BaseInputAdapter, DEFAULT_INPUT_CONFIG } from './input-adapter';
-import type { InputAdapterConfig } from './input-adapter';
 import {
   createDefaultModifiers,
   extractModifiers,

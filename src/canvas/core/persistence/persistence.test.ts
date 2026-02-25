@@ -6,7 +6,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { describe, it, expect, beforeEach } from 'vitest';
 
-import type { CanvasDocument, CanvasEntity, TextEntity } from '@sn/types';
+import type { CanvasEntity, TextEntity } from '@sn/types';
 
 import { createSceneGraph } from '../scene';
 
@@ -23,7 +23,6 @@ import {
   createEmptyDocument,
   extractMetadata,
   extractEntityIds,
-  countEntitiesByType,
   // Deserialization
   deserialize,
   deserializeToSceneGraph,
@@ -95,6 +94,8 @@ describe('Serialization', () => {
       zIndex: 1,
       visible: true,
       locked: false,
+      opacity: 1,
+      borderRadius: 0,
       createdAt: now,
       updatedAt: now,
       createdBy: uuidv4(),
@@ -109,7 +110,7 @@ describe('Serialization', () => {
 
   describe('serialize', () => {
     it('should serialize empty scene graph', () => {
-      const sceneGraph = createSceneGraph(uuidv4());
+      const sceneGraph = createSceneGraph();
       const meta = {
         id: uuidv4(),
         name: 'Test Canvas',
@@ -127,7 +128,7 @@ describe('Serialization', () => {
 
     it('should serialize scene graph with entities', () => {
       const canvasId = uuidv4();
-      const sceneGraph = createSceneGraph(canvasId);
+      const sceneGraph = createSceneGraph();
       const entity = { ...createTestEntity(), canvasId };
       sceneGraph.addEntity(entity);
 
@@ -145,7 +146,7 @@ describe('Serialization', () => {
     });
 
     it('should include viewport config', () => {
-      const sceneGraph = createSceneGraph(uuidv4());
+      const sceneGraph = createSceneGraph();
       const meta = {
         id: uuidv4(),
         name: 'Test',
@@ -169,7 +170,7 @@ describe('Serialization', () => {
     });
 
     it('should include layout mode', () => {
-      const sceneGraph = createSceneGraph(uuidv4());
+      const sceneGraph = createSceneGraph();
       const meta = {
         id: uuidv4(),
         name: 'Test',
@@ -188,7 +189,7 @@ describe('Serialization', () => {
 
     it('should filter invisible entities when option set', () => {
       const canvasId = uuidv4();
-      const sceneGraph = createSceneGraph(canvasId);
+      const sceneGraph = createSceneGraph();
 
       const visibleEntity = { ...createTestEntity(), canvasId, visible: true };
       const invisibleEntity = { ...createTestEntity(), canvasId, visible: false };
@@ -212,7 +213,7 @@ describe('Serialization', () => {
 
   describe('serializeToJSON', () => {
     it('should return valid JSON string', () => {
-      const sceneGraph = createSceneGraph(uuidv4());
+      const sceneGraph = createSceneGraph();
       const meta = {
         id: uuidv4(),
         name: 'Test',
@@ -364,6 +365,8 @@ describe('Deserialization', () => {
             zIndex: 1,
             visible: true,
             locked: false,
+            opacity: 1,
+            borderRadius: 0,
             createdAt: now,
             updatedAt: now,
             createdBy: uuidv4(),
@@ -378,7 +381,7 @@ describe('Deserialization', () => {
         layoutMode: 'freeform',
       };
 
-      const sceneGraph = createSceneGraph(canvasId);
+      const sceneGraph = createSceneGraph();
       const result = deserializeToSceneGraph(doc, sceneGraph);
 
       expect(result.success).toBe(true);
@@ -500,7 +503,7 @@ describe('Round-trip', () => {
   it('should preserve data through serialize -> deserialize', () => {
     const canvasId = uuidv4();
     const now = new Date().toISOString();
-    const sceneGraph = createSceneGraph(canvasId);
+    const sceneGraph = createSceneGraph();
 
     // Add a text entity
     const entity: TextEntity = {
@@ -516,6 +519,8 @@ describe('Round-trip', () => {
       zIndex: 5,
       visible: true,
       locked: false,
+      opacity: 1,
+      borderRadius: 0,
       createdAt: now,
       updatedAt: now,
       createdBy: uuidv4(),
@@ -540,7 +545,7 @@ describe('Round-trip', () => {
     const json = JSON.stringify(doc);
 
     // Deserialize to new scene graph
-    const newSceneGraph = createSceneGraph(canvasId);
+    const newSceneGraph = createSceneGraph();
     const result = deserializeToSceneGraph(json, newSceneGraph);
 
     expect(result.success).toBe(true);

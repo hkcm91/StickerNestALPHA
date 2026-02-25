@@ -34,6 +34,8 @@ function createMockCanvas(width = 800, height = 600): {
     beginPath: vi.fn(),
     moveTo: vi.fn(),
     lineTo: vi.fn(),
+    closePath: vi.fn(),
+    fill: vi.fn(),
     stroke: vi.fn(),
     clearRect: vi.fn(),
   } as unknown as CanvasRenderingContext2D;
@@ -253,6 +255,105 @@ describe('countVisibleCells', () => {
     const count2 = countVisibleCells(viewport2, config);
 
     expect(count2).toBeLessThan(count1);
+  });
+});
+
+describe('GridRenderer projection modes', () => {
+  let cellStore: ReturnType<typeof createGridCellStore>;
+  let renderer: GridRenderer;
+  let viewport: ViewportState;
+  const baseConfig: GridConfig = {
+    enabled: true,
+    cellSize: 64,
+    showGridLines: true,
+    gridLineColor: 'rgba(255, 255, 255, 0.1)',
+    gridLineWidth: 1,
+    snapMode: 'none',
+    origin: { x: 0, y: 0 },
+    defaultBackground: '#0d1117',
+    minCellScreenSize: 4,
+    projection: 'orthogonal',
+    isometricRatio: 2,
+  };
+
+  beforeEach(() => {
+    cellStore = createGridCellStore();
+    renderer = createGridRenderer(cellStore);
+    viewport = createViewport(800, 600);
+  });
+
+  it('renders triangular cells using path API', () => {
+    const { canvas, ctx } = createMockCanvas();
+    renderer.setCanvas(canvas);
+    renderer.setViewport(viewport);
+    renderer.setConfig({ ...baseConfig, projection: 'triangular' });
+
+    cellStore.set({ col: 0, row: 0, fillType: 'solid', color: '#ff0000' });
+    renderer.render();
+
+    // Triangular cells use beginPath/moveTo/lineTo/closePath/fill
+    expect(ctx.beginPath).toHaveBeenCalled();
+    expect(ctx.moveTo).toHaveBeenCalled();
+    expect(ctx.lineTo).toHaveBeenCalled();
+  });
+
+  it('renders hexagonal cells using path API', () => {
+    const { canvas, ctx } = createMockCanvas();
+    renderer.setCanvas(canvas);
+    renderer.setViewport(viewport);
+    renderer.setConfig({ ...baseConfig, projection: 'hexagonal' });
+
+    cellStore.set({ col: 0, row: 0, fillType: 'solid', color: '#00ff00' });
+    renderer.render();
+
+    // Hexagonal cells use beginPath/moveTo/lineTo/closePath/fill
+    expect(ctx.beginPath).toHaveBeenCalled();
+    expect(ctx.moveTo).toHaveBeenCalled();
+    expect(ctx.lineTo).toHaveBeenCalled();
+  });
+
+  it('renders triangular grid lines', () => {
+    const { canvas, ctx } = createMockCanvas();
+    renderer.setCanvas(canvas);
+    renderer.setViewport(viewport);
+    renderer.setConfig({ ...baseConfig, projection: 'triangular', showGridLines: true });
+
+    renderer.render();
+
+    expect(ctx.stroke).toHaveBeenCalled();
+  });
+
+  it('renders hexagonal grid lines', () => {
+    const { canvas, ctx } = createMockCanvas();
+    renderer.setCanvas(canvas);
+    renderer.setViewport(viewport);
+    renderer.setConfig({ ...baseConfig, projection: 'hexagonal', showGridLines: true });
+
+    renderer.render();
+
+    expect(ctx.stroke).toHaveBeenCalled();
+  });
+
+  it('skips grid lines for triangular when zoomed out too far', () => {
+    const { canvas, ctx } = createMockCanvas();
+    renderer.setCanvas(canvas);
+    renderer.setViewport({ ...viewport, zoom: 0.01 });
+    renderer.setConfig({ ...baseConfig, projection: 'triangular' });
+
+    renderer.render();
+
+    expect(ctx.stroke).not.toHaveBeenCalled();
+  });
+
+  it('skips grid lines for hexagonal when zoomed out too far', () => {
+    const { canvas, ctx } = createMockCanvas();
+    renderer.setCanvas(canvas);
+    renderer.setViewport({ ...viewport, zoom: 0.01 });
+    renderer.setConfig({ ...baseConfig, projection: 'hexagonal' });
+
+    renderer.render();
+
+    expect(ctx.stroke).not.toHaveBeenCalled();
   });
 });
 

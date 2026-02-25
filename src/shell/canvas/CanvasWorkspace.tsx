@@ -35,7 +35,7 @@ import { CanvasOverlayLayer } from './CanvasOverlayLayer';
 import { CanvasToolLayer } from './CanvasToolLayer';
 import { CanvasViewportLayer } from './CanvasViewportLayer';
 import { SelectionOverlay } from './components';
-import { initAlignHandler, initGroupHandler } from './handlers';
+import { initAlignHandler, initCropHandler, initGroupHandler } from './handlers';
 import { useActiveTool, useCanvasInput, useCanvasShortcuts, useSceneGraph, useSelection, useViewport } from './hooks';
 
 export interface CanvasWorkspaceProps {
@@ -65,6 +65,18 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   onSelectionChange,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Track last cursor position for cursor-centered keyboard zoom
+  const lastCursorScreen = useRef<{ x: number; y: number } | null>(null);
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (rect) {
+      lastCursorScreen.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    }
+  }, []);
+  const handleMouseLeave = useCallback(() => {
+    lastCursorScreen.current = null;
+  }, []);
 
   // Reactive grid config — merges prop defaults with bus event updates
   const [gridConfig, setGridConfig] = useState<GridConfig>(gridConfigProp);
@@ -106,6 +118,12 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
     return teardown;
   }, [sceneGraph]);
 
+  // Initialize crop handler — subscribes to crop bus events
+  useEffect(() => {
+    const teardown = initCropHandler(() => sceneGraph);
+    return teardown;
+  }, [sceneGraph]);
+
   // Viewport state (pan/zoom)
   const { viewport, store: viewportStore } = useViewport();
 
@@ -129,6 +147,8 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
     selectIds: setSelectedIds,
     clearSelection: () => setSelectedIds(new Set()),
     setTool,
+    viewportStore,
+    lastCursorScreen,
   });
 
   // Handle container resize
@@ -174,6 +194,8 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
       data-testid="canvas-workspace"
       tabIndex={0}
       onKeyDown={handleKeyDown}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
       style={{
         position: 'relative',
         width: '100%',
@@ -201,11 +223,6 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
           theme={theme}
           interactionMode={rendererMode}
         />
-        <SelectionOverlay
-          selectedIds={selectedIds}
-          sceneGraph={sceneGraph}
-          interactionMode={rendererMode}
-        />
       </CanvasViewportLayer>
 
       {/* Layer 3: Tool interaction layer (transparent input capture) */}
@@ -219,6 +236,16 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
         onPan={handlePan}
         getZoom={getZoom}
       />
+
+      {/* Layer 4: Selection handles — ABOVE tool layer so handles receive pointer events.
+          Wrapper has pointer-events: none; individual handles set pointer-events: auto. */}
+      <CanvasViewportLayer viewport={viewport} style={{ pointerEvents: 'none' }}>
+        <SelectionOverlay
+          selectedIds={selectedIds}
+          sceneGraph={sceneGraph}
+          interactionMode={rendererMode}
+        />
+      </CanvasViewportLayer>
     </div>
   );
 };

@@ -12,7 +12,7 @@ describe('RenderLoop', () => {
       setTimeout(() => cb(performance.now()), 16);
       return rafId;
     });
-    vi.stubGlobal('cancelAnimationFrame', (id: number) => {
+    vi.stubGlobal('cancelAnimationFrame', (_id: number) => {
       // no-op in tests
     });
   });

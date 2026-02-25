@@ -33,7 +33,7 @@ export interface ContextMenuController {
 
 export function createContextMenuController(): ContextMenuController {
   return {
-    getEntityMenuItems(entityId: string): ContextMenuItem[] {
+    getEntityMenuItems(_entityId: string): ContextMenuItem[] {
       return [
         { id: 'cut', label: 'Cut', action: 'cut', disabled: false },
         { id: 'copy', label: 'Copy', action: 'copy', disabled: false },

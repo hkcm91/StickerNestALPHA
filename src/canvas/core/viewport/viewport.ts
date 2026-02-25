@@ -52,10 +52,6 @@ export function zoomTo(vp: ViewportState, zoom: number, anchor: Point2D): Viewpo
   const clamped = Math.min(vp.maxZoom, Math.max(vp.minZoom, zoom));
   // Keep the anchor point in the same screen position
   const canvasAnchor = screenToCanvas(anchor, vp);
-  const newOffset = {
-    x: anchor.x / clamped - canvasAnchor.x + vp.offset.x - (anchor.x / clamped - canvasAnchor.x),
-    y: anchor.y / clamped - canvasAnchor.y + vp.offset.y - (anchor.y / clamped - canvasAnchor.y),
-  };
   // Simplified: anchor stays at same canvas position
   return {
     ...vp,

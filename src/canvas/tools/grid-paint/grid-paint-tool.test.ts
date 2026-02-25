@@ -34,6 +34,8 @@ function createMockGridLayer(): GridLayer & {
     origin: { x: 0, y: 0 },
     defaultBackground: '#0d1117',
     minCellScreenSize: 4,
+    projection: 'orthogonal',
+    isometricRatio: 2,
   };
 
   return {
@@ -275,6 +277,72 @@ describe('createGridPaintToolWithController', () => {
 
     controller.setEraseMode(false);
     expect(controller.isEraseMode()).toBe(false);
+  });
+});
+
+describe('painting on non-orthogonal grids', () => {
+  it('paints on triangular grid via positionToCell', () => {
+    const gridLayer = createMockGridLayer();
+    // Override positionToCell to simulate triangular grid (returns different cells)
+    (gridLayer.positionToCell as ReturnType<typeof vi.fn>).mockImplementation(
+      (x: number, y: number) => ({
+        col: Math.floor(x / 32), // triangular has narrower cols
+        row: Math.floor(y / 55), // h = 64 * sqrt(3)/2 ≈ 55
+      })
+    );
+
+    const tool = createGridPaintTool({
+      gridLayer,
+      color: '#ff0000',
+      eraseMode: false,
+    });
+    tool.onActivate();
+    tool.onPointerDown(createPointerEvent(50, 50));
+
+    expect(gridLayer.paintCell).toHaveBeenCalledWith(1, 0, '#ff0000');
+  });
+
+  it('paints on hexagonal grid via positionToCell', () => {
+    const gridLayer = createMockGridLayer();
+    // Override positionToCell to simulate hex grid
+    (gridLayer.positionToCell as ReturnType<typeof vi.fn>).mockImplementation(
+      (x: number, y: number) => ({
+        col: Math.round(x / 110), // hex width ≈ sqrt(3) * 64
+        row: Math.round(y / 96),  // hex row spacing ≈ 1.5 * 64
+      })
+    );
+
+    const tool = createGridPaintTool({
+      gridLayer,
+      color: '#00ff00',
+      eraseMode: false,
+    });
+    tool.onActivate();
+    tool.onPointerDown(createPointerEvent(110, 96));
+
+    expect(gridLayer.paintCell).toHaveBeenCalledWith(1, 1, '#00ff00');
+  });
+
+  it('drag paints on hexagonal grid with interpolation', () => {
+    const gridLayer = createMockGridLayer();
+    (gridLayer.positionToCell as ReturnType<typeof vi.fn>).mockImplementation(
+      (x: number, y: number) => ({
+        col: Math.round(x / 110),
+        row: Math.round(y / 96),
+      })
+    );
+
+    const tool = createGridPaintTool({
+      gridLayer,
+      color: '#0000ff',
+      eraseMode: false,
+    });
+    tool.onActivate();
+    tool.onPointerDown(createPointerEvent(0, 0));
+    tool.onPointerMove(createPointerEvent(220, 0)); // Jump 2 hex cells
+
+    // Should have painted at least the start and end cells
+    expect(gridLayer.paintedCells.length).toBeGreaterThanOrEqual(2);
   });
 });
 

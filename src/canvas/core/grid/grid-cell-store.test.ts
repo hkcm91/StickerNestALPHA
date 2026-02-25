@@ -18,6 +18,8 @@ import {
   getCellBounds,
   cellCenter,
   getVisibleCellBounds,
+  getTriangularCellCorners,
+  getHexagonalCellCorners,
   type GridCellStore,
 } from './grid-cell-store';
 
@@ -323,6 +325,233 @@ describe('coordinate utilities', () => {
         expect(cellPos.x + defaultConfig.cellSize).toBeGreaterThan(pos.x);
         expect(cellPos.y + defaultConfig.cellSize).toBeGreaterThan(pos.y);
       }
+    });
+  });
+
+  // ===========================================================================
+  // Triangular projection tests
+  // ===========================================================================
+
+  describe('triangular projection', () => {
+    const triConfig: GridConfig = {
+      ...defaultConfig,
+      projection: 'triangular',
+    };
+
+    describe('positionToCell round-trip', () => {
+      it('round-trips for UP triangles (even col)', () => {
+        const testCells = [
+          { col: 0, row: 0 },
+          { col: 2, row: 1 },
+          { col: 4, row: 3 },
+          { col: -2, row: 0 },
+        ];
+        for (const { col, row } of testCells) {
+          const center = cellToPosition(col, row, triConfig);
+          const result = positionToCell(center.x, center.y, triConfig);
+          expect(result).toEqual({ col, row });
+        }
+      });
+
+      it('round-trips for DOWN triangles (odd col)', () => {
+        const testCells = [
+          { col: 1, row: 0 },
+          { col: 3, row: 1 },
+          { col: 5, row: 2 },
+          { col: -1, row: 0 },
+        ];
+        for (const { col, row } of testCells) {
+          const center = cellToPosition(col, row, triConfig);
+          const result = positionToCell(center.x, center.y, triConfig);
+          expect(result).toEqual({ col, row });
+        }
+      });
+    });
+
+    describe('getTriangularCellCorners', () => {
+      it('returns 3 corners for UP triangle', () => {
+        const corners = getTriangularCellCorners(0, 0, triConfig);
+        expect(corners).toHaveLength(3);
+      });
+
+      it('returns 3 corners for DOWN triangle', () => {
+        const corners = getTriangularCellCorners(1, 0, triConfig);
+        expect(corners).toHaveLength(3);
+      });
+
+      it('UP triangle apex is above base', () => {
+        const corners = getTriangularCellCorners(0, 0, triConfig);
+        const [bl, br, top] = corners;
+        // Apex (top) y should be less than base y
+        expect(top.y).toBeLessThan(bl.y);
+        expect(top.y).toBeLessThan(br.y);
+        // Base vertices should have same y
+        expect(bl.y).toBeCloseTo(br.y, 5);
+      });
+
+      it('DOWN triangle apex is below base', () => {
+        const corners = getTriangularCellCorners(1, 0, triConfig);
+        const [tl, tr, bottom] = corners;
+        // Apex (bottom) y should be greater than top edge y
+        expect(bottom.y).toBeGreaterThan(tl.y);
+        expect(bottom.y).toBeGreaterThan(tr.y);
+        // Top vertices should have same y
+        expect(tl.y).toBeCloseTo(tr.y, 5);
+      });
+
+      it('triangle side length approximately equals cellSize', () => {
+        const corners = getTriangularCellCorners(0, 0, triConfig);
+        const [bl, br] = corners;
+        const baseLength = Math.abs(br.x - bl.x);
+        expect(baseLength).toBeCloseTo(triConfig.cellSize, 5);
+      });
+    });
+
+    describe('getCellBounds for triangular', () => {
+      it('returns bounding box enclosing the triangle', () => {
+        const bounds = getCellBounds(0, 0, triConfig);
+        const corners = getTriangularCellCorners(0, 0, triConfig);
+        for (const c of corners) {
+          expect(c.x).toBeGreaterThanOrEqual(bounds.x - 0.001);
+          expect(c.y).toBeGreaterThanOrEqual(bounds.y - 0.001);
+          expect(c.x).toBeLessThanOrEqual(bounds.x + bounds.width + 0.001);
+          expect(c.y).toBeLessThanOrEqual(bounds.y + bounds.height + 0.001);
+        }
+      });
+    });
+
+    describe('cellCenter for triangular', () => {
+      it('returns center inside the triangle bounds', () => {
+        const center = cellCenter(0, 0, triConfig);
+        const bounds = getCellBounds(0, 0, triConfig);
+        expect(center.x).toBeGreaterThanOrEqual(bounds.x);
+        expect(center.x).toBeLessThanOrEqual(bounds.x + bounds.width);
+        expect(center.y).toBeGreaterThanOrEqual(bounds.y);
+        expect(center.y).toBeLessThanOrEqual(bounds.y + bounds.height);
+      });
+    });
+
+    describe('getVisibleCellBounds for triangular', () => {
+      it('uses larger buffer than orthogonal', () => {
+        const visibleBounds = {
+          min: { x: 0, y: 0 },
+          max: { x: 640, y: 480 },
+        };
+        const orthBounds = getVisibleCellBounds(visibleBounds, defaultConfig, 1);
+        const triBounds = getVisibleCellBounds(visibleBounds, triConfig, 1);
+        // Triangular should have wider bounds (buffer + 2 extra)
+        const orthRange = orthBounds.maxCol - orthBounds.minCol;
+        const triRange = triBounds.maxCol - triBounds.minCol;
+        expect(triRange).toBeGreaterThanOrEqual(orthRange);
+      });
+    });
+  });
+
+  // ===========================================================================
+  // Hexagonal projection tests
+  // ===========================================================================
+
+  describe('hexagonal projection', () => {
+    const hexConfig: GridConfig = {
+      ...defaultConfig,
+      projection: 'hexagonal',
+    };
+
+    describe('positionToCell round-trip', () => {
+      it('round-trips for various hex cells', () => {
+        const testCells = [
+          { col: 0, row: 0 },
+          { col: 1, row: 0 },
+          { col: 0, row: 1 },
+          { col: 2, row: 3 },
+          { col: -1, row: -1 },
+          { col: -2, row: 1 },
+        ];
+        for (const { col, row } of testCells) {
+          const center = cellToPosition(col, row, hexConfig);
+          const result = positionToCell(center.x, center.y, hexConfig);
+          expect(result).toEqual({ col, row });
+        }
+      });
+
+      it('cube-rounding handles boundary positions', () => {
+        // Test positions near hex edges — should still resolve to correct hex
+        const center = cellToPosition(0, 0, hexConfig);
+        // Small perturbation near center should still resolve to (0,0)
+        const result = positionToCell(center.x + 1, center.y + 1, hexConfig);
+        expect(result).toEqual({ col: 0, row: 0 });
+      });
+    });
+
+    describe('getHexagonalCellCorners', () => {
+      it('returns 6 corners', () => {
+        const corners = getHexagonalCellCorners(0, 0, hexConfig);
+        expect(corners).toHaveLength(6);
+      });
+
+      it('corners are equidistant from center', () => {
+        const corners = getHexagonalCellCorners(0, 0, hexConfig);
+        const center = cellToPosition(0, 0, hexConfig);
+        const distances = corners.map(c =>
+          Math.sqrt((c.x - center.x) ** 2 + (c.y - center.y) ** 2)
+        );
+        // All distances should equal cellSize
+        for (const d of distances) {
+          expect(d).toBeCloseTo(hexConfig.cellSize, 3);
+        }
+      });
+
+      it('forms a regular hexagon (equal edge lengths)', () => {
+        const corners = getHexagonalCellCorners(0, 0, hexConfig);
+        const edgeLengths: number[] = [];
+        for (let i = 0; i < 6; i++) {
+          const a = corners[i];
+          const b = corners[(i + 1) % 6];
+          edgeLengths.push(Math.sqrt((b.x - a.x) ** 2 + (b.y - a.y) ** 2));
+        }
+        // All edges should be equal
+        for (const len of edgeLengths) {
+          expect(len).toBeCloseTo(edgeLengths[0], 3);
+        }
+      });
+    });
+
+    describe('getCellBounds for hexagonal', () => {
+      it('returns bounding box enclosing all 6 corners', () => {
+        const bounds = getCellBounds(0, 0, hexConfig);
+        const corners = getHexagonalCellCorners(0, 0, hexConfig);
+        for (const c of corners) {
+          expect(c.x).toBeGreaterThanOrEqual(bounds.x - 0.001);
+          expect(c.y).toBeGreaterThanOrEqual(bounds.y - 0.001);
+          expect(c.x).toBeLessThanOrEqual(bounds.x + bounds.width + 0.001);
+          expect(c.y).toBeLessThanOrEqual(bounds.y + bounds.height + 0.001);
+        }
+      });
+    });
+
+    describe('cellCenter for hexagonal', () => {
+      it('returns center inside the hex bounds', () => {
+        const center = cellCenter(1, 1, hexConfig);
+        const bounds = getCellBounds(1, 1, hexConfig);
+        expect(center.x).toBeGreaterThanOrEqual(bounds.x);
+        expect(center.x).toBeLessThanOrEqual(bounds.x + bounds.width);
+        expect(center.y).toBeGreaterThanOrEqual(bounds.y);
+        expect(center.y).toBeLessThanOrEqual(bounds.y + bounds.height);
+      });
+    });
+
+    describe('getVisibleCellBounds for hexagonal', () => {
+      it('uses larger buffer than orthogonal', () => {
+        const visibleBounds = {
+          min: { x: 0, y: 0 },
+          max: { x: 640, y: 480 },
+        };
+        const orthBounds = getVisibleCellBounds(visibleBounds, defaultConfig, 1);
+        const hexBounds = getVisibleCellBounds(visibleBounds, hexConfig, 1);
+        const orthRange = orthBounds.maxCol - orthBounds.minCol;
+        const hexRange = hexBounds.maxCol - hexBounds.minCol;
+        expect(hexRange).toBeGreaterThanOrEqual(orthRange);
+      });
     });
   });
 });

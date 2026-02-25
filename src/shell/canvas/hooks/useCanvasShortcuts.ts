@@ -18,6 +18,7 @@ import type { SceneGraph } from '../../../canvas/core';
 import { bus } from '../../../kernel/bus';
 
 import type { CanvasToolId } from './useActiveTool';
+import type { ViewportStore } from './useViewport';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -36,6 +37,10 @@ export interface CanvasShortcutDeps {
   clearSelection: () => void;
   /** Set the active tool */
   setTool: (tool: CanvasToolId) => void;
+  /** Viewport store for zoom shortcuts */
+  viewportStore?: ViewportStore;
+  /** Last known cursor position in screen-space (relative to canvas container) */
+  lastCursorScreen?: React.RefObject<{ x: number; y: number } | null>;
 }
 
 // ---------------------------------------------------------------------------
@@ -45,11 +50,13 @@ export interface CanvasShortcutDeps {
 const IGNORED_TAGS = new Set(['INPUT', 'TEXTAREA', 'SELECT']);
 const NUDGE_SMALL = 10;
 const NUDGE_LARGE = 50;
+const ZOOM_FACTOR = 1.25;
 
 /** Single-key tool switching map */
 const TOOL_KEYS: Record<string, CanvasToolId> = {
   v: 'select',
-  h: 'move', // hand/pan tool
+  h: 'pan',  // hand/pan tool
+  m: 'move', // move tool
   t: 'text',
   r: 'rect',
   p: 'pen',
@@ -85,6 +92,8 @@ export function useCanvasShortcuts(deps: CanvasShortcutDeps) {
     selectIds,
     clearSelection,
     setTool,
+    viewportStore,
+    lastCursorScreen,
   } = deps;
 
   const onKeyDown = useCallback(
@@ -107,10 +116,11 @@ export function useCanvasShortcuts(deps: CanvasShortcutDeps) {
         return;
       }
 
-      // ----- Escape — deselect all -----
+      // ----- Escape — deselect all + reset tool to select -----
       if (key === 'Escape' && !mod && !shift) {
         e.preventDefault();
         clearSelection();
+        setTool('select');
         return;
       }
 
@@ -142,11 +152,13 @@ export function useCanvasShortcuts(deps: CanvasShortcutDeps) {
           if (!entity) continue;
           bus.emit(CanvasEvents.ENTITY_UPDATED, {
             id,
-            transform: {
-              ...entity.transform,
-              position: {
-                x: entity.transform.position.x + dx,
-                y: entity.transform.position.y + dy,
+            updates: {
+              transform: {
+                ...entity.transform,
+                position: {
+                  x: entity.transform.position.x + dx,
+                  y: entity.transform.position.y + dy,
+                },
               },
             },
           });
@@ -242,6 +254,35 @@ export function useCanvasShortcuts(deps: CanvasShortcutDeps) {
         return;
       }
 
+      // ----- Ctrl+= / Ctrl++ — zoom in at cursor (or viewport center) -----
+      if ((key === '=' || key === '+') && mod && !shift && viewportStore) {
+        e.preventDefault();
+        const vp = viewportStore.getState();
+        const newZoom = vp.zoom * ZOOM_FACTOR;
+        const anchor = lastCursorScreen?.current
+          ?? { x: vp.viewportWidth / 2, y: vp.viewportHeight / 2 };
+        viewportStore.zoom(newZoom, anchor);
+        return;
+      }
+
+      // ----- Ctrl+- — zoom out at cursor (or viewport center) -----
+      if (key === '-' && mod && !shift && viewportStore) {
+        e.preventDefault();
+        const vp = viewportStore.getState();
+        const newZoom = vp.zoom / ZOOM_FACTOR;
+        const anchor = lastCursorScreen?.current
+          ?? { x: vp.viewportWidth / 2, y: vp.viewportHeight / 2 };
+        viewportStore.zoom(newZoom, anchor);
+        return;
+      }
+
+      // ----- Ctrl+0 — reset zoom to 100% -----
+      if (key === '0' && mod && !shift && viewportStore) {
+        e.preventDefault();
+        viewportStore.reset();
+        return;
+      }
+
       // ----- Single-key tool switching (V, H, T, R, P, E) -----
       const toolKey = TOOL_KEYS[key.toLowerCase()];
       if (toolKey && !mod && !shift && !hasSelection) {
@@ -250,7 +291,7 @@ export function useCanvasShortcuts(deps: CanvasShortcutDeps) {
         return;
       }
     },
-    [isEditMode, selectedIds, sceneGraph, selectIds, clearSelection, setTool],
+    [isEditMode, selectedIds, sceneGraph, selectIds, clearSelection, setTool, viewportStore, lastCursorScreen],
   );
 
   return { onKeyDown };

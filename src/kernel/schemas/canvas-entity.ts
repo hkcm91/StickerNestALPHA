@@ -6,6 +6,7 @@
 import { z } from 'zod';
 
 import { Point2DSchema, Size2DSchema, BoundingBox2DSchema, Vector3Schema, QuaternionSchema } from './spatial';
+import { AnchorPointSchema, PathFillRuleSchema } from './path';
 
 /**
  * Entity type enum
@@ -19,6 +20,8 @@ import { Point2DSchema, Size2DSchema, BoundingBox2DSchema, Vector3Schema, Quater
  * - `drawing` - Freehand pen stroke
  * - `group` - Container for grouped entities
  * - `docker` - Container widget that hosts child widgets
+ * - `audio` - Audio player with waveform visualization
+ * - `svg` - Vector graphic (inline SVG markup)
  */
 export const CanvasEntityTypeSchema = z.enum([
   'sticker',
@@ -29,6 +32,9 @@ export const CanvasEntityTypeSchema = z.enum([
   'group',
   'docker',
   'lottie',
+  'audio',
+  'svg',
+  'path',
 ]);
 
 export type CanvasEntityType = z.infer<typeof CanvasEntityTypeSchema>;
@@ -64,6 +70,28 @@ export const Transform3DSchema = z.object({
 export type Transform3D = z.infer<typeof Transform3DSchema>;
 
 /**
+ * Crop rectangle — percentage-based insets from each edge.
+ *
+ * @remarks
+ * Values are in the range [0, 1] where 0 means no crop from that edge
+ * and 1 means fully cropped. For example, `{ top: 0.1, right: 0.2, bottom: 0.1, left: 0.2 }`
+ * crops 10% from top/bottom and 20% from left/right.
+ * Applied via CSS `clip-path: inset(top right bottom left)`.
+ */
+export const CropRectSchema = z.object({
+  /** Percentage cropped from the top edge (0–1) */
+  top: z.number().min(0).max(1).default(0),
+  /** Percentage cropped from the right edge (0–1) */
+  right: z.number().min(0).max(1).default(0),
+  /** Percentage cropped from the bottom edge (0–1) */
+  bottom: z.number().min(0).max(1).default(0),
+  /** Percentage cropped from the left edge (0–1) */
+  left: z.number().min(0).max(1).default(0),
+});
+
+export type CropRect = z.infer<typeof CropRectSchema>;
+
+/**
  * Base CanvasEntity schema
  *
  * @remarks
@@ -90,6 +118,14 @@ export const CanvasEntityBaseSchema = z.object({
   visible: z.boolean().default(true),
   /** Whether entity is locked from editing */
   locked: z.boolean().default(false),
+  /** Opacity (0 = fully transparent, 1 = fully opaque) */
+  opacity: z.number().min(0).max(1).default(1),
+  /** Border radius in canvas units */
+  borderRadius: z.number().nonnegative().default(0),
+  /** Optional crop rectangle — percentage-based edge insets */
+  cropRect: CropRectSchema.optional(),
+  /** Parent group/docker ID — set when entity is a child of a group */
+  parentId: z.string().uuid().optional(),
   /** Optional name for layers panel */
   name: z.string().optional(),
   /** Creation timestamp */
@@ -214,7 +250,7 @@ export const WidgetCropConfigSchema = z.object({
   enabled: z.boolean().default(false),
   /**
    * Crop rectangle in widget intrinsic coordinates.
-   * x, y are the top-left corner; width, height define the visible area.
+   * min is the top-left corner; max is the bottom-right corner of the visible area.
    */
   rect: BoundingBox2DSchema.optional(),
 });
@@ -319,6 +355,80 @@ export const DockerEntitySchema = CanvasEntityBaseSchema.extend({
 export type DockerEntity = z.infer<typeof DockerEntitySchema>;
 
 /**
+ * Audio entity schema
+ */
+export const AudioEntitySchema = CanvasEntityBaseSchema.extend({
+  type: z.literal('audio'),
+  /** URL to the audio file (proxied, never direct bucket URL) */
+  assetUrl: z.string().url(),
+  /** Whether audio starts playing immediately */
+  autoplay: z.boolean().default(false),
+  /** Whether audio loops */
+  loop: z.boolean().default(false),
+  /** Volume (0 = muted, 1 = full) */
+  volume: z.number().min(0).max(1).default(1),
+  /** Waveform visualization color */
+  waveformColor: z.string().optional(),
+  /** Alt text for accessibility */
+  altText: z.string().optional(),
+});
+
+export type AudioEntity = z.infer<typeof AudioEntitySchema>;
+
+/**
+ * SVG vector graphic entity schema
+ */
+export const SvgEntitySchema = CanvasEntityBaseSchema.extend({
+  type: z.literal('svg'),
+  /** Raw SVG markup (sanitized before rendering) */
+  svgContent: z.string(),
+  /** Optional URL to load SVG from */
+  assetUrl: z.string().url().optional(),
+  /** Override fill color */
+  fill: z.string().optional(),
+  /** Override stroke color */
+  stroke: z.string().optional(),
+  /** Alt text for accessibility */
+  altText: z.string().optional(),
+  /** Aspect ratio lock */
+  aspectLocked: z.boolean().default(true),
+});
+
+export type SvgEntity = z.infer<typeof SvgEntitySchema>;
+
+/**
+ * Path entity schema — Bezier path with configurable fill and stroke.
+ *
+ * @remarks
+ * Anchor positions are stored in **entity-local coordinates** (relative to
+ * `transform.position`). The entity's bounding box (`transform.position` +
+ * `transform.size`) encompasses all anchors and their control handles.
+ */
+export const PathEntitySchema = CanvasEntityBaseSchema.extend({
+  type: z.literal('path'),
+  /** Ordered list of anchor points defining the path */
+  anchors: z.array(AnchorPointSchema).min(1),
+  /** Whether the path is closed (last anchor connects back to first) */
+  closed: z.boolean().default(false),
+  /** Fill color (null for no fill / transparent) */
+  fill: z.string().nullable().default(null),
+  /** SVG fill-rule for complex/self-intersecting paths */
+  fillRule: PathFillRuleSchema.default('nonzero'),
+  /** Stroke color */
+  stroke: z.string().default('#000000'),
+  /** Stroke width in canvas units */
+  strokeWidth: z.number().nonnegative().default(2),
+  /** Stroke line cap style */
+  strokeLinecap: z.enum(['butt', 'round', 'square']).default('round'),
+  /** Stroke line join style */
+  strokeLinejoin: z.enum(['miter', 'round', 'bevel']).default('round'),
+  /** SVG stroke-dasharray for dashed/dotted lines */
+  strokeDasharray: z.string().optional(),
+});
+
+export type PathEntity = z.infer<typeof PathEntitySchema>;
+
+/**
  * Union of all entity types
  */
 export const CanvasEntitySchema = z.discriminatedUnion('type', [
@@ -330,6 +440,9 @@ export const CanvasEntitySchema = z.discriminatedUnion('type', [
   DrawingEntitySchema,
   GroupEntitySchema,
   DockerEntitySchema,
+  AudioEntitySchema,
+  SvgEntitySchema,
+  PathEntitySchema,
 ]);
 
 export type CanvasEntity = z.infer<typeof CanvasEntitySchema>;
@@ -337,8 +450,11 @@ export type CanvasEntity = z.infer<typeof CanvasEntitySchema>;
 /**
  * JSON Schema exports for external validation
  */
+export const CropRectJSONSchema = CropRectSchema.toJSONSchema();
 export const CanvasEntityBaseJSONSchema = CanvasEntityBaseSchema.toJSONSchema();
 export const LottieEntityJSONSchema = LottieEntitySchema.toJSONSchema();
+export const AudioEntityJSONSchema = AudioEntitySchema.toJSONSchema();
+export const SvgEntityJSONSchema = SvgEntitySchema.toJSONSchema();
 export const CanvasEntityJSONSchema = CanvasEntitySchema.toJSONSchema();
 export const WidgetIntrinsicSizeJSONSchema = WidgetIntrinsicSizeSchema.toJSONSchema();
 export const WidgetScalingModeJSONSchema = WidgetScalingModeSchema.toJSONSchema();

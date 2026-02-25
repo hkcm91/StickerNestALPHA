@@ -120,6 +120,7 @@ export {
   CanvasEntityTypeSchema,
   Transform2DSchema,
   Transform3DSchema,
+  CropRectSchema,
   CanvasEntityBaseSchema,
   StickerEntitySchema,
   LottieEntitySchema,
@@ -140,6 +141,7 @@ export {
   type CanvasEntityType,
   type Transform2D,
   type Transform3D,
+  type CropRect,
   type CanvasEntityBase,
   type StickerEntity,
   type LottieEntity,
@@ -156,6 +158,7 @@ export {
   type SvgEntity,
   type CanvasEntity,
   // JSON Schemas
+  CropRectJSONSchema,
   CanvasEntityBaseJSONSchema,
   LottieEntityJSONSchema,
   AudioEntityJSONSchema,
@@ -166,6 +169,25 @@ export {
   WidgetCropConfigJSONSchema,
   WidgetContainerEntityJSONSchema,
 } from './canvas-entity';
+
+// =============================================================================
+// Path Entity Schemas
+// =============================================================================
+export {
+  // Schemas
+  AnchorPointTypeSchema,
+  AnchorPointSchema,
+  PathFillRuleSchema,
+  PathEntitySchema,
+  // Types
+  type AnchorPointType,
+  type AnchorPoint,
+  type PathFillRule,
+  type PathEntity,
+  // JSON Schemas
+  AnchorPointJSONSchema,
+  PathEntityJSONSchema,
+} from './path';
 
 // =============================================================================
 // Widget Manifest Schemas

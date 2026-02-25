@@ -137,6 +137,14 @@ function handleGroup(
   // Emit group creation
   bus.emit(CanvasEvents.ENTITY_CREATED, groupEntity);
 
+  // Set parentId on each child entity
+  for (const child of entities) {
+    bus.emit(CanvasEvents.ENTITY_UPDATED, {
+      id: child.id,
+      updates: { parentId: groupId },
+    });
+  }
+
   // Emit the grouped event so other systems can react
   bus.emit(CanvasEvents.ENTITY_GROUPED, {
     groupId,
@@ -160,6 +168,14 @@ function handleUngroup(
 
     const groupEntity = entity as GroupEntity;
     const childIds = groupEntity.children;
+
+    // Clear parentId on each child before destroying the group
+    for (const childId of childIds) {
+      bus.emit(CanvasEvents.ENTITY_UPDATED, {
+        id: childId,
+        updates: { parentId: undefined },
+      });
+    }
 
     // Delete the group entity
     bus.emit(CanvasEvents.ENTITY_DELETED, { id: groupEntity.id });
