@@ -3,7 +3,7 @@
     "stickernest-dev": {
       "command": "node",
       "args": ["./mcp-dev/dist/index.js"],
-      "description": "StickerNest V5 Development Testing Server - Event Bus, Canvas, Viewport, Widgets"
+      "description": "StickerNest V5 Development Testing Server - Event Bus, Canvas, Viewport, Widgets, Billing, Commerce"
     }
   }
 }

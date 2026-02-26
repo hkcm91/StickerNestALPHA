@@ -2,8 +2,9 @@
 /**
  * StickerNest MCP Development Server
  *
- * Provides tools for testing the event bus, canvas core, and widget systems
- * without requiring the full browser/React environment.
+ * Provides tools for testing the event bus, canvas core, widget systems,
+ * billing/quota, and creator commerce without requiring the full browser
+ * or React environment.
  */
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
@@ -345,6 +346,347 @@ class WidgetRegistry {
 }
 
 // ============================================================================
+// Billing & Quota Simulation
+// ============================================================================
+
+type UserTier = 'free' | 'creator' | 'pro' | 'enterprise';
+
+interface TierQuota {
+  tier: UserTier;
+  maxCanvases: number;
+  maxStorageMb: number;
+  maxWidgetsPerCanvas: number;
+  maxCollaboratorsPerCanvas: number;
+  canSell: boolean;
+  applicationFeePct: number;
+}
+
+const TIER_QUOTAS: Record<UserTier, TierQuota> = {
+  free:       { tier: 'free',       maxCanvases: 3,   maxStorageMb: 100,    maxWidgetsPerCanvas: 10,  maxCollaboratorsPerCanvas: 3,   canSell: false, applicationFeePct: 0 },
+  creator:    { tier: 'creator',    maxCanvases: 25,  maxStorageMb: 5000,   maxWidgetsPerCanvas: 50,  maxCollaboratorsPerCanvas: 10,  canSell: true,  applicationFeePct: 12 },
+  pro:        { tier: 'pro',        maxCanvases: -1,  maxStorageMb: 50000,  maxWidgetsPerCanvas: -1,  maxCollaboratorsPerCanvas: 50,  canSell: true,  applicationFeePct: 8 },
+  enterprise: { tier: 'enterprise', maxCanvases: -1,  maxStorageMb: -1,     maxWidgetsPerCanvas: -1,  maxCollaboratorsPerCanvas: -1,  canSell: true,  applicationFeePct: 5 },
+};
+
+interface SimUser {
+  id: string;
+  email: string;
+  tier: UserTier;
+  stripeCustomerId: string | null;
+  stripeConnectAccountId: string | null;
+  connectOnboardingComplete: boolean;
+  chargesEnabled: boolean;
+}
+
+class BillingSimulation {
+  private users: Map<string, SimUser> = new Map();
+
+  constructor() {
+    // Seed a default test user
+    this.users.set('user-1', {
+      id: 'user-1',
+      email: 'test@stickernest.com',
+      tier: 'free',
+      stripeCustomerId: null,
+      stripeConnectAccountId: null,
+      connectOnboardingComplete: false,
+      chargesEnabled: false,
+    });
+  }
+
+  getUser(userId: string): SimUser | null {
+    return this.users.get(userId) ?? null;
+  }
+
+  createUser(email: string, tier: UserTier = 'free'): SimUser {
+    const id = `user-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const user: SimUser = {
+      id,
+      email,
+      tier,
+      stripeCustomerId: null,
+      stripeConnectAccountId: null,
+      connectOnboardingComplete: false,
+      chargesEnabled: false,
+    };
+    this.users.set(id, user);
+    return user;
+  }
+
+  setTier(userId: string, tier: UserTier): SimUser | null {
+    const user = this.users.get(userId);
+    if (!user) return null;
+    user.tier = tier;
+    user.stripeCustomerId = tier !== 'free' ? `cus_sim_${userId}` : user.stripeCustomerId;
+    return user;
+  }
+
+  getQuota(tier: UserTier): TierQuota {
+    return TIER_QUOTAS[tier];
+  }
+
+  checkQuota(userId: string, resource: string, currentUsage: number): { allowed: boolean; limit: number; current: number; nextTier: UserTier | null } {
+    const user = this.users.get(userId);
+    if (!user) return { allowed: false, limit: 0, current: currentUsage, nextTier: 'free' };
+    const q = TIER_QUOTAS[user.tier];
+    let limit = 0;
+    switch (resource) {
+      case 'canvas_count': limit = q.maxCanvases; break;
+      case 'storage_mb': limit = q.maxStorageMb; break;
+      case 'widgets_per_canvas': limit = q.maxWidgetsPerCanvas; break;
+      case 'collaborators_per_canvas': limit = q.maxCollaboratorsPerCanvas; break;
+      default: return { allowed: false, limit: 0, current: currentUsage, nextTier: null };
+    }
+    const allowed = limit === -1 || currentUsage < limit;
+    const tiers: UserTier[] = ['free', 'creator', 'pro', 'enterprise'];
+    const idx = tiers.indexOf(user.tier);
+    const nextTier = !allowed && idx < tiers.length - 1 ? tiers[idx + 1] : null;
+    return { allowed, limit, current: currentUsage, nextTier };
+  }
+
+  connectOnboard(userId: string): { url: string } | null {
+    const user = this.users.get(userId);
+    if (!user) return null;
+    const q = TIER_QUOTAS[user.tier];
+    if (!q.canSell) return null;
+    user.stripeConnectAccountId = `acct_sim_${userId}`;
+    user.connectOnboardingComplete = true;
+    user.chargesEnabled = true;
+    return { url: `https://connect.stripe.com/setup/sim/${userId}` };
+  }
+
+  listUsers(): SimUser[] {
+    return Array.from(this.users.values());
+  }
+
+  stats(): { totalUsers: number; byTier: Record<string, number>; connectedCreators: number } {
+    const byTier: Record<string, number> = {};
+    let connected = 0;
+    for (const u of this.users.values()) {
+      byTier[u.tier] = (byTier[u.tier] || 0) + 1;
+      if (u.chargesEnabled) connected++;
+    }
+    return { totalUsers: this.users.size, byTier, connectedCreators: connected };
+  }
+}
+
+// ============================================================================
+// Creator Commerce Simulation
+// ============================================================================
+
+interface SubscriptionTier {
+  id: string;
+  canvasId: string;
+  creatorId: string;
+  name: string;
+  priceCents: number;
+  currency: string;
+  interval: string;
+  description: string | null;
+  benefits: string[];
+  isActive: boolean;
+  sortOrder: number;
+}
+
+interface ShopItem {
+  id: string;
+  canvasId: string;
+  creatorId: string;
+  name: string;
+  description: string | null;
+  priceCents: number;
+  currency: string;
+  itemType: 'digital' | 'physical' | 'service';
+  fulfillment: 'auto' | 'manual' | 'shipping';
+  thumbnailUrl: string | null;
+  downloadUrl: string | null;
+  stockCount: number | null;
+  requiresShipping: boolean;
+  shippingNote: string | null;
+  isActive: boolean;
+}
+
+interface Order {
+  id: string;
+  buyerId: string;
+  sellerId: string;
+  itemId: string;
+  amountCents: number;
+  platformFeeCents: number;
+  currency: string;
+  status: 'paid' | 'fulfilled' | 'refunded' | 'disputed';
+  type: 'subscription' | 'shop_item';
+  createdAt: string;
+}
+
+class CommerceSimulation {
+  private tiers: Map<string, SubscriptionTier> = new Map();
+  private items: Map<string, ShopItem> = new Map();
+  private orders: Map<string, Order> = new Map();
+  private nextId = 1;
+
+  private genId(prefix: string): string {
+    return `${prefix}-${this.nextId++}`;
+  }
+
+  // Subscription tiers
+  createTier(canvasId: string, creatorId: string, data: { name: string; priceCents: number; currency?: string; interval?: string; description?: string; benefits?: string[] }): SubscriptionTier {
+    const tier: SubscriptionTier = {
+      id: this.genId('tier'),
+      canvasId,
+      creatorId,
+      name: data.name,
+      priceCents: data.priceCents,
+      currency: data.currency ?? 'usd',
+      interval: data.interval ?? 'month',
+      description: data.description ?? null,
+      benefits: data.benefits ?? [],
+      isActive: true,
+      sortOrder: this.listTiers(canvasId).length,
+    };
+    this.tiers.set(tier.id, tier);
+    return tier;
+  }
+
+  getTier(id: string): SubscriptionTier | null {
+    return this.tiers.get(id) ?? null;
+  }
+
+  listTiers(canvasId?: string): SubscriptionTier[] {
+    const all = Array.from(this.tiers.values());
+    return canvasId ? all.filter(t => t.canvasId === canvasId) : all;
+  }
+
+  updateTier(id: string, updates: Partial<Pick<SubscriptionTier, 'name' | 'priceCents' | 'description' | 'benefits' | 'isActive'>>): SubscriptionTier | null {
+    const tier = this.tiers.get(id);
+    if (!tier) return null;
+    Object.assign(tier, updates);
+    return tier;
+  }
+
+  deleteTier(id: string): boolean {
+    return this.tiers.delete(id);
+  }
+
+  // Shop items
+  createItem(canvasId: string, creatorId: string, data: {
+    name: string; priceCents: number; itemType: ShopItem['itemType']; fulfillment?: ShopItem['fulfillment'];
+    currency?: string; description?: string; stockCount?: number; requiresShipping?: boolean; shippingNote?: string;
+  }): ShopItem {
+    const item: ShopItem = {
+      id: this.genId('item'),
+      canvasId,
+      creatorId,
+      name: data.name,
+      description: data.description ?? null,
+      priceCents: data.priceCents,
+      currency: data.currency ?? 'usd',
+      itemType: data.itemType,
+      fulfillment: data.fulfillment ?? 'auto',
+      thumbnailUrl: null,
+      downloadUrl: null,
+      stockCount: data.stockCount ?? null,
+      requiresShipping: data.requiresShipping ?? false,
+      shippingNote: data.shippingNote ?? null,
+      isActive: true,
+    };
+    this.items.set(item.id, item);
+    return item;
+  }
+
+  getItem(id: string): ShopItem | null {
+    return this.items.get(id) ?? null;
+  }
+
+  listItems(canvasId?: string): ShopItem[] {
+    const all = Array.from(this.items.values());
+    return canvasId ? all.filter(i => i.canvasId === canvasId) : all;
+  }
+
+  updateItem(id: string, updates: Partial<Pick<ShopItem, 'name' | 'priceCents' | 'description' | 'stockCount' | 'isActive'>>): ShopItem | null {
+    const item = this.items.get(id);
+    if (!item) return null;
+    Object.assign(item, updates);
+    return item;
+  }
+
+  deleteItem(id: string): boolean {
+    return this.items.delete(id);
+  }
+
+  // Orders
+  createOrder(buyerId: string, itemId: string, type: Order['type'], applicationFeePct: number): Order | null {
+    const item = type === 'shop_item' ? this.items.get(itemId) : null;
+    const tier = type === 'subscription' ? this.tiers.get(itemId) : null;
+    const source = item ?? tier;
+    if (!source) return null;
+    const amountCents = 'priceCents' in source ? source.priceCents : 0;
+    const platformFeeCents = Math.round(amountCents * applicationFeePct / 100);
+    const order: Order = {
+      id: this.genId('order'),
+      buyerId,
+      sellerId: source.creatorId,
+      itemId,
+      amountCents,
+      platformFeeCents,
+      currency: source.currency,
+      status: 'paid',
+      type,
+      createdAt: new Date().toISOString(),
+    };
+    this.orders.set(order.id, order);
+    // Decrement stock for physical items
+    if (item && item.stockCount !== null) {
+      item.stockCount = Math.max(0, item.stockCount - 1);
+    }
+    return order;
+  }
+
+  getOrder(id: string): Order | null {
+    return this.orders.get(id) ?? null;
+  }
+
+  listOrders(filter?: { buyerId?: string; sellerId?: string }): Order[] {
+    let all = Array.from(this.orders.values());
+    if (filter?.buyerId) all = all.filter(o => o.buyerId === filter.buyerId);
+    if (filter?.sellerId) all = all.filter(o => o.sellerId === filter.sellerId);
+    return all;
+  }
+
+  fulfillOrder(id: string): Order | null {
+    const order = this.orders.get(id);
+    if (!order) return null;
+    order.status = 'fulfilled';
+    return order;
+  }
+
+  stats(): {
+    totalTiers: number; totalItems: number; totalOrders: number;
+    revenueBySellerCents: Record<string, number>; platformFeeTotalCents: number;
+  } {
+    let platformFees = 0;
+    const revBySeller: Record<string, number> = {};
+    for (const o of this.orders.values()) {
+      platformFees += o.platformFeeCents;
+      revBySeller[o.sellerId] = (revBySeller[o.sellerId] || 0) + (o.amountCents - o.platformFeeCents);
+    }
+    return {
+      totalTiers: this.tiers.size,
+      totalItems: this.items.size,
+      totalOrders: this.orders.size,
+      revenueBySellerCents: revBySeller,
+      platformFeeTotalCents: platformFees,
+    };
+  }
+
+  clear(): void {
+    this.tiers.clear();
+    this.items.clear();
+    this.orders.clear();
+  }
+}
+
+// ============================================================================
 // MCP Server
 // ============================================================================
 
@@ -352,11 +694,13 @@ const bus = new EventBus();
 const scene = new SceneGraph();
 const viewport = new Viewport();
 const widgets = new WidgetRegistry();
+const billing = new BillingSimulation();
+const commerce = new CommerceSimulation();
 
 const server = new Server(
   {
     name: 'stickernest-dev',
-    version: '1.0.0',
+    version: '2.0.0',
   },
   {
     capabilities: {
@@ -617,6 +961,242 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         required: ['instanceId'],
       },
     },
+    // Billing & Quota Tools
+    {
+      name: 'billing_create_user',
+      description: 'Create a simulated user for billing testing',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          email: { type: 'string', description: 'User email' },
+          tier: { type: 'string', enum: ['free', 'creator', 'pro', 'enterprise'], description: 'Starting tier (default: free)' },
+        },
+        required: ['email'],
+      },
+    },
+    {
+      name: 'billing_get_user',
+      description: 'Get a simulated user by ID',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          userId: { type: 'string' },
+        },
+        required: ['userId'],
+      },
+    },
+    {
+      name: 'billing_set_tier',
+      description: 'Change a user\'s subscription tier (simulates checkout.session.completed)',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          userId: { type: 'string' },
+          tier: { type: 'string', enum: ['free', 'creator', 'pro', 'enterprise'] },
+        },
+        required: ['userId', 'tier'],
+      },
+    },
+    {
+      name: 'billing_get_quota',
+      description: 'Get quota limits for a tier',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          tier: { type: 'string', enum: ['free', 'creator', 'pro', 'enterprise'] },
+        },
+        required: ['tier'],
+      },
+    },
+    {
+      name: 'billing_check_quota',
+      description: 'Check if a user can use more of a resource',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          userId: { type: 'string' },
+          resource: { type: 'string', enum: ['canvas_count', 'storage_mb', 'widgets_per_canvas', 'collaborators_per_canvas'] },
+          currentUsage: { type: 'number', description: 'Current usage count' },
+        },
+        required: ['userId', 'resource', 'currentUsage'],
+      },
+    },
+    {
+      name: 'billing_connect_onboard',
+      description: 'Simulate Stripe Connect onboarding for a creator',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          userId: { type: 'string' },
+        },
+        required: ['userId'],
+      },
+    },
+    {
+      name: 'billing_list_users',
+      description: 'List all simulated users',
+      inputSchema: { type: 'object', properties: {} },
+    },
+    {
+      name: 'billing_stats',
+      description: 'Get billing simulation statistics',
+      inputSchema: { type: 'object', properties: {} },
+    },
+    // Commerce Tools — Subscription Tiers
+    {
+      name: 'commerce_create_tier',
+      description: 'Create a canvas subscription tier',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          canvasId: { type: 'string', description: 'Canvas ID' },
+          creatorId: { type: 'string', description: 'Creator user ID' },
+          name: { type: 'string', description: 'Tier name (e.g., "Supporter", "VIP")' },
+          priceCents: { type: 'number', description: 'Price in cents (e.g., 999 = $9.99)' },
+          currency: { type: 'string', description: 'ISO 4217 currency (default: usd)' },
+          interval: { type: 'string', enum: ['month', 'year'], description: 'Billing interval (default: month)' },
+          description: { type: 'string' },
+          benefits: { type: 'array', items: { type: 'string' }, description: 'List of benefit descriptions' },
+        },
+        required: ['canvasId', 'creatorId', 'name', 'priceCents'],
+      },
+    },
+    {
+      name: 'commerce_list_tiers',
+      description: 'List subscription tiers, optionally filtered by canvas',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          canvasId: { type: 'string', description: 'Filter by canvas ID' },
+        },
+      },
+    },
+    {
+      name: 'commerce_update_tier',
+      description: 'Update a subscription tier',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          name: { type: 'string' },
+          priceCents: { type: 'number' },
+          description: { type: 'string' },
+          benefits: { type: 'array', items: { type: 'string' } },
+          isActive: { type: 'boolean' },
+        },
+        required: ['id'],
+      },
+    },
+    {
+      name: 'commerce_delete_tier',
+      description: 'Delete a subscription tier',
+      inputSchema: {
+        type: 'object',
+        properties: { id: { type: 'string' } },
+        required: ['id'],
+      },
+    },
+    // Commerce Tools — Shop Items
+    {
+      name: 'commerce_create_item',
+      description: 'Create a shop item on a canvas',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          canvasId: { type: 'string' },
+          creatorId: { type: 'string' },
+          name: { type: 'string', description: 'Item name' },
+          priceCents: { type: 'number', description: 'Price in cents' },
+          itemType: { type: 'string', enum: ['digital', 'physical', 'service'] },
+          fulfillment: { type: 'string', enum: ['auto', 'manual', 'shipping'] },
+          currency: { type: 'string' },
+          description: { type: 'string' },
+          stockCount: { type: 'number', description: 'null for unlimited' },
+          requiresShipping: { type: 'boolean' },
+          shippingNote: { type: 'string' },
+        },
+        required: ['canvasId', 'creatorId', 'name', 'priceCents', 'itemType'],
+      },
+    },
+    {
+      name: 'commerce_list_items',
+      description: 'List shop items, optionally filtered by canvas',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          canvasId: { type: 'string' },
+        },
+      },
+    },
+    {
+      name: 'commerce_update_item',
+      description: 'Update a shop item',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          name: { type: 'string' },
+          priceCents: { type: 'number' },
+          description: { type: 'string' },
+          stockCount: { type: 'number' },
+          isActive: { type: 'boolean' },
+        },
+        required: ['id'],
+      },
+    },
+    {
+      name: 'commerce_delete_item',
+      description: 'Delete a shop item',
+      inputSchema: {
+        type: 'object',
+        properties: { id: { type: 'string' } },
+        required: ['id'],
+      },
+    },
+    // Commerce Tools — Orders
+    {
+      name: 'commerce_buy',
+      description: 'Simulate a purchase (subscription or shop item)',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          buyerId: { type: 'string', description: 'Buyer user ID' },
+          itemId: { type: 'string', description: 'Tier ID or Shop Item ID' },
+          type: { type: 'string', enum: ['subscription', 'shop_item'] },
+        },
+        required: ['buyerId', 'itemId', 'type'],
+      },
+    },
+    {
+      name: 'commerce_list_orders',
+      description: 'List orders, optionally filtered by buyer or seller',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          buyerId: { type: 'string' },
+          sellerId: { type: 'string' },
+        },
+      },
+    },
+    {
+      name: 'commerce_fulfill_order',
+      description: 'Mark an order as fulfilled',
+      inputSchema: {
+        type: 'object',
+        properties: { id: { type: 'string' } },
+        required: ['id'],
+      },
+    },
+    {
+      name: 'commerce_stats',
+      description: 'Get commerce statistics (tiers, items, orders, revenue)',
+      inputSchema: { type: 'object', properties: {} },
+    },
+    {
+      name: 'commerce_clear',
+      description: 'Clear all commerce data (tiers, items, orders)',
+      inputSchema: { type: 'object', properties: {} },
+    },
   ],
 }));
 
@@ -761,6 +1341,143 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         return { content: [{ type: 'text', text: removed ? 'Widget removed' : 'Instance not found' }] };
       }
 
+      // Billing & Quota
+      case 'billing_create_user': {
+        const user = billing.createUser(a.email as string, (a.tier as UserTier) ?? 'free');
+        bus.emit('billing.user.created', { userId: user.id, tier: user.tier });
+        return { content: [{ type: 'text', text: JSON.stringify(user, null, 2) }] };
+      }
+      case 'billing_get_user': {
+        const user = billing.getUser(a.userId as string);
+        return { content: [{ type: 'text', text: user ? JSON.stringify(user, null, 2) : 'User not found' }] };
+      }
+      case 'billing_set_tier': {
+        const user = billing.setTier(a.userId as string, a.tier as UserTier);
+        if (user) bus.emit('billing.tier.changed', { userId: user.id, tier: user.tier });
+        return { content: [{ type: 'text', text: user ? JSON.stringify(user, null, 2) : 'User not found' }] };
+      }
+      case 'billing_get_quota': {
+        const quota = billing.getQuota(a.tier as UserTier);
+        return { content: [{ type: 'text', text: JSON.stringify(quota, null, 2) }] };
+      }
+      case 'billing_check_quota': {
+        const result = billing.checkQuota(a.userId as string, a.resource as string, a.currentUsage as number);
+        return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+      }
+      case 'billing_connect_onboard': {
+        const result = billing.connectOnboard(a.userId as string);
+        if (result) bus.emit('billing.connect.onboarded', { userId: a.userId });
+        return { content: [{ type: 'text', text: result ? JSON.stringify(result, null, 2) : 'User not found or tier cannot sell' }] };
+      }
+      case 'billing_list_users': {
+        return { content: [{ type: 'text', text: JSON.stringify(billing.listUsers(), null, 2) }] };
+      }
+      case 'billing_stats': {
+        return { content: [{ type: 'text', text: JSON.stringify(billing.stats(), null, 2) }] };
+      }
+
+      // Commerce — Tiers
+      case 'commerce_create_tier': {
+        const tier = commerce.createTier(a.canvasId as string, a.creatorId as string, {
+          name: a.name as string,
+          priceCents: a.priceCents as number,
+          currency: a.currency as string | undefined,
+          interval: a.interval as string | undefined,
+          description: a.description as string | undefined,
+          benefits: a.benefits as string[] | undefined,
+        });
+        bus.emit('commerce.tier.created', { tierId: tier.id, canvasId: tier.canvasId });
+        return { content: [{ type: 'text', text: JSON.stringify(tier, null, 2) }] };
+      }
+      case 'commerce_list_tiers': {
+        return { content: [{ type: 'text', text: JSON.stringify(commerce.listTiers(a.canvasId as string | undefined), null, 2) }] };
+      }
+      case 'commerce_update_tier': {
+        const tier = commerce.updateTier(a.id as string, {
+          name: a.name as string | undefined,
+          priceCents: a.priceCents as number | undefined,
+          description: a.description as string | undefined,
+          benefits: a.benefits as string[] | undefined,
+          isActive: a.isActive as boolean | undefined,
+        });
+        if (tier) bus.emit('commerce.tier.updated', { tierId: tier.id });
+        return { content: [{ type: 'text', text: tier ? JSON.stringify(tier, null, 2) : 'Tier not found' }] };
+      }
+      case 'commerce_delete_tier': {
+        const ok = commerce.deleteTier(a.id as string);
+        if (ok) bus.emit('commerce.tier.deleted', { tierId: a.id });
+        return { content: [{ type: 'text', text: ok ? 'Tier deleted' : 'Tier not found' }] };
+      }
+
+      // Commerce — Shop Items
+      case 'commerce_create_item': {
+        const item = commerce.createItem(a.canvasId as string, a.creatorId as string, {
+          name: a.name as string,
+          priceCents: a.priceCents as number,
+          itemType: a.itemType as ShopItem['itemType'],
+          fulfillment: a.fulfillment as ShopItem['fulfillment'] | undefined,
+          currency: a.currency as string | undefined,
+          description: a.description as string | undefined,
+          stockCount: a.stockCount as number | undefined,
+          requiresShipping: a.requiresShipping as boolean | undefined,
+          shippingNote: a.shippingNote as string | undefined,
+        });
+        bus.emit('commerce.item.created', { itemId: item.id, canvasId: item.canvasId });
+        return { content: [{ type: 'text', text: JSON.stringify(item, null, 2) }] };
+      }
+      case 'commerce_list_items': {
+        return { content: [{ type: 'text', text: JSON.stringify(commerce.listItems(a.canvasId as string | undefined), null, 2) }] };
+      }
+      case 'commerce_update_item': {
+        const item = commerce.updateItem(a.id as string, {
+          name: a.name as string | undefined,
+          priceCents: a.priceCents as number | undefined,
+          description: a.description as string | undefined,
+          stockCount: a.stockCount as number | undefined,
+          isActive: a.isActive as boolean | undefined,
+        });
+        if (item) bus.emit('commerce.item.updated', { itemId: item.id });
+        return { content: [{ type: 'text', text: item ? JSON.stringify(item, null, 2) : 'Item not found' }] };
+      }
+      case 'commerce_delete_item': {
+        const ok = commerce.deleteItem(a.id as string);
+        if (ok) bus.emit('commerce.item.deleted', { itemId: a.id });
+        return { content: [{ type: 'text', text: ok ? 'Item deleted' : 'Item not found' }] };
+      }
+
+      // Commerce — Orders
+      case 'commerce_buy': {
+        const user = billing.getUser(a.buyerId as string);
+        const sellerId = a.type === 'subscription'
+          ? commerce.getTier(a.itemId as string)?.creatorId
+          : commerce.getItem(a.itemId as string)?.creatorId;
+        const seller = sellerId ? billing.getUser(sellerId) : null;
+        const feePct = seller ? billing.getQuota(seller.tier).applicationFeePct : 12;
+        const order = commerce.createOrder(a.buyerId as string, a.itemId as string, a.type as Order['type'], feePct);
+        if (order) {
+          bus.emit('commerce.order.created', { orderId: order.id, buyerId: order.buyerId, sellerId: order.sellerId });
+          bus.emit('marketplace.widget.purchased', { orderId: order.id, type: order.type });
+        }
+        return { content: [{ type: 'text', text: order ? JSON.stringify(order, null, 2) : 'Item or tier not found' }] };
+      }
+      case 'commerce_list_orders': {
+        const orders = commerce.listOrders({ buyerId: a.buyerId as string | undefined, sellerId: a.sellerId as string | undefined });
+        return { content: [{ type: 'text', text: JSON.stringify(orders, null, 2) }] };
+      }
+      case 'commerce_fulfill_order': {
+        const order = commerce.fulfillOrder(a.id as string);
+        if (order) bus.emit('commerce.order.fulfilled', { orderId: order.id });
+        return { content: [{ type: 'text', text: order ? JSON.stringify(order, null, 2) : 'Order not found' }] };
+      }
+      case 'commerce_stats': {
+        return { content: [{ type: 'text', text: JSON.stringify(commerce.stats(), null, 2) }] };
+      }
+      case 'commerce_clear': {
+        commerce.clear();
+        bus.emit('commerce.cleared', {});
+        return { content: [{ type: 'text', text: 'Commerce data cleared' }] };
+      }
+
       default:
         return { content: [{ type: 'text', text: `Unknown tool: ${name}` }], isError: true };
     }
@@ -790,6 +1507,18 @@ server.setRequestHandler(ListResourcesRequestSchema, async () => ({
       description: 'Current viewport state',
       mimeType: 'application/json',
     },
+    {
+      uri: 'stickernest://billing/stats',
+      name: 'Billing Stats',
+      description: 'User/tier billing simulation statistics',
+      mimeType: 'application/json',
+    },
+    {
+      uri: 'stickernest://commerce/stats',
+      name: 'Commerce Stats',
+      description: 'Creator commerce statistics (tiers, items, orders, revenue)',
+      mimeType: 'application/json',
+    },
   ],
 }));
 
@@ -804,6 +1533,10 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
       return { contents: [{ uri, mimeType: 'application/json', text: JSON.stringify(scene.stats(), null, 2) }] };
     case 'stickernest://viewport/state':
       return { contents: [{ uri, mimeType: 'application/json', text: JSON.stringify(viewport.getState(), null, 2) }] };
+    case 'stickernest://billing/stats':
+      return { contents: [{ uri, mimeType: 'application/json', text: JSON.stringify(billing.stats(), null, 2) }] };
+    case 'stickernest://commerce/stats':
+      return { contents: [{ uri, mimeType: 'application/json', text: JSON.stringify(commerce.stats(), null, 2) }] };
     default:
       throw new Error(`Unknown resource: ${uri}`);
   }
