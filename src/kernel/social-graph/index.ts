@@ -84,3 +84,23 @@ export {
   deleteNotification,
   deleteReadNotifications,
 } from './notifications';
+
+// Canvas API (for profile pages)
+export { getUserPublicCanvases } from './canvases';
+export type { PublicCanvas } from './canvases';
+
+// Block API
+export {
+  blockUser,
+  unblockUser,
+  isBlocked,
+  isBlockedEitherWay,
+} from './blocks';
+
+// Message API
+export {
+  sendMessage,
+  getConversation,
+  canMessage,
+} from './messages';
+export type { DirectMessage } from './messages';

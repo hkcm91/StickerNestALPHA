@@ -12,6 +12,7 @@ import { ShellEvents } from '@sn/types';
 
 import { bus } from '../../kernel/bus';
 import { TestHarness } from '../dev';
+import { ProfilePage } from '../profile';
 
 import {
   DashboardPage,
@@ -60,6 +61,7 @@ const GlobalNav: React.FC = () => (
     <Link to="/canvas/demo">Canvas</Link>
     <Link to="/lab">Lab</Link>
     <Link to="/marketplace">Marketplace</Link>
+    <Link to="/profile/me" data-testid="nav-profile">Profile</Link>
     <Link to="/settings">Settings</Link>
     <Link to="/dev/test">Dev</Link>
     <Link to="/login">Login</Link>
@@ -88,6 +90,8 @@ export const AppRouter: React.FC = () => (
           </AuthGuard>
         }
       />
+
+      <Route path="/profile/:username" element={<ProfilePage />} />
 
       <Route path="/canvas/:canvasParam" element={<CanvasPage />} />
 

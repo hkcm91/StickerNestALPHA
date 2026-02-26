@@ -321,6 +321,13 @@ export const SocialGraphEvents = {
   NOTIFICATION_CREATED: 'kernel.socialgraph.notification.created',
   NOTIFICATION_READ: 'kernel.socialgraph.notification.read',
   NOTIFICATIONS_ALL_READ: 'kernel.socialgraph.notifications.allRead',
+
+  // Block events
+  USER_BLOCKED: 'kernel.socialgraph.user.blocked',
+  USER_UNBLOCKED: 'kernel.socialgraph.user.unblocked',
+
+  // Message events
+  MESSAGE_SENT: 'kernel.socialgraph.message.sent',
 } as const;
 
 /**
