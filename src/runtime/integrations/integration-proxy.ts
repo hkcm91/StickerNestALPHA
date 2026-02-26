@@ -84,6 +84,33 @@ function cacheKey(name: string, params: unknown): string {
 }
 
 /**
+ * Strip internal `_nonce` metadata from handler results before returning to
+ * widgets. Handlers attach `_nonce` for opt-in replay protection, but widgets
+ * should receive clean data — they never read `_nonce` directly.
+ *
+ * - `{data: [...], _nonce}` envelope → returns the inner `data` value
+ * - `{field1, field2, _nonce}` spread → returns object without `_nonce`
+ * - primitives / arrays / null → returned as-is
+ */
+function stripNonce(result: unknown): unknown {
+  if (result === null || result === undefined || typeof result !== 'object' || Array.isArray(result)) {
+    return result;
+  }
+  const obj = result as Record<string, unknown>;
+  if (!('_nonce' in obj)) return result;
+
+  // Pure envelope: only {data, _nonce} — unwrap to just the data value
+  const keys = Object.keys(obj);
+  if (keys.length === 2 && 'data' in obj) {
+    return obj.data;
+  }
+
+  // Object with _nonce spread into it — remove _nonce, keep everything else
+  const { _nonce: _, ...rest } = obj;
+  return rest;
+}
+
+/**
  * Creates a new integration proxy instance with built-in timeout and TTL caching.
  *
  * @param options.timeoutMs - Timeout per handler call (default: 15000ms)
@@ -141,7 +168,8 @@ export function createIntegrationProxy(options?: {
       const cached = getFromCache(key);
       if (cached !== undefined) return cached;
 
-      const result = await withTimeout(handler.query(params), timeoutMs, name);
+      const raw = await withTimeout(handler.query(params), timeoutMs, name);
+      const result = stripNonce(raw);
       setInCache(key, result);
       return result;
     },

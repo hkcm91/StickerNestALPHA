@@ -375,12 +375,7 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
           StickerNest.integration('checkout').query({ action: 'tiers' }),
           StickerNest.integration('checkout').query({ action: 'my_subscription' }),
         ]).then(function(results) {
-          // Unwrap nonce envelope: query results may be { data: [...], _nonce }
-          var tiersResult = results[0];
-          var tiersArray = Array.isArray(tiersResult) ? tiersResult : (tiersResult && tiersResult.data ? tiersResult.data : []);
-          var subResult = results[1];
-          var mySub = (subResult && subResult.data !== undefined) ? subResult.data : subResult;
-          renderTiers(tiersArray, mySub);
+          renderTiers(results[0] || [], results[1]);
         }).catch(function() {
           loadingEl.textContent = 'Failed to load tiers.';
         });
@@ -478,8 +473,7 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
 
         StickerNest.integration('checkout').query({ action: 'shop_items' })
           .then(function(result) {
-            // Handle both paginated { data, total } and raw array responses
-            var items = Array.isArray(result) ? result : (result && result.data ? result.data : []);
+            var items = (result && result.data) ? result.data : (Array.isArray(result) ? result : []);
             loadingEl.style.display = 'none';
             if (!items || items.length === 0) {
               emptyEl.style.display = 'block';
@@ -911,7 +905,6 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
 
       function loadTiers() {
         checkout.query({ action: 'my_tiers' }).then(function(result) {
-          // Handle both paginated { data } and raw array responses
           tiers = (result && result.data) ? result.data : (Array.isArray(result) ? result : []);
           tiers.sort(function(a, b) { return (a.sort_order || 0) - (b.sort_order || 0); });
           document.getElementById('loading').style.display = 'none';
@@ -1315,8 +1308,7 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
 
       function loadItems() {
         checkout.query({ action: 'my_items' }).then(function(result) {
-          // Handle both paginated { data } and raw array responses
-          items = Array.isArray(result) ? result : (result && result.data ? result.data : []);
+          items = (result && result.data) ? result.data : (Array.isArray(result) ? result : []);
           document.getElementById('loading').style.display = 'none';
           renderList();
           showPage('page-list');
@@ -1736,10 +1728,8 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
           document.getElementById('loading').style.display = 'none';
           // Handle both paginated { data } and raw array responses
           var rawOrders = results[0];
-          orders = Array.isArray(rawOrders) ? rawOrders : (rawOrders && rawOrders.data ? rawOrders.data : []);
-          // Unwrap nonce envelope: my_subscription may be { data: subObj, _nonce }
-          var subRaw = results[1];
-          var sub = (subRaw && subRaw.data !== undefined) ? subRaw.data : subRaw;
+          orders = (rawOrders && rawOrders.data) ? rawOrders.data : (Array.isArray(rawOrders) ? rawOrders : []);
+          var sub = results[1];
           subscriptions = sub ? (Array.isArray(sub) ? sub : [sub]) : [];
           if (currentTab === 'purchases') { filterBar.style.display = 'flex'; }
           render();
@@ -1879,7 +1869,7 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
           document.getElementById('loading').style.display = 'none';
           document.getElementById('dashboard-content').style.display = 'block';
           stats = results[0] || { totalRevenue: 0, activeSubscribers: 0, totalOrders: 0 };
-          recentOrders = Array.isArray(results[1]) ? results[1] : (results[1] && results[1].data ? results[1].data : []);
+          recentOrders = results[1] || [];
           renderStats();
           renderActivity();
         }).catch(function(e) {
