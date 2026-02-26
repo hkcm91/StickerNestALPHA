@@ -595,6 +595,24 @@ export const SocialGraphQuerySchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('getUnreadCount'),
   }),
+
+  // Block queries
+  z.object({
+    type: z.literal('isBlocked'),
+    userId: z.string().uuid(),
+  }),
+
+  // Message queries
+  z.object({
+    type: z.literal('getConversation'),
+    userId: z.string().uuid(),
+    limit: z.number().int().min(1).max(100).optional(),
+    cursor: z.string().optional(),
+  }),
+  z.object({
+    type: z.literal('canMessage'),
+    userId: z.string().uuid(),
+  }),
 ]);
 
 export type SocialGraphQuery = z.infer<typeof SocialGraphQuerySchema>;
@@ -715,6 +733,23 @@ export const SocialGraphMutationSchema = z.discriminatedUnion('type', [
   }),
   z.object({
     type: z.literal('deleteReadNotifications'),
+  }),
+
+  // Block mutations
+  z.object({
+    type: z.literal('blockUser'),
+    userId: z.string().uuid(),
+  }),
+  z.object({
+    type: z.literal('unblockUser'),
+    userId: z.string().uuid(),
+  }),
+
+  // Message mutations
+  z.object({
+    type: z.literal('sendMessage'),
+    recipientId: z.string().uuid(),
+    content: z.string().min(1).max(2000),
   }),
 ]);
 

@@ -51,7 +51,12 @@ export function createTestEntity(id: string, type: EntityType, x: number, y: num
     },
     zIndex,
     visible: true,
+    canvasVisibility: 'both' as const,
     locked: false,
+    flipH: false,
+    flipV: false,
+    opacity: 1,
+    borderRadius: 0,
     name: id,
     createdAt: now,
     updatedAt: now,
@@ -115,6 +120,7 @@ export function createTestEntity(id: string, type: EntityType, x: number, y: num
       type: 'docker' as const,
       children: [],
       layout: 'free' as const,
+      config: {},
     };
   }
   // Default: sticker
@@ -124,7 +130,7 @@ export function createTestEntity(id: string, type: EntityType, x: number, y: num
     assetUrl: 'https://picsum.photos/seed/sticker1/100/100',
     assetType: 'image' as const,
     aspectLocked: true,
-    clickEventType: 'sticker.clicked',
+    clickAction: { type: 'emit-event', eventType: 'sticker.clicked', urlNewTab: true },
     hoverEffect: 'scale' as const,
   };
 }
@@ -152,7 +158,12 @@ export function createGroupEntity(
     },
     zIndex,
     visible: true,
+    canvasVisibility: 'both' as const,
     locked: false,
+    flipH: false,
+    flipV: false,
+    opacity: 1,
+    borderRadius: 0,
     name,
     createdAt: now,
     updatedAt: now,
@@ -185,12 +196,18 @@ export function createDockerEntity(
     },
     zIndex,
     visible: true,
+    canvasVisibility: 'both' as const,
     locked: false,
+    flipH: false,
+    flipV: false,
+    opacity: 1,
+    borderRadius: 0,
     name,
     createdAt: now,
     updatedAt: now,
     createdBy: TEST_USER_ID,
     children: childWidgetIds,
     layout,
+    config: {},
   };
 }

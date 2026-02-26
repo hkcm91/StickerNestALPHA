@@ -172,8 +172,22 @@ export const HandJointSchema = z.object({
 export type HandJoint = z.infer<typeof HandJointSchema>;
 
 // =============================================================================
+// Spatial Mode
+// =============================================================================
+
+/**
+ * Spatial visualization mode.
+ * - `2d`: Standard flat canvas
+ * - `3d`: Full 3D scene representation
+ * - `vr`: Immersive virtual reality
+ * - `ar`: Augmented/mixed reality passthrough
+ */
+export const SpatialModeSchema = z.enum(['2d', '3d', 'vr', 'ar']);
+
+export type SpatialMode = z.infer<typeof SpatialModeSchema>;
+
+// =============================================================================
 // JSON Schema exports for external validation
-// Used by widget manifests and external tooling.
 // =============================================================================
 
 export const Vector3JSONSchema = Vector3Schema.toJSONSchema();
@@ -187,3 +201,4 @@ export const DetectedMeshJSONSchema = DetectedMeshSchema.toJSONSchema();
 export const SpatialAnchorJSONSchema = SpatialAnchorSchema.toJSONSchema();
 export const HandJointJSONSchema = HandJointSchema.toJSONSchema();
 export const XRSessionModeJSONSchema = XRSessionModeSchema.toJSONSchema();
+export const SpatialModeJSONSchema = SpatialModeSchema.toJSONSchema();

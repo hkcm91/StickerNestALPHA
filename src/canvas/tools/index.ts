@@ -11,8 +11,6 @@ export type { ToolRegistry, Tool, CanvasPointerEvent, CanvasKeyEvent } from './r
 export { createSelectTool } from './select';
 export type { SelectTool } from './select';
 
-export { createMoveTool } from './move';
-export type { MoveToolOptions } from './move';
 export {
   snapToGrid,
   findAlignmentGuides,
@@ -23,8 +21,8 @@ export {
   getGridCellCenter,
   widgetFitsInCell,
   widgetCellSpan,
-} from './move';
-export type { AlignmentGuide } from './move';
+} from './move/snap';
+export type { AlignmentGuide } from './move/snap';
 
 export { createResizeTool, getResizeHandles, computeResize } from './resize';
 export type { HandlePosition, ResizeHandle } from './resize';

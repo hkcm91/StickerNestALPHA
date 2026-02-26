@@ -9,11 +9,14 @@
 import React, { useCallback, useMemo } from 'react';
 
 import type { CanvasEntity } from '@sn/types';
+import { CanvasEvents } from '@sn/types';
 
+import type { PropertyValue, EntityProperties } from '../../../canvas/panels/properties';
+import { bus } from '../../../kernel/bus';
+import { useDockerStore } from '../../../kernel/stores/docker';
 import { useUIStore } from '../../../kernel/stores/ui/ui.store';
 import { useSelection } from '../hooks';
 
-import type { PropertyValue, EntityProperties } from '../../../canvas/panels/properties';
 
 export interface PropertiesPanelProps {
   /** All current entities (from scene graph) */
@@ -102,6 +105,7 @@ const twoColStyle: React.CSSProperties = {
   gridTemplateColumns: '1fr 1fr',
   gap: '8px',
 };
+const CANVAS_DOCKER_NAME = 'Canvas Docker';
 
 /**
  * Properties Panel — shows entity properties for the current selection.
@@ -120,6 +124,53 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ entities }) =>
     () => resolveProperties(selectedEntities),
     [selectedEntities],
   );
+  const selectedWidget = useMemo(
+    () =>
+      selectedEntities.length === 1 && selectedEntities[0].type === 'widget'
+        ? selectedEntities[0]
+        : null,
+    [selectedEntities],
+  );
+
+  const handleDockSelectedWidget = useCallback(() => {
+    if (!selectedWidget || selectedWidget.type !== 'widget') return;
+
+    const dockerStore = useDockerStore.getState();
+    let dockerEntry =
+      Object.values(dockerStore.dockers).find((docker) => docker.name === CANVAS_DOCKER_NAME) ??
+      Object.values(dockerStore.dockers)[0];
+
+    if (!dockerEntry) {
+      const dockerId = dockerStore.addDocker({
+        name: CANVAS_DOCKER_NAME,
+        dockMode: 'docked-right',
+        visible: true,
+        pinned: true,
+        size: { width: 320, height: 460 },
+        tabs: [{ id: crypto.randomUUID(), name: 'Widgets', widgets: [] }],
+      });
+      dockerEntry = useDockerStore.getState().dockers[dockerId];
+    }
+
+    const alreadyDocked = dockerEntry.tabs.some((tab) =>
+      tab.widgets.some((slot) => slot.widgetInstanceId === selectedWidget.widgetInstanceId),
+    );
+    if (!alreadyDocked) {
+      dockerStore.addWidgetToTab(
+        dockerEntry.id,
+        dockerEntry.activeTabIndex,
+        selectedWidget.widgetInstanceId,
+        220,
+      );
+    }
+    dockerStore.setVisible(dockerEntry.id, true);
+    dockerStore.bringToFront(dockerEntry.id);
+
+    bus.emit(CanvasEvents.ENTITY_UPDATED, {
+      id: selectedWidget.id,
+      updates: { visible: false },
+    });
+  }, [selectedWidget]);
 
   // Hidden in preview mode
   if (mode !== 'edit') return null;
@@ -256,6 +307,25 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ entities }) =>
           </div>
         </div>
       </div>
+
+      {selectedWidget ? (
+        <div style={rowStyle}>
+          <label style={labelStyle}>Widget</label>
+          <button
+            type="button"
+            data-testid="prop-dock-widget"
+            onClick={handleDockSelectedWidget}
+            style={{
+              ...valueStyle,
+              textAlign: 'center',
+              cursor: 'pointer',
+              background: 'var(--sn-surface, #fff)',
+            }}
+          >
+            Dock To Docker
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 };

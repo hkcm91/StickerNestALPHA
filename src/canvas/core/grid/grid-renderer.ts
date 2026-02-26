@@ -281,8 +281,16 @@ export function createGridRenderer(cellStore: GridCellStore): GridRenderer {
   }
 
   /**
-   * Render triangular grid lines
-   * Draws outlines of each triangle in the visible range.
+   * Render triangular grid lines as 3 sets of parallel lines:
+   * horizontal, +60deg diagonal, and -60deg diagonal.
+   *
+   * The vertex lattice sits at (n * s/2, m * h) where s = cellSize,
+   * h = s * sqrt(3) / 2, and (n + m) is even.
+   *
+   * Line families:
+   *   1. Horizontal: y = m * h, one per integer m
+   *   2. Down-right (+60deg): slope +sqrt(3), indexed by n - m = const
+   *   3. Down-left (-60deg): slope -sqrt(3), indexed by n + m = const
    */
   function renderTriangularGridLines(
     context: CanvasRenderingContext2D,
@@ -291,18 +299,68 @@ export function createGridRenderer(cellStore: GridCellStore): GridRenderer {
     _config: GridConfig,
     _canvas: HTMLCanvasElement
   ): void {
+    const { cellSize, origin } = _config;
+    const h = cellSize * Math.sqrt(3) / 2;
+    const halfS = cellSize / 2;
+
+    // Determine row/k ranges with padding
+    const minRow = visibleCellBounds.minRow - 1;
+    const maxRow = visibleCellBounds.maxRow + 2;
+    const minK = Math.floor(visibleCellBounds.minCol / 2) - 1;
+    const maxK = Math.ceil(visibleCellBounds.maxCol / 2) + 2;
+
+    // Convert k range to n range (n = vertex index along x, at x = n * s/2)
+    const minN = minK * 2 - 2;
+    const maxN = maxK * 2 + 2;
+    // m range (vertex index along y, at y = m * h)
+    const minM = minRow - 1;
+    const maxM = maxRow + 2;
+
     context.beginPath();
 
-    for (let row = visibleCellBounds.minRow; row <= visibleCellBounds.maxRow; row++) {
-      for (let col = visibleCellBounds.minCol; col <= visibleCellBounds.maxCol; col++) {
-        const corners = getTriangularCellCorners(col, row, _config);
-        const [a, b, c] = corners.map(p => canvasToScreen(p, _viewport));
+    // --- Line Set 1: Horizontal lines at y = m * h/2 (twice the density) ---
+    for (let m = minM * 2; m <= maxM * 2 + 1; m++) {
+      const canvasY = m * h / 2 + origin.y;
+      const left = canvasToScreen({ x: minN * halfS + origin.x, y: canvasY }, _viewport);
+      const right = canvasToScreen({ x: maxN * halfS + origin.x, y: canvasY }, _viewport);
+      context.moveTo(left.x, left.y);
+      context.lineTo(right.x, right.y);
+    }
 
-        context.moveTo(a.x, a.y);
-        context.lineTo(b.x, b.y);
-        context.lineTo(c.x, c.y);
-        context.closePath();
-      }
+    // --- Line Set 2: Down-right diagonals (+60deg, slope +sqrt(3)) ---
+    // Lines connect vertices where (n - m) = constant.
+    // Each step along the line: n+1, m+1 (so x += s/2, y += h).
+    for (let d = minN - maxM; d <= maxN - minM; d++) {
+      const n0 = d + minM;
+      const n1 = d + maxM;
+      const start = canvasToScreen(
+        { x: n0 * halfS + origin.x, y: minM * h + origin.y },
+        _viewport
+      );
+      const end = canvasToScreen(
+        { x: n1 * halfS + origin.x, y: maxM * h + origin.y },
+        _viewport
+      );
+      context.moveTo(start.x, start.y);
+      context.lineTo(end.x, end.y);
+    }
+
+    // --- Line Set 3: Down-left diagonals (-60deg, slope -sqrt(3)) ---
+    // Lines connect vertices where (n + m) = constant.
+    // Each step along the line: n-1, m+1 (so x -= s/2, y += h).
+    for (let s = minN + minM; s <= maxN + maxM; s++) {
+      const n0 = s - minM;
+      const n1 = s - maxM;
+      const start = canvasToScreen(
+        { x: n0 * halfS + origin.x, y: minM * h + origin.y },
+        _viewport
+      );
+      const end = canvasToScreen(
+        { x: n1 * halfS + origin.x, y: maxM * h + origin.y },
+        _viewport
+      );
+      context.moveTo(start.x, start.y);
+      context.lineTo(end.x, end.y);
     }
 
     context.stroke();

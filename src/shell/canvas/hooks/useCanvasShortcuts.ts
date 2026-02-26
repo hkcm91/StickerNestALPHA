@@ -56,7 +56,7 @@ const ZOOM_FACTOR = 1.25;
 const TOOL_KEYS: Record<string, CanvasToolId> = {
   v: 'select',
   h: 'pan',  // hand/pan tool
-  m: 'move', // move tool
+  m: 'pathfinder',
   t: 'text',
   r: 'rect',
   p: 'pen',

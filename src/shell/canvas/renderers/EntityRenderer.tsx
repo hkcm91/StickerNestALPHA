@@ -1,90 +1,140 @@
 /**
- * Entity renderer dispatcher — routes to the correct renderer by entity type.
+ * Entity renderer dispatcher routes to the correct renderer by entity type.
  *
  * @module shell/canvas/renderers
  * @layer L6
  */
 
-import React from 'react';
+import React from "react";
 
-import type { CanvasEntity } from '@sn/types';
+import type { CanvasEntity } from "@sn/types";
 
-import { AudioRenderer } from './AudioRenderer';
-import { DockerRenderer } from './DockerRenderer';
-import { DrawingRenderer } from './DrawingRenderer';
-import { GroupRenderer } from './GroupRenderer';
-import { LottieRenderer } from './LottieRenderer';
-import { ShapeRenderer } from './ShapeRenderer';
-import { StickerRenderer } from './StickerRenderer';
-import { SvgRenderer } from './SvgRenderer';
-import { TextRenderer } from './TextRenderer';
-import { WidgetRenderer } from './WidgetRenderer';
+import { AudioRenderer } from "./AudioRenderer";
+import { DockerRenderer } from "./DockerRenderer";
+import { DrawingRenderer } from "./DrawingRenderer";
+import { GroupRenderer } from "./GroupRenderer";
+import { LottieRenderer } from "./LottieRenderer";
+import { Object3DRenderer } from "./Object3DRenderer";
+import { PathRenderer } from "./PathRenderer";
+import { ShapeRenderer } from "./ShapeRenderer";
+import { StickerRenderer } from "./StickerRenderer";
+import { SvgRenderer } from "./SvgRenderer";
+import { TextRenderer } from "./TextRenderer";
+import { WidgetRenderer } from "./WidgetRenderer";
 
 export interface EntityRendererProps {
   entity: CanvasEntity;
   isSelected: boolean;
-  /** Widget HTML source — required when entity.type === 'widget' */
+  /** Docker folder open state, only used when entity.type === 'docker'. */
+  folderOpen?: boolean;
+  /** Children entities to render inside an open docker folder. */
+  childrenEntities?: CanvasEntity[];
+  /** Function to render an individual entity (avoids circular dependency). */
+  renderChild?: (entity: CanvasEntity) => React.ReactNode;
+  /** Widget HTML source, required when entity.type === 'widget'. */
   widgetHtml?: string;
-  /** Theme tokens — forwarded to WidgetRenderer */
+  /** Theme tokens, forwarded to WidgetRenderer. */
   theme?: Record<string, string>;
-  /** Canvas interaction mode — forwarded to WidgetRenderer */
-  interactionMode?: 'edit' | 'preview';
+  /** Canvas interaction mode, forwarded to WidgetRenderer. */
+  interactionMode?: "edit" | "preview";
 }
 
 /**
  * Dispatches rendering to the correct type-specific renderer.
- * Uses a switch on the discriminated `entity.type` field.
  */
 export const EntityRenderer: React.FC<EntityRendererProps> = ({
   entity,
   isSelected,
+  folderOpen = false,
+  childrenEntities = [],
+  renderChild,
   widgetHtml,
   theme,
-  interactionMode = 'edit',
+  interactionMode = "edit",
 }) => {
+  const renderWithAutoPointer = (children: React.ReactNode) => (
+    <div style={{ pointerEvents: 'auto', display: 'contents' }}>
+      {children}
+    </div>
+  );
+
+  let rendered: React.ReactNode = null;
+
   switch (entity.type) {
-    case 'sticker':
-      return <StickerRenderer entity={entity} isSelected={isSelected} />;
+    case "sticker":
+      rendered = (
+        <StickerRenderer
+          entity={entity}
+          isSelected={isSelected}
+          interactionMode={interactionMode}
+        />
+      );
+      break;
 
-    case 'lottie':
-      return <LottieRenderer entity={entity} isSelected={isSelected} />;
+    case "lottie":
+      rendered = <LottieRenderer entity={entity} isSelected={isSelected} />;
+      break;
 
-    case 'text':
-      return <TextRenderer entity={entity} isSelected={isSelected} />;
+    case "text":
+      rendered = <TextRenderer entity={entity} isSelected={isSelected} />;
+      break;
 
-    case 'widget':
-      return (
+    case "widget":
+      rendered = (
         <WidgetRenderer
           entity={entity}
           isSelected={isSelected}
-          widgetHtml={widgetHtml ?? ''}
+          widgetHtml={widgetHtml ?? ""}
           theme={theme ?? {}}
           interactionMode={interactionMode}
         />
       );
+      break;
 
-    case 'shape':
-      return <ShapeRenderer entity={entity} isSelected={isSelected} />;
+    case "shape":
+      rendered = <ShapeRenderer entity={entity} isSelected={isSelected} />;
+      break;
 
-    case 'drawing':
-      return <DrawingRenderer entity={entity} isSelected={isSelected} />;
+    case "drawing":
+      rendered = <DrawingRenderer entity={entity} isSelected={isSelected} />;
+      break;
 
-    case 'group':
-      return <GroupRenderer entity={entity} isSelected={isSelected} />;
+    case "group":
+      rendered = <GroupRenderer entity={entity} isSelected={isSelected} />;
+      break;
 
-    case 'docker':
-      return <DockerRenderer entity={entity} isSelected={isSelected} />;
+    case "docker":
+      rendered = (
+        <DockerRenderer
+          entity={entity}
+          isSelected={isSelected}
+          isOpen={folderOpen}
+          childrenEntities={childrenEntities}
+          renderEntity={renderChild}
+        />
+      );
+      break;
 
-    case 'audio':
-      return <AudioRenderer entity={entity} isSelected={isSelected} />;
+    case "audio":
+      rendered = <AudioRenderer entity={entity} isSelected={isSelected} />;
+      break;
 
-    case 'svg':
-      return <SvgRenderer entity={entity} isSelected={isSelected} />;
+    case "svg":
+      rendered = <SvgRenderer entity={entity} isSelected={isSelected} />;
+      break;
+
+    case "path":
+      rendered = <PathRenderer entity={entity} isSelected={isSelected} />;
+      break;
+
+    case "object3d":
+      rendered = <Object3DRenderer entity={entity} />;
+      break;
 
     default: {
-      // Exhaustiveness check — TypeScript will error if a case is missed
-      const _exhaustive: never = entity;
-      return null;
+      rendered = null;
     }
   }
+
+  return rendered ? renderWithAutoPointer(rendered) : null;
 };

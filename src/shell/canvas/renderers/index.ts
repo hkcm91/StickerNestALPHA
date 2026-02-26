@@ -18,5 +18,8 @@ export { GroupRenderer } from './GroupRenderer';
 export { DockerRenderer } from './DockerRenderer';
 export { AudioRenderer } from './AudioRenderer';
 export { SvgRenderer } from './SvgRenderer';
+export { PathRenderer } from './PathRenderer';
+export { Object3DRenderer } from './Object3DRenderer';
+export { ArtboardRenderer } from './ArtboardRenderer';
 
 export { entityTransformStyle } from './entity-style';

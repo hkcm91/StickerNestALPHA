@@ -13,11 +13,15 @@ import { ShellEvents } from '@sn/types';
 import { bus } from '../../kernel/bus';
 import { DataManagerPage } from '../data';
 import { TestHarness } from '../dev';
-
+import { PricingPage } from '../pages/PricingPage';
+import { ProfilePage } from '../profile';
+import { themeVar } from '../theme/theme-vars';
 
 import {
   DashboardPage,
   LoginPage,
+  CanvasGalleryPage,
+  NewCanvasPage,
   CanvasPage,
   MarketplacePage,
   SettingsPage,
@@ -55,20 +59,37 @@ function RouteChangeEmitter(): null {
 /**
  * Global navigation bar — visible on every page including login.
  */
-const navStyles: Record<string, React.CSSProperties> = {
-  nav: { display: 'flex', alignItems: 'center', gap: '4px', padding: '8px 16px', background: 'var(--sn-surface, #fff)', borderBottom: '1px solid var(--sn-border, #ddd)', zIndex: 100, position: 'relative' as const },
-  link: { padding: '6px 12px', fontSize: '13px', fontWeight: 500, color: 'var(--sn-text-muted, #555)', textDecoration: 'none', borderRadius: 'var(--sn-radius, 6px)' },
+const navLinkStyle: React.CSSProperties = {
+  color: 'inherit',
+  textDecoration: 'none',
+  padding: '4px 10px',
+  borderRadius: '6px',
+  fontSize: '13px',
 };
 
 const GlobalNav: React.FC = () => (
-  <nav data-testid="global-nav" style={navStyles.nav}>
-    <Link to="/" style={navStyles.link}>Dashboard</Link>
-    <Link to="/canvas/demo" style={navStyles.link}>Canvas</Link>
-    <Link to="/data" style={navStyles.link}>Databases</Link>
-    <Link to="/lab" style={navStyles.link}>Lab</Link>
-    <Link to="/marketplace" style={navStyles.link}>Marketplace</Link>
-    <Link to="/settings" style={navStyles.link}>Settings</Link>
-    <Link to="/dev/test" style={navStyles.link}>Dev</Link>
+  <nav
+    data-testid="global-nav"
+    style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: '6px',
+      padding: '10px 14px',
+      borderBottom: `1px solid ${themeVar('--sn-border')}`,
+      background: themeVar('--sn-surface'),
+      color: themeVar('--sn-text'),
+      fontFamily: themeVar('--sn-font-family'),
+    }}
+  >
+    <Link style={navLinkStyle} to="/">Dashboard</Link>
+    <Link style={navLinkStyle} to="/canvas">Canvas</Link>
+    <Link style={navLinkStyle} to="/data">Databases</Link>
+    <Link style={navLinkStyle} to="/lab">Lab</Link>
+    <Link style={navLinkStyle} to="/marketplace">Marketplace</Link>
+    <Link style={navLinkStyle} to="/profile/me" data-testid="nav-profile">Profile</Link>
+    <Link style={navLinkStyle} to="/settings">Settings</Link>
+    <Link style={navLinkStyle} to="/dev/test">Dev</Link>
+    <Link style={navLinkStyle} to="/login">Login</Link>
   </nav>
 );
 
@@ -82,6 +103,7 @@ export const AppRouter: React.FC = () => (
     <GlobalNav />
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/pricing" element={<PricingPage />} />
       <Route path="/invite/:token" element={<InvitePage />} />
       <Route path="/dev/test" element={<TestHarness />} />
 
@@ -94,7 +116,11 @@ export const AppRouter: React.FC = () => (
         }
       />
 
-      <Route path="/canvas/:canvasParam" element={<CanvasPage />} />
+      <Route path="/profile/:username" element={<ProfilePage />} />
+
+      <Route path="/canvas" element={<CanvasGalleryPage />} />
+      <Route path="/canvas/new" element={<NewCanvasPage />} />
+      <Route path="/canvas/:canvasSlug" element={<CanvasPage />} />
 
       <Route
         path="/lab"

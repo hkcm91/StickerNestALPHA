@@ -9,9 +9,10 @@ import React from 'react';
 
 import type { WidgetContainerEntity } from '@sn/types';
 
-import { WidgetFrame } from '../../../runtime';
+import { WidgetFrame, InlineWidgetFrame } from '../../../runtime';
+import { BUILT_IN_WIDGET_COMPONENTS } from '../../../runtime/widgets';
 
-import { entityTransformStyle } from './entity-style';
+import { entityTransformStyle, RENDER_SIZE_MULTIPLIER } from './entity-style';
 
 export interface WidgetRendererProps {
   entity: WidgetContainerEntity;
@@ -29,6 +30,13 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
   interactionMode,
 }) => {
   const style = entityTransformStyle(entity);
+  const BuiltInComponent = BUILT_IN_WIDGET_COMPONENTS[entity.widgetId];
+
+  // In edit mode, we show a drag handle at the top.
+  // The rest of the widget is interactive.
+  const isEditMode = interactionMode === 'edit';
+  const showHandle = isEditMode && !entity.locked;
+  const handleHeight = 28;
 
   return (
     <div
@@ -37,31 +45,90 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
       style={{
         ...style,
         outline: isSelected ? '2px solid var(--sn-accent, #3b82f6)' : undefined,
-        // In edit mode, overlay captures pointer events so widget doesn't steal focus
-        pointerEvents: interactionMode === 'edit' && !entity.locked ? 'auto' : undefined,
+        // In edit mode, we want pointer events to pass through to sub-elements
+        pointerEvents: isEditMode ? 'auto' : undefined,
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
       }}
     >
-      {/* In edit mode, transparent overlay prevents iframe from capturing clicks */}
-      {interactionMode === 'edit' && (
+      {/* Drag Handle Bar — only in edit mode */}
+      {showHandle && (
+        <div
+          data-widget-drag-handle="true"
+          style={{
+            height: `${handleHeight}px`,
+            width: '100%',
+            background: isSelected ? 'rgba(59, 130, 246, 0.1)' : 'rgba(0, 0, 0, 0.03)',
+            borderBottom: '1px solid rgba(0, 0, 0, 0.05)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'grab',
+            flexShrink: 0,
+            zIndex: 10,
+          }}
+        >
+          {/* Drag indicator dots */}
+          <div style={{ display: 'flex', gap: '2px' }}>
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div
+                key={i}
+                style={{
+                  width: '3px',
+                  height: '3px',
+                  borderRadius: '50%',
+                  background: isSelected ? 'var(--sn-accent, #3b82f6)' : '#94a3b8',
+                }}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div 
+        style={{ 
+          flex: 1, 
+          position: 'relative', 
+          width: '100%',
+          pointerEvents: 'auto',
+        }}
+      >
         <div
           style={{
             position: 'absolute',
             inset: 0,
-            zIndex: 1,
-            cursor: entity.locked ? 'default' : 'grab',
+            width: `${100 * RENDER_SIZE_MULTIPLIER}%`,
+            height: `${100 * RENDER_SIZE_MULTIPLIER}%`,
+            transform: `scale(${1 / RENDER_SIZE_MULTIPLIER})`,
+            transformOrigin: 'top left',
           }}
-        />
-      )}
-      <WidgetFrame
-        widgetId={entity.widgetId}
-        instanceId={entity.widgetInstanceId}
-        widgetHtml={widgetHtml}
-        config={entity.config}
-        theme={theme}
-        visible={entity.visible}
-        width={entity.transform.size.width}
-        height={entity.transform.size.height}
-      />
+        >
+          {BuiltInComponent ? (
+            <InlineWidgetFrame
+              widgetId={entity.widgetId}
+              instanceId={entity.widgetInstanceId}
+              Component={BuiltInComponent}
+              config={entity.config}
+              theme={theme as any}
+              visible={entity.visible}
+              width={entity.transform.size.width * RENDER_SIZE_MULTIPLIER}
+              height={(entity.transform.size.height - (showHandle ? handleHeight : 0)) * RENDER_SIZE_MULTIPLIER}
+            />
+          ) : (
+            <WidgetFrame
+              widgetId={entity.widgetId}
+              instanceId={entity.widgetInstanceId}
+              widgetHtml={widgetHtml}
+              config={entity.config}
+              theme={theme as any}
+              visible={entity.visible}
+              width={entity.transform.size.width * RENDER_SIZE_MULTIPLIER}
+              height={(entity.transform.size.height - (showHandle ? handleHeight : 0)) * RENDER_SIZE_MULTIPLIER}
+            />
+          )}
+        </div>
+      </div>
     </div>
   );
 };

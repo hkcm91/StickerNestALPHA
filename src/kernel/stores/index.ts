@@ -124,11 +124,46 @@ export type {
 } from './ui';
 
 // =============================================================================
+// Docker Store
+// =============================================================================
+export {
+  useDockerStore,
+  selectVisibleDockers,
+  selectLeftDockedDockers,
+  selectRightDockedDockers,
+  selectFloatingDockers,
+  setupDockerBusSubscriptions,
+} from './docker';
+
+export type {
+  DockerState,
+  DockerActions,
+  DockerStore,
+} from './docker';
+
+// =============================================================================
+// Gallery Store
+// =============================================================================
+export {
+  useGalleryStore,
+  setupGalleryBusSubscriptions,
+} from './gallery';
+
+export type {
+  GalleryAsset,
+  GalleryState,
+  GalleryActions,
+  GalleryStore,
+} from './gallery';
+
+// =============================================================================
 // Setup All Bus Subscriptions
 // =============================================================================
 
 import { setupAuthBusSubscriptions as _setupAuth } from './auth';
 import { setupCanvasBusSubscriptions as _setupCanvas } from './canvas';
+import { setupDockerBusSubscriptions as _setupDocker } from './docker';
+import { setupGalleryBusSubscriptions as _setupGallery } from './gallery';
 import { setupHistoryBusSubscriptions as _setupHistory } from './history';
 import { setupSocialBusSubscriptions as _setupSocial } from './social';
 import { setupUIBusSubscriptions as _setupUI } from './ui';
@@ -147,4 +182,6 @@ export function setupAllStoreBusSubscriptions(): void {
   _setupWidget();
   _setupSocial();
   _setupUI();
+  _setupDocker();
+  _setupGallery();
 }

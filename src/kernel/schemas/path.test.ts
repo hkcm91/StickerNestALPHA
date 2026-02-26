@@ -6,14 +6,16 @@
 import { describe, it, expect } from 'vitest';
 
 import {
+  PathEntitySchema,
+  PathEntityJSONSchema,
+  type PathEntity,
+} from './canvas-entity';
+import {
   AnchorPointTypeSchema,
   AnchorPointSchema,
   PathFillRuleSchema,
-  PathEntitySchema,
   AnchorPointJSONSchema,
-  PathEntityJSONSchema,
   type AnchorPoint,
-  type PathEntity,
 } from './path';
 
 const BASE_ENTITY = {
@@ -27,7 +29,10 @@ const BASE_ENTITY = {
   },
   zIndex: 1,
   visible: true,
+  canvasVisibility: 'both' as const,
   locked: false,
+  flipH: false,
+  flipV: false,
   opacity: 1,
   borderRadius: 0,
   createdAt: '2024-01-01T00:00:00Z',

@@ -9,7 +9,7 @@
  * @layer L6
  */
 
-import type { Point2D, Size2D, BoundingBox2D } from '@sn/types';
+import type { Point2D, Size2D, BoundingBox2D, CanvasEntity } from '@sn/types';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -28,6 +28,28 @@ export type HandlePosition =
 export interface ResizeHandle {
   position: HandlePosition;
   cursor: string;
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Determine if an entity should have its aspect ratio locked by default.
+ * Most visual assets (stickers, SVG, Lottie) lock by default.
+ */
+export function shouldLockAspectRatio(entity: CanvasEntity): boolean {
+  switch (entity.type) {
+    case 'sticker':
+    case 'lottie':
+    case 'svg':
+      return (entity as any).aspectLocked !== false;
+    case 'widget':
+      // Widgets with an intrinsic size often want to stay proportional
+      return !!(entity as any).intrinsicSize;
+    default:
+      return false;
+  }
 }
 
 // ---------------------------------------------------------------------------

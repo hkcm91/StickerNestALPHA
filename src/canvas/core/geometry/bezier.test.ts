@@ -6,6 +6,7 @@
 import { describe, it, expect } from 'vitest';
 
 import type { Point2D, AnchorPoint } from '../../../kernel/schemas';
+
 import {
   evaluateCubicBezier,
   splitCubicBezier,
@@ -21,7 +22,7 @@ import {
 // Tolerance for floating-point comparisons
 const EPS = 1e-6;
 
-function expectClose(actual: Point2D, expected: Point2D, tolerance = EPS) {
+function expectClose(actual: Point2D, expected: Point2D, _tolerance = EPS) {
   expect(actual.x).toBeCloseTo(expected.x, 4);
   expect(actual.y).toBeCloseTo(expected.y, 4);
 }

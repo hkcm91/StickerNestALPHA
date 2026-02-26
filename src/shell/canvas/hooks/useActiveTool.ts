@@ -15,15 +15,21 @@ import { useUIStore } from '../../../kernel/stores/ui/ui.store';
 export type CanvasToolId =
   | 'select'
   | 'pan'
-  | 'move'
+  | 'brush'
+  | 'artboard'
   | 'resize'
   | 'pen'
+  | 'pen-path'
+  | 'direct-select'
+  | 'pathfinder'
   | 'text'
   | 'rect'
   | 'ellipse'
   | 'line'
   | 'sticker'
-  | 'widget';
+  | 'widget'
+  | 'lottie'
+  | 'svg';
 
 /**
  * Set the active tool in uiStore (callable outside React).
@@ -37,7 +43,9 @@ export function setActiveTool(tool: CanvasToolId) {
  * Reads from uiStore — the same source Toolbar uses.
  */
 export function useActiveTool() {
-  const activeTool = useUIStore((s) => s.activeTool) as CanvasToolId;
+  const activeTool = useUIStore((s) => (
+    s.activeTool === 'move' ? 'select' : s.activeTool
+  )) as CanvasToolId;
   const mode: InteractionMode = useInteractionStore((s) => s.mode);
   const toolsEnabled = useInteractionStore((s) => s.toolsEnabled);
 

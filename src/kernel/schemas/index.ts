@@ -45,6 +45,7 @@ export {
   type DetectedMesh,
   type SpatialAnchor,
   type HandJoint,
+  type SpatialMode,
   // JSON Schemas
   Vector3JSONSchema,
   QuaternionJSONSchema,
@@ -54,7 +55,8 @@ export {
   SpatialAnchorJSONSchema,
   HandJointJSONSchema,
   XRSessionModeJSONSchema,
-} from './spatial';
+  SpatialModeJSONSchema,
+} from "./spatial";
 
 // =============================================================================
 // Event Bus Schemas
@@ -78,13 +80,15 @@ export {
   DataManagerEvents,
   GridEvents,
   CanvasDocumentEvents,
+  GalleryEvents,
   InteractionModeEvents,
   InputEvents,
   LayoutModeEvents,
   BackgroundEvents,
+  DockerEvents,
   // JSON Schemas
   BusEventJSONSchema,
-} from './bus-event';
+} from "./bus-event";
 
 // =============================================================================
 // DataSource Schemas
@@ -111,7 +115,7 @@ export {
   // JSON Schemas
   DataSourceJSONSchema,
   DataSourceACLEntryJSONSchema,
-} from './data-source';
+} from "./data-source";
 
 // =============================================================================
 // Canvas Entity Schemas
@@ -123,6 +127,8 @@ export {
   Transform3DSchema,
   CropRectSchema,
   CanvasEntityBaseSchema,
+  StickerClickActionTypeSchema,
+  StickerClickActionSchema,
   StickerEntitySchema,
   LottieEntitySchema,
   TextEntitySchema,
@@ -137,6 +143,9 @@ export {
   DockerEntitySchema,
   AudioEntitySchema,
   SvgEntitySchema,
+  Object3DEntitySchema,
+  ArtboardEntitySchema,
+  FolderEntitySchema,
   CanvasEntitySchema,
   // Types
   type CanvasEntityType,
@@ -144,6 +153,8 @@ export {
   type Transform3D,
   type CropRect,
   type CanvasEntityBase,
+  type StickerClickActionType,
+  type StickerClickAction,
   type StickerEntity,
   type LottieEntity,
   type TextEntity,
@@ -157,6 +168,9 @@ export {
   type DockerEntity,
   type AudioEntity,
   type SvgEntity,
+  type Object3DEntity,
+  type ArtboardEntity,
+  type FolderEntity,
   type CanvasEntity,
   // JSON Schemas
   CropRectJSONSchema,
@@ -164,31 +178,33 @@ export {
   LottieEntityJSONSchema,
   AudioEntityJSONSchema,
   SvgEntityJSONSchema,
+  PathEntitySchema,
+  type PathEntity,
+  PathEntityJSONSchema,
+  ArtboardEntityJSONSchema,
+  FolderEntityJSONSchema,
   CanvasEntityJSONSchema,
   WidgetIntrinsicSizeJSONSchema,
   WidgetScalingModeJSONSchema,
   WidgetCropConfigJSONSchema,
   WidgetContainerEntityJSONSchema,
-} from './canvas-entity';
+} from "./canvas-entity";
 
 // =============================================================================
-// Path Entity Schemas
+// Path Sub-Schemas (anchor points, fill rules)
 // =============================================================================
 export {
   // Schemas
   AnchorPointTypeSchema,
   AnchorPointSchema,
   PathFillRuleSchema,
-  PathEntitySchema,
   // Types
   type AnchorPointType,
   type AnchorPoint,
   type PathFillRule,
-  type PathEntity,
   // JSON Schemas
   AnchorPointJSONSchema,
-  PathEntityJSONSchema,
-} from './path';
+} from "./path";
 
 // =============================================================================
 // Widget Manifest Schemas
@@ -223,7 +239,7 @@ export {
   WidgetManifestJSONSchema,
   WidgetInstanceStateJSONSchema,
   UserWidgetStateJSONSchema,
-} from './widget-manifest';
+} from "./widget-manifest";
 
 // =============================================================================
 // Pipeline Schemas
@@ -248,7 +264,7 @@ export {
   PipelineNodeJSONSchema,
   PipelineEdgeJSONSchema,
   PipelineJSONSchema,
-} from './pipeline';
+} from "./pipeline";
 
 // =============================================================================
 // Social Graph Schemas
@@ -321,7 +337,7 @@ export {
   ReactionJSONSchema,
   NotificationJSONSchema,
   FeedResponseJSONSchema,
-} from './social-graph';
+} from "./social-graph";
 
 // =============================================================================
 // Notion Integration Schemas
@@ -368,7 +384,7 @@ export {
   NotionPageJSONSchema,
   NotionDatabaseJSONSchema,
   NotionQueryResponseJSONSchema,
-} from './notion-integration';
+} from "./notion-integration";
 
 // =============================================================================
 // World Instance Schemas
@@ -397,7 +413,7 @@ export {
   WorldStatusJSONSchema,
   WorldOptionsJSONSchema,
   WorldSnapshotJSONSchema,
-} from './world';
+} from "./world";
 
 // =============================================================================
 // Grid Layer Schemas
@@ -434,7 +450,7 @@ export {
   getGridCellJSONSchema,
   getGridConfigJSONSchema,
   getGridStateJSONSchema,
-} from './grid';
+} from "./grid";
 
 // =============================================================================
 // Canvas Document Schemas
@@ -443,6 +459,7 @@ export {
   // Background Schemas
   SolidBackgroundSchema,
   GradientStopSchema,
+  GradientTypeSchema,
   GradientBackgroundSchema,
   ImageBackgroundModeSchema,
   ImageBackgroundSchema,
@@ -450,6 +467,8 @@ export {
   DEFAULT_BACKGROUND,
   // Viewport Config Schema
   ViewportConfigSchema,
+  // Platform Schema
+  CanvasPlatformSchema,
   // Layout Mode Schema
   LayoutModeSchema,
   // Document Schemas
@@ -462,11 +481,13 @@ export {
   // Types
   type SolidBackground,
   type GradientStop,
+  type GradientType,
   type GradientBackground,
   type ImageBackgroundMode,
   type ImageBackground,
   type BackgroundSpec,
   type ViewportConfig,
+  type CanvasPlatform,
   type LayoutMode,
   type CanvasDocumentMeta,
   type CanvasDocument,
@@ -475,6 +496,7 @@ export {
   // JSON Schemas
   BackgroundSpecJSONSchema,
   ViewportConfigJSONSchema,
+  CanvasPlatformJSONSchema,
   LayoutModeJSONSchema,
   CanvasDocumentMetaJSONSchema,
   CanvasDocumentJSONSchema,
@@ -564,3 +586,47 @@ export {
   TableSchemaJSONSchema,
   DatabaseTemplateJSONSchema,
 } from './database-management';
+
+// =============================================================================
+// Docker Schemas (Shell-level dockable containers)
+// =============================================================================
+export {
+  // Schemas
+  DockerWidgetSlotSchema,
+  DockerTabSchema,
+  DockerDockModeSchema,
+  DockerSchema,
+  UserDockerConfigSchema,
+  CreateDockerInputSchema,
+  UpdateDockerInputSchema,
+  // Types
+  type DockerWidgetSlot,
+  type DockerTab,
+  type DockerDockMode,
+  type Docker,
+  type UserDockerConfig,
+  type CreateDockerInput,
+  type UpdateDockerInput,
+  // JSON Schemas
+  DockerWidgetSlotJSONSchema,
+  DockerTabJSONSchema,
+  DockerDockModeJSONSchema,
+  DockerJSONSchema,
+  UserDockerConfigJSONSchema,
+} from "./docker";
+
+// =============================================================================
+// Gallery Asset Schemas
+// =============================================================================
+export {
+  // Schemas
+  GalleryAssetSchema,
+  CreateGalleryAssetInputSchema,
+  UpdateGalleryAssetInputSchema,
+  // Types
+  type GalleryAsset,
+  type CreateGalleryAssetInput,
+  type UpdateGalleryAssetInput,
+  // JSON Schemas
+  GalleryAssetJSONSchema,
+} from "./gallery";

@@ -2200,6 +2200,94 @@ export const DEFAULT_WIDGET_THEME: ThemeTokens = {
   '--sn-font-family': 'system-ui, sans-serif',
 };
 
+export const PEN_PATH_OPTIONS_WIDGET_HTML = `
+<!DOCTYPE html>
+<html>
+<head><title>Pen Tool Options</title></head>
+<body style="margin:0;padding:8px;font-family:sans-serif;background:#1e1e2e;color:#eee;font-size:11px;">
+<style>
+  button {
+    background: #333;
+    color: #eee;
+    border: 1px solid #555;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 10px;
+  }
+  button:hover { background: #444; }
+  button.active { background: #6366f1; border-color: #818cf8; }
+  .row { display: flex; gap: 4px; margin-bottom: 8px; align-items: center; }
+  .label { color: #888; width: 60px; font-size: 9px; }
+  .btn-group { display: flex; gap: 2px; }
+</style>
+<div id="app">
+  <div style="font-size: 10px; font-weight: bold; margin-bottom: 10px; color: #6366f1; border-bottom: 1px solid #333; padding-bottom: 4px;">PEN TOOL OPTIONS</div>
+  
+  <div class="row">
+    <div class="label">POINT TYPE</div>
+    <div class="btn-group">
+      <button id="type-corner" title="Corner Point">Corner</button>
+      <button id="type-smooth" title="Smooth Point">Smooth</button>
+      <button id="type-symmetric" title="Symmetric Point">Symm</button>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="label">PATH</div>
+    <button id="toggle-closed">Closed: NO</button>
+  </div>
+
+  <div style="display: flex; gap: 4px; margin-top: 10px; border-top: 1px solid #333; padding-top: 8px;">
+    <button id="delete-anchor" style="flex: 1; color: #f87171;">Del Point</button>
+    <button id="commit-path" style="flex: 1; color: #4ade80;">Commit</button>
+  </div>
+</div>
+<script>
+  let toolState = { anchors: [], activeAnchorIndex: -1, closed: false };
+
+  const updateUI = () => {
+    const active = toolState.activeAnchorIndex !== -1;
+    const current = active ? toolState.anchors[toolState.activeAnchorIndex] : null;
+
+    document.getElementById('type-corner')?.classList.toggle('active', current?.pointType === 'corner');
+    document.getElementById('type-smooth')?.classList.toggle('active', current?.pointType === 'smooth');
+    document.getElementById('type-symmetric')?.classList.toggle('active', current?.pointType === 'symmetric');
+    
+    const toggleClosed = document.getElementById('toggle-closed');
+    if (toggleClosed) {
+      toggleClosed.textContent = 'Closed: ' + (toolState.closed ? 'YES' : 'NO');
+      toggleClosed.classList.toggle('active', toolState.closed);
+    }
+    
+    document.getElementById('delete-anchor').disabled = !active;
+    document.getElementById('commit-path').disabled = toolState.anchors.length < 2;
+  };
+
+  const emitCmd = (action, payload = {}) => {
+    window.StickerNest?.emit('canvas.tool.command', { tool: 'pen', action, ...payload });
+  };
+
+  document.getElementById('type-corner').onclick = () => emitCmd('set_point_type', { type: 'corner' });
+  document.getElementById('type-smooth').onclick = () => emitCmd('set_point_type', { type: 'smooth' });
+  document.getElementById('type-symmetric').onclick = () => emitCmd('set_point_type', { type: 'symmetric' });
+  document.getElementById('toggle-closed').onclick = () => emitCmd('toggle_closed');
+  document.getElementById('delete-anchor').onclick = () => emitCmd('delete_anchor');
+  document.getElementById('commit-path').onclick = () => emitCmd('commit_path');
+
+  window.StickerNest?.subscribe('canvas.tool.penpath.preview', (payload) => {
+    toolState = payload;
+    updateUI();
+  });
+
+  window.StickerNest?.register({ id: 'pen-path-options', name: 'Pen Options', version: '1.0.0' });
+  window.StickerNest?.ready();
+  updateUI();
+</script>
+</body>
+</html>
+`;
+
 export const getWidgetHtml = (type: string): string => {
   switch (type) {
     case 'counter': return COUNTER_WIDGET_HTML;
@@ -2223,6 +2311,7 @@ export const getWidgetHtml = (type: string): string => {
     case 'image-generator': return IMAGE_GENERATION_WIDGET_HTML;
     case 'sticker-props': return STICKER_PROPS_WIDGET_HTML;
     case 'lottie-props': return LOTTIE_PROPS_WIDGET_HTML;
+    case 'pen-path-options': return PEN_PATH_OPTIONS_WIDGET_HTML;
     default: return COUNTER_WIDGET_HTML;
   }
 };

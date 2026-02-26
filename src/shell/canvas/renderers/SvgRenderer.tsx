@@ -11,7 +11,7 @@ import React, { useMemo } from 'react';
 
 import type { SvgEntity } from '@sn/types';
 
-import { entityTransformStyle } from './entity-style';
+import { entityTransformStyle, RENDER_SIZE_MULTIPLIER } from './entity-style';
 
 /**
  * Basic SVG sanitizer — strips dangerous elements and attributes.
@@ -36,14 +36,16 @@ export const SvgRenderer: React.FC<SvgRendererProps> = ({ entity, isSelected }) 
   const sanitizedContent = useMemo(() => {
     let svg = sanitizeSvg(entity.svgContent);
 
-    // Apply fill/stroke overrides by injecting a style element
-    if (entity.fill || entity.stroke) {
-      const overrides: string[] = [];
-      if (entity.fill) overrides.push(`fill: ${entity.fill}`);
-      if (entity.stroke) overrides.push(`stroke: ${entity.stroke}`);
-      const styleTag = `<style>svg > * { ${overrides.join('; ')} }</style>`;
-      svg = svg.replace(/<svg([^>]*)>/, `<svg$1>${styleTag}`);
-    }
+    const rootStyle =
+      'width:100%;height:100%;display:block;overflow:visible;pointer-events:none;vector-effect:non-scaling-stroke;';
+    const rootStyleTag = `<style>svg{${rootStyle}}</style>`;
+
+    // Apply fill/stroke overrides and target all descendants, not only direct children.
+    const colorRule = entity.fill || entity.stroke
+      ? `<style>svg * { ${entity.fill ? `fill: ${entity.fill} !important;` : ''} ${entity.stroke ? `stroke: ${entity.stroke} !important;` : ''} }</style>`
+      : '';
+
+    svg = svg.replace(/<svg([^>]*)>/, `<svg$1>${rootStyleTag}${colorRule}`);
 
     return svg;
   }, [entity.svgContent, entity.fill, entity.stroke]);
@@ -55,10 +57,24 @@ export const SvgRenderer: React.FC<SvgRendererProps> = ({ entity, isSelected }) 
       style={{
         ...style,
         outline: isSelected ? '2px solid var(--sn-accent, #3b82f6)' : undefined,
+        // Render at a higher multiplier for sharpness, then scale it down to fit the container
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
       }}
       role="img"
       aria-label={entity.altText ?? 'SVG graphic'}
-      dangerouslySetInnerHTML={{ __html: sanitizedContent }}
-    />
+    >
+      <div
+        style={{
+          width: `${100 * RENDER_SIZE_MULTIPLIER}%`,
+          height: `${100 * RENDER_SIZE_MULTIPLIER}%`,
+          transform: `scale(${1 / RENDER_SIZE_MULTIPLIER})`,
+          transformOrigin: 'center center',
+          flexShrink: 0,
+        }}
+        dangerouslySetInnerHTML={{ __html: sanitizedContent }}
+      />
+    </div>
   );
 };

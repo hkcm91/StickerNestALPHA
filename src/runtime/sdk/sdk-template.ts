@@ -70,9 +70,38 @@ export function generateSDKTemplate(): string {
   var _crossCanvasHandlers = {};
   var _pendingRequests = {};
   var _requestCounter = 0;
+  var REQUEST_TIMEOUT_MS = 10000;
 
   function postToHost(message) {
     window.parent.postMessage(message, '*');
+  }
+
+  function addPendingRequest(key, resolve, reject) {
+    var timer = setTimeout(function() {
+      if (_pendingRequests[key]) {
+        delete _pendingRequests[key];
+        reject(new Error('Request timed out after ' + REQUEST_TIMEOUT_MS + 'ms'));
+      }
+    }, REQUEST_TIMEOUT_MS);
+    _pendingRequests[key] = { resolve: resolve, reject: reject, timer: timer };
+  }
+
+  function resolvePending(key, value) {
+    var pending = _pendingRequests[key];
+    if (pending) {
+      clearTimeout(pending.timer);
+      pending.resolve(value);
+      delete _pendingRequests[key];
+    }
+  }
+
+  function rejectPending(key, error) {
+    var pending = _pendingRequests[key];
+    if (pending) {
+      clearTimeout(pending.timer);
+      pending.reject(error);
+      delete _pendingRequests[key];
+    }
   }
 
   // Listen for messages from the host
@@ -122,14 +151,10 @@ export function generateSDKTemplate(): string {
       case 'STATE_RESPONSE':
         var stateKey = 'state:' + data.key;
         var userStateKey = 'userState:' + data.key;
-        var pending = _pendingRequests[stateKey] || _pendingRequests[userStateKey];
-        if (pending) {
-          pending.resolve(data.value);
-          if (_pendingRequests[stateKey]) {
-            delete _pendingRequests[stateKey];
-          } else {
-            delete _pendingRequests[userStateKey];
-          }
+        if (_pendingRequests[stateKey]) {
+          resolvePending(stateKey, data.value);
+        } else {
+          resolvePending(userStateKey, data.value);
         }
         break;
 
@@ -138,14 +163,11 @@ export function generateSDKTemplate(): string {
         break;
 
       case 'INTEGRATION_RESPONSE':
-        var pendingIntegration = _pendingRequests['integration_' + data.requestId];
-        if (pendingIntegration) {
-          if (data.error) {
-            pendingIntegration.reject(new Error(data.error));
-          } else {
-            pendingIntegration.resolve(data.result);
-          }
-          delete _pendingRequests['integration_' + data.requestId];
+        var integrationKey = 'integration_' + data.requestId;
+        if (data.error) {
+          rejectPending(integrationKey, new Error(data.error));
+        } else {
+          resolvePending(integrationKey, data.result);
         }
         break;
 
@@ -163,6 +185,12 @@ export function generateSDKTemplate(): string {
         _themeHandlers = [];
         _resizeHandlers = [];
         _crossCanvasHandlers = {};
+        // Clear all pending request timers before discarding
+        var pendingKeys = Object.keys(_pendingRequests);
+        for (var pk = 0; pk < pendingKeys.length; pk++) {
+          var entry = _pendingRequests[pendingKeys[pk]];
+          if (entry && entry.timer) { clearTimeout(entry.timer); }
+        }
         _pendingRequests = {};
         break;
     }
@@ -206,7 +234,7 @@ export function generateSDKTemplate(): string {
 
     getState: function(key) {
       return new Promise(function(resolve, reject) {
-        _pendingRequests['state:' + key] = { resolve: resolve, reject: reject };
+        addPendingRequest('state:' + key, resolve, reject);
         postToHost({ type: 'GET_STATE', key: key });
       });
     },
@@ -217,7 +245,7 @@ export function generateSDKTemplate(): string {
 
     getUserState: function(key) {
       return new Promise(function(resolve, reject) {
-        _pendingRequests['userState:' + key] = { resolve: resolve, reject: reject };
+        addPendingRequest('userState:' + key, resolve, reject);
         postToHost({ type: 'GET_USER_STATE', key: key });
       });
     },
@@ -254,14 +282,14 @@ export function generateSDKTemplate(): string {
         query: function(params) {
           return new Promise(function(resolve, reject) {
             var requestId = 'req_' + (++_requestCounter);
-            _pendingRequests['integration_' + requestId] = { resolve: resolve, reject: reject };
+            addPendingRequest('integration_' + requestId, resolve, reject);
             postToHost({ type: 'INTEGRATION_QUERY', requestId: requestId, name: name, params: params });
           });
         },
         mutate: function(params) {
           return new Promise(function(resolve, reject) {
             var requestId = 'req_' + (++_requestCounter);
-            _pendingRequests['integration_' + requestId] = { resolve: resolve, reject: reject };
+            addPendingRequest('integration_' + requestId, resolve, reject);
             postToHost({ type: 'INTEGRATION_MUTATE', requestId: requestId, name: name, params: params });
           });
         }

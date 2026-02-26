@@ -1,6 +1,6 @@
 {
   "name": "stickernest-mcp-dev",
-  "version": "1.0.0",
+  "version": "2.2.0",
   "description": "MCP server for StickerNest V5 development testing",
   "type": "module",
   "main": "dist/index.js",

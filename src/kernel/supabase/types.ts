@@ -6,12 +6,16 @@
  *   supabase/migrations/00002_add_datasource_revision.sql
  *   supabase/migrations/00003_add_widget_snapshots.sql
  *   supabase/migrations/00004_add_marketplace_tables.sql
+ *   supabase/migrations/00005_add_social_graph.sql
+ *   supabase/migrations/00008_add_gallery_assets.sql
  *
  * Tables: users, canvases, canvas_members, entities, widgets, stickers,
  *         pipelines, widget_connections, presence, data_sources,
  *         data_source_acl, widget_instances, user_installed_widgets,
  *         user_widget_state, widget_snapshots, widget_reviews,
- *         widget_versions
+ *         widget_versions, user_profiles, follows, posts, reactions,
+ *         comments, notifications, bookmarks, blocks, direct_messages,
+ *         gallery_assets
  */
 
 /**
@@ -226,6 +230,10 @@ export interface Database {
           install_count: number;
           rating_average: number | null;
           rating_count: number;
+          price_cents: number | null;
+          currency: string;
+          stripe_price_id: string | null;
+          is_free: boolean;
           metadata: Json;
           created_at: string;
           updated_at: string;
@@ -249,6 +257,9 @@ export interface Database {
           install_count?: number;
           rating_average?: number | null;
           rating_count?: number;
+          price_cents?: number | null;
+          currency?: string;
+          stripe_price_id?: string | null;
           metadata?: Json;
           created_at?: string;
           updated_at?: string;
@@ -272,6 +283,9 @@ export interface Database {
           install_count?: number;
           rating_average?: number | null;
           rating_count?: number;
+          price_cents?: number | null;
+          currency?: string;
+          stripe_price_id?: string | null;
           metadata?: Json;
           created_at?: string;
           updated_at?: string;
@@ -685,6 +699,177 @@ export interface Database {
           html_content?: string;
           manifest?: Json;
           changelog?: string | null;
+          created_at?: string;
+        };
+      };
+
+      user_profiles: {
+        Row: {
+          user_id: string;
+          display_name: string;
+          username: string;
+          bio: string | null;
+          avatar_url: string | null;
+          banner_url: string | null;
+          location: string | null;
+          website_url: string | null;
+          visibility: 'public' | 'followers' | 'private';
+          follower_count: number;
+          following_count: number;
+          post_count: number;
+          is_verified: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          display_name: string;
+          username: string;
+          bio?: string | null;
+          avatar_url?: string | null;
+          banner_url?: string | null;
+          location?: string | null;
+          website_url?: string | null;
+          visibility?: 'public' | 'followers' | 'private';
+          follower_count?: number;
+          following_count?: number;
+          post_count?: number;
+          is_verified?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          display_name?: string;
+          username?: string;
+          bio?: string | null;
+          avatar_url?: string | null;
+          banner_url?: string | null;
+          location?: string | null;
+          website_url?: string | null;
+          visibility?: 'public' | 'followers' | 'private';
+          follower_count?: number;
+          following_count?: number;
+          post_count?: number;
+          is_verified?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+
+      gallery_assets: {
+        Row: {
+          id: string;
+          owner_id: string;
+          name: string;
+          storage_path: string;
+          file_type: string;
+          file_size: number;
+          width: number | null;
+          height: number | null;
+          description: string | null;
+          tags: string[];
+          thumbnail_path: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_id: string;
+          name: string;
+          storage_path: string;
+          file_type: string;
+          file_size?: number;
+          width?: number | null;
+          height?: number | null;
+          description?: string | null;
+          tags?: string[];
+          thumbnail_path?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          owner_id?: string;
+          name?: string;
+          storage_path?: string;
+          file_type?: string;
+          file_size?: number;
+          width?: number | null;
+          height?: number | null;
+          description?: string | null;
+          tags?: string[];
+          thumbnail_path?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+
+      follows: {
+        Row: {
+          id: string;
+          follower_id: string;
+          following_id: string;
+          status: 'active' | 'pending' | 'blocked';
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          follower_id: string;
+          following_id: string;
+          status?: 'active' | 'pending' | 'blocked';
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          follower_id?: string;
+          following_id?: string;
+          status?: 'active' | 'pending' | 'blocked';
+          created_at?: string;
+        };
+      };
+
+      blocks: {
+        Row: {
+          blocker_id: string;
+          blocked_id: string;
+          created_at: string;
+        };
+        Insert: {
+          blocker_id: string;
+          blocked_id: string;
+          created_at?: string;
+        };
+        Update: {
+          blocker_id?: string;
+          blocked_id?: string;
+          created_at?: string;
+        };
+      };
+
+      direct_messages: {
+        Row: {
+          id: string;
+          sender_id: string;
+          recipient_id: string;
+          content: string;
+          is_read: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          sender_id: string;
+          recipient_id: string;
+          content: string;
+          is_read?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          sender_id?: string;
+          recipient_id?: string;
+          content?: string;
+          is_read?: boolean;
           created_at?: string;
         };
       };
