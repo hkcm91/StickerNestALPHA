@@ -272,6 +272,8 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
         return (cents / 100).toLocaleString(undefined, { style: 'currency', currency: currency || 'usd' });
       }
 
+      function esc(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+
       function renderTiers(tiers, mySub) {
         loadingEl.style.display = 'none';
         if (!tiers || tiers.length === 0) {
@@ -291,18 +293,18 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
           card.className = 'tier-card' + (isActive ? ' active' : '');
           card.setAttribute('role', 'listitem');
 
-          var benefits = (tier.benefits || []).map(function(b) { return '<li>' + b + '</li>'; }).join('');
+          var benefits = (tier.benefits || []).map(function(b) { return '<li>' + esc(b) + '</li>'; }).join('');
           var priceLabel = tier.price_cents === 0 ? 'Free' : formatPrice(tier.price_cents, tier.currency);
-          var intervalLabel = tier.price_cents > 0 ? '<span>/' + (tier.interval || 'month') + '</span>' : '';
+          var intervalLabel = tier.price_cents > 0 ? '<span>/' + esc(tier.interval || 'month') + '</span>' : '';
 
           var manageBtn = isActive
             ? '<button class="btn-manage" id="btn-manage-sub" aria-label="Manage subscription">Manage Subscription</button>'
             : '';
 
           card.innerHTML =
-            '<div class="tier-name">' + tier.name + '</div>' +
+            '<div class="tier-name">' + esc(tier.name) + '</div>' +
             '<div class="tier-price">' + priceLabel + intervalLabel + '</div>' +
-            (tier.description ? '<div class="tier-desc">' + tier.description + '</div>' : '') +
+            (tier.description ? '<div class="tier-desc">' + esc(tier.description) + '</div>' : '') +
             (benefits ? '<ul class="tier-benefits">' + benefits + '</ul>' : '') +
             '<button class="btn ' + (isActive ? 'btn-muted' : 'btn-accent') + '" data-tier-id="' + tier.id + '" ' + (isActive ? 'disabled' : '') + '>' +
             (isActive ? 'Current' : tier.price_cents === 0 ? 'Select Free' : 'Subscribe') +
@@ -968,7 +970,7 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
           var toggleHtml = '<label class="toggle-switch"><input type="checkbox" ' + toggleChecked + ' onchange="toggleTierActive(' + "'" + t.id + "'" + ')" role="switch" aria-checked="' + (t.is_active ? 'true' : 'false') + '" aria-label="Toggle active state for ' + esc(t.name) + '" /><span class="toggle-slider"></span></label>';
           var upDisabled = idx === 0 ? ' disabled' : '';
           var downDisabled = idx === tiers.length - 1 ? ' disabled' : '';
-          return '<div class="tier-row">' +
+          return '<div class="tier-row" role="listitem">' +
             '<div class="tier-info"><h3>' + esc(t.name) + ' ' + statusBadge + '</h3>' +
             '<div class="tier-meta">' + formatPrice(t.price_cents, t.currency) + '/' + (t.interval || 'month') +
             (t.benefits && t.benefits.length ? ' &middot; ' + t.benefits.length + ' benefits' : '') + '</div></div>' +
@@ -1317,7 +1319,7 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
           var stockStr = t.stock_count !== null && t.stock_count !== undefined ? t.stock_count + ' in stock' : 'Unlimited';
           var toggleChecked = t.is_active ? 'checked' : '';
           var toggleHtml = '<label class="toggle-switch"><input type="checkbox" ' + toggleChecked + ' onchange="toggleItemActive(' + "'" + t.id + "'" + ')" role="switch" aria-checked="' + (t.is_active ? 'true' : 'false') + '" aria-label="Toggle active state for ' + esc(t.name) + '" /><span class="toggle-slider"></span></label>';
-          return '<div class="item-row">' +
+          return '<div class="item-row" role="listitem">' +
             '<div class="item-info"><h3>' + esc(t.name) + ' ' + statusBadge + ' ' + typeBadge + '</h3>' +
             '<div class="item-meta">' + formatPrice(t.price_cents, t.currency) + ' &middot; ' + stockStr +
             (t.requires_shipping ? ' &middot; Ships' : '') + '</div></div>' +
