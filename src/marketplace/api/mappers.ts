@@ -16,7 +16,7 @@ import type {
 } from './types';
 
 export const LISTING_COLUMNS =
-  'id,name,slug,description,version,author_id,thumbnail_url,icon_url,category,tags,license,is_published,is_deprecated,install_count,rating_average,rating_count,created_at,updated_at';
+  'id,name,slug,description,version,author_id,thumbnail_url,icon_url,category,tags,license,is_published,is_deprecated,install_count,rating_average,rating_count,is_free,price_cents,currency,stripe_price_id,created_at,updated_at';
 
 export function rowToListing(row: Record<string, unknown>): MarketplaceWidgetListing {
   return {
@@ -36,6 +36,10 @@ export function rowToListing(row: Record<string, unknown>): MarketplaceWidgetLis
     installCount: row.install_count as number,
     ratingAverage: row.rating_average as number | null,
     ratingCount: row.rating_count as number,
+    isFree: (row.is_free as boolean) ?? true,
+    priceCents: (row.price_cents as number | null) ?? null,
+    currency: (row.currency as string) ?? 'usd',
+    stripePriceId: (row.stripe_price_id as string | null) ?? null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   };

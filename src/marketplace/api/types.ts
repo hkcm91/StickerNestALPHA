@@ -25,6 +25,14 @@ export interface MarketplaceWidgetListing {
   installCount: number;
   ratingAverage: number | null;
   ratingCount: number;
+  /** Whether the widget is free (true) or paid */
+  isFree: boolean;
+  /** Price in smallest currency unit (e.g. cents). null for free widgets. */
+  priceCents: number | null;
+  /** ISO 4217 currency code (e.g. 'usd') */
+  currency: string;
+  /** Stripe price ID for paid widgets */
+  stripePriceId: string | null;
   createdAt: string;
   updatedAt: string;
 }

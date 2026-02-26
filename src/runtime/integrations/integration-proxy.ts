@@ -9,6 +9,12 @@
  * @see .claude/rules/L3-runtime.md
  */
 
+/** Default timeout for handler calls (15 seconds) */
+const DEFAULT_TIMEOUT_MS = 15_000;
+
+/** Default TTL for cached query results (30 seconds) */
+const DEFAULT_CACHE_TTL_MS = 30_000;
+
 /**
  * Handler interface for a registered integration.
  * Each integration provides query (read) and mutate (write) methods.
@@ -16,6 +22,11 @@
 export interface IntegrationHandler {
   query(params: unknown): Promise<unknown>;
   mutate(params: unknown): Promise<unknown>;
+}
+
+interface CacheEntry {
+  value: unknown;
+  expiresAt: number;
 }
 
 /**
@@ -32,15 +43,111 @@ export interface IntegrationProxy {
   mutate(name: string, params: unknown): Promise<unknown>;
   /** Check if an integration is registered */
   has(name: string): boolean;
+  /** Invalidate cache for a given integration (or all) */
+  invalidateCache(name?: string): void;
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error(`Integration "${label}" timed out after ${ms}ms`)),
+      ms,
+    );
+    promise.then(
+      (v) => { clearTimeout(timer); resolve(v); },
+      (e) => { clearTimeout(timer); reject(e); },
+    );
+  });
+}
+
+/** Deterministic cache key — sorts object keys to avoid ordering mismatches. */
+function stableStringify(val: unknown): string {
+  if (val === null || val === undefined || typeof val !== 'object') {
+    return JSON.stringify(val);
+  }
+  if (val instanceof Date) {
+    return JSON.stringify(val.toISOString());
+  }
+  if (Array.isArray(val)) {
+    return '[' + val.map(stableStringify).join(',') + ']';
+  }
+  const keys = Object.keys(val as Record<string, unknown>).sort();
+  return '{' + keys.map(k => JSON.stringify(k) + ':' + stableStringify((val as Record<string, unknown>)[k])).join(',') + '}';
+}
+
+function cacheKey(name: string, params: unknown): string {
+  try {
+    return `${name}:${stableStringify(params)}`;
+  } catch {
+    return `${name}:${String(params)}`;
+  }
 }
 
 /**
- * Creates a new integration proxy instance.
+ * Strip internal `_nonce` metadata from handler results before returning to
+ * widgets. Handlers attach `_nonce` for opt-in replay protection, but widgets
+ * should receive clean data — they never read `_nonce` directly.
  *
+ * - `{data: [...], _nonce}` envelope → returns the inner `data` value
+ * - `{field1, field2, _nonce}` spread → returns object without `_nonce`
+ * - primitives / arrays / null → returned as-is
+ */
+function stripNonce(result: unknown): unknown {
+  if (result === null || result === undefined || typeof result !== 'object' || Array.isArray(result)) {
+    return result;
+  }
+  const obj = result as Record<string, unknown>;
+  if (!('_nonce' in obj)) return result;
+
+  // Pure envelope: only {data, _nonce} — unwrap to just the data value
+  const keys = Object.keys(obj);
+  if (keys.length === 2 && 'data' in obj) {
+    return obj.data;
+  }
+
+  // Object with _nonce spread into it — remove _nonce, keep everything else
+  const { _nonce: _, ...rest } = obj;
+  return rest;
+}
+
+/**
+ * Creates a new integration proxy instance with built-in timeout and TTL caching.
+ *
+ * @param options.timeoutMs - Timeout per handler call (default: 15000ms)
+ * @param options.cacheTtlMs - TTL for cached query results (default: 30000ms, 0 = disabled)
  * @returns An IntegrationProxy for registering and invoking integration handlers
  */
-export function createIntegrationProxy(): IntegrationProxy {
+export function createIntegrationProxy(options?: {
+  timeoutMs?: number;
+  cacheTtlMs?: number;
+}): IntegrationProxy {
+  const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const cacheTtlMs = options?.cacheTtlMs ?? DEFAULT_CACHE_TTL_MS;
   const handlers = new Map<string, IntegrationHandler>();
+  const queryCache = new Map<string, CacheEntry>();
+
+  function getFromCache(key: string): unknown | undefined {
+    const entry = queryCache.get(key);
+    if (!entry) return undefined;
+    if (Date.now() > entry.expiresAt) {
+      queryCache.delete(key);
+      return undefined;
+    }
+    return entry.value;
+  }
+
+  function setInCache(key: string, value: unknown) {
+    if (cacheTtlMs <= 0) return;
+    queryCache.set(key, { value, expiresAt: Date.now() + cacheTtlMs });
+  }
+
+  function invalidateByPrefix(prefix: string) {
+    queryCache.forEach((_value, key) => {
+      if (key.startsWith(prefix)) {
+        queryCache.delete(key);
+      }
+    });
+  }
 
   return {
     register(name: string, handler: IntegrationHandler) {
@@ -49,6 +156,7 @@ export function createIntegrationProxy(): IntegrationProxy {
 
     unregister(name: string) {
       handlers.delete(name);
+      invalidateByPrefix(name + ':');
     },
 
     async query(name: string, params: unknown): Promise<unknown> {
@@ -56,7 +164,14 @@ export function createIntegrationProxy(): IntegrationProxy {
       if (!handler) {
         throw new Error(`Integration "${name}" is not registered`);
       }
-      return handler.query(params);
+      const key = cacheKey(name, params);
+      const cached = getFromCache(key);
+      if (cached !== undefined) return cached;
+
+      const raw = await withTimeout(handler.query(params), timeoutMs, name);
+      const result = stripNonce(raw);
+      setInCache(key, result);
+      return result;
     },
 
     async mutate(name: string, params: unknown): Promise<unknown> {
@@ -64,11 +179,21 @@ export function createIntegrationProxy(): IntegrationProxy {
       if (!handler) {
         throw new Error(`Integration "${name}" is not registered`);
       }
-      return handler.mutate(params);
+      // Invalidate cache for this integration on any mutation
+      invalidateByPrefix(name + ':');
+      return withTimeout(handler.mutate(params), timeoutMs, name);
     },
 
     has(name: string): boolean {
       return handlers.has(name);
+    },
+
+    invalidateCache(name?: string) {
+      if (name) {
+        invalidateByPrefix(name + ':');
+      } else {
+        queryCache.clear();
+      }
     },
   };
 }

@@ -226,6 +226,10 @@ export interface Database {
           install_count: number;
           rating_average: number | null;
           rating_count: number;
+          price_cents: number | null;
+          currency: string;
+          stripe_price_id: string | null;
+          is_free: boolean;
           metadata: Json;
           created_at: string;
           updated_at: string;
@@ -249,6 +253,9 @@ export interface Database {
           install_count?: number;
           rating_average?: number | null;
           rating_count?: number;
+          price_cents?: number | null;
+          currency?: string;
+          stripe_price_id?: string | null;
           metadata?: Json;
           created_at?: string;
           updated_at?: string;
@@ -272,6 +279,9 @@ export interface Database {
           install_count?: number;
           rating_average?: number | null;
           rating_count?: number;
+          price_cents?: number | null;
+          currency?: string;
+          stripe_price_id?: string | null;
           metadata?: Json;
           created_at?: string;
           updated_at?: string;
