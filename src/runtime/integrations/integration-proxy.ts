@@ -65,6 +65,9 @@ function stableStringify(val: unknown): string {
   if (val === null || val === undefined || typeof val !== 'object') {
     return JSON.stringify(val);
   }
+  if (val instanceof Date) {
+    return JSON.stringify(val.toISOString());
+  }
   if (Array.isArray(val)) {
     return '[' + val.map(stableStringify).join(',') + ']';
   }

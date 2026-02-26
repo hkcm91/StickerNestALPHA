@@ -375,7 +375,12 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
           StickerNest.integration('checkout').query({ action: 'tiers' }),
           StickerNest.integration('checkout').query({ action: 'my_subscription' }),
         ]).then(function(results) {
-          renderTiers(results[0] || [], results[1]);
+          // Unwrap nonce envelope: query results may be { data: [...], _nonce }
+          var tiersResult = results[0];
+          var tiersArray = Array.isArray(tiersResult) ? tiersResult : (tiersResult && tiersResult.data ? tiersResult.data : []);
+          var subResult = results[1];
+          var mySub = (subResult && subResult.data !== undefined) ? subResult.data : subResult;
+          renderTiers(tiersArray, mySub);
         }).catch(function() {
           loadingEl.textContent = 'Failed to load tiers.';
         });
@@ -1732,7 +1737,9 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
           // Handle both paginated { data } and raw array responses
           var rawOrders = results[0];
           orders = Array.isArray(rawOrders) ? rawOrders : (rawOrders && rawOrders.data ? rawOrders.data : []);
-          var sub = results[1];
+          // Unwrap nonce envelope: my_subscription may be { data: subObj, _nonce }
+          var subRaw = results[1];
+          var sub = (subRaw && subRaw.data !== undefined) ? subRaw.data : subRaw;
           subscriptions = sub ? (Array.isArray(sub) ? sub : [sub]) : [];
           if (currentTab === 'purchases') { filterBar.style.display = 'flex'; }
           render();
