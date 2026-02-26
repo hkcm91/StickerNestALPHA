@@ -12,7 +12,7 @@
  * @layer L6
  */
 
-import type { CanvasEntity, GroupEntity } from '@sn/types';
+import type { CanvasEntity, GroupEntity, DockerEntity } from '@sn/types';
 import { CanvasEvents } from '@sn/types';
 
 import type { SceneGraph } from '../../../canvas/core';
@@ -41,11 +41,10 @@ interface GroupPayload {
 // Helpers
 // ---------------------------------------------------------------------------
 
-const PADDING = 8;
+const PADDING = 0;
 
 /**
- * Compute the bounding box encompassing all given entities,
- * with optional padding.
+ * Compute the bounding box encompassing all given entities.
  */
 function computeBoundingBox(entities: CanvasEntity[]): {
   x: number;
@@ -53,24 +52,52 @@ function computeBoundingBox(entities: CanvasEntity[]): {
   width: number;
   height: number;
 } {
+  if (entities.length === 0) return { x: 0, y: 0, width: 0, height: 0 };
+  
   let minX = Infinity;
   let minY = Infinity;
   let maxX = -Infinity;
   let maxY = -Infinity;
 
   for (const entity of entities) {
-    const { position, size } = entity.transform;
-    minX = Math.min(minX, position.x);
-    minY = Math.min(minY, position.y);
-    maxX = Math.max(maxX, position.x + size.width);
-    maxY = Math.max(maxY, position.y + size.height);
+    const { position, size, rotation } = entity.transform;
+    const { width, height } = size;
+
+    let eMinX, eMinY, eMaxX, eMaxY;
+
+    if (!rotation) {
+      eMinX = position.x;
+      eMinY = position.y;
+      eMaxX = position.x + width;
+      eMaxY = position.y + height;
+    } else {
+      const rad = (rotation * Math.PI) / 180;
+      const cos = Math.abs(Math.cos(rad));
+      const sin = Math.abs(Math.sin(rad));
+      
+      const newWidth = width * cos + height * sin;
+      const newHeight = width * sin + height * cos;
+      
+      const cx = position.x + width / 2;
+      const cy = position.y + height / 2;
+      
+      eMinX = cx - newWidth / 2;
+      eMinY = cy - newHeight / 2;
+      eMaxX = cx + newWidth / 2;
+      eMaxY = cy + newHeight / 2;
+    }
+
+    minX = Math.min(minX, eMinX);
+    minY = Math.min(minY, eMinY);
+    maxX = Math.max(maxX, eMaxX);
+    maxY = Math.max(maxY, eMaxY);
   }
 
   return {
-    x: minX - PADDING,
-    y: minY - PADDING,
-    width: maxX - minX + PADDING * 2,
-    height: maxY - minY + PADDING * 2,
+    x: minX,
+    y: minY,
+    width: maxX - minX,
+    height: maxY - minY,
   };
 }
 
@@ -79,11 +106,11 @@ function computeBoundingBox(entities: CanvasEntity[]): {
  * so the group sits on top.
  */
 function maxZIndex(entities: CanvasEntity[]): number {
-  let max = 0;
+  let max = -Infinity;
   for (const entity of entities) {
     if (entity.zIndex > max) max = entity.zIndex;
   }
-  return max;
+  return max === -Infinity ? 0 : max;
 }
 
 // ---------------------------------------------------------------------------
@@ -97,7 +124,7 @@ function handleGroup(
   const { entityIds } = payload;
   if (entityIds.length < 2) return;
 
-  // Gather entities, skip any that don't exist or are already groups
+  // Gather entities, skip any that don't exist
   const entities: CanvasEntity[] = [];
   for (const id of entityIds) {
     const entity = sceneGraph.getEntity(id);
@@ -105,6 +132,14 @@ function handleGroup(
   }
 
   if (entities.length < 2) return;
+
+  // Find a common parent if all selected entities share one.
+  // Otherwise, if they have different parents, Adobe/Canva usually places the 
+  // new group at the root or current active context level. 
+  // For simplicity, we use the parent of the first selected entity if it's common.
+  const commonParentId = entities.every(e => e.parentId === entities[0].parentId)
+    ? entities[0].parentId
+    : undefined;
 
   // Compute group bounding box
   const bounds = computeBoundingBox(entities);
@@ -124,13 +159,17 @@ function handleGroup(
     },
     zIndex: maxZIndex(entities) + 1,
     visible: true,
+    canvasVisibility: 'both',
     locked: false,
+    flipH: false,
+    flipV: false,
     opacity: 1,
     borderRadius: 0,
     name: `Group (${entities.length})`,
     createdAt: now,
     updatedAt: now,
     createdBy: entities[0].createdBy,
+    parentId: commonParentId,
     children: entities.map((e) => e.id),
   };
 
@@ -143,6 +182,20 @@ function handleGroup(
       id: child.id,
       updates: { parentId: groupId },
     });
+  }
+
+  // If there was a common parent, add the new group as its child
+  if (commonParentId) {
+    const parent = sceneGraph.getEntity(commonParentId);
+    if (parent && 'children' in parent) {
+      const container = parent as GroupEntity | DockerEntity;
+      bus.emit(CanvasEvents.ENTITY_UPDATED, {
+        id: commonParentId,
+        updates: {
+          children: [...container.children.filter(cid => !entityIds.includes(cid)), groupId]
+        }
+      });
+    }
   }
 
   // Emit the grouped event so other systems can react
@@ -168,13 +221,28 @@ function handleUngroup(
 
     const groupEntity = entity as GroupEntity;
     const childIds = groupEntity.children;
+    const parentId = groupEntity.parentId;
 
-    // Clear parentId on each child before destroying the group
+    // Move children to the group's parent (instead of setting to undefined)
     for (const childId of childIds) {
       bus.emit(CanvasEvents.ENTITY_UPDATED, {
         id: childId,
-        updates: { parentId: undefined },
+        updates: { parentId: parentId },
       });
+    }
+
+    // If there was a parent, we need to update its children list to include the newly orphaned children
+    if (parentId) {
+      const parent = sceneGraph.getEntity(parentId);
+      if (parent && 'children' in parent) {
+        const container = parent as GroupEntity | DockerEntity;
+        bus.emit(CanvasEvents.ENTITY_UPDATED, {
+          id: parentId,
+          updates: {
+            children: [...container.children.filter(cid => cid !== groupEntity.id), ...childIds]
+          }
+        });
+      }
     }
 
     // Delete the group entity

@@ -101,9 +101,41 @@ describe('SelectTool', () => {
     tool.onPointerMove(makeEvent(100, 100));
     tool.onPointerUp(makeEvent(100, 100));
 
+    expect(tool.getSelection().size).toBe(1);
+    expect(
+      tool.getSelection().has('e1') || tool.getSelection().has('e2')
+    ).toBe(true);
+    expect(tool.getSelection().has('e3')).toBe(false);
+  });
+
+  it('shift-marquee adds multiple entities in region', () => {
+    const scene = createSceneGraph();
+    scene.addEntity(makeEntity('e1', 10, 10, 30, 30, 0));
+    scene.addEntity(makeEntity('e2', 50, 50, 30, 30, 1));
+    const tool = createSelectTool(scene);
+
+    tool.onPointerDown(makeEvent(0, 0));
+    tool.onPointerMove(makeEvent(100, 100, null, true));
+    tool.onPointerUp(makeEvent(100, 100, null, true));
+
     expect(tool.getSelection().has('e1')).toBe(true);
     expect(tool.getSelection().has('e2')).toBe(true);
-    expect(tool.getSelection().has('e3')).toBe(false);
+  });
+
+  it('marquee on empty space clears selection', () => {
+    const scene = createSceneGraph();
+    scene.addEntity(makeEntity('e1', 0, 0, 100, 100, 0));
+    const tool = createSelectTool(scene);
+
+    tool.onPointerDown(makeEvent(50, 50, 'e1'));
+    tool.onPointerUp(makeEvent(50, 50, 'e1'));
+    expect(tool.getSelection().has('e1')).toBe(true);
+
+    tool.onPointerDown(makeEvent(500, 500));
+    tool.onPointerMove(makeEvent(520, 520));
+    tool.onPointerUp(makeEvent(520, 520));
+
+    expect(tool.getSelection().size).toBe(0);
   });
 
   it('delete key emits ENTITY_DELETED for selected', () => {

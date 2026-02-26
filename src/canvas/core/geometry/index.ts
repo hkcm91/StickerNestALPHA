@@ -16,3 +16,5 @@ export {
   enforceSmooth,
   enforceSymmetric,
 } from './bezier';
+
+export * from './boolean';

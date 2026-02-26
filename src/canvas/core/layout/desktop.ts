@@ -25,6 +25,8 @@ export const DEFAULT_DESKTOP_CONFIG = {
   dockingZoneSize: 50,
   edgeSnapEnabled: true,
   cascadeEnabled: true,
+  iconGridWidth: 100,
+  iconGridHeight: 120,
 };
 
 /**
@@ -40,6 +42,8 @@ export interface DesktopConfig {
   dockingZoneSize: number;
   edgeSnapEnabled: boolean;
   cascadeEnabled: boolean;
+  iconGridWidth: number;
+  iconGridHeight: number;
 }
 
 /**
@@ -138,6 +142,26 @@ export function createDesktopLayout(config: Partial<DesktopConfig> = {}): Layout
       const activeSnaps: SnapPoint[] = [];
       const currentWidth = ctx.currentBounds.max.x - ctx.currentBounds.min.x;
       const currentHeight = ctx.currentBounds.max.y - ctx.currentBounds.min.y;
+
+      // Icon/Folder grid snapping
+      if (ctx.entityType === 'folder' || ctx.entityType === 'sticker') {
+        const gridX = Math.round(x / mergedConfig.iconGridWidth) * mergedConfig.iconGridWidth;
+        const gridY = Math.round(y / mergedConfig.iconGridHeight) * mergedConfig.iconGridHeight;
+        
+        if (Math.abs(gridX - x) < mergedConfig.snapThreshold) {
+          x = gridX;
+          wasConstrained = true;
+          activeSnaps.push({ value: x, axis: 'x', type: 'grid' });
+        }
+        if (Math.abs(gridY - y) < mergedConfig.snapThreshold) {
+          y = gridY;
+          wasConstrained = true;
+          activeSnaps.push({ value: y, axis: 'y', type: 'grid' });
+        }
+        
+        // Return early for icons - they don't edge snap to windows
+        return { value: { x, y }, wasConstrained, activeSnaps };
+      }
 
       // Edge snapping to other entities
       if (mergedConfig.edgeSnapEnabled && ctx.otherEntities) {

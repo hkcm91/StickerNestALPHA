@@ -18,8 +18,15 @@ export { useCanvasInput } from './useCanvasInput';
 export { useSelection, getSelectionStore } from './useSelection';
 export type { SelectionStore } from './useSelection';
 
-export { usePersistence } from './usePersistence';
-export type { SaveStatus, PersistenceState } from './usePersistence';
+export {
+  usePersistence,
+  createLocalCanvas,
+  ensureLocalCanvas,
+  getLocalCanvasBySlug,
+  listLocalCanvases,
+  slugifyCanvasName,
+} from './usePersistence';
+export type { SaveStatus, PersistenceState, LocalCanvasSummary } from './usePersistence';
 
 export { useCanvasShortcuts } from './useCanvasShortcuts';
 export type { CanvasShortcutDeps } from './useCanvasShortcuts';

@@ -66,9 +66,9 @@ function createSelectionStore() {
   };
 
   // Sync with bus events from tool layer
-  bus.subscribe(CanvasEvents.ENTITY_SELECTED, (event: { payload?: { id?: string } }) => {
-    if (event.payload?.id) {
-      store.select(new Set([event.payload.id]));
+  bus.subscribe(CanvasEvents.ENTITY_SELECTED, (event: { payload?: { entities?: Array<{ id: string }> } }) => {
+    if (event.payload?.entities) {
+      store.select(new Set(event.payload.entities.map((e) => e.id)));
     }
   });
 

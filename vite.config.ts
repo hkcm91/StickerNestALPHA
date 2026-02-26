@@ -6,8 +6,13 @@ export default defineConfig({
   plugins: [react()],
   base: process.env.GITHUB_ACTIONS ? '/StickerNest5.0/' : '/',
   resolve: {
+    dedupe: ['three', 'react', 'react-dom'],
     alias: {
       '@sn/types': path.resolve(__dirname, './src/kernel/schemas/index.ts'),
     },
+  },
+  server: {
+    port: 5173,
+    strictPort: false,
   },
 });

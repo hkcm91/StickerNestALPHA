@@ -105,7 +105,7 @@ export function createBackgroundRenderer(
   }
 
   /**
-   * Render gradient background
+   * Render gradient background (linear or radial)
    */
   function renderGradient(
     ctx: CanvasRenderingContext2D,
@@ -113,19 +113,30 @@ export function createBackgroundRenderer(
     viewport: ViewportState
   ): void {
     const { viewportWidth, viewportHeight } = viewport;
-    const angleRad = (spec.angle * Math.PI) / 180;
-
-    // Calculate gradient line based on angle
     const centerX = viewportWidth / 2;
     const centerY = viewportHeight / 2;
-    const length = Math.sqrt(viewportWidth ** 2 + viewportHeight ** 2) / 2;
 
-    const x0 = centerX - Math.cos(angleRad) * length;
-    const y0 = centerY - Math.sin(angleRad) * length;
-    const x1 = centerX + Math.cos(angleRad) * length;
-    const y1 = centerY + Math.sin(angleRad) * length;
+    let gradient: CanvasGradient;
 
-    const gradient = ctx.createLinearGradient(x0, y0, x1, y1);
+    // Determine gradient type (default to linear for backwards compatibility)
+    const gradientType = spec.gradientType ?? 'linear';
+
+    if (gradientType === 'radial') {
+      // Radial gradient from center
+      const radius = Math.sqrt(viewportWidth ** 2 + viewportHeight ** 2) / 2;
+      gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
+    } else {
+      // Linear gradient based on angle
+      const angleRad = (spec.angle * Math.PI) / 180;
+      const length = Math.sqrt(viewportWidth ** 2 + viewportHeight ** 2) / 2;
+
+      const x0 = centerX - Math.cos(angleRad) * length;
+      const y0 = centerY - Math.sin(angleRad) * length;
+      const x1 = centerX + Math.cos(angleRad) * length;
+      const y1 = centerY + Math.sin(angleRad) * length;
+
+      gradient = ctx.createLinearGradient(x0, y0, x1, y1);
+    }
 
     for (const stop of spec.stops) {
       gradient.addColorStop(stop.offset, stop.color);
@@ -392,6 +403,10 @@ export function backgroundSpecToCSS(spec: BackgroundSpec): string {
       const stops = spec.stops
         .map((s) => `${s.color} ${s.offset * 100}%`)
         .join(', ');
+      const gradientType = spec.gradientType ?? 'linear';
+      if (gradientType === 'radial') {
+        return `radial-gradient(circle at center, ${stops})`;
+      }
       return `linear-gradient(${spec.angle}deg, ${stops})`;
     }
 

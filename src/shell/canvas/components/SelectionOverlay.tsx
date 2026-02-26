@@ -13,17 +13,26 @@
  * @layer L6
  */
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState } from "react";
 
-import type { CanvasEntity, BoundingBox2D, CropRect, Point2D, Size2D } from '@sn/types';
-import { CanvasEvents } from '@sn/types';
+import type {
+  CanvasEntity,
+  BoundingBox2D,
+  CropRect,
+  Point2D,
+  Size2D,
+} from "@sn/types";
+import { CanvasEvents } from "@sn/types";
 
-import type { SceneGraph } from '../../../canvas/core';
-import { bus } from '../../../kernel/bus';
-import { CropEvents } from '../handlers';
-import { useCropMode } from '../hooks';
-import type { HandlePosition } from '../utils/resize';
-import { computeResize, getResizeHandles } from '../utils/resize';
+import type { SceneGraph } from "../../../canvas/core";
+import { bus } from "../../../kernel/bus";
+import { CropEvents } from "../handlers";
+import { useCropMode } from "../hooks";
+import { getEntityBoundingBox } from "../renderers/entity-style";
+import type { HandlePosition } from "../utils/resize";
+import { computeResize, getResizeHandles, shouldLockAspectRatio } from "../utils/resize";
+
+import { EntityFloatingToolbar } from "./EntityFloatingToolbar";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -40,7 +49,7 @@ const CROP_HANDLE_THICKNESS = 6;
 /** Minimum gap between opposite crop edges (prevents inverting). */
 const MIN_CROP_GAP = 0.05;
 
-type CropEdge = 'top' | 'right' | 'bottom' | 'left';
+type CropEdge = "top" | "right" | "bottom" | "left";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -52,7 +61,7 @@ export interface SelectionOverlayProps {
   /** Scene graph reference for entity lookups */
   sceneGraph: SceneGraph | null;
   /** Interaction mode — handles only render in edit mode */
-  interactionMode: 'edit' | 'preview';
+  interactionMode: "edit" | "preview";
 }
 
 interface DragState {
@@ -60,7 +69,7 @@ interface DragState {
   entityId: string;
   startPointer: Point2D;
   originalBounds: BoundingBox2D;
-  originalTransform: CanvasEntity['transform'];
+  originalTransform: CanvasEntity["transform"];
 }
 
 interface CropDragState {
@@ -91,22 +100,22 @@ function computeCropFromDrag(
   const crop = { ...originalCrop };
 
   switch (edge) {
-    case 'top': {
+    case "top": {
       const delta = dy / entitySize.height;
       crop.top = clampCropValue(originalCrop.top + delta, crop.bottom);
       break;
     }
-    case 'bottom': {
+    case "bottom": {
       const delta = -dy / entitySize.height;
       crop.bottom = clampCropValue(originalCrop.bottom + delta, crop.top);
       break;
     }
-    case 'left': {
+    case "left": {
       const delta = dx / entitySize.width;
       crop.left = clampCropValue(originalCrop.left + delta, crop.right);
       break;
     }
-    case 'right': {
+    case "right": {
       const delta = -dx / entitySize.width;
       crop.right = clampCropValue(originalCrop.right + delta, crop.left);
       break;
@@ -129,21 +138,21 @@ function getHandleOffset(
   height: number,
 ): Point2D {
   switch (handle) {
-    case 'top-left':
+    case "top-left":
       return { x: -HALF_HANDLE, y: -HALF_HANDLE };
-    case 'top':
+    case "top":
       return { x: width / 2 - HALF_HANDLE, y: -HALF_HANDLE };
-    case 'top-right':
+    case "top-right":
       return { x: width - HALF_HANDLE, y: -HALF_HANDLE };
-    case 'right':
+    case "right":
       return { x: width - HALF_HANDLE, y: height / 2 - HALF_HANDLE };
-    case 'bottom-right':
+    case "bottom-right":
       return { x: width - HALF_HANDLE, y: height - HALF_HANDLE };
-    case 'bottom':
+    case "bottom":
       return { x: width / 2 - HALF_HANDLE, y: height - HALF_HANDLE };
-    case 'bottom-left':
+    case "bottom-left":
       return { x: -HALF_HANDLE, y: height - HALF_HANDLE };
-    case 'left':
+    case "left":
       return { x: -HALF_HANDLE, y: height / 2 - HALF_HANDLE };
   }
 }
@@ -170,12 +179,14 @@ export const SelectionOverlay: React.FC<SelectionOverlayProps> = ({
 
   // Crop mode state
   const cropModeIds = useCropMode();
-  const [_cropDragState, setCropDragState] = useState<CropDragState | null>(null);
+  const [_cropDragState, setCropDragState] = useState<CropDragState | null>(
+    null,
+  );
   const [liveCrop, setLiveCrop] = useState<CropRect | null>(null);
   const cropDragRef = useRef<CropDragState | null>(null);
 
   // Only render in edit mode
-  if (interactionMode !== 'edit') return null;
+  if (interactionMode !== "edit") return null;
   if (selectedIds.size === 0) return null;
   if (!sceneGraph) return null;
 
@@ -191,24 +202,26 @@ export const SelectionOverlay: React.FC<SelectionOverlayProps> = ({
   if (selectedEntities.length === 0) return null;
 
   // For resize: only enable handles when exactly 1 entity is selected
-  const canResize = selectedEntities.length === 1 && !selectedEntities[0].locked;
+  const canResize =
+    selectedEntities.length === 1 && !selectedEntities[0].locked;
 
   // Determine if the single selected entity is in crop mode
   const isCropMode =
     selectedEntities.length === 1 && cropModeIds.has(selectedEntities[0].id);
 
   // Compute bounding box encompassing all selected entities
+  // Uses center-based positioning — entity positions represent their center
   let minX = Infinity;
   let minY = Infinity;
   let maxX = -Infinity;
   let maxY = -Infinity;
 
   for (const entity of selectedEntities) {
-    const { position, size } = entity.transform;
-    minX = Math.min(minX, position.x);
-    minY = Math.min(minY, position.y);
-    maxX = Math.max(maxX, position.x + size.width);
-    maxY = Math.max(maxY, position.y + size.height);
+    const bounds = getEntityBoundingBox(entity);
+    minX = Math.min(minX, bounds.minX);
+    minY = Math.min(minY, bounds.minY);
+    maxX = Math.max(maxX, bounds.maxX);
+    maxY = Math.max(maxY, bounds.maxY);
   }
 
   // If we're actively resizing, use the live preview dimensions
@@ -221,24 +234,22 @@ export const SelectionOverlay: React.FC<SelectionOverlayProps> = ({
 
   // --- Pointer handlers for resize ---
 
-  const handlePointerDown = (
-    e: React.PointerEvent,
-    handle: HandlePosition,
-  ) => {
+  const handlePointerDown = (e: React.PointerEvent, handle: HandlePosition) => {
     if (!canResize) return;
     e.preventDefault();
     e.stopPropagation();
 
     const entity = selectedEntities[0];
-    const { position, size } = entity.transform;
+    // Use center-based bounds calculation
+    const bounds = getEntityBoundingBox(entity);
 
     const state: DragState = {
       handle,
       entityId: entity.id,
       startPointer: { x: e.clientX, y: e.clientY },
       originalBounds: {
-        min: { x: position.x, y: position.y },
-        max: { x: position.x + size.width, y: position.y + size.height },
+        min: { x: bounds.minX, y: bounds.minY },
+        max: { x: bounds.maxX, y: bounds.maxY },
       },
       originalTransform: { ...entity.transform },
     };
@@ -262,8 +273,12 @@ export const SelectionOverlay: React.FC<SelectionOverlayProps> = ({
       y: e.clientY - state.startPointer.y,
     };
 
+    const entity = selectedEntities[0];
+    const isDefaultLocked = shouldLockAspectRatio(entity);
+    const aspectLock = isDefaultLocked ? !e.shiftKey : e.shiftKey;
+
     const result = computeResize(state.handle, delta, state.originalBounds, {
-      aspectLock: e.shiftKey,
+      aspectLock,
       centerResize: e.altKey,
     });
 
@@ -294,8 +309,12 @@ export const SelectionOverlay: React.FC<SelectionOverlayProps> = ({
       y: e.clientY - state.startPointer.y,
     };
 
+    const entity = selectedEntities[0];
+    const isDefaultLocked = shouldLockAspectRatio(entity);
+    const aspectLock = isDefaultLocked ? !e.shiftKey : e.shiftKey;
+
     const result = computeResize(state.handle, delta, state.originalBounds, {
-      aspectLock: e.shiftKey,
+      aspectLock,
       centerResize: e.altKey,
     });
 
@@ -304,13 +323,20 @@ export const SelectionOverlay: React.FC<SelectionOverlayProps> = ({
       height: Math.max(MIN_ENTITY_SIZE, result.size.height),
     };
 
+    // Convert from top-left position to center position for storage
+    // (computeResize returns top-left; we store center)
+    const centerPosition: Point2D = {
+      x: result.position.x + clampedSize.width / 2,
+      y: result.position.y + clampedSize.height / 2,
+    };
+
     // Emit resize event with full transform wrapped in updates
     bus.emit(CanvasEvents.ENTITY_UPDATED, {
       id: state.entityId,
       updates: {
         transform: {
           ...state.originalTransform,
-          position: result.position,
+          position: centerPosition,
           size: clampedSize,
         },
       },
@@ -324,10 +350,7 @@ export const SelectionOverlay: React.FC<SelectionOverlayProps> = ({
 
   // --- Pointer handlers for crop ---
 
-  const handleCropPointerDown = (
-    e: React.PointerEvent,
-    edge: CropEdge,
-  ) => {
+  const handleCropPointerDown = (e: React.PointerEvent, edge: CropEdge) => {
     if (!isCropMode) return;
     e.preventDefault();
     e.stopPropagation();
@@ -389,24 +412,34 @@ export const SelectionOverlay: React.FC<SelectionOverlayProps> = ({
 
   // Current crop values for crop mode overlay
   const activeCrop: CropRect = isCropMode
-    ? liveCrop ??
-      selectedEntities[0].cropRect ?? { top: 0, right: 0, bottom: 0, left: 0 }
+    ? (liveCrop ??
+      selectedEntities[0].cropRect ?? { top: 0, right: 0, bottom: 0, left: 0 })
     : { top: 0, right: 0, bottom: 0, left: 0 };
 
   return (
     <>
+      {selectedEntities.length === 1 && (
+        <EntityFloatingToolbar
+          entity={selectedEntities[0]}
+          position={{
+            x: displayPosition.x + displaySize.width / 2,
+            y: displayPosition.y,
+          }}
+        />
+      )}
+
       {/* Selection bounding box outline */}
       <div
         data-testid="selection-overlay"
         style={{
-          position: 'absolute',
+          position: "absolute",
           left: displayPosition.x,
           top: displayPosition.y,
           width: displaySize.width,
           height: displaySize.height,
-          border: `${SELECTION_BORDER_WIDTH}px solid ${isCropMode ? '#e17055' : '#4a90d9'}`,
-          pointerEvents: 'none',
-          boxSizing: 'border-box',
+          border: `${SELECTION_BORDER_WIDTH}px solid ${isCropMode ? "#e17055" : "#4a90d9"}`,
+          pointerEvents: "none",
+          boxSizing: "border-box",
         }}
       />
 
@@ -419,13 +452,13 @@ export const SelectionOverlay: React.FC<SelectionOverlayProps> = ({
             <div
               data-testid="crop-dim-top"
               style={{
-                position: 'absolute',
+                position: "absolute",
                 left: displayPosition.x,
                 top: displayPosition.y,
                 width: displaySize.width,
                 height: displaySize.height * activeCrop.top,
-                background: 'rgba(0, 0, 0, 0.4)',
-                pointerEvents: 'none',
+                background: "rgba(0, 0, 0, 0.4)",
+                pointerEvents: "none",
               }}
             />
           )}
@@ -434,15 +467,15 @@ export const SelectionOverlay: React.FC<SelectionOverlayProps> = ({
             <div
               data-testid="crop-dim-bottom"
               style={{
-                position: 'absolute',
+                position: "absolute",
                 left: displayPosition.x,
                 top:
                   displayPosition.y +
                   displaySize.height * (1 - activeCrop.bottom),
                 width: displaySize.width,
                 height: displaySize.height * activeCrop.bottom,
-                background: 'rgba(0, 0, 0, 0.4)',
-                pointerEvents: 'none',
+                background: "rgba(0, 0, 0, 0.4)",
+                pointerEvents: "none",
               }}
             />
           )}
@@ -451,16 +484,14 @@ export const SelectionOverlay: React.FC<SelectionOverlayProps> = ({
             <div
               data-testid="crop-dim-left"
               style={{
-                position: 'absolute',
+                position: "absolute",
                 left: displayPosition.x,
-                top:
-                  displayPosition.y + displaySize.height * activeCrop.top,
+                top: displayPosition.y + displaySize.height * activeCrop.top,
                 width: displaySize.width * activeCrop.left,
                 height:
-                  displaySize.height *
-                  (1 - activeCrop.top - activeCrop.bottom),
-                background: 'rgba(0, 0, 0, 0.4)',
-                pointerEvents: 'none',
+                  displaySize.height * (1 - activeCrop.top - activeCrop.bottom),
+                background: "rgba(0, 0, 0, 0.4)",
+                pointerEvents: "none",
               }}
             />
           )}
@@ -469,18 +500,16 @@ export const SelectionOverlay: React.FC<SelectionOverlayProps> = ({
             <div
               data-testid="crop-dim-right"
               style={{
-                position: 'absolute',
+                position: "absolute",
                 left:
                   displayPosition.x +
                   displaySize.width * (1 - activeCrop.right),
-                top:
-                  displayPosition.y + displaySize.height * activeCrop.top,
+                top: displayPosition.y + displaySize.height * activeCrop.top,
                 width: displaySize.width * activeCrop.right,
                 height:
-                  displaySize.height *
-                  (1 - activeCrop.top - activeCrop.bottom),
-                background: 'rgba(0, 0, 0, 0.4)',
-                pointerEvents: 'none',
+                  displaySize.height * (1 - activeCrop.top - activeCrop.bottom),
+                background: "rgba(0, 0, 0, 0.4)",
+                pointerEvents: "none",
               }}
             />
           )}
@@ -489,23 +518,22 @@ export const SelectionOverlay: React.FC<SelectionOverlayProps> = ({
           {/* Top handle */}
           <div
             data-testid="crop-handle-top"
-            onPointerDown={(e) => handleCropPointerDown(e, 'top')}
+            onPointerDown={(e) => handleCropPointerDown(e, "top")}
             onPointerMove={handleCropPointerMove}
             onPointerUp={handleCropPointerUp}
             style={{
-              position: 'absolute',
+              position: "absolute",
               left: displayPosition.x + displaySize.width * activeCrop.left,
               top:
                 displayPosition.y +
                 displaySize.height * activeCrop.top -
                 CROP_HANDLE_THICKNESS / 2,
               width:
-                displaySize.width *
-                (1 - activeCrop.left - activeCrop.right),
+                displaySize.width * (1 - activeCrop.left - activeCrop.right),
               height: CROP_HANDLE_THICKNESS,
-              background: '#e17055',
-              cursor: 'ns-resize',
-              pointerEvents: 'auto',
+              background: "#e17055",
+              cursor: "ns-resize",
+              pointerEvents: "auto",
               borderRadius: 2,
               opacity: 0.9,
               zIndex: 2,
@@ -514,23 +542,22 @@ export const SelectionOverlay: React.FC<SelectionOverlayProps> = ({
           {/* Bottom handle */}
           <div
             data-testid="crop-handle-bottom"
-            onPointerDown={(e) => handleCropPointerDown(e, 'bottom')}
+            onPointerDown={(e) => handleCropPointerDown(e, "bottom")}
             onPointerMove={handleCropPointerMove}
             onPointerUp={handleCropPointerUp}
             style={{
-              position: 'absolute',
+              position: "absolute",
               left: displayPosition.x + displaySize.width * activeCrop.left,
               top:
                 displayPosition.y +
                 displaySize.height * (1 - activeCrop.bottom) -
                 CROP_HANDLE_THICKNESS / 2,
               width:
-                displaySize.width *
-                (1 - activeCrop.left - activeCrop.right),
+                displaySize.width * (1 - activeCrop.left - activeCrop.right),
               height: CROP_HANDLE_THICKNESS,
-              background: '#e17055',
-              cursor: 'ns-resize',
-              pointerEvents: 'auto',
+              background: "#e17055",
+              cursor: "ns-resize",
+              pointerEvents: "auto",
               borderRadius: 2,
               opacity: 0.9,
               zIndex: 2,
@@ -539,11 +566,11 @@ export const SelectionOverlay: React.FC<SelectionOverlayProps> = ({
           {/* Left handle */}
           <div
             data-testid="crop-handle-left"
-            onPointerDown={(e) => handleCropPointerDown(e, 'left')}
+            onPointerDown={(e) => handleCropPointerDown(e, "left")}
             onPointerMove={handleCropPointerMove}
             onPointerUp={handleCropPointerUp}
             style={{
-              position: 'absolute',
+              position: "absolute",
               left:
                 displayPosition.x +
                 displaySize.width * activeCrop.left -
@@ -551,11 +578,10 @@ export const SelectionOverlay: React.FC<SelectionOverlayProps> = ({
               top: displayPosition.y + displaySize.height * activeCrop.top,
               width: CROP_HANDLE_THICKNESS,
               height:
-                displaySize.height *
-                (1 - activeCrop.top - activeCrop.bottom),
-              background: '#e17055',
-              cursor: 'ew-resize',
-              pointerEvents: 'auto',
+                displaySize.height * (1 - activeCrop.top - activeCrop.bottom),
+              background: "#e17055",
+              cursor: "ew-resize",
+              pointerEvents: "auto",
               borderRadius: 2,
               opacity: 0.9,
               zIndex: 2,
@@ -564,11 +590,11 @@ export const SelectionOverlay: React.FC<SelectionOverlayProps> = ({
           {/* Right handle */}
           <div
             data-testid="crop-handle-right"
-            onPointerDown={(e) => handleCropPointerDown(e, 'right')}
+            onPointerDown={(e) => handleCropPointerDown(e, "right")}
             onPointerMove={handleCropPointerMove}
             onPointerUp={handleCropPointerUp}
             style={{
-              position: 'absolute',
+              position: "absolute",
               left:
                 displayPosition.x +
                 displaySize.width * (1 - activeCrop.right) -
@@ -576,11 +602,10 @@ export const SelectionOverlay: React.FC<SelectionOverlayProps> = ({
               top: displayPosition.y + displaySize.height * activeCrop.top,
               width: CROP_HANDLE_THICKNESS,
               height:
-                displaySize.height *
-                (1 - activeCrop.top - activeCrop.bottom),
-              background: '#e17055',
-              cursor: 'ew-resize',
-              pointerEvents: 'auto',
+                displaySize.height * (1 - activeCrop.top - activeCrop.bottom),
+              background: "#e17055",
+              cursor: "ew-resize",
+              pointerEvents: "auto",
               borderRadius: 2,
               opacity: 0.9,
               zIndex: 2,
@@ -607,17 +632,17 @@ export const SelectionOverlay: React.FC<SelectionOverlayProps> = ({
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
               style={{
-                position: 'absolute',
+                position: "absolute",
                 left: displayPosition.x + offset.x,
                 top: displayPosition.y + offset.y,
                 width: HANDLE_SIZE,
                 height: HANDLE_SIZE,
-                background: '#ffffff',
-                border: '1px solid #4a90d9',
+                background: "#ffffff",
+                border: "1px solid #4a90d9",
                 borderRadius: 1,
                 cursor: h.cursor,
-                pointerEvents: 'auto',
-                boxSizing: 'border-box',
+                pointerEvents: "auto",
+                boxSizing: "border-box",
                 zIndex: 1,
               }}
             />

@@ -215,7 +215,7 @@ module.exports = {
             allow: ['kernel', 'social', 'runtime', 'canvas-core', 'marketplace'],
           },
 
-          // L6: Shell — may import from L0, L1, L3, L4A-1, L4B, L5
+          // L6: Shell — may import from L0, L1, L3, L4A (all), L4B, L5
           {
             from: 'shell',
             allow: [
@@ -223,6 +223,9 @@ module.exports = {
               'social',
               'runtime',
               'canvas-core',
+              'canvas-tools',
+              'canvas-wiring',
+              'canvas-panels',
               'spatial',
               'marketplace',
               'shell',

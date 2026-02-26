@@ -45,6 +45,8 @@ export interface IntegrationProxy {
   has(name: string): boolean;
   /** Invalidate cache for a given integration (or all) */
   invalidateCache(name?: string): void;
+  /** Returns a query/mutate handle for a specific integration */
+  integration(name: string): IntegrationHandler;
 }
 
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
@@ -149,7 +151,7 @@ export function createIntegrationProxy(options?: {
     });
   }
 
-  return {
+  const proxy: IntegrationProxy = {
     register(name: string, handler: IntegrationHandler) {
       handlers.set(name, handler);
     },
@@ -195,5 +197,14 @@ export function createIntegrationProxy(options?: {
         queryCache.clear();
       }
     },
+
+    integration(name: string): IntegrationHandler {
+      return {
+        query: (params: unknown) => proxy.query(name, params),
+        mutate: (params: unknown) => proxy.mutate(name, params),
+      };
+    },
   };
+
+  return proxy;
 }

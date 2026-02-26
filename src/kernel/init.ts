@@ -10,6 +10,7 @@
 import { initAuthListener } from './auth';
 import { setupAuthBusSubscriptions } from './stores/auth';
 import { setupCanvasBusSubscriptions } from './stores/canvas';
+import { setupGalleryBusSubscriptions } from './stores/gallery';
 import { setupHistoryBusSubscriptions } from './stores/history';
 import { setupSocialBusSubscriptions } from './stores/social';
 import { setupUIBusSubscriptions } from './stores/ui';
@@ -36,6 +37,7 @@ export function initKernel(): void {
   setupWidgetBusSubscriptions();
   setupSocialBusSubscriptions();
   setupUIBusSubscriptions();
+  setupGalleryBusSubscriptions();
 
   // Set up auth state listener
   const { unsubscribe } = initAuthListener();

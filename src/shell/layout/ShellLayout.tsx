@@ -8,6 +8,8 @@
 import React from 'react';
 
 import { useUIStore } from '../../kernel/stores/ui/ui.store';
+import { DockerLayer } from '../components/docker';
+import { themeVar } from '../theme/theme-vars';
 
 export interface ShellLayoutProps {
   /** Content for the top bar slot (toolbar) */
@@ -18,6 +20,8 @@ export interface ShellLayoutProps {
   sidebarRight?: React.ReactNode;
   /** Main content (canvas workspace) */
   children: React.ReactNode;
+  /** Render function for widget content in dockers */
+  renderDockerWidget?: (widgetInstanceId: string) => React.ReactNode;
 }
 
 const SIDEBAR_WIDTH = 280;
@@ -43,6 +47,7 @@ export const ShellLayout: React.FC<ShellLayoutProps> = ({
   sidebarLeft,
   sidebarRight,
   children,
+  renderDockerWidget,
 }) => {
   const leftOpen = useUIStore((s) => s.sidebarLeftOpen);
   const rightOpen = useUIStore((s) => s.sidebarRightOpen);
@@ -62,8 +67,9 @@ export const ShellLayout: React.FC<ShellLayoutProps> = ({
         width: '100vw',
         height: '100vh',
         overflow: 'hidden',
-        background: 'var(--sn-bg, #f8f9fa)',
-        fontFamily: 'var(--sn-font-family, system-ui)',
+        background: themeVar('--sn-bg'),
+        color: themeVar('--sn-text'),
+        fontFamily: themeVar('--sn-font-family'),
       }}
     >
       {/* Top bar */}
@@ -86,6 +92,11 @@ export const ShellLayout: React.FC<ShellLayoutProps> = ({
         {/* Canvas content — always full width */}
         {children}
 
+        {/* Docker layer — renders floating and docked dockers */}
+        {renderDockerWidget && (
+          <DockerLayer renderWidget={renderDockerWidget} />
+        )}
+
         {/* Left tray overlay */}
         {hasLeft && (
           <>
@@ -101,10 +112,10 @@ export const ShellLayout: React.FC<ShellLayoutProps> = ({
                 zIndex: TRAY_Z + 1,
                 width: TAB_WIDTH,
                 height: TAB_HEIGHT,
-                border: '1px solid var(--sn-border, #e0e0e0)',
+                border: `1px solid ${themeVar('--sn-border')}`,
                 borderLeft: 'none',
                 borderRadius: '0 6px 6px 0',
-                background: 'var(--sn-surface, #fff)',
+                background: themeVar('--sn-surface'),
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -112,12 +123,12 @@ export const ShellLayout: React.FC<ShellLayoutProps> = ({
                 padding: 0,
                 boxShadow: '2px 0 8px rgba(0,0,0,0.08)',
                 transition: 'left 0.25s ease',
-                color: 'var(--sn-text-muted, #6b7280)',
+                color: themeVar('--sn-text-muted'),
                 fontSize: '11px',
                 writingMode: 'vertical-rl',
                 textOrientation: 'mixed',
                 letterSpacing: '1px',
-                fontFamily: 'var(--sn-font-family, system-ui)',
+                fontFamily: themeVar('--sn-font-family'),
               }}
             >
               {leftOpen ? '\u25C0' : 'Assets'}
@@ -133,8 +144,8 @@ export const ShellLayout: React.FC<ShellLayoutProps> = ({
                 bottom: 0,
                 width: SIDEBAR_WIDTH,
                 zIndex: TRAY_Z,
-                background: 'var(--sn-surface, #fff)',
-                borderRight: '1px solid var(--sn-border, #e0e0e0)',
+                background: themeVar('--sn-surface'),
+                borderRight: `1px solid ${themeVar('--sn-border')}`,
                 boxShadow: '2px 0 12px rgba(0,0,0,0.1)',
                 transform: leftOpen ? 'translateX(0)' : 'translateX(-100%)',
                 transition: 'transform 0.25s ease',
@@ -161,10 +172,10 @@ export const ShellLayout: React.FC<ShellLayoutProps> = ({
                 zIndex: TRAY_Z + 1,
                 width: TAB_WIDTH,
                 height: TAB_HEIGHT,
-                border: '1px solid var(--sn-border, #e0e0e0)',
+                border: `1px solid ${themeVar('--sn-border')}`,
                 borderRight: 'none',
                 borderRadius: '6px 0 0 6px',
-                background: 'var(--sn-surface, #fff)',
+                background: themeVar('--sn-surface'),
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -172,12 +183,12 @@ export const ShellLayout: React.FC<ShellLayoutProps> = ({
                 padding: 0,
                 boxShadow: '-2px 0 8px rgba(0,0,0,0.08)',
                 transition: 'right 0.25s ease',
-                color: 'var(--sn-text-muted, #6b7280)',
+                color: themeVar('--sn-text-muted'),
                 fontSize: '11px',
                 writingMode: 'vertical-rl',
                 textOrientation: 'mixed',
                 letterSpacing: '1px',
-                fontFamily: 'var(--sn-font-family, system-ui)',
+                fontFamily: themeVar('--sn-font-family'),
               }}
             >
               {rightOpen ? '\u25B6' : 'Props'}
@@ -193,8 +204,8 @@ export const ShellLayout: React.FC<ShellLayoutProps> = ({
                 bottom: 0,
                 width: SIDEBAR_WIDTH,
                 zIndex: TRAY_Z,
-                background: 'var(--sn-surface, #fff)',
-                borderLeft: '1px solid var(--sn-border, #e0e0e0)',
+                background: themeVar('--sn-surface'),
+                borderLeft: `1px solid ${themeVar('--sn-border')}`,
                 boxShadow: '-2px 0 12px rgba(0,0,0,0.1)',
                 transform: rightOpen ? 'translateX(0)' : 'translateX(100%)',
                 transition: 'transform 0.25s ease',

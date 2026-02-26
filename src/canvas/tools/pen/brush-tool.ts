@@ -16,7 +16,7 @@ export function createPenTool(getMode: () => 'edit' | 'preview'): Tool {
   let points: Point2D[] = [];
 
   return {
-    name: 'pen',
+    name: 'brush',
 
     onActivate() {},
     onDeactivate() {

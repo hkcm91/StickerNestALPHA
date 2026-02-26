@@ -8,6 +8,7 @@
  * @layer L4A-1
  */
 
+import { artboardLayout } from './artboard';
 import { bentoLayout } from './bento';
 import { desktopLayout } from './desktop';
 import { freeformLayout } from './freeform';
@@ -98,6 +99,7 @@ export function initializeDefaultLayoutModes(): void {
   registerLayoutMode(freeformLayout);
   registerLayoutMode(bentoLayout);
   registerLayoutMode(desktopLayout);
+  registerLayoutMode(artboardLayout);
 }
 
 /**

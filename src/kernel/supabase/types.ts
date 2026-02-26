@@ -7,13 +7,15 @@
  *   supabase/migrations/00003_add_widget_snapshots.sql
  *   supabase/migrations/00004_add_marketplace_tables.sql
  *   supabase/migrations/00005_add_social_graph.sql
+ *   supabase/migrations/00008_add_gallery_assets.sql
  *
  * Tables: users, canvases, canvas_members, entities, widgets, stickers,
  *         pipelines, widget_connections, presence, data_sources,
  *         data_source_acl, widget_instances, user_installed_widgets,
  *         user_widget_state, widget_snapshots, widget_reviews,
  *         widget_versions, user_profiles, follows, posts, reactions,
- *         comments, notifications, bookmarks, blocks, direct_messages
+ *         comments, notifications, bookmarks, blocks, direct_messages,
+ *         gallery_assets
  */
 
 /**
@@ -750,6 +752,54 @@ export interface Database {
           following_count?: number;
           post_count?: number;
           is_verified?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+
+      gallery_assets: {
+        Row: {
+          id: string;
+          owner_id: string;
+          name: string;
+          storage_path: string;
+          file_type: string;
+          file_size: number;
+          width: number | null;
+          height: number | null;
+          description: string | null;
+          tags: string[];
+          thumbnail_path: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_id: string;
+          name: string;
+          storage_path: string;
+          file_type: string;
+          file_size?: number;
+          width?: number | null;
+          height?: number | null;
+          description?: string | null;
+          tags?: string[];
+          thumbnail_path?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          owner_id?: string;
+          name?: string;
+          storage_path?: string;
+          file_type?: string;
+          file_size?: number;
+          width?: number | null;
+          height?: number | null;
+          description?: string | null;
+          tags?: string[];
+          thumbnail_path?: string | null;
           created_at?: string;
           updated_at?: string;
         };

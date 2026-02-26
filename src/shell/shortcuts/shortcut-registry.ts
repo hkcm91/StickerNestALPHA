@@ -127,6 +127,16 @@ export function registerDefaultShortcuts(registry: ShortcutRegistry): void {
   });
 
   registry.register({
+    id: 'redo-alt',
+    key: 'z',
+    ctrl: true,
+    shift: false,
+    alt: true,
+    scope: 'canvas',
+    busEvent: 'shell.shortcut.redo',
+  });
+
+  registry.register({
     id: 'save',
     key: 's',
     ctrl: true,

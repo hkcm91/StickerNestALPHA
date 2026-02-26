@@ -1,5 +1,5 @@
 /**
- * usePersistence — auto-save + manual save/load for canvas documents.
+ * usePersistence - auto-save + manual save/load for canvas documents.
  *
  * Serializes the scene graph to localStorage on entity changes (debounced 2s).
  * Manual save/load via Ctrl+S and on-demand.
@@ -16,70 +16,246 @@ import type { CanvasDocument } from '@sn/types';
 import type { SceneGraph } from '../../../canvas/core';
 import { serialize, deserializeToSceneGraph } from '../../../canvas/core/persistence';
 import { bus } from '../../../kernel/bus';
+import { useUIStore } from '../../../kernel/stores/ui/ui.store';
 
 export type SaveStatus = 'saved' | 'saving' | 'unsaved';
 
 export interface PersistenceState {
   status: SaveStatus;
   lastSavedAt: number | null;
+  loaded: boolean;
   save: () => void;
   load: () => boolean;
 }
 
+export interface LocalCanvasSummary {
+  id: string;
+  slug: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface CanvasIndex {
+  items: LocalCanvasSummary[];
+}
+
 const STORAGE_KEY_PREFIX = 'sn:canvas:';
+const STORAGE_INDEX_KEY = 'sn:canvas:index';
 const AUTO_SAVE_DELAY_MS = 2000;
 
-function getStorageKey(canvasId: string): string {
-  return `${STORAGE_KEY_PREFIX}${canvasId}`;
+export function getStorageKey(canvasSlug: string): string {
+  return `${STORAGE_KEY_PREFIX}${canvasSlug}`;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function readCanvasIndex(): CanvasIndex {
+  const raw = localStorage.getItem(STORAGE_INDEX_KEY);
+  if (!raw) return { items: [] };
+
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!isRecord(parsed) || !Array.isArray(parsed.items)) {
+      return { items: [] };
+    }
+
+    const items = parsed.items.filter((item): item is LocalCanvasSummary => {
+      if (!isRecord(item)) return false;
+      return (
+        typeof item.id === 'string'
+        && typeof item.slug === 'string'
+        && typeof item.name === 'string'
+        && typeof item.createdAt === 'string'
+        && typeof item.updatedAt === 'string'
+      );
+    });
+
+    return { items };
+  } catch {
+    return { items: [] };
+  }
+}
+
+function writeCanvasIndex(index: CanvasIndex): void {
+  localStorage.setItem(STORAGE_INDEX_KEY, JSON.stringify(index));
+}
+
+function createUuid(): string {
+  return crypto.randomUUID();
+}
+
+export function slugifyCanvasName(input: string): string {
+  const normalized = input
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .replace(/-{2,}/g, '-');
+
+  return normalized || 'canvas';
+}
+
+function pickUniqueSlug(baseSlug: string, existing: Set<string>): string {
+  if (!existing.has(baseSlug)) return baseSlug;
+
+  let index = 2;
+  while (existing.has(`${baseSlug}-${index}`)) {
+    index += 1;
+  }
+
+  return `${baseSlug}-${index}`;
+}
+
+export function listLocalCanvases(): LocalCanvasSummary[] {
+  return [...readCanvasIndex().items].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+}
+
+export function getLocalCanvasBySlug(slug: string): LocalCanvasSummary | null {
+  return readCanvasIndex().items.find((item) => item.slug === slug) ?? null;
+}
+
+function upsertLocalCanvas(summary: LocalCanvasSummary): LocalCanvasSummary {
+  const index = readCanvasIndex();
+  const nextItems = index.items.filter((item) => item.slug !== summary.slug && item.id !== summary.id);
+  nextItems.push(summary);
+  writeCanvasIndex({ items: nextItems });
+  return summary;
+}
+
+export function createLocalCanvas(input?: { name?: string; slug?: string }): LocalCanvasSummary {
+  const now = new Date().toISOString();
+  const existing = readCanvasIndex();
+  const existingSlugs = new Set(existing.items.map((item) => item.slug));
+  const baseName = input?.name?.trim() || 'Untitled canvas';
+  const baseSlug = slugifyCanvasName(input?.slug ?? baseName);
+  const slug = pickUniqueSlug(baseSlug, existingSlugs);
+
+  const summary: LocalCanvasSummary = {
+    id: createUuid(),
+    slug,
+    name: baseName,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  return upsertLocalCanvas(summary);
+}
+
+export function ensureLocalCanvas(input: { slug: string; fallbackName?: string }): LocalCanvasSummary {
+  const normalizedSlug = slugifyCanvasName(input.slug);
+  const existing = getLocalCanvasBySlug(normalizedSlug);
+  if (existing) return existing;
+
+  return createLocalCanvas({
+    slug: normalizedSlug,
+    name: input.fallbackName ?? `Canvas ${normalizedSlug}`,
+  });
+}
+
+export function readStoredDocument(canvasSlug: string): CanvasDocument | null {
+  const raw = localStorage.getItem(getStorageKey(canvasSlug));
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw) as CanvasDocument;
+  } catch {
+    return null;
+  }
 }
 
 /**
- * Persistence hook — auto-saves canvas state to localStorage on entity changes.
+ * Persistence hook - auto-saves canvas state to localStorage on entity changes.
  *
- * @param canvasId - The canvas ID (used as storage key)
+ * @param canvasSlug - The canvas slug (used as storage key)
  * @param sceneGraph - The scene graph to serialize/deserialize
  */
 export function usePersistence(
-  canvasId: string,
+  canvasSlug: string,
   sceneGraph: SceneGraph | null,
+  canvasSummary?: Pick<LocalCanvasSummary, 'id' | 'name' | 'createdAt'>,
 ): PersistenceState {
   const [status, setStatus] = useState<SaveStatus>('saved');
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
+  const [loaded, setLoaded] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sceneGraphRef = useRef(sceneGraph);
   sceneGraphRef.current = sceneGraph;
+  const prevSlugRef = useRef(canvasSlug);
 
-  // Perform the actual save to localStorage
+  // Reset loaded state when canvas slug changes
+  useEffect(() => {
+    if (prevSlugRef.current !== canvasSlug) {
+      setLoaded(false);
+      prevSlugRef.current = canvasSlug;
+    }
+  }, [canvasSlug]);
+
   const doSave = useCallback(() => {
     const sg = sceneGraphRef.current;
-    if (!sg || !canvasId) return;
+    if (!sg || !canvasSlug) {
+      console.log('[Persistence] doSave() aborted: no sceneGraph or canvasSlug');
+      return;
+    }
+
+    console.log('[Persistence] doSave() called', {
+      canvasSlug,
+      entityCount: sg.entityCount,
+      entities: sg.getAllEntities().map(e => ({ id: e.id, type: e.type, name: e.name })),
+    });
 
     setStatus('saving');
 
     try {
+      const nowIso = new Date().toISOString();
+      const existing = readStoredDocument(canvasSlug);
+      const docId = existing?.meta?.id ?? canvasSummary?.id ?? createUuid();
+      const docName = canvasSummary?.name ?? existing?.meta?.name ?? `Canvas ${canvasSlug}`;
+      const createdAt = existing?.meta?.createdAt ?? canvasSummary?.createdAt ?? nowIso;
+
+      const uiState = useUIStore.getState();
+
       const doc: CanvasDocument = serialize({
         sceneGraph: sg,
         meta: {
-          id: canvasId,
-          name: `Canvas ${canvasId}`,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
+          id: docId,
+          name: docName,
+          createdAt,
+          updatedAt: nowIso,
         },
+        platform: uiState.canvasPlatform,
+        spatialMode: uiState.spatialMode,
+        platformConfigs: uiState.platformConfigs,
       });
 
-      const json = JSON.stringify(doc);
-      localStorage.setItem(getStorageKey(canvasId), json);
+      const storageKey = getStorageKey(canvasSlug);
+      const serialized = JSON.stringify(doc);
+      localStorage.setItem(storageKey, serialized);
+      console.log('[Persistence] Saved to localStorage', {
+        storageKey,
+        dataLength: serialized.length,
+        entityCount: doc.entities.length,
+      });
+
+      upsertLocalCanvas({
+        id: docId,
+        slug: canvasSlug,
+        name: docName,
+        createdAt,
+        updatedAt: nowIso,
+      });
 
       const now = Date.now();
       setLastSavedAt(now);
       setStatus('saved');
-      bus.emit(CanvasDocumentEvents.SAVED, { canvasId, savedAt: now });
+      bus.emit(CanvasDocumentEvents.SAVED, { canvasId: docId, savedAt: now });
     } catch {
       setStatus('unsaved');
     }
-  }, [canvasId]);
+  }, [canvasSlug, canvasSummary?.createdAt, canvasSummary?.id, canvasSummary?.name]);
 
-  // Schedule a debounced auto-save
   const scheduleSave = useCallback(() => {
     setStatus('unsaved');
 
@@ -93,7 +269,6 @@ export function usePersistence(
     }, AUTO_SAVE_DELAY_MS);
   }, [doSave]);
 
-  // Manual save (immediate)
   const save = useCallback(() => {
     if (timerRef.current) {
       clearTimeout(timerRef.current);
@@ -102,25 +277,58 @@ export function usePersistence(
     doSave();
   }, [doSave]);
 
-  // Load from localStorage into scene graph
   const load = useCallback((): boolean => {
     const sg = sceneGraphRef.current;
-    if (!sg || !canvasId) return false;
+    if (!sg || !canvasSlug) {
+      console.log('[Persistence] load() aborted: no sceneGraph or canvasSlug', { sg: !!sg, canvasSlug });
+      return false;
+    }
 
-    const raw = localStorage.getItem(getStorageKey(canvasId));
-    if (!raw) return false;
+    const storageKey = getStorageKey(canvasSlug);
+    const raw = localStorage.getItem(storageKey);
+    console.log('[Persistence] load() called', { storageKey, hasData: !!raw, dataLength: raw?.length });
+
+    if (!raw) {
+      // No saved data - mark as loaded (empty canvas)
+      console.log('[Persistence] No saved data found, marking as loaded (empty canvas)');
+      setLoaded(true);
+      bus.emit(CanvasDocumentEvents.LOADED, { canvasId: canvasSlug });
+      return false;
+    }
 
     const result = deserializeToSceneGraph(raw, sg, { skipInvalidEntities: true });
+    console.log('[Persistence] deserializeToSceneGraph result:', {
+      success: result.success,
+      entityCount: result.document?.entities?.length,
+      error: result.error,
+      warnings: result.warnings,
+    });
+
     if (result.success) {
+      const loadedDoc = readStoredDocument(canvasSlug);
+      if (loadedDoc) {
+        const uiStore = useUIStore.getState();
+        if (loadedDoc.platform) uiStore.setCanvasPlatform(loadedDoc.platform);
+        if (loadedDoc.spatialMode) uiStore.setSpatialMode(loadedDoc.spatialMode);
+        if (loadedDoc.platformConfigs) {
+          for (const [p, config] of Object.entries(loadedDoc.platformConfigs)) {
+            uiStore.setPlatformConfig(p as any, config);
+          }
+        }
+      }
+      console.log('[Persistence] Load successful, sceneGraph entityCount:', sg.entityCount);
+      setLoaded(true);
       setStatus('saved');
-      bus.emit(CanvasDocumentEvents.LOADED, { canvasId });
+      bus.emit(CanvasDocumentEvents.LOADED, { canvasId: loadedDoc?.meta?.id ?? canvasSlug });
       return true;
     }
 
+    // Deserialization failed - mark as loaded anyway to unblock
+    console.log('[Persistence] Deserialization failed:', result.error);
+    setLoaded(true);
     return false;
-  }, [canvasId]);
+  }, [canvasSlug]);
 
-  // Subscribe to entity change events for auto-save
   useEffect(() => {
     const unsubs = [
       bus.subscribe(CanvasEvents.ENTITY_CREATED, scheduleSave),
@@ -136,7 +344,6 @@ export function usePersistence(
     };
   }, [scheduleSave]);
 
-  // Listen for Ctrl+S (manual save shortcut)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
@@ -149,5 +356,5 @@ export function usePersistence(
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [save]);
 
-  return { status, lastSavedAt, save, load };
+  return { status, lastSavedAt, loaded, save, load };
 }

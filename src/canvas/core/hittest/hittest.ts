@@ -10,11 +10,33 @@ import type { CanvasEntity, Point2D, BoundingBox2D } from '@sn/types';
 import type { SceneGraph } from '../scene';
 
 export function entityBounds(entity: CanvasEntity): BoundingBox2D {
-  const { position, size } = entity.transform;
-  return {
-    min: { x: position.x, y: position.y },
-    max: { x: position.x + size.width, y: position.y + size.height },
+  const { position, size, rotation } = entity.transform;
+  const { width, height } = size;
+  
+  if (!rotation) {
+    return {
+      min: { x: position.x, y: position.y },
+      max: { x: position.x + width, y: position.y + height },
+    };
+  }
+
+  const rad = (rotation * Math.PI) / 180;
+  const cos = Math.abs(Math.cos(rad));
+  const sin = Math.abs(Math.sin(rad));
+  
+  // Rotated size
+  const newWidth = width * cos + height * sin;
+  const newHeight = width * sin + height * cos;
+  
+  // Center stays the same
+  const cx = position.x + width / 2;
+  const cy = position.y + height / 2;
+  
+  const result = {
+    min: { x: cx - newWidth / 2, y: cy - newHeight / 2 },
+    max: { x: cx + newWidth / 2, y: cy + newHeight / 2 },
   };
+  return result;
 }
 
 export function pointInEntity(point: Point2D, entity: CanvasEntity): boolean {

@@ -31,8 +31,26 @@ export {
   useSelection,
   getSelectionStore,
   usePersistence,
+  createLocalCanvas,
+  ensureLocalCanvas,
+  getLocalCanvasBySlug,
+  listLocalCanvases,
+  slugifyCanvasName,
 } from './hooks';
-export type { ViewportStore, CanvasToolId, SelectionStore, SaveStatus, PersistenceState } from './hooks';
+export type {
+  ViewportStore,
+  CanvasToolId,
+  SelectionStore,
+  SaveStatus,
+  PersistenceState,
+  LocalCanvasSummary,
+} from './hooks';
 
-export { Toolbar, PropertiesPanel, LayersPanel, AssetPanel } from './panels';
-export type { ToolbarProps, PropertiesPanelProps, LayersPanelProps, AssetPanelProps } from './panels';
+export { Toolbar, PropertiesPanel, LayersPanel, TextSettingsPanel, AssetPanel, HistoryPanel } from './panels';
+export type {
+  ToolbarProps,
+  PropertiesPanelProps,
+  LayersPanelProps,
+  TextSettingsPanelProps,
+  AssetPanelProps,
+} from './panels';

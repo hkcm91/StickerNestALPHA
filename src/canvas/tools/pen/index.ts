@@ -1,1 +1,1 @@
-export { createPenTool } from './pen-tool';
+export { createPenTool } from './brush-tool';

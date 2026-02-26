@@ -6,6 +6,7 @@
 import { z } from 'zod';
 
 import { CanvasEntitySchema } from './canvas-entity';
+import { SpatialModeSchema } from './spatial';
 
 // =============================================================================
 // Background Specification (Discriminated Union)
@@ -37,13 +38,22 @@ export const GradientStopSchema = z.object({
 export type GradientStop = z.infer<typeof GradientStopSchema>;
 
 /**
+ * Gradient type
+ */
+export const GradientTypeSchema = z.enum(['linear', 'radial']);
+
+export type GradientType = z.infer<typeof GradientTypeSchema>;
+
+/**
  * Gradient background
  */
 export const GradientBackgroundSchema = z.object({
   type: z.literal('gradient'),
+  /** Gradient type (linear or radial) */
+  gradientType: GradientTypeSchema.default('linear'),
   /** Array of color stops (min 2) */
   stops: z.array(GradientStopSchema).min(2),
-  /** Angle in degrees (0 = right, 90 = down) */
+  /** Angle in degrees (0 = right, 90 = down) — used for linear gradients */
   angle: z.number().default(0),
   /** Opacity from 0 to 1 */
   opacity: z.number().min(0).max(1).default(1),
@@ -107,9 +117,25 @@ export const ViewportConfigSchema = z.object({
   height: z.number().positive().optional(),
   /** Background specification */
   background: BackgroundSpecSchema.default(DEFAULT_BACKGROUND),
+  /** Whether the viewport is in preview mode (showing one artboard) */
+  isPreviewMode: z.boolean().optional(),
 });
 
 export type ViewportConfig = z.infer<typeof ViewportConfigSchema>;
+
+// =============================================================================
+// Canvas Platform
+// =============================================================================
+
+/**
+ * Target platform for the canvas.
+ * - `web`: Standard web browser view
+ * - `mobile`: Mobile device view
+ * - `desktop`: Personal computer desktop experience
+ */
+export const CanvasPlatformSchema = z.enum(['web', 'mobile', 'desktop']);
+
+export type CanvasPlatform = z.infer<typeof CanvasPlatformSchema>;
 
 // =============================================================================
 // Layout Mode
@@ -120,8 +146,9 @@ export type ViewportConfig = z.infer<typeof ViewportConfigSchema>;
  * - freeform: No constraints, entities can be placed anywhere
  * - bento: Grid slot constraints
  * - desktop: Window/docking constraints
+ * - artboard: Multiple artboards (pages) layout
  */
-export const LayoutModeSchema = z.enum(['freeform', 'bento', 'desktop']);
+export const LayoutModeSchema = z.enum(['freeform', 'bento', 'desktop', 'artboard']);
 
 export type LayoutMode = z.infer<typeof LayoutModeSchema>;
 
@@ -175,11 +202,18 @@ export const CanvasDocumentSchema = z.object({
   /** Viewport configuration (dimensions and background) */
   viewport: ViewportConfigSchema.default({
     background: DEFAULT_BACKGROUND,
+    isPreviewMode: false,
   }),
+  /** Configurations per platform (width/height) */
+  platformConfigs: z.record(CanvasPlatformSchema, ViewportConfigSchema).optional(),
   /** All entities on the canvas */
   entities: z.array(CanvasEntitySchema).default([]),
   /** Layout mode for entity positioning */
   layoutMode: LayoutModeSchema.default('freeform'),
+  /** Target platform for the canvas */
+  platform: CanvasPlatformSchema.default('web'),
+  /** Spatial visualization mode */
+  spatialMode: SpatialModeSchema.default('2d'),
 });
 
 export type CanvasDocument = z.infer<typeof CanvasDocumentSchema>;
@@ -196,6 +230,8 @@ export const CreateCanvasDocumentInputSchema = z.object({
   description: z.string().optional(),
   viewport: ViewportConfigSchema.optional(),
   layoutMode: LayoutModeSchema.optional(),
+  platform: CanvasPlatformSchema.optional(),
+  spatialMode: SpatialModeSchema.optional(),
 });
 
 export type CreateCanvasDocumentInput = z.infer<typeof CreateCanvasDocumentInputSchema>;
@@ -208,6 +244,8 @@ export const UpdateCanvasDocumentInputSchema = z.object({
   description: z.string().optional(),
   viewport: ViewportConfigSchema.partial().optional(),
   layoutMode: LayoutModeSchema.optional(),
+  platform: CanvasPlatformSchema.optional(),
+  spatialMode: SpatialModeSchema.optional(),
 });
 
 export type UpdateCanvasDocumentInput = z.infer<typeof UpdateCanvasDocumentInputSchema>;
@@ -219,5 +257,6 @@ export type UpdateCanvasDocumentInput = z.infer<typeof UpdateCanvasDocumentInput
 export const BackgroundSpecJSONSchema = BackgroundSpecSchema.toJSONSchema();
 export const ViewportConfigJSONSchema = ViewportConfigSchema.toJSONSchema();
 export const LayoutModeJSONSchema = LayoutModeSchema.toJSONSchema();
+export const CanvasPlatformJSONSchema = CanvasPlatformSchema.toJSONSchema();
 export const CanvasDocumentMetaJSONSchema = CanvasDocumentMetaSchema.toJSONSchema();
 export const CanvasDocumentJSONSchema = CanvasDocumentSchema.toJSONSchema();

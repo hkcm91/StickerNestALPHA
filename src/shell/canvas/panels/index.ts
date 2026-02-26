@@ -14,5 +14,10 @@ export type { PropertiesPanelProps } from './PropertiesPanel';
 export { LayersPanel } from './LayersPanel';
 export type { LayersPanelProps } from './LayersPanel';
 
+export { TextSettingsPanel } from './TextSettingsPanel';
+export type { TextSettingsPanelProps } from './TextSettingsPanel';
+
 export { AssetPanel } from './AssetPanel';
 export type { AssetPanelProps, AssetItem } from './AssetPanel';
+
+export { HistoryPanel } from './HistoryPanel';
