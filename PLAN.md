@@ -368,16 +368,101 @@ CREATE POLICY "Sellers update own orders" ON orders
     FOR UPDATE USING (auth.uid() = seller_id);
 ```
 
-### 3.3 Creator-Set Canvas Subscriptions
+### 3.3 Commerce Widgets — Signup, Payment, and Shop Are Widgets
+
+**Core design principle:** Signup, payment/subscription, and shop browsing are NOT
+platform overlays or shell-level UIs. They are **widgets** that creators place on
+their canvas. They use the existing SDK bridge (`StickerNest.integration()`) to
+talk to the backend. This means:
+
+- Creators control where signup and payment appear on their canvas
+- Creators can style/theme them like any other widget
+- The entire visitor experience happens inside the canvas — no jarring redirects
+- Widgets connect to the backend through the existing Runtime bridge proxy —
+  no credentials in the iframe, no direct Supabase access from the widget
+
+**Built-in commerce widgets** (added to `src/runtime/widgets/built-in-html.ts`):
+
+1. **`wgt-signup`** — Canvas Signup Widget
+   - Shows email/password signup form (and OAuth buttons if configured)
+   - Calls `StickerNest.integration('auth').mutate({ action: 'signup', email, password })`
+   - Host proxies to Supabase Auth → creates user account
+   - On success: user gets a `canvas_subscriptions` entry at the free tier (if one exists)
+   - Also shows login form for returning users
+   - Widget reads auth state via `StickerNest.integration('auth').query({ action: 'session' })`
+   - Emits `auth.signed_up` and `auth.signed_in` bus events on success
+   - Creator can configure: whether to show OAuth buttons, custom welcome text,
+     redirect behavior after signup (via widget config)
+
+2. **`wgt-subscribe`** — Canvas Subscription Widget
+   - Displays the creator's subscription tiers (reads from `canvas_subscription_tiers`)
+   - Calls `StickerNest.integration('checkout').mutate({ action: 'subscribe', tierId })`
+   - Host proxies to `creator-checkout` edge function → Stripe Checkout opens
+   - On successful checkout (webhook confirms), user's canvas role upgrades
+   - Shows current subscription status for authenticated users
+   - "Manage" button for existing subscribers (change tier, cancel)
+
+3. **`wgt-shop`** — Canvas Shop Widget
+   - Displays shop items for the current canvas (reads from `shop_items`)
+   - Calls `StickerNest.integration('checkout').mutate({ action: 'buy', itemId })`
+   - Host proxies to `creator-checkout` edge function → Stripe Checkout opens
+   - For digital items: shows download link after purchase confirmation
+   - For physical items: shows order status and tracking info
+   - Creator configures: layout (grid/list), items to feature, categories
+
+**SDK integration endpoints** (new, proxied by host via bridge):
+
+```typescript
+// New integration handlers in the Runtime bridge
+StickerNest.integration('auth').query({ action: 'session' })
+  // → returns { user, isAuthenticated, canvasRole }
+StickerNest.integration('auth').mutate({ action: 'signup', email, password })
+  // → proxies to Supabase Auth, creates account + canvas membership
+StickerNest.integration('auth').mutate({ action: 'signin', email, password })
+  // → proxies to Supabase Auth
+StickerNest.integration('auth').mutate({ action: 'signout' })
+  // → clears session
+
+StickerNest.integration('checkout').query({ action: 'tiers', canvasId })
+  // → returns canvas_subscription_tiers for this canvas
+StickerNest.integration('checkout').query({ action: 'my_subscription', canvasId })
+  // → returns current user's subscription for this canvas
+StickerNest.integration('checkout').query({ action: 'shop_items', canvasId })
+  // → returns active shop items
+StickerNest.integration('checkout').mutate({ action: 'subscribe', tierId })
+  // → creates Stripe Checkout session via creator-checkout edge function
+StickerNest.integration('checkout').mutate({ action: 'buy', itemId })
+  // → creates Stripe Checkout session for shop item
+StickerNest.integration('checkout').query({ action: 'my_orders', canvasId })
+  // → returns buyer's orders for this canvas
+```
+
+**How canvas-level signup works:**
+1. Visitor lands on `/canvas/:slug` — sees the canvas in preview mode (unauthenticated)
+2. Creator has placed `wgt-signup` on the canvas (visible to unauthenticated visitors)
+3. Visitor fills in email/password in the widget → widget calls `auth.mutate(signup)`
+4. Host proxies the call → Supabase creates the user account
+5. Host also creates a `canvas_members` entry (default role from canvas settings)
+6. If the canvas has a free subscription tier, auto-subscribe the user to it
+7. Canvas re-renders with the new auth state — role-gated content now visible
+8. If the creator also placed `wgt-subscribe`, the user can upgrade to a paid tier
+
+**Key security rules:**
+- Auth integration calls are proxied through the host — no Supabase client in iframe
+- The widget never sees the JWT or session token — the host manages the session
+- OAuth flows open in a popup from the host context, not from inside the iframe
+- The signup widget works in preview mode (unauthenticated visitors can interact)
+
+### 3.4 Creator-Set Canvas Subscriptions
 
 **How it works:**
 1. Creator opens canvas settings → "Monetization" tab
 2. Creates subscription tiers with names, prices, and benefits
    - e.g., Free ($0, viewer role), Supporter ($5/mo, commenter role), VIP ($15/mo, editor role)
 3. Each paid tier creates a Stripe Price on the creator's Connect account
-4. Visitors to the canvas slug see tier options if any exist
-5. Clicking a paid tier → Stripe Checkout (with `application_fee_percent` for StickerNest's cut)
-6. On successful checkout, buyer gets `canvas_subscriptions` entry → grants the canvas role
+4. Creator places `wgt-subscribe` widget on their canvas where they want it
+5. Visitors interact with the subscribe widget → Stripe Checkout (with `application_fee_percent`)
+6. On successful checkout, buyer gets `canvas_subscriptions` entry → canvas role upgrades
 7. Stripe pays the creator directly; StickerNest never touches their money
 
 **Edge functions:**
@@ -393,18 +478,21 @@ CREATE POLICY "Sellers update own orders" ON orders
 from each payment and sends it to StickerNest's platform account automatically. Creators
 see the net amount in their Stripe Express Dashboard.
 
-### 3.4 Canvas Shop — Physical & Digital Items
+### 3.5 Canvas Shop — Physical & Digital Items
+
+The shop experience lives inside `wgt-shop`, placed on the canvas by the creator.
 
 **What creators can sell from their canvas:**
 - **Digital:** downloadable files (art packs, templates, widget bundles, etc.)
   - Fulfillment: `instant` — buyer gets a download link immediately after payment
-  - Download link is proxied through StickerNest (never a raw bucket URL in the client)
+  - Download link is proxied through `StickerNest.integration('checkout').query({ action: 'download', orderId })`
+  - Never a raw bucket URL in the widget
 - **Physical:** merchandise, prints, stickers (real ones), etc.
   - Fulfillment: `manual` — creator ships it themselves
   - Stripe Checkout collects the buyer's shipping address
   - Creator sees the shipping address in their order dashboard
   - Creator marks order as "shipped" with optional tracking number
-  - Buyer gets a notification with tracking info
+  - Buyer sees tracking status inside `wgt-shop` or in Settings → My Orders
 
 **Shipping — the platform's role is minimal:**
 - StickerNest does NOT handle shipping rates, label printing, or fulfillment
@@ -424,7 +512,7 @@ see the net amount in their Stripe Express Dashboard.
 - Disputes go through Stripe's dispute resolution process
 - StickerNest does not arbitrate between buyers and sellers
 
-### 3.5 Widget Marketplace Pricing
+### 3.6 Widget Marketplace Pricing
 
 **Update existing `widgets` table:**
 ```sql
@@ -452,7 +540,7 @@ export interface MarketplaceWidgetListing {
 }
 ```
 
-### 3.6 Creator Dashboard
+### 3.7 Creator Dashboard
 
 **New files in:** `src/shell/pages/creator-dashboard/`
 
@@ -474,27 +562,28 @@ Route: `/dashboard/creator` (Creator+ tier only)
 Financial details (bank accounts, tax forms, payout schedules) live in Stripe's Express
 Dashboard — StickerNest never displays or stores that sensitive information.
 
-### 3.7 Buyer Experience
+### 3.8 Buyer Experience
 
 **Canvas subscription flow (buyer perspective):**
-1. Visit `/canvas/:slug` → see the canvas in preview mode
-2. If creator has set subscription tiers, see a tier selector overlay
-3. Free tier: immediate access at viewer role
-4. Paid tier: Stripe Checkout → payment → role upgraded → canvas unlocks
-5. Manage subscriptions in Settings → "My Subscriptions"
+1. Visit `/canvas/:slug` → see the canvas in preview mode (unauthenticated)
+2. See `wgt-signup` widget on the canvas → sign up directly on the canvas
+3. Now authenticated → `wgt-subscribe` shows available tiers
+4. Free tier: already subscribed (auto-assigned on signup)
+5. Paid tier: click in `wgt-subscribe` → Stripe Checkout → role upgrades → canvas unlocks
+6. Manage subscriptions in Settings → "My Subscriptions"
 
 **Shop purchase flow (buyer perspective):**
-1. Canvas has a "Shop" widget/panel embedded by the creator
-2. Browse items → click "Buy" → Stripe Checkout
-3. Digital items: download link appears immediately in order confirmation
+1. `wgt-shop` is placed on the canvas by the creator
+2. Browse items in the widget → click "Buy" → Stripe Checkout
+3. Digital items: download link appears in the widget immediately
 4. Physical items: order appears in "My Orders" with status tracking
-5. "My Orders" page: view history, track shipments, contact seller
+5. Settings → "My Orders" page: full history, track shipments, contact seller
 
 **New files:**
 - `src/shell/pages/settings/MySubscriptionsSection.tsx` — Active canvas subscriptions
 - `src/shell/pages/settings/MyOrdersSection.tsx` — Purchase history + order tracking
 
-### 3.8 What StickerNest Handles vs What It Doesn't
+### 3.9 What StickerNest Handles vs What It Doesn't
 
 | Responsibility | Who handles it |
 |---|---|
@@ -512,6 +601,9 @@ Dashboard — StickerNest never displays or stores that sensitive information.
 | Digital asset delivery | **StickerNest** (proxied download after payment) |
 | Creator onboarding / KYC | **Stripe** (Express account onboarding) |
 | Canvas role grants on subscription | **StickerNest** (webhook → canvas_subscriptions → role) |
+| Canvas-level user signup | **StickerNest** (`wgt-signup` widget → `auth` integration → Supabase Auth) |
+| Signup/payment/shop UI on canvas | **Widgets** (`wgt-signup`, `wgt-subscribe`, `wgt-shop` — placed by creator) |
+| Auth session management | **StickerNest host** (widget never sees JWT, host proxies all auth calls) |
 
 ---
 
@@ -778,16 +870,17 @@ Lower platform fees incentivize upgrades — this is the primary revenue lever b
 1. **Stripe Direct + Billing migration** (Phase 1) — blocks all revenue
 2. **Quota enforcement** (Phase 2) — blocks tier value differentiation
 3. **Stripe Connect + Creator onboarding** (Phase 3.1-3.2) — blocks creator economy
-4. **Canvas subscriptions** (Phase 3.3) — first creator revenue stream
-5. **Slug resolution + sharing UI** (Phase 4.1, 4.4) — blocks public canvas product
-6. **Canvas shop — digital items** (Phase 3.4) — second creator revenue stream
-7. **SEO/OG tags** (Phase 4.2) — blocks social sharing/virality
-8. **Sentry + PostHog** (Phase 5.1, 5.2) — blocks operational visibility
-9. **Widget marketplace pricing** (Phase 3.5) — third creator revenue stream
-10. **Creator dashboard** (Phase 3.6) — order management for sellers
-11. **OAuth activation** (Phase 6.1) — blocks frictionless signup
-12. **Onboarding** (Phase 6.2) — blocks activation rate
-13. **Canvas shop — physical items** (Phase 3.4) — requires shipping address collection
-14. **Embed route** (Phase 4.3) — unlocks distribution channel
-15. **Custom domains** (Phase 4.5) — premium feature, can wait
-16. **E2E tests** (Phase 7.3) — confidence for iteration speed
+4. **Commerce widgets + auth/checkout integrations** (Phase 3.3) — wgt-signup, wgt-subscribe, wgt-shop + SDK integration handlers
+5. **Canvas subscriptions** (Phase 3.4) — first creator revenue stream
+6. **Slug resolution + sharing UI** (Phase 4.1, 4.4) — blocks public canvas product
+7. **Canvas shop — digital items** (Phase 3.5) — second creator revenue stream
+8. **SEO/OG tags** (Phase 4.2) — blocks social sharing/virality
+9. **Sentry + PostHog** (Phase 5.1, 5.2) — blocks operational visibility
+10. **Widget marketplace pricing** (Phase 3.6) — third creator revenue stream
+11. **Creator dashboard** (Phase 3.7) — order management for sellers
+12. **OAuth activation** (Phase 6.1) — blocks frictionless signup
+13. **Onboarding** (Phase 6.2) — blocks activation rate
+14. **Canvas shop — physical items** (Phase 3.5) — requires shipping address collection
+15. **Embed route** (Phase 4.3) — unlocks distribution channel
+16. **Custom domains** (Phase 4.5) — premium feature, can wait
+17. **E2E tests** (Phase 7.3) — confidence for iteration speed
