@@ -7,8 +7,8 @@
 
 import React, { useEffect, useState } from 'react';
 
-import { supabase } from '../../../kernel/supabase';
 import { useAuthStore } from '../../../kernel/stores/auth';
+import { supabase } from '../../../kernel/supabase';
 
 // ── Types ────────────────────────────────────────────────────────────────
 

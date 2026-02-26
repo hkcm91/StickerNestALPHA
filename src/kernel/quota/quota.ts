@@ -5,8 +5,8 @@
  * @layer L0
  */
 
-import { supabase } from '../supabase';
 import { getTierQuota, type TierQuota } from '../billing';
+import { supabase } from '../supabase';
 
 export type QuotaResource =
   | 'canvas_count'

@@ -13,6 +13,7 @@ import { CanvasDocumentEvents, CanvasEvents, DEFAULT_BACKGROUND, DockerEvents } 
 
 import { initCanvasCore, teardownCanvasCore } from '../../canvas/core';
 import type { SceneGraph } from '../../canvas/core';
+// eslint-disable-next-line boundaries/element-types -- shell mounts canvas panels at route level
 import { initCanvasPanels, teardownCanvasPanels } from '../../canvas/panels/init';
 import { initCanvasTools, teardownCanvasTools } from '../../canvas/tools';
 import { bus } from '../../kernel/bus';
@@ -73,7 +74,39 @@ const appPageStyle: React.CSSProperties = {
 };
 
 export const DashboardPage: React.FC = () => (
-  <div data-testid="page-dashboard" style={appPageStyle}><h1>Dashboard</h1></div>
+  <div data-testid="page-dashboard" style={{ ...appPageStyle, ...dashboardStyles.container }}>
+    <h1 style={dashboardStyles.title}>Dashboard</h1>
+    <div style={dashboardStyles.grid}>
+      <DashboardCard
+        to="/canvas"
+        testId="dashboard-card-canvas"
+        icon="C"
+        label="Canvas"
+        description="Open the infinite canvas workspace"
+      />
+      <DashboardCard
+        to="/data"
+        testId="dashboard-card-data"
+        icon="D"
+        label="Databases"
+        description="Create, manage, and view your databases with AI tools"
+      />
+      <DashboardCard
+        to="/marketplace"
+        testId="dashboard-card-marketplace"
+        icon="M"
+        label="Marketplace"
+        description="Discover and install widgets"
+      />
+      <DashboardCard
+        to="/settings"
+        testId="dashboard-card-settings"
+        icon="S"
+        label="Settings"
+        description="User and workspace settings"
+      />
+    </div>
+  </div>
 );
 
 export const LoginPage: React.FC = () => {
@@ -841,3 +874,39 @@ export const InvitePage: React.FC = () => {
 export const NotFoundPage: React.FC = () => (
   <div data-testid="page-not-found" style={appPageStyle}><h1>404 — Not Found</h1></div>
 );
+
+// =============================================================================
+// DashboardCard
+// =============================================================================
+
+interface DashboardCardProps {
+  to: string;
+  testId: string;
+  icon: string;
+  label: string;
+  description: string;
+}
+
+const DashboardCard: React.FC<DashboardCardProps> = ({
+  to,
+  testId,
+  icon,
+  label,
+  description,
+}: DashboardCardProps) => (
+  <Link to={to} data-testid={testId} style={dashboardStyles.card}>
+    <div style={dashboardStyles.cardIcon}>{icon}</div>
+    <div style={dashboardStyles.cardLabel}>{label}</div>
+    <div style={dashboardStyles.cardDesc}>{description}</div>
+  </Link>
+);
+
+const dashboardStyles: Record<string, React.CSSProperties> = {
+  container: { padding: '48px 24px', maxWidth: '900px', margin: '0 auto' },
+  title: { fontSize: '28px', fontWeight: 700, margin: '0 0 32px', color: 'var(--sn-text, #111)' },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px' },
+  card: { display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '24px 16px', background: 'var(--sn-surface, #fff)', border: '1px solid var(--sn-border, #ddd)', borderRadius: 'var(--sn-radius, 8px)', textDecoration: 'none', textAlign: 'center' as const, transition: 'border-color 0.15s, box-shadow 0.15s' },
+  cardIcon: { width: '48px', height: '48px', borderRadius: '12px', background: 'var(--sn-accent, #2563eb)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', fontWeight: 700, marginBottom: '12px' },
+  cardLabel: { fontWeight: 600, fontSize: '16px', color: 'var(--sn-text, #111)', marginBottom: '6px' },
+  cardDesc: { fontSize: '13px', color: 'var(--sn-text-muted, #666)', lineHeight: 1.4 },
+};

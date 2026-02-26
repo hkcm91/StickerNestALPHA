@@ -59,51 +59,39 @@ function RouteChangeEmitter(): null {
 /**
  * Global navigation bar — visible on every page including login.
  */
-const GlobalNav: React.FC = () => {
-  return (
-    <nav
-      data-testid="global-nav"
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "12px",
-        padding: "10px 14px",
-        borderBottom: `1px solid ${themeVar("--sn-border")}`,
-        background: themeVar("--sn-surface"),
-        color: themeVar("--sn-text"),
-        fontFamily: themeVar("--sn-font-family"),
-      }}
-    >
-      <Link style={{ color: "inherit" }} to="/">
-        Dashboard
-      </Link>
-      <Link style={{ color: "inherit" }} to="/canvas">
-        Canvas
-      </Link>
-      <Link style={{ color: "inherit" }} to="/data">
-        Data
-      </Link>
-      <Link style={{ color: "inherit" }} to="/lab">
-        Lab
-      </Link>
-      <Link style={{ color: "inherit" }} to="/marketplace">
-        Marketplace
-      </Link>
-      <Link style={{ color: "inherit" }} to="/profile/me" data-testid="nav-profile">
-        Profile
-      </Link>
-      <Link style={{ color: "inherit" }} to="/settings">
-        Settings
-      </Link>
-      <Link style={{ color: "inherit" }} to="/dev/test">
-        Dev
-      </Link>
-      <Link style={{ color: "inherit" }} to="/login">
-        Login
-      </Link>
-    </nav>
-  );
+const navLinkStyle: React.CSSProperties = {
+  color: 'inherit',
+  textDecoration: 'none',
+  padding: '4px 10px',
+  borderRadius: '6px',
+  fontSize: '13px',
 };
+
+const GlobalNav: React.FC = () => (
+  <nav
+    data-testid="global-nav"
+    style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: '6px',
+      padding: '10px 14px',
+      borderBottom: `1px solid ${themeVar('--sn-border')}`,
+      background: themeVar('--sn-surface'),
+      color: themeVar('--sn-text'),
+      fontFamily: themeVar('--sn-font-family'),
+    }}
+  >
+    <Link style={navLinkStyle} to="/">Dashboard</Link>
+    <Link style={navLinkStyle} to="/canvas">Canvas</Link>
+    <Link style={navLinkStyle} to="/data">Databases</Link>
+    <Link style={navLinkStyle} to="/lab">Lab</Link>
+    <Link style={navLinkStyle} to="/marketplace">Marketplace</Link>
+    <Link style={navLinkStyle} to="/profile/me" data-testid="nav-profile">Profile</Link>
+    <Link style={navLinkStyle} to="/settings">Settings</Link>
+    <Link style={navLinkStyle} to="/dev/test">Dev</Link>
+    <Link style={navLinkStyle} to="/login">Login</Link>
+  </nav>
+);
 
 /**
  * Main application router.
