@@ -26,10 +26,10 @@ import { createNotionHandler } from './integrations/notion-handler';
 import { getIntegrationProxy } from './integrations/singleton';
 import { createSocialHandler } from './integrations/social-handler';
 import { createIframePool, DEFAULT_WARMUP_COUNT } from './pool/iframe-pool';
-import { BUILT_IN_WIDGET_HTML } from './widgets/built-in-html';
 import type { IframePool } from './pool/iframe-pool';
 import { createRateLimiter } from './security/rate-limiter';
 import type { RateLimiter } from './security/rate-limiter';
+import { BUILT_IN_WIDGET_HTML } from './widgets/built-in-html';
 
 let initialized = false;
 let pool: IframePool | null = null;
@@ -339,6 +339,111 @@ StickerNest.ready();
     isBuiltIn: true,
     installedAt: new Date().toISOString(),
   },
+  {
+    widgetId: 'sn.builtin.creator-setup',
+    manifest: {
+      id: 'sn.builtin.creator-setup',
+      name: 'Creator Setup',
+      version: '1.0.0',
+      description: 'Multi-page Stripe Connect onboarding for creators',
+      author: { name: 'StickerNest', url: 'https://stickernest.com' },
+      license: 'MIT',
+      tags: ['commerce', 'creator'],
+      category: 'commerce',
+      permissions: ['checkout'],
+      events: {
+        emits: [{ name: 'commerce.connect.completed', description: 'Creator finished Stripe Connect onboarding' }],
+        subscribes: [],
+      },
+      config: { fields: [] },
+      size: { minWidth: 320, minHeight: 400, maxWidth: 520, maxHeight: 700, defaultWidth: 440, defaultHeight: 560, aspectLocked: false },
+      entry: 'inline',
+      spatialSupport: false,
+    },
+    htmlContent: '',
+    isBuiltIn: true,
+    installedAt: new Date().toISOString(),
+  },
+  {
+    widgetId: 'sn.builtin.tier-manager',
+    manifest: {
+      id: 'sn.builtin.tier-manager',
+      name: 'Tier Manager',
+      version: '1.0.0',
+      description: 'Create, edit, and delete subscription tiers (multi-page form)',
+      author: { name: 'StickerNest', url: 'https://stickernest.com' },
+      license: 'MIT',
+      tags: ['commerce', 'creator'],
+      category: 'commerce',
+      permissions: ['checkout'],
+      events: {
+        emits: [
+          { name: 'commerce.tier.created', description: 'Creator created a tier' },
+          { name: 'commerce.tier.updated', description: 'Creator updated a tier' },
+          { name: 'commerce.tier.deleted', description: 'Creator deleted a tier' },
+        ],
+        subscribes: [],
+      },
+      config: { fields: [] },
+      size: { minWidth: 320, minHeight: 400, maxWidth: 600, maxHeight: 800, defaultWidth: 440, defaultHeight: 600, aspectLocked: false },
+      entry: 'inline',
+      spatialSupport: false,
+    },
+    htmlContent: '',
+    isBuiltIn: true,
+    installedAt: new Date().toISOString(),
+  },
+  {
+    widgetId: 'sn.builtin.item-manager',
+    manifest: {
+      id: 'sn.builtin.item-manager',
+      name: 'Item Manager',
+      version: '1.0.0',
+      description: 'Create, edit, and delete shop items (multi-page form)',
+      author: { name: 'StickerNest', url: 'https://stickernest.com' },
+      license: 'MIT',
+      tags: ['commerce', 'creator'],
+      category: 'commerce',
+      permissions: ['checkout'],
+      events: {
+        emits: [
+          { name: 'commerce.item.created', description: 'Creator created an item' },
+          { name: 'commerce.item.updated', description: 'Creator updated an item' },
+          { name: 'commerce.item.deleted', description: 'Creator deleted an item' },
+        ],
+        subscribes: [],
+      },
+      config: { fields: [] },
+      size: { minWidth: 320, minHeight: 400, maxWidth: 600, maxHeight: 800, defaultWidth: 440, defaultHeight: 600, aspectLocked: false },
+      entry: 'inline',
+      spatialSupport: false,
+    },
+    htmlContent: '',
+    isBuiltIn: true,
+    installedAt: new Date().toISOString(),
+  },
+  {
+    widgetId: 'sn.builtin.orders',
+    manifest: {
+      id: 'sn.builtin.orders',
+      name: 'My Orders',
+      version: '1.0.0',
+      description: 'Purchase history and active subscriptions for buyers',
+      author: { name: 'StickerNest', url: 'https://stickernest.com' },
+      license: 'MIT',
+      tags: ['commerce', 'buyer'],
+      category: 'commerce',
+      permissions: ['checkout'],
+      events: { emits: [], subscribes: [] },
+      config: { fields: [] },
+      size: { minWidth: 300, minHeight: 350, maxWidth: 600, maxHeight: 800, defaultWidth: 420, defaultHeight: 500, aspectLocked: false },
+      entry: 'inline',
+      spatialSupport: false,
+    },
+    htmlContent: '',
+    isBuiltIn: true,
+    installedAt: new Date().toISOString(),
+  },
 ];
 
 /** Map from registry widgetId to built-in-html key */
@@ -346,6 +451,10 @@ const WIDGET_HTML_KEY: Record<string, string> = {
   'sn.builtin.signup': 'wgt-signup',
   'sn.builtin.subscribe': 'wgt-subscribe',
   'sn.builtin.shop': 'wgt-shop',
+  'sn.builtin.creator-setup': 'wgt-creator-setup',
+  'sn.builtin.tier-manager': 'wgt-tier-manager',
+  'sn.builtin.item-manager': 'wgt-item-manager',
+  'sn.builtin.orders': 'wgt-orders',
 };
 
 /**

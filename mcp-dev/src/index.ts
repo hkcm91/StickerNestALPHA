@@ -1197,6 +1197,19 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       description: 'Clear all commerce data (tiers, items, orders)',
       inputSchema: { type: 'object', properties: {} },
     },
+
+    // ── Universal Test Canvas ──────────────────────────────────────────
+    {
+      name: 'canvas_setup_commerce',
+      description: 'Set up a universal test canvas with all commerce widgets placed. Creates creator, onboards, creates tiers/items, places all 7 commerce widgets on canvas in a grid layout.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          canvasId: { type: 'string', description: 'Canvas ID (default: "test-commerce-canvas")' },
+          creatorEmail: { type: 'string', description: 'Creator email (default: "creator@test.canvas")' },
+        },
+      },
+    },
   ],
 }));
 
@@ -1476,6 +1489,108 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         commerce.clear();
         bus.emit('commerce.cleared', {});
         return { content: [{ type: 'text', text: 'Commerce data cleared' }] };
+      }
+
+      // ── Universal Test Canvas ────────────────────────────────────────
+      case 'canvas_setup_commerce': {
+        const canvasId = (a.canvasId as string) || 'test-commerce-canvas';
+        const creatorEmail = (a.creatorEmail as string) || 'creator@test.canvas';
+
+        // 1. Create creator user and onboard
+        const creator = billing.createUser(creatorEmail, 'creator');
+        billing.connectOnboard(creator.id);
+        bus.emit('commerce.setup.creator', { userId: creator.id, email: creatorEmail });
+
+        // 2. Create sample tiers
+        const freeTier = commerce.createTier(canvasId, creator.id, {
+          name: 'Free Follower',
+          priceCents: 0,
+          currency: 'usd',
+          interval: 'month',
+          description: 'Follow along for free!',
+          benefits: ['Community chat access', 'Monthly newsletter', 'Early previews'],
+        });
+        const proTier = commerce.createTier(canvasId, creator.id, {
+          name: 'Pro Supporter',
+          priceCents: 999,
+          currency: 'usd',
+          interval: 'month',
+          description: 'Get exclusive content and perks',
+          benefits: ['All Free benefits', 'Exclusive sticker drops', 'Priority support', 'Behind-the-scenes'],
+        });
+        bus.emit('commerce.setup.tiers', { count: 2, canvasId });
+
+        // 3. Create sample shop items
+        const stickerPack = commerce.createItem(canvasId, creator.id, {
+          name: 'Cute Cat Sticker Pack',
+          priceCents: 0,
+          itemType: 'digital',
+          fulfillment: 'auto',
+          currency: 'usd',
+          description: 'A free starter pack of 5 adorable cat stickers',
+          stockCount: 100,
+          requiresShipping: false,
+        });
+        const artPrint = commerce.createItem(canvasId, creator.id, {
+          name: 'Signed Art Print',
+          priceCents: 2500,
+          itemType: 'physical',
+          fulfillment: 'manual',
+          currency: 'usd',
+          description: 'A hand-signed 8x10 art print shipped to your door',
+          stockCount: 25,
+          requiresShipping: true,
+        });
+        bus.emit('commerce.setup.items', { count: 2, canvasId });
+
+        // 4. Place all 7 commerce widgets on the canvas in a grid layout
+        const widgets = [
+          { id: 'w-signup',        widgetId: 'sn.builtin.signup',        name: 'Sign Up',        x: 0,   y: 0,   w: 360, h: 400 },
+          { id: 'w-creator-setup', widgetId: 'sn.builtin.creator-setup', name: 'Creator Setup',  x: 400, y: 0,   w: 440, h: 560 },
+          { id: 'w-tier-manager',  widgetId: 'sn.builtin.tier-manager',  name: 'Tier Manager',   x: 880, y: 0,   w: 440, h: 600 },
+          { id: 'w-item-manager',  widgetId: 'sn.builtin.item-manager',  name: 'Item Manager',   x: 0,   y: 440, w: 440, h: 600 },
+          { id: 'w-subscribe',     widgetId: 'sn.builtin.subscribe',     name: 'Subscribe',      x: 480, y: 600, w: 360, h: 500 },
+          { id: 'w-shop',          widgetId: 'sn.builtin.shop',          name: 'Shop',           x: 880, y: 640, w: 480, h: 500 },
+          { id: 'w-orders',        widgetId: 'sn.builtin.orders',        name: 'My Orders',      x: 0,   y: 1080,w: 420, h: 500 },
+        ];
+
+        const placedWidgets = widgets.map(w => {
+          const entity = scene.addEntity({
+            id: w.id,
+            type: 'widget',
+            name: w.name,
+            transform: {
+              position: { x: w.x, y: w.y },
+              size: { width: w.w, height: w.h },
+              rotation: 0,
+              scale: 1,
+            },
+            visible: true,
+            locked: false,
+            metadata: { widgetId: w.widgetId, canvasId },
+          });
+          bus.emit('canvas.widget.placed', { entityId: entity.id, widgetId: w.widgetId });
+          return { entityId: entity.id, widgetId: w.widgetId, name: w.name, position: { x: w.x, y: w.y } };
+        });
+
+        bus.emit('commerce.setup.complete', { canvasId, widgetCount: widgets.length });
+
+        const result = {
+          canvasId,
+          creator: { id: creator.id, email: creatorEmail, chargesEnabled: true },
+          tiers: [
+            { id: freeTier.id, name: freeTier.name, priceCents: freeTier.priceCents },
+            { id: proTier.id, name: proTier.name, priceCents: proTier.priceCents },
+          ],
+          items: [
+            { id: stickerPack.id, name: stickerPack.name, priceCents: stickerPack.priceCents, type: stickerPack.itemType },
+            { id: artPrint.id, name: artPrint.name, priceCents: artPrint.priceCents, type: artPrint.itemType },
+          ],
+          widgets: placedWidgets,
+          summary: `Canvas "${canvasId}" set up with 7 commerce widgets, 2 tiers (free + $9.99/mo), and 2 items (free digital + $25 physical).`,
+        };
+
+        return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
       }
 
       default:
