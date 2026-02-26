@@ -75,26 +75,32 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
       .toggle { font-size: 13px; text-align: center; margin-top: 12px; color: var(--sn-accent, #6366f1); cursor: pointer; }
       .signed-in { text-align: center; padding: 20px; }
       .hidden { display: none; }
+      .btn:focus-visible { outline: 2px solid var(--sn-accent, #6366f1); outline-offset: 2px; }
+      input:focus-visible { outline: 2px solid var(--sn-accent, #6366f1); outline-offset: 1px; }
+      .btn { transition: background 0.15s ease, opacity 0.15s ease; }
+      .btn:disabled { opacity: 0.6; }
+      .signup-root { animation: fadeIn 0.2s ease; }
+      @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
     </style>
-    <div class="signup-root">
-      <div id="auth-form">
+    <div class="signup-root" role="region" aria-label="Authentication">
+      <div id="auth-form" role="form" aria-labelledby="form-title">
         <h2 id="form-title">Sign Up</h2>
         <div class="form-group">
           <label for="email">Email</label>
-          <input type="email" id="email" placeholder="you@example.com" />
+          <input type="email" id="email" placeholder="you@example.com" autocomplete="email" aria-required="true" />
         </div>
         <div class="form-group">
           <label for="password">Password</label>
-          <input type="password" id="password" placeholder="Min 6 characters" />
+          <input type="password" id="password" placeholder="Min 8 characters" autocomplete="new-password" aria-required="true" aria-describedby="error" />
         </div>
-        <div id="error" class="error hidden"></div>
-        <button id="submit-btn" class="btn btn-primary">Sign Up</button>
-        <div id="toggle-mode" class="toggle">Already have an account? Sign in</div>
+        <div id="error" class="error hidden" role="alert" aria-live="polite"></div>
+        <button id="submit-btn" class="btn btn-primary" type="button">Sign Up</button>
+        <div id="toggle-mode" class="toggle" role="button" tabindex="0">Already have an account? Sign in</div>
       </div>
-      <div id="signed-in" class="signed-in hidden">
+      <div id="signed-in" class="signed-in hidden" role="status">
         <h2>Welcome!</h2>
         <p id="user-email" style="color:var(--sn-text-muted,#6b7280);margin:8px 0 16px;font-size:14px;"></p>
-        <button id="signout-btn" class="btn btn-secondary">Sign Out</button>
+        <button id="signout-btn" class="btn btn-secondary" type="button">Sign Out</button>
       </div>
     </div>
     <script>
@@ -131,13 +137,16 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
         userEmailEl.textContent = user.email || '';
       }
 
-      toggleEl.onclick = function() {
+      function toggleMode() {
         isSignUp = !isSignUp;
         titleEl.textContent = isSignUp ? 'Sign Up' : 'Sign In';
         submitBtn.textContent = isSignUp ? 'Sign Up' : 'Sign In';
         toggleEl.textContent = isSignUp ? 'Already have an account? Sign in' : 'Need an account? Sign up';
+        passwordInput.setAttribute('autocomplete', isSignUp ? 'new-password' : 'current-password');
         clearError();
-      };
+      }
+      toggleEl.onclick = toggleMode;
+      toggleEl.onkeydown = function(e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleMode(); } };
 
       // Allow Enter key to submit form
       passwordInput.onkeydown = function(e) { if (e.key === 'Enter') submitBtn.click(); };
@@ -210,19 +219,29 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
       .loading { text-align: center; padding: 40px; color: var(--sn-text-muted, #6b7280); }
       .empty { text-align: center; padding: 40px; color: var(--sn-text-muted, #6b7280); font-size: 14px; }
       .error-toast { background: #fee2e2; color: #dc2626; padding: 8px 12px; border-radius: var(--sn-radius, 6px); font-size: 13px; margin-bottom: 12px; display: none; }
+      .success-toast { background: #dcfce7; color: #16a34a; padding: 10px 14px; border-radius: var(--sn-radius, 6px); font-size: 13px; margin-bottom: 12px; display: none; text-align: center; }
+      .btn { transition: background 0.15s ease, opacity 0.15s ease; }
+      .btn:disabled { opacity: 0.6; }
+      .btn:focus-visible { outline: 2px solid var(--sn-accent, #6366f1); outline-offset: 2px; }
+      .tier-card { transition: border-color 0.15s ease, box-shadow 0.15s ease; }
+      .tier-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+      .tiers { animation: fadeIn 0.2s ease; }
+      @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
     </style>
-    <div class="sub-root">
-      <h2>Subscription Tiers</h2>
-      <div id="error-toast" class="error-toast"></div>
-      <div id="loading" class="loading">Loading tiers...</div>
-      <div id="empty" class="empty" style="display:none;">No subscription tiers available yet.</div>
-      <div id="tiers" class="tiers" style="display:none;"></div>
+    <div class="sub-root" role="region" aria-label="Subscription Tiers">
+      <h2 id="sub-heading">Subscription Tiers</h2>
+      <div id="success-toast" class="success-toast" role="status" aria-live="polite"></div>
+      <div id="error-toast" class="error-toast" role="alert" aria-live="polite"></div>
+      <div id="loading" class="loading" role="status" aria-live="polite">Loading tiers...</div>
+      <div id="empty" class="empty" style="display:none;" role="status">No subscription tiers available yet.</div>
+      <div id="tiers" class="tiers" style="display:none;" role="list" aria-labelledby="sub-heading"></div>
     </div>
     <script>
       var tiersEl = document.getElementById('tiers');
       var loadingEl = document.getElementById('loading');
       var emptyEl = document.getElementById('empty');
       var errorToast = document.getElementById('error-toast');
+      var successToast = document.getElementById('success-toast');
       var currentSub = null;
 
       function showToast(msg) {
@@ -230,6 +249,17 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
         errorToast.style.display = 'block';
         setTimeout(function() { errorToast.style.display = 'none'; }, 5000);
       }
+
+      function showSuccess(msg) {
+        successToast.textContent = msg;
+        successToast.style.display = 'block';
+        setTimeout(function() { successToast.style.display = 'none'; }, 6000);
+      }
+
+      // Detect return from Stripe checkout via config
+      var cfg = StickerNest.getConfig();
+      if (cfg.subscribed) { showSuccess('Subscription successful! Welcome aboard.'); }
+      if (cfg.canceled) { showToast('Checkout was canceled.'); }
 
       function formatPrice(cents, currency) {
         return (cents / 100).toLocaleString(undefined, { style: 'currency', currency: currency || 'usd' });
@@ -252,6 +282,7 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
           var isActive = mySub && mySub.tier_id === tier.id;
           var card = document.createElement('div');
           card.className = 'tier-card' + (isActive ? ' active' : '');
+          card.setAttribute('role', 'listitem');
 
           var benefits = (tier.benefits || []).map(function(b) { return '<li>' + b + '</li>'; }).join('');
           var priceLabel = tier.price_cents === 0 ? 'Free' : formatPrice(tier.price_cents, tier.currency);
@@ -346,25 +377,44 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
       .empty { text-align: center; padding: 40px; color: var(--sn-text-muted, #6b7280); font-size: 14px; }
       .loading { text-align: center; padding: 40px; color: var(--sn-text-muted, #6b7280); }
       .error-toast { background: #fee2e2; color: #dc2626; padding: 8px 12px; border-radius: var(--sn-radius, 6px); font-size: 13px; margin-bottom: 12px; display: none; }
+      .success-toast { background: #dcfce7; color: #16a34a; padding: 10px 14px; border-radius: var(--sn-radius, 6px); font-size: 13px; margin-bottom: 12px; display: none; text-align: center; }
+      .btn { transition: background 0.15s ease, opacity 0.15s ease; }
+      .btn:focus-visible { outline: 2px solid var(--sn-accent, #6366f1); outline-offset: 2px; }
+      .item-card { transition: box-shadow 0.15s ease, transform 0.15s ease; }
+      .item-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); transform: translateY(-1px); }
+      .items-grid { animation: fadeIn 0.2s ease; }
+      @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
     </style>
-    <div class="shop-root">
-      <h2>Shop</h2>
-      <div id="error-toast" class="error-toast"></div>
-      <div id="loading" class="loading">Loading items...</div>
-      <div id="items" class="items-grid" style="display:none;"></div>
-      <div id="empty" class="empty" style="display:none;">No items available.</div>
+    <div class="shop-root" role="region" aria-label="Shop">
+      <h2 id="shop-heading">Shop</h2>
+      <div id="success-toast" class="success-toast" role="status" aria-live="polite"></div>
+      <div id="error-toast" class="error-toast" role="alert" aria-live="polite"></div>
+      <div id="loading" class="loading" role="status" aria-live="polite">Loading items...</div>
+      <div id="items" class="items-grid" style="display:none;" role="list" aria-labelledby="shop-heading"></div>
+      <div id="empty" class="empty" style="display:none;" role="status">No items available.</div>
     </div>
     <script>
       var itemsEl = document.getElementById('items');
       var loadingEl = document.getElementById('loading');
       var emptyEl = document.getElementById('empty');
       var shopErrorToast = document.getElementById('error-toast');
+      var shopSuccessToast = document.getElementById('success-toast');
 
       function showShopToast(msg) {
         shopErrorToast.textContent = msg;
         shopErrorToast.style.display = 'block';
         setTimeout(function() { shopErrorToast.style.display = 'none'; }, 5000);
       }
+
+      function showShopSuccess(msg) {
+        shopSuccessToast.textContent = msg;
+        shopSuccessToast.style.display = 'block';
+        setTimeout(function() { shopSuccessToast.style.display = 'none'; }, 6000);
+      }
+
+      // Detect return from Stripe checkout via config
+      var shopCfg = StickerNest.getConfig();
+      if (shopCfg.purchased) { showShopSuccess('Purchase successful! Check My Orders for details.'); }
 
       function formatPrice(cents, currency) {
         return (cents / 100).toLocaleString(undefined, { style: 'currency', currency: currency || 'usd' });
@@ -392,6 +442,7 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
             items.forEach(function(item) {
               var card = document.createElement('div');
               card.className = 'item-card';
+              card.setAttribute('role', 'listitem');
 
               var imgHtml = item.thumbnail_url
                 ? '<img class="item-img" src="' + item.thumbnail_url + '" alt="' + esc(item.name) + '" />'
@@ -501,12 +552,19 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
       .info-box{background:var(--sn-surface,#f9fafb);border:1px solid var(--sn-border,#e5e7eb);border-radius:var(--sn-radius,6px);padding:16px;margin:16px 0;font-size:13px;line-height:1.6}
       .error{color:#ef4444;font-size:12px;margin-top:8px}
       .loading{text-align:center;padding:40px;color:var(--sn-text-muted,#6b7280)}
+      .btn{transition:background 0.15s ease,opacity 0.15s ease}
+      .btn:disabled{opacity:.5;cursor:default}
+      .btn:focus-visible{outline:2px solid var(--sn-accent,#6366f1);outline-offset:2px}
+      .page.active{animation:fadeIn 0.2s ease}
+      @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+      .success-banner{background:#dcfce7;color:#16a34a;padding:10px 14px;border-radius:var(--sn-radius,6px);font-size:13px;margin-bottom:12px;text-align:center;display:none}
     </style>
-    <div class="root">
-      <div id="loading" class="loading">Checking account status...</div>
+    <div class="root" role="region" aria-label="Creator Setup">
+      <div id="loading" class="loading" role="status" aria-live="polite">Checking account status...</div>
+      <div id="success-banner" class="success-banner" role="status" aria-live="polite"></div>
 
       <!-- Page 1: Status overview -->
-      <div id="page-status" class="page">
+      <div id="page-status" class="page" role="region" aria-label="Account Status">
         <h2>Creator Setup</h2>
         <p class="subtitle">Connect with Stripe to start selling on your canvas</p>
         <div id="steps-bar" class="steps"></div>
@@ -514,7 +572,7 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
       </div>
 
       <!-- Page 2: Onboarding info -->
-      <div id="page-onboard" class="page">
+      <div id="page-onboard" class="page" role="region" aria-label="Connect with Stripe">
         <h2>Connect with Stripe</h2>
         <p class="subtitle">Stripe handles all payments securely — you never touch card details</p>
         <div class="info-box">
@@ -536,7 +594,7 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
       </div>
 
       <!-- Page 3: Complete / Dashboard -->
-      <div id="page-complete" class="page">
+      <div id="page-complete" class="page" role="region" aria-label="Setup Complete">
         <h2 style="color:#16a34a">You are all set!</h2>
         <p class="subtitle">Your Stripe account is connected and ready to accept payments</p>
         <div class="status-card">
@@ -647,6 +705,15 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
         });
       };
 
+      // Detect return from Stripe Connect onboarding via config
+      var setupCfg = StickerNest.getConfig();
+      if (setupCfg.connectReturning) {
+        var banner = document.getElementById('success-banner');
+        banner.textContent = 'Welcome back from Stripe! Checking your account status...';
+        banner.style.display = 'block';
+        setTimeout(function() { banner.style.display = 'none'; }, 8000);
+      }
+
       StickerNest.register({ id: 'wgt-creator-setup', name: 'Creator Setup', version: '1.0.0' });
       load();
       StickerNest.ready();
@@ -690,21 +757,29 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
       .empty{text-align:center;padding:30px;color:var(--sn-text-muted,#6b7280);font-size:14px}
       .loading{text-align:center;padding:30px;color:var(--sn-text-muted,#6b7280)}
       .success-msg{background:#dcfce7;color:#16a34a;padding:10px;border-radius:var(--sn-radius,6px);font-size:13px;text-align:center;margin-bottom:12px}
+      .btn{transition:background 0.15s ease,opacity 0.15s ease}
+      .btn:disabled{opacity:.5;cursor:default}
+      .btn:focus-visible,.btn-sm:focus-visible{outline:2px solid var(--sn-accent,#6366f1);outline-offset:2px}
+      .form-group input:focus-visible,.form-group textarea:focus-visible,.form-group select:focus-visible{outline:2px solid var(--sn-accent,#6366f1);outline-offset:1px}
+      .tier-row{transition:box-shadow 0.15s ease}
+      .tier-row:hover{box-shadow:0 1px 6px rgba(0,0,0,0.06)}
+      .page.active{animation:fadeIn 0.2s ease}
+      @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
     </style>
-    <div class="root">
-      <div id="loading" class="loading">Loading tiers...</div>
+    <div class="root" role="region" aria-label="Tier Manager">
+      <div id="loading" class="loading" role="status" aria-live="polite">Loading tiers...</div>
 
       <!-- Page 1: Tier list -->
-      <div id="page-list" class="page">
+      <div id="page-list" class="page" role="region" aria-label="Tier List">
         <h2>Subscription Tiers</h2>
         <p class="subtitle">Manage tiers visitors can subscribe to on your canvas</p>
-        <div id="success" class="success-msg" style="display:none"></div>
-        <div id="tier-list"></div>
-        <button id="btn-add" class="btn btn-primary" style="margin-top:16px">+ Add Tier</button>
+        <div id="success" class="success-msg" role="status" aria-live="polite" style="display:none"></div>
+        <div id="tier-list" role="list"></div>
+        <button id="btn-add" class="btn btn-primary" style="margin-top:16px" type="button">+ Add Tier</button>
       </div>
 
       <!-- Page 2: Create/Edit form -->
-      <div id="page-form" class="page">
+      <div id="page-form" class="page" role="form" aria-labelledby="form-title">
         <h2 id="form-title">Add Tier</h2>
         <p class="subtitle" id="form-subtitle">Create a new subscription tier for your canvas</p>
         <div class="form-group">
@@ -740,13 +815,13 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
       </div>
 
       <!-- Page 3: Confirm delete -->
-      <div id="page-delete" class="page">
+      <div id="page-delete" class="page" role="alertdialog" aria-label="Confirm Tier Deletion">
         <h2>Delete Tier</h2>
         <p class="subtitle">Are you sure you want to delete this tier? Active subscribers will lose access.</p>
         <div id="delete-name" style="font-weight:600;font-size:16px;padding:16px 0"></div>
-        <button id="btn-confirm-del" class="btn btn-primary" style="background:#ef4444">Delete Tier</button>
-        <button id="btn-cancel-del" class="btn btn-secondary">Cancel</button>
-        <div id="del-error" class="error" style="display:none"></div>
+        <button id="btn-confirm-del" class="btn btn-primary" style="background:#ef4444" type="button">Delete Tier</button>
+        <button id="btn-cancel-del" class="btn btn-secondary" type="button">Cancel</button>
+        <div id="del-error" class="error" role="alert" style="display:none"></div>
       </div>
     </div>
     <script>
@@ -985,21 +1060,29 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
       .empty{text-align:center;padding:30px;color:var(--sn-text-muted,#6b7280);font-size:14px}
       .loading{text-align:center;padding:30px;color:var(--sn-text-muted,#6b7280)}
       .success-msg{background:#dcfce7;color:#16a34a;padding:10px;border-radius:var(--sn-radius,6px);font-size:13px;text-align:center;margin-bottom:12px}
+      .btn{transition:background 0.15s ease,opacity 0.15s ease}
+      .btn:disabled{opacity:.5;cursor:default}
+      .btn:focus-visible,.btn-sm:focus-visible{outline:2px solid var(--sn-accent,#6366f1);outline-offset:2px}
+      .form-group input:focus-visible,.form-group textarea:focus-visible,.form-group select:focus-visible{outline:2px solid var(--sn-accent,#6366f1);outline-offset:1px}
+      .item-row{transition:box-shadow 0.15s ease}
+      .item-row:hover{box-shadow:0 1px 6px rgba(0,0,0,0.06)}
+      .page.active{animation:fadeIn 0.2s ease}
+      @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
     </style>
-    <div class="root">
-      <div id="loading" class="loading">Loading items...</div>
+    <div class="root" role="region" aria-label="Item Manager">
+      <div id="loading" class="loading" role="status" aria-live="polite">Loading items...</div>
 
       <!-- Page 1: Item list -->
-      <div id="page-list" class="page">
+      <div id="page-list" class="page" role="region" aria-label="Item List">
         <h2>Shop Items</h2>
         <p class="subtitle">Manage products and digital goods for sale on your canvas</p>
-        <div id="success" class="success-msg" style="display:none"></div>
-        <div id="item-list"></div>
-        <button id="btn-add" class="btn btn-primary" style="margin-top:16px">+ Add Item</button>
+        <div id="success" class="success-msg" role="status" aria-live="polite" style="display:none"></div>
+        <div id="item-list" role="list"></div>
+        <button id="btn-add" class="btn btn-primary" style="margin-top:16px" type="button">+ Add Item</button>
       </div>
 
       <!-- Page 2: Create/Edit form -->
-      <div id="page-form" class="page">
+      <div id="page-form" class="page" role="form" aria-labelledby="form-title">
         <h2 id="form-title">Add Item</h2>
         <p class="subtitle" id="form-subtitle">Create a new shop item</p>
         <div class="form-group">
@@ -1044,13 +1127,13 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
       </div>
 
       <!-- Page 3: Confirm delete -->
-      <div id="page-delete" class="page">
+      <div id="page-delete" class="page" role="alertdialog" aria-label="Confirm Item Deletion">
         <h2>Delete Item</h2>
         <p class="subtitle">Are you sure? Existing orders will not be affected but no new purchases can be made.</p>
         <div id="delete-name" style="font-weight:600;font-size:16px;padding:16px 0"></div>
-        <button id="btn-confirm-del" class="btn btn-primary" style="background:#ef4444">Delete Item</button>
-        <button id="btn-cancel-del" class="btn btn-secondary">Cancel</button>
-        <div id="del-error" class="error" style="display:none"></div>
+        <button id="btn-confirm-del" class="btn btn-primary" style="background:#ef4444" type="button">Delete Item</button>
+        <button id="btn-cancel-del" class="btn btn-secondary" type="button">Cancel</button>
+        <div id="del-error" class="error" role="alert" style="display:none"></div>
       </div>
     </div>
     <script>
@@ -1258,17 +1341,25 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
       .empty{text-align:center;padding:40px;color:var(--sn-text-muted,#6b7280);font-size:14px}
       .loading{text-align:center;padding:40px;color:var(--sn-text-muted,#6b7280)}
       .order-amount{font-weight:700;font-size:15px}
-      .btn-download{padding:4px 10px;border:1px solid var(--sn-accent,#6366f1);border-radius:var(--sn-radius,4px);background:transparent;color:var(--sn-accent,#6366f1);font-size:12px;cursor:pointer;font-weight:600}
+      .btn-download{padding:4px 10px;border:1px solid var(--sn-accent,#6366f1);border-radius:var(--sn-radius,4px);background:transparent;color:var(--sn-accent,#6366f1);font-size:12px;cursor:pointer;font-weight:600;transition:background 0.15s ease}
+      .btn-download:hover{background:rgba(99,102,241,0.08)}
+      .btn-download:focus-visible{outline:2px solid var(--sn-accent,#6366f1);outline-offset:2px}
+      .tab{transition:color 0.15s ease,border-color 0.15s ease}
+      .tab:focus-visible{outline:2px solid var(--sn-accent,#6366f1);outline-offset:2px}
+      .order-row{transition:box-shadow 0.15s ease}
+      .order-row:hover{box-shadow:0 1px 6px rgba(0,0,0,0.06)}
+      .order-list{animation:fadeIn 0.2s ease}
+      @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
     </style>
-    <div class="root">
-      <h2>My Orders</h2>
+    <div class="root" role="region" aria-label="My Orders">
+      <h2 id="orders-heading">My Orders</h2>
       <p class="subtitle">Your purchases and subscriptions</p>
-      <div class="tabs">
-        <div class="tab active" id="tab-purchases" data-tab="purchases">Purchases</div>
-        <div class="tab" id="tab-subscriptions" data-tab="subscriptions">Subscriptions</div>
+      <div class="tabs" role="tablist" aria-label="Order categories">
+        <div class="tab active" id="tab-purchases" data-tab="purchases" role="tab" tabindex="0" aria-selected="true" aria-controls="content">Purchases</div>
+        <div class="tab" id="tab-subscriptions" data-tab="subscriptions" role="tab" tabindex="0" aria-selected="false" aria-controls="content">Subscriptions</div>
       </div>
-      <div id="loading" class="loading">Loading orders...</div>
-      <div id="content"></div>
+      <div id="loading" class="loading" role="status" aria-live="polite">Loading orders...</div>
+      <div id="content" role="tabpanel" aria-labelledby="tab-purchases"></div>
     </div>
     <script>
       var checkout = StickerNest.integration('checkout');
@@ -1294,13 +1385,29 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
 
       function switchTab(tab) {
         currentTab = tab;
-        document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
-        document.getElementById('tab-' + tab).classList.add('active');
+        document.querySelectorAll('.tab').forEach(function(t) {
+          t.classList.remove('active');
+          t.setAttribute('aria-selected', 'false');
+        });
+        var activeTab = document.getElementById('tab-' + tab);
+        activeTab.classList.add('active');
+        activeTab.setAttribute('aria-selected', 'true');
+        document.getElementById('content').setAttribute('aria-labelledby', 'tab-' + tab);
         render();
       }
 
-      document.querySelectorAll('.tab').forEach(function(t) {
+      var tabEls = document.querySelectorAll('.tab');
+      tabEls.forEach(function(t) {
         t.onclick = function() { switchTab(t.dataset.tab); };
+        t.onkeydown = function(e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); switchTab(t.dataset.tab); }
+          if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+            var tabs = Array.from(tabEls);
+            var idx = tabs.indexOf(t);
+            var next = e.key === 'ArrowRight' ? (idx + 1) % tabs.length : (idx - 1 + tabs.length) % tabs.length;
+            tabs[next].focus();
+          }
+        };
       });
 
       function render() {
