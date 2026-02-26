@@ -60,9 +60,21 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
   });
 }
 
+/** Deterministic cache key — sorts object keys to avoid ordering mismatches. */
+function stableStringify(val: unknown): string {
+  if (val === null || val === undefined || typeof val !== 'object') {
+    return JSON.stringify(val);
+  }
+  if (Array.isArray(val)) {
+    return '[' + val.map(stableStringify).join(',') + ']';
+  }
+  const keys = Object.keys(val as Record<string, unknown>).sort();
+  return '{' + keys.map(k => JSON.stringify(k) + ':' + stableStringify((val as Record<string, unknown>)[k])).join(',') + '}';
+}
+
 function cacheKey(name: string, params: unknown): string {
   try {
-    return `${name}:${JSON.stringify(params)}`;
+    return `${name}:${stableStringify(params)}`;
   } catch {
     return `${name}:${String(params)}`;
   }

@@ -200,13 +200,16 @@ async function handleCheckoutQuery(
 
     case 'my_tiers': {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return withNonce([]);
-      const { data } = await supabase
+      if (!user) return withNonce({ data: [], total: 0, hasMore: false });
+      const limit = clampLimit(params.limit);
+      const offset = clampOffset(params.offset);
+      const { data, count } = await supabase
         .from('canvas_subscription_tiers')
-        .select('*')
+        .select('*', { count: 'exact' })
         .eq('creator_id', user.id)
-        .order('sort_order', { ascending: true });
-      return withNonce(data ?? []);
+        .order('sort_order', { ascending: true })
+        .range(offset, offset + limit - 1);
+      return withNonce({ data: data ?? [], total: count ?? 0, hasMore: (count ?? 0) > offset + limit });
     }
 
     case 'my_items': {
@@ -374,39 +377,16 @@ async function handleCheckoutMutate(
 
     case 'request_refund': {
       if (!params.orderId) return { error: 'orderId required' };
-      const { data: { user: refundUser } } = await supabase.auth.getUser();
-      if (!refundUser) return { error: 'Not authenticated' };
 
-      // Verify the authenticated user owns this order
-      const { data: order } = await supabase
-        .from('orders')
-        .select('id, created_at, status')
-        .eq('id', params.orderId)
-        .eq('buyer_id', refundUser.id)
-        .single();
+      // Delegate to the request-refund edge function which owns all
+      // validation: ownership, 30-day window, status checks, dedup.
+      const resp = await supabase.functions.invoke('request-refund', {
+        body: { orderId: params.orderId },
+      });
 
-      if (!order) return { error: 'Order not found or not owned by you' };
-
-      // Check that the order is in a refundable status
-      if (order.status !== 'paid' && order.status !== 'fulfilled') {
-        return { error: 'Only paid or fulfilled orders can be refunded' };
-      }
-
-      // Check the 30-day refund window
-      const orderDate = new Date(order.created_at);
-      const now = new Date();
-      const daysSinceOrder = (now.getTime() - orderDate.getTime()) / (1000 * 60 * 60 * 24);
-      if (daysSinceOrder > 30) {
-        return { error: 'Refund window has expired (30 days)' };
-      }
-
-      const { error: refundError } = await supabase
-        .from('orders')
-        .update({ status: 'refund_requested' })
-        .eq('id', params.orderId)
-        .eq('buyer_id', refundUser.id);
-
-      if (refundError) return { error: refundError.message };
+      if (resp.error) return { error: resp.error.message };
+      const body = resp.data as Record<string, unknown> | null;
+      if (body?.error) return { error: String(body.error) };
       return { success: true };
     }
 

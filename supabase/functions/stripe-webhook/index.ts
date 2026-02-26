@@ -106,126 +106,146 @@ async function handleCheckoutComplete(
   db: ReturnType<typeof createClient>,
   session: Stripe.Checkout.Session,
 ) {
-  const userId = session.metadata?.supabase_user_id;
-  const tier = session.metadata?.tier;
-  if (!userId || !tier) return;
+  try {
+    const userId = session.metadata?.supabase_user_id;
+    const tier = session.metadata?.tier;
+    if (!userId || !tier) return;
 
-  const subscriptionId =
-    typeof session.subscription === "string"
-      ? session.subscription
-      : session.subscription?.id;
-  const customerId =
-    typeof session.customer === "string"
-      ? session.customer
-      : session.customer?.id;
+    const subscriptionId =
+      typeof session.subscription === "string"
+        ? session.subscription
+        : session.subscription?.id;
+    const customerId =
+      typeof session.customer === "string"
+        ? session.customer
+        : session.customer?.id;
 
-  if (!subscriptionId || !customerId) return;
+    if (!subscriptionId || !customerId) return;
 
-  // Fetch the subscription to get price and period info
-  const sub = await stripe.subscriptions.retrieve(subscriptionId);
-  const priceId = sub.items.data[0]?.price?.id;
+    // Fetch the subscription to get price and period info
+    const sub = await stripe.subscriptions.retrieve(subscriptionId);
+    const priceId = sub.items.data[0]?.price?.id;
 
-  // Upsert the subscription record
-  await db.from("subscriptions").upsert(
-    {
-      user_id: userId,
-      stripe_customer_id: customerId,
-      stripe_subscription_id: subscriptionId,
-      stripe_price_id: priceId,
-      tier,
-      status: "active",
-      current_period_start: new Date(
-        sub.current_period_start * 1000,
-      ).toISOString(),
-      current_period_end: new Date(
-        sub.current_period_end * 1000,
-      ).toISOString(),
-      cancel_at_period_end: sub.cancel_at_period_end,
-    },
-    { onConflict: "user_id" },
-  );
+    // Upsert the subscription record
+    await db.from("subscriptions").upsert(
+      {
+        user_id: userId,
+        stripe_customer_id: customerId,
+        stripe_subscription_id: subscriptionId,
+        stripe_price_id: priceId,
+        tier,
+        status: "active",
+        current_period_start: new Date(
+          sub.current_period_start * 1000,
+        ).toISOString(),
+        current_period_end: new Date(
+          sub.current_period_end * 1000,
+        ).toISOString(),
+        cancel_at_period_end: sub.cancel_at_period_end,
+      },
+      { onConflict: "user_id" },
+    );
 
-  // Update the user's tier
-  await db.from("users").update({ tier }).eq("id", userId);
+    // Update the user's tier
+    await db.from("users").update({ tier }).eq("id", userId);
+  } catch (err) {
+    console.error(`handleCheckoutComplete failed for session ${session.id}:`, err);
+  }
 }
 
 async function handleSubscriptionUpdated(
   db: ReturnType<typeof createClient>,
   subscription: Stripe.Subscription,
 ) {
-  const userId = subscription.metadata?.supabase_user_id;
-  if (!userId) return;
+  try {
+    const userId = subscription.metadata?.supabase_user_id;
+    if (!userId) return;
 
-  const priceId = subscription.items.data[0]?.price?.id;
-  const tier = priceId ? (TIER_BY_PRICE[priceId] ?? "free") : "free";
-  const status = subscription.status === "active" ? "active" : subscription.status;
+    const priceId = subscription.items.data[0]?.price?.id;
+    const tier = priceId ? (TIER_BY_PRICE[priceId] ?? "free") : "free";
+    const status = subscription.status === "active" ? "active" : subscription.status;
 
-  await db
-    .from("subscriptions")
-    .update({
-      stripe_price_id: priceId,
-      tier,
-      status,
-      current_period_start: new Date(
-        subscription.current_period_start * 1000,
-      ).toISOString(),
-      current_period_end: new Date(
-        subscription.current_period_end * 1000,
-      ).toISOString(),
-      cancel_at_period_end: subscription.cancel_at_period_end,
-    })
-    .eq("stripe_subscription_id", subscription.id);
+    await db
+      .from("subscriptions")
+      .update({
+        stripe_price_id: priceId,
+        tier,
+        status,
+        current_period_start: new Date(
+          subscription.current_period_start * 1000,
+        ).toISOString(),
+        current_period_end: new Date(
+          subscription.current_period_end * 1000,
+        ).toISOString(),
+        cancel_at_period_end: subscription.cancel_at_period_end,
+      })
+      .eq("stripe_subscription_id", subscription.id);
 
-  // Sync the user tier
-  await db.from("users").update({ tier }).eq("id", userId);
+    // Sync the user tier
+    await db.from("users").update({ tier }).eq("id", userId);
+  } catch (err) {
+    console.error(`handleSubscriptionUpdated failed for subscription ${subscription.id}:`, err);
+  }
 }
 
 async function handleSubscriptionDeleted(
   db: ReturnType<typeof createClient>,
   subscription: Stripe.Subscription,
 ) {
-  const userId = subscription.metadata?.supabase_user_id;
-  if (!userId) return;
+  try {
+    const userId = subscription.metadata?.supabase_user_id;
+    if (!userId) return;
 
-  await db
-    .from("subscriptions")
-    .update({ status: "canceled", tier: "free" })
-    .eq("stripe_subscription_id", subscription.id);
+    await db
+      .from("subscriptions")
+      .update({ status: "canceled", tier: "free" })
+      .eq("stripe_subscription_id", subscription.id);
 
-  // Revert user to free tier
-  await db.from("users").update({ tier: "free" }).eq("id", userId);
+    // Revert user to free tier
+    await db.from("users").update({ tier: "free" }).eq("id", userId);
+  } catch (err) {
+    console.error(`handleSubscriptionDeleted failed for subscription ${subscription.id}:`, err);
+  }
 }
 
 async function handlePaymentFailed(
   db: ReturnType<typeof createClient>,
   invoice: Stripe.Invoice,
 ) {
-  const subscriptionId =
-    typeof invoice.subscription === "string"
-      ? invoice.subscription
-      : invoice.subscription?.id;
-  if (!subscriptionId) return;
+  try {
+    const subscriptionId =
+      typeof invoice.subscription === "string"
+        ? invoice.subscription
+        : invoice.subscription?.id;
+    if (!subscriptionId) return;
 
-  await db
-    .from("subscriptions")
-    .update({ status: "past_due" })
-    .eq("stripe_subscription_id", subscriptionId);
+    await db
+      .from("subscriptions")
+      .update({ status: "past_due" })
+      .eq("stripe_subscription_id", subscriptionId);
+  } catch (err) {
+    console.error(`handlePaymentFailed failed for invoice ${invoice.id}:`, err);
+  }
 }
 
 async function handleInvoicePaid(
   db: ReturnType<typeof createClient>,
   invoice: Stripe.Invoice,
 ) {
-  const subscriptionId =
-    typeof invoice.subscription === "string"
-      ? invoice.subscription
-      : invoice.subscription?.id;
-  if (!subscriptionId) return;
+  try {
+    const subscriptionId =
+      typeof invoice.subscription === "string"
+        ? invoice.subscription
+        : invoice.subscription?.id;
+    if (!subscriptionId) return;
 
-  // Restore active status after successful payment
-  await db
-    .from("subscriptions")
-    .update({ status: "active" })
-    .eq("stripe_subscription_id", subscriptionId)
-    .eq("status", "past_due");
+    // Restore active status after successful payment
+    await db
+      .from("subscriptions")
+      .update({ status: "active" })
+      .eq("stripe_subscription_id", subscriptionId)
+      .eq("status", "past_due");
+  } catch (err) {
+    console.error(`handleInvoicePaid failed for invoice ${invoice.id}:`, err);
+  }
 }

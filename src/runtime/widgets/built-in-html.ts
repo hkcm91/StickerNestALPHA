@@ -905,8 +905,9 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
       }
 
       function loadTiers() {
-        checkout.query({ action: 'my_tiers' }).then(function(data) {
-          tiers = data || [];
+        checkout.query({ action: 'my_tiers' }).then(function(result) {
+          // Handle both paginated { data } and raw array responses
+          tiers = (result && result.data) ? result.data : (Array.isArray(result) ? result : []);
           tiers.sort(function(a, b) { return (a.sort_order || 0) - (b.sort_order || 0); });
           document.getElementById('loading').style.display = 'none';
           renderList();
@@ -926,7 +927,10 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
         Promise.all([
           checkout.mutate({ action: 'update_tier', tierId: current.id, data: { sortOrder: orderA } }),
           checkout.mutate({ action: 'update_tier', tierId: above.id, data: { sortOrder: orderB } })
-        ]).then(function() { loadTiers(); }).catch(function() {});
+        ]).then(function() { loadTiers(); }).catch(function() {
+          var msg = document.getElementById('success');
+          if (msg) { msg.textContent = 'Failed to reorder tiers.'; msg.style.display = 'block'; setTimeout(function() { msg.style.display = 'none'; }, 3000); }
+        });
       };
 
       window.moveTierDown = function(id) {
@@ -939,7 +943,10 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
         Promise.all([
           checkout.mutate({ action: 'update_tier', tierId: current.id, data: { sortOrder: orderB } }),
           checkout.mutate({ action: 'update_tier', tierId: below.id, data: { sortOrder: orderA } })
-        ]).then(function() { loadTiers(); }).catch(function() {});
+        ]).then(function() { loadTiers(); }).catch(function() {
+          var msg = document.getElementById('success');
+          if (msg) { msg.textContent = 'Failed to reorder tiers.'; msg.style.display = 'block'; setTimeout(function() { msg.style.display = 'none'; }, 3000); }
+        });
       };
 
       window.toggleTierActive = function(id) {
@@ -953,7 +960,10 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
             setTimeout(function() { msg.style.display = 'none'; }, 2000);
             loadTiers();
           }
-        }).catch(function() {});
+        }).catch(function() {
+          var msg = document.getElementById('success');
+          if (msg) { msg.textContent = 'Failed to toggle tier.'; msg.style.display = 'block'; setTimeout(function() { msg.style.display = 'none'; }, 3000); }
+        });
       };
 
       function renderList() {
@@ -1292,7 +1302,10 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
             setTimeout(function() { msg.style.display = 'none'; }, 2000);
             loadItems();
           }
-        }).catch(function() {});
+        }).catch(function() {
+          var msg = document.getElementById('success');
+          if (msg) { msg.textContent = 'Failed to toggle item.'; msg.style.display = 'block'; setTimeout(function() { msg.style.display = 'none'; }, 3000); }
+        });
       };
 
       function loadItems() {

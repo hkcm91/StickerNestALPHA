@@ -94,95 +94,99 @@ async function handleCreatorCheckoutComplete(
   db: ReturnType<typeof createClient>,
   session: Stripe.Checkout.Session,
 ) {
-  const meta = session.metadata ?? {};
-  const buyerId = meta.supabase_buyer_id;
-  const sellerId = meta.seller_id;
-  const orderType = meta.order_type;
-  const canvasId = meta.canvas_id;
+  try {
+    const meta = session.metadata ?? {};
+    const buyerId = meta.supabase_buyer_id;
+    const sellerId = meta.seller_id;
+    const orderType = meta.order_type;
+    const canvasId = meta.canvas_id;
 
-  if (!buyerId || !sellerId || !orderType) return;
+    if (!buyerId || !sellerId || !orderType) return;
 
-  const amountTotal = session.amount_total ?? 0;
-  // Stripe reports the application fee in the payment intent
-  const platformFeeCents = Math.round(amountTotal * 0.12); // approximate; exact comes from Stripe fee
+    const amountTotal = session.amount_total ?? 0;
+    // Stripe reports the application fee in the payment intent
+    const platformFeeCents = Math.round(amountTotal * 0.12); // approximate; exact comes from Stripe fee
 
-  // Create the order record
-  await db.from("orders").insert({
-    buyer_id: buyerId,
-    seller_id: sellerId,
-    order_type: orderType,
-    item_id: meta.tier_id ?? meta.item_id,
-    stripe_checkout_session_id: session.id,
-    stripe_payment_intent_id:
-      typeof session.payment_intent === "string"
-        ? session.payment_intent
-        : session.payment_intent?.id ?? null,
-    amount_cents: amountTotal,
-    currency: session.currency ?? "usd",
-    platform_fee_cents: platformFeeCents,
-    status: "paid",
-    shipping_address: session.shipping_details?.address
-      ? JSON.stringify(session.shipping_details.address)
-      : null,
-  });
+    // Create the order record
+    await db.from("orders").insert({
+      buyer_id: buyerId,
+      seller_id: sellerId,
+      order_type: orderType,
+      item_id: meta.tier_id ?? meta.item_id,
+      stripe_checkout_session_id: session.id,
+      stripe_payment_intent_id:
+        typeof session.payment_intent === "string"
+          ? session.payment_intent
+          : session.payment_intent?.id ?? null,
+      amount_cents: amountTotal,
+      currency: session.currency ?? "usd",
+      platform_fee_cents: platformFeeCents,
+      status: "paid",
+      shipping_address: session.shipping_details?.address
+        ? JSON.stringify(session.shipping_details.address)
+        : null,
+    });
 
-  // Handle canvas subscription specifically
-  if (orderType === "canvas_subscription" && meta.tier_id && canvasId) {
-    const subscriptionId =
-      typeof session.subscription === "string"
-        ? session.subscription
-        : session.subscription?.id ?? null;
+    // Handle canvas subscription specifically
+    if (orderType === "canvas_subscription" && meta.tier_id && canvasId) {
+      const subscriptionId =
+        typeof session.subscription === "string"
+          ? session.subscription
+          : session.subscription?.id ?? null;
 
-    await db.from("canvas_subscriptions").upsert(
-      {
-        buyer_id: buyerId,
-        canvas_id: canvasId,
-        tier_id: meta.tier_id,
-        stripe_subscription_id: subscriptionId,
-        status: "active",
-      },
-      { onConflict: "buyer_id,canvas_id" },
-    );
-
-    // Grant the canvas role from the tier
-    const { data: tier } = await db
-      .from("canvas_subscription_tiers")
-      .select("canvas_role")
-      .eq("id", meta.tier_id)
-      .single();
-
-    if (tier?.canvas_role) {
-      await db.from("canvas_members").upsert(
+      await db.from("canvas_subscriptions").upsert(
         {
+          buyer_id: buyerId,
           canvas_id: canvasId,
-          user_id: buyerId,
-          role: tier.canvas_role,
+          tier_id: meta.tier_id,
+          stripe_subscription_id: subscriptionId,
+          status: "active",
         },
-        { onConflict: "canvas_id,user_id" },
+        { onConflict: "buyer_id,canvas_id" },
       );
-    }
-  }
 
-  // Handle shop item — fulfill digital instantly
-  if (orderType === "shop_item" && meta.item_id) {
-    const { data: item } = await db
-      .from("shop_items")
-      .select("item_type, stock_count")
-      .eq("id", meta.item_id)
-      .single();
+      // Grant the canvas role from the tier
+      const { data: tier } = await db
+        .from("canvas_subscription_tiers")
+        .select("canvas_role")
+        .eq("id", meta.tier_id)
+        .single();
 
-    if (item?.item_type === "digital") {
-      // Mark as fulfilled immediately
-      await db
-        .from("orders")
-        .update({ status: "fulfilled" })
-        .eq("stripe_checkout_session_id", session.id);
+      if (tier?.canvas_role) {
+        await db.from("canvas_members").upsert(
+          {
+            canvas_id: canvasId,
+            user_id: buyerId,
+            role: tier.canvas_role,
+          },
+          { onConflict: "canvas_id,user_id" },
+        );
+      }
     }
 
-    // Decrement stock
-    if (item?.stock_count !== null) {
-      await db.rpc("decrement_stock", { item_id: meta.item_id });
+    // Handle shop item — fulfill digital instantly
+    if (orderType === "shop_item" && meta.item_id) {
+      const { data: item } = await db
+        .from("shop_items")
+        .select("item_type, stock_count")
+        .eq("id", meta.item_id)
+        .single();
+
+      if (item?.item_type === "digital") {
+        // Mark as fulfilled immediately
+        await db
+          .from("orders")
+          .update({ status: "fulfilled" })
+          .eq("stripe_checkout_session_id", session.id);
+      }
+
+      // Decrement stock
+      if (item?.stock_count !== null) {
+        await db.rpc("decrement_stock", { item_id: meta.item_id });
+      }
     }
+  } catch (err) {
+    console.error(`handleCreatorCheckoutComplete failed for session ${session.id}:`, err);
   }
 }
 
@@ -190,66 +194,78 @@ async function handleCreatorSubscriptionDeleted(
   db: ReturnType<typeof createClient>,
   subscription: Stripe.Subscription,
 ) {
-  // Revoke the canvas subscription and downgrade role
-  await db
-    .from("canvas_subscriptions")
-    .update({ status: "canceled" })
-    .eq("stripe_subscription_id", subscription.id);
+  try {
+    // Revoke the canvas subscription and downgrade role
+    await db
+      .from("canvas_subscriptions")
+      .update({ status: "canceled" })
+      .eq("stripe_subscription_id", subscription.id);
+  } catch (err) {
+    console.error(`handleCreatorSubscriptionDeleted failed for subscription ${subscription.id}:`, err);
+  }
 }
 
 async function handleDisputeCreated(
   db: ReturnType<typeof createClient>,
   dispute: Stripe.Dispute,
 ) {
-  const paymentIntentId =
-    typeof dispute.payment_intent === "string"
-      ? dispute.payment_intent
-      : dispute.payment_intent?.id;
+  try {
+    const paymentIntentId =
+      typeof dispute.payment_intent === "string"
+        ? dispute.payment_intent
+        : dispute.payment_intent?.id;
 
-  if (!paymentIntentId) return;
+    if (!paymentIntentId) return;
 
-  await db
-    .from("orders")
-    .update({ status: "disputed" })
-    .eq("stripe_payment_intent_id", paymentIntentId);
+    await db
+      .from("orders")
+      .update({ status: "disputed" })
+      .eq("stripe_payment_intent_id", paymentIntentId);
+  } catch (err) {
+    console.error(`handleDisputeCreated failed for dispute ${dispute.id}:`, err);
+  }
 }
 
 async function handleInvoicePaymentFailed(
   db: ReturnType<typeof createClient>,
   invoice: Stripe.Invoice,
 ) {
-  const stripeSubscriptionId =
-    typeof invoice.subscription === "string"
-      ? invoice.subscription
-      : invoice.subscription?.id ?? null;
+  try {
+    const stripeSubscriptionId =
+      typeof invoice.subscription === "string"
+        ? invoice.subscription
+        : invoice.subscription?.id ?? null;
 
-  if (!stripeSubscriptionId) return;
+    if (!stripeSubscriptionId) return;
 
-  // Update the canvas subscription status to past_due
-  const { data: subscription } = await db
-    .from("canvas_subscriptions")
-    .update({ status: "past_due" })
-    .eq("stripe_subscription_id", stripeSubscriptionId)
-    .select("id, buyer_id, canvas_id")
-    .single();
+    // Update the canvas subscription status to past_due
+    const { data: subscription } = await db
+      .from("canvas_subscriptions")
+      .update({ status: "past_due" })
+      .eq("stripe_subscription_id", stripeSubscriptionId)
+      .select("id, buyer_id, canvas_id")
+      .single();
 
-  if (!subscription) {
-    console.log(`No canvas_subscription found for Stripe subscription: ${stripeSubscriptionId}`);
-    return;
+    if (!subscription) {
+      console.log(`No canvas_subscription found for Stripe subscription: ${stripeSubscriptionId}`);
+      return;
+    }
+
+    // Log the payment failure event for the seller
+    await db.from("seller_events").insert({
+      canvas_id: subscription.canvas_id,
+      event_type: "payment_failed",
+      payload: {
+        subscription_id: subscription.id,
+        buyer_id: subscription.buyer_id,
+        stripe_subscription_id: stripeSubscriptionId,
+        invoice_id: invoice.id,
+        amount_due: invoice.amount_due,
+        currency: invoice.currency,
+        attempt_count: invoice.attempt_count,
+      },
+    });
+  } catch (err) {
+    console.error(`handleInvoicePaymentFailed failed for invoice ${invoice.id}:`, err);
   }
-
-  // Log the payment failure event for the seller
-  await db.from("seller_events").insert({
-    canvas_id: subscription.canvas_id,
-    event_type: "payment_failed",
-    payload: {
-      subscription_id: subscription.id,
-      buyer_id: subscription.buyer_id,
-      stripe_subscription_id: stripeSubscriptionId,
-      invoice_id: invoice.id,
-      amount_due: invoice.amount_due,
-      currency: invoice.currency,
-      attempt_count: invoice.attempt_count,
-    },
-  });
 }
