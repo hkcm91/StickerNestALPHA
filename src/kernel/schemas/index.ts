@@ -75,6 +75,7 @@ export {
   SpatialEvents,
   MarketplaceEvents,
   SocialGraphEvents,
+  DataManagerEvents,
   GridEvents,
   CanvasDocumentEvents,
   InteractionModeEvents,
@@ -478,3 +479,88 @@ export {
   CanvasDocumentMetaJSONSchema,
   CanvasDocumentJSONSchema,
 } from './canvas-document';
+
+// =============================================================================
+// Database Management Schemas
+// =============================================================================
+export {
+  // Column Schemas
+  ColumnTypeSchema,
+  SelectOptionSchema,
+  NumberFormatSchema,
+  ColumnConfigSchema,
+  TableColumnSchema,
+  // Cell & Row Schemas
+  CellValueSchema,
+  TableRowSchema,
+  // Filter & Sort Schemas
+  FilterOperatorSchema,
+  FilterRuleSchema,
+  FilterGroupSchema,
+  SortDirectionSchema,
+  SortRuleSchema,
+  // View Schemas
+  ViewTypeSchema,
+  DatabaseViewSchema,
+  // Table Schema (stored in DataSource.schema)
+  TableSchemaSchema,
+  TableContentSchema,
+  // AI Operation Schemas
+  AIOperationTypeSchema,
+  AISchemaGenerateRequestSchema,
+  AISchemaGenerateResponseSchema,
+  AIAutofillRequestSchema,
+  AIAutofillResponseSchema,
+  AISuggestColumnRequestSchema,
+  AISuggestColumnResponseSchema,
+  AINaturalLanguageQueryRequestSchema,
+  AINaturalLanguageQueryResponseSchema,
+  AIExtractDataRequestSchema,
+  AIExtractDataResponseSchema,
+  AIDataRequestSchema,
+  // Template Schemas
+  TemplateCategorySchema,
+  DatabaseTemplateSchema,
+  // Notion Sync Schemas
+  NotionSyncStatusSchema,
+  NotionSyncConfigSchema,
+  // Types
+  type ColumnType,
+  type SelectOption,
+  type NumberFormat,
+  type ColumnConfig,
+  type TableColumn,
+  type CellValue,
+  type TableRow,
+  type FilterOperator,
+  type FilterRule,
+  type FilterGroup,
+  type SortDirection,
+  type SortRule,
+  type ViewType,
+  type DatabaseView,
+  type TableSchema,
+  type TableContent,
+  type AIOperationType,
+  type AISchemaGenerateRequest,
+  type AISchemaGenerateResponse,
+  type AIAutofillRequest,
+  type AIAutofillResponse,
+  type AISuggestColumnRequest,
+  type AISuggestColumnResponse,
+  type AINaturalLanguageQueryRequest,
+  type AINaturalLanguageQueryResponse,
+  type AIExtractDataRequest,
+  type AIExtractDataResponse,
+  type AIDataRequest,
+  type TemplateCategory,
+  type DatabaseTemplate,
+  type NotionSyncStatus,
+  type NotionSyncConfig,
+  // JSON Schemas
+  TableColumnJSONSchema,
+  TableRowJSONSchema,
+  DatabaseViewJSONSchema,
+  TableSchemaJSONSchema,
+  DatabaseTemplateJSONSchema,
+} from './database-management';

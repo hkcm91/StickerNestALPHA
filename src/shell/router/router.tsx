@@ -11,7 +11,9 @@ import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import { ShellEvents } from '@sn/types';
 
 import { bus } from '../../kernel/bus';
+import { DataManagerPage } from '../data';
 import { TestHarness } from '../dev';
+
 
 import {
   DashboardPage,
@@ -57,6 +59,7 @@ const GlobalNav: React.FC = () => (
   <nav data-testid="global-nav">
     <Link to="/">Dashboard</Link>
     <Link to="/canvas/demo">Canvas</Link>
+    <Link to="/data">Data</Link>
     <Link to="/lab">Lab</Link>
     <Link to="/marketplace">Marketplace</Link>
     <Link to="/settings">Settings</Link>
@@ -98,6 +101,15 @@ export const AppRouter: React.FC = () => (
                 <LazyLabPage />
               </Suspense>
             </TierGuard>
+          </AuthGuard>
+        }
+      />
+
+      <Route
+        path="/data"
+        element={
+          <AuthGuard>
+            <DataManagerPage />
           </AuthGuard>
         }
       />

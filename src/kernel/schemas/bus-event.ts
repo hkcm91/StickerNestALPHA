@@ -288,6 +288,42 @@ export const BackgroundEvents = {
 } as const;
 
 /**
+ * Event type constants for Data Manager (Layer 0 - Kernel infrastructure)
+ * Database management operations: table ops, AI operations, Notion sync.
+ */
+export const DataManagerEvents = {
+  // Column operations
+  COLUMN_ADDED: 'kernel.datamanager.column.added',
+  COLUMN_UPDATED: 'kernel.datamanager.column.updated',
+  COLUMN_REMOVED: 'kernel.datamanager.column.removed',
+  COLUMN_REORDERED: 'kernel.datamanager.column.reordered',
+
+  // Row operations
+  ROW_ADDED: 'kernel.datamanager.row.added',
+  ROW_UPDATED: 'kernel.datamanager.row.updated',
+  ROW_DELETED: 'kernel.datamanager.row.deleted',
+  ROWS_BATCH_ADDED: 'kernel.datamanager.rows.batchAdded',
+
+  // View operations
+  VIEW_CREATED: 'kernel.datamanager.view.created',
+  VIEW_UPDATED: 'kernel.datamanager.view.updated',
+  VIEW_DELETED: 'kernel.datamanager.view.deleted',
+
+  // AI operations
+  AI_OPERATION_STARTED: 'kernel.datamanager.ai.started',
+  AI_OPERATION_COMPLETED: 'kernel.datamanager.ai.completed',
+  AI_OPERATION_FAILED: 'kernel.datamanager.ai.failed',
+
+  // Notion sync
+  NOTION_SYNC_STARTED: 'kernel.datamanager.notion.syncStarted',
+  NOTION_SYNC_COMPLETED: 'kernel.datamanager.notion.syncCompleted',
+  NOTION_SYNC_FAILED: 'kernel.datamanager.notion.syncFailed',
+
+  // Template applied
+  TEMPLATE_APPLIED: 'kernel.datamanager.template.applied',
+} as const;
+
+/**
  * Event type constants for Social Graph (Layer 0 - Kernel infrastructure)
  * The social graph is persistent data that widgets render via integration.
  * NOT the same as SocialEvents (Layer 1 real-time collaboration).
