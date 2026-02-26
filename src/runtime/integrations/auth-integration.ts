@@ -11,6 +11,9 @@ import { supabase } from '../../kernel/supabase';
 
 import type { IntegrationHandler } from './integration-proxy';
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MIN_PASSWORD_LENGTH = 8;
+
 interface AuthQueryParams {
   action: 'session';
 }
@@ -48,6 +51,18 @@ async function handleAuthMutate(params: AuthMutateParams): Promise<unknown> {
       if (!params.email || !params.password) {
         return { error: 'Email and password required' };
       }
+      if (!EMAIL_RE.test(params.email)) {
+        return { error: 'Invalid email format' };
+      }
+      if (params.password.length < MIN_PASSWORD_LENGTH) {
+        return { error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters` };
+      }
+      if (!/[A-Z]/.test(params.password)) {
+        return { error: 'Password must contain at least one uppercase letter' };
+      }
+      if (!/[0-9]/.test(params.password)) {
+        return { error: 'Password must contain at least one number' };
+      }
       const { data, error } = await supabase.auth.signUp({
         email: params.email,
         password: params.password,
@@ -62,6 +77,9 @@ async function handleAuthMutate(params: AuthMutateParams): Promise<unknown> {
     case 'signin': {
       if (!params.email || !params.password) {
         return { error: 'Email and password required' };
+      }
+      if (!EMAIL_RE.test(params.email)) {
+        return { error: 'Invalid email format' };
       }
       const { data, error } = await supabase.auth.signInWithPassword({
         email: params.email,

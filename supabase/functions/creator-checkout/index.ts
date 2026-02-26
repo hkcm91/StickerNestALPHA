@@ -164,9 +164,13 @@ async function handleSubscribe(
         : undefined,
   };
 
+  // Idempotency: use a deterministic key to prevent duplicate sessions
+  const timeBucket = Math.floor(Date.now() / (5 * 60 * 1000));
+  const idempotencyKey = `sub_${user.id}_${tier.id}_${timeBucket}`;
+
   const session = await stripe.checkout.sessions.create(
     sessionParams,
-    { stripeAccount: sellerAccount.stripe_connect_account_id },
+    { stripeAccount: sellerAccount.stripe_connect_account_id, idempotencyKey },
   );
 
   return jsonResponse({ url: session.url });
@@ -189,9 +193,25 @@ async function handleBuyItem(
     return jsonResponse({ error: "Item not found" }, 404);
   }
 
-  // Check stock
-  if (item.stock_count !== null && item.stock_count <= 0) {
-    return jsonResponse({ error: "Out of stock" }, 400);
+  // Check and reserve stock atomically via RPC or conditional update
+  if (item.stock_count !== null) {
+    if (item.stock_count <= 0) {
+      return jsonResponse({ error: "Out of stock" }, 400);
+    }
+    // Atomic decrement — only succeeds if stock_count > 0
+    const { data: reserved, error: reserveError } = await db
+      .from("shop_items")
+      .update({ stock_count: item.stock_count - 1 })
+      .eq("id", item.id)
+      .gt("stock_count", 0)
+      .select("stock_count")
+      .single();
+
+    if (reserveError || !reserved) {
+      return jsonResponse({ error: "Out of stock" }, 400);
+    }
+    // Stock is now reserved — if checkout session is never completed,
+    // the webhook handler or a cron job should release reserved stock.
   }
 
   // Get seller's Connect account
@@ -202,6 +222,10 @@ async function handleBuyItem(
     .single();
 
   if (!sellerAccount?.stripe_connect_account_id) {
+    // Release stock if we reserved it
+    if (item.stock_count !== null) {
+      await db.rpc("increment_stock", { item_id: item.id, amount: 1 });
+    }
     return jsonResponse({ error: "Seller has not connected Stripe" }, 400);
   }
 
@@ -214,6 +238,11 @@ async function handleBuyItem(
 
   const platformFee = PLATFORM_FEE_MAP[sellerUser?.tier ?? "creator"] ?? 12;
   const feeAmount = Math.round(item.price_cents * (platformFee / 100));
+
+  // Idempotency: use a deterministic key to prevent duplicate sessions
+  // for the same buyer + item within a 5-minute window
+  const timeBucket = Math.floor(Date.now() / (5 * 60 * 1000));
+  const idempotencyKey = `buy_${user.id}_${item.id}_${timeBucket}`;
 
   const sessionParams: Stripe.Checkout.SessionCreateParams = {
     mode: "payment",
@@ -248,10 +277,17 @@ async function handleBuyItem(
       : {}),
   };
 
-  const session = await stripe.checkout.sessions.create(
-    sessionParams,
-    { stripeAccount: sellerAccount.stripe_connect_account_id },
-  );
-
-  return jsonResponse({ url: session.url });
+  try {
+    const session = await stripe.checkout.sessions.create(
+      sessionParams,
+      { stripeAccount: sellerAccount.stripe_connect_account_id, idempotencyKey },
+    );
+    return jsonResponse({ url: session.url });
+  } catch (err) {
+    // Release stock on Stripe failure
+    if (item.stock_count !== null) {
+      await db.rpc("increment_stock", { item_id: item.id, amount: 1 });
+    }
+    throw err;
+  }
 }

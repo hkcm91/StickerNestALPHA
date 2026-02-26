@@ -18,7 +18,23 @@ interface CheckoutQueryParams {
     | 'connect_status' | 'my_tiers' | 'my_items' | 'seller_orders';
   canvasId?: string;
   orderId?: string;
+  limit?: number;
+  offset?: number;
 }
+
+const DEFAULT_PAGE_LIMIT = 50;
+const MAX_PAGE_LIMIT = 200;
+
+function clampLimit(raw?: number): number {
+  if (raw == null || raw <= 0) return DEFAULT_PAGE_LIMIT;
+  return Math.min(raw, MAX_PAGE_LIMIT);
+}
+
+function clampOffset(raw?: number): number {
+  return raw != null && raw > 0 ? raw : 0;
+}
+
+const MAX_NAME_LENGTH = 200;
 
 interface CheckoutMutateParams {
   action:
@@ -66,29 +82,30 @@ async function handleCheckoutQuery(
 
     case 'shop_items': {
       if (!canvasId) return [];
-      const { data } = await supabase
+      const limit = clampLimit(params.limit);
+      const offset = clampOffset(params.offset);
+      const { data, count } = await supabase
         .from('shop_items')
-        .select('*')
+        .select('*', { count: 'exact' })
         .eq('canvas_id', canvasId)
         .eq('is_active', true)
-        .order('created_at', { ascending: false });
-      return data ?? [];
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1);
+      return { data: data ?? [], total: count ?? 0, hasMore: (count ?? 0) > offset + limit };
     }
 
     case 'my_orders': {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];
-      const query = supabase
+      const limit = clampLimit(params.limit);
+      const offset = clampOffset(params.offset);
+      const { data, count } = await supabase
         .from('orders')
-        .select('*')
+        .select('*', { count: 'exact' })
         .eq('buyer_id', user.id)
-        .order('created_at', { ascending: false });
-      if (canvasId) {
-        // Filter orders to items from this canvas — requires a join or metadata
-        // For now, return all buyer orders; filtering by canvas can be added later
-      }
-      const { data } = await query;
-      return data ?? [];
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1);
+      return { data: data ?? [], total: count ?? 0, hasMore: (count ?? 0) > offset + limit };
     }
 
     case 'download': {
@@ -148,23 +165,29 @@ async function handleCheckoutQuery(
     case 'my_items': {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];
-      const { data } = await supabase
+      const limit = clampLimit(params.limit);
+      const offset = clampOffset(params.offset);
+      const { data, count } = await supabase
         .from('shop_items')
-        .select('*')
-        .eq('creator_id', user.id)
-        .order('created_at', { ascending: false });
-      return data ?? [];
+        .select('*', { count: 'exact' })
+        .eq('seller_id', user.id)
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1);
+      return { data: data ?? [], total: count ?? 0, hasMore: (count ?? 0) > offset + limit };
     }
 
     case 'seller_orders': {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];
-      const { data } = await supabase
+      const limit = clampLimit(params.limit);
+      const offset = clampOffset(params.offset);
+      const { data, count } = await supabase
         .from('orders')
-        .select('*')
+        .select('*', { count: 'exact' })
         .eq('seller_id', user.id)
-        .order('created_at', { ascending: false });
-      return data ?? [];
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1);
+      return { data: data ?? [], total: count ?? 0, hasMore: (count ?? 0) > offset + limit };
     }
 
     default:
@@ -228,14 +251,36 @@ async function handleCheckoutMutate(
       if (!params.data) return { error: 'data required' };
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return { error: 'Not authenticated' };
+
+      const canvasId = (params.data.canvasId ?? contextCanvasId) as string | undefined;
+      if (!canvasId) return { error: 'canvasId required' };
+
+      // Validate name
+      const tierName = String(params.data.name ?? '').trim();
+      if (!tierName) return { error: 'name is required' };
+      if (tierName.length > MAX_NAME_LENGTH) return { error: `name must be ${MAX_NAME_LENGTH} characters or fewer` };
+
+      // Validate price
+      const priceCents = Number(params.data.priceCents ?? 0);
+      if (!Number.isFinite(priceCents) || priceCents < 0) return { error: 'priceCents must be a non-negative number' };
+
+      // Verify canvas ownership
+      const { data: canvas } = await supabase
+        .from('canvases')
+        .select('id')
+        .eq('id', canvasId)
+        .eq('owner_id', user.id)
+        .single();
+      if (!canvas) return { error: 'Canvas not found or you are not the owner' };
+
       const { data, error } = await supabase
         .from('canvas_subscription_tiers')
         .insert({
           creator_id: user.id,
-          canvas_id: params.data.canvasId ?? contextCanvasId,
-          name: params.data.name,
+          canvas_id: canvasId,
+          name: tierName,
           description: params.data.description ?? null,
-          price_cents: params.data.priceCents ?? 0,
+          price_cents: priceCents,
           currency: params.data.currency ?? 'usd',
           interval: params.data.interval ?? 'month',
           benefits: params.data.benefits ?? [],
@@ -253,9 +298,18 @@ async function handleCheckoutMutate(
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return { error: 'Not authenticated' };
       const updates: Record<string, unknown> = {};
-      if (params.data.name !== undefined) updates.name = params.data.name;
+      if (params.data.name !== undefined) {
+        const name = String(params.data.name).trim();
+        if (!name) return { error: 'name cannot be empty' };
+        if (name.length > MAX_NAME_LENGTH) return { error: `name must be ${MAX_NAME_LENGTH} characters or fewer` };
+        updates.name = name;
+      }
       if (params.data.description !== undefined) updates.description = params.data.description;
-      if (params.data.priceCents !== undefined) updates.price_cents = params.data.priceCents;
+      if (params.data.priceCents !== undefined) {
+        const pc = Number(params.data.priceCents);
+        if (!Number.isFinite(pc) || pc < 0) return { error: 'priceCents must be a non-negative number' };
+        updates.price_cents = pc;
+      }
       if (params.data.currency !== undefined) updates.currency = params.data.currency;
       if (params.data.interval !== undefined) updates.interval = params.data.interval;
       if (params.data.benefits !== undefined) updates.benefits = params.data.benefits;
@@ -289,14 +343,36 @@ async function handleCheckoutMutate(
       if (!params.data) return { error: 'data required' };
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return { error: 'Not authenticated' };
+
+      const canvasId = (params.data.canvasId ?? contextCanvasId) as string | undefined;
+      if (!canvasId) return { error: 'canvasId required' };
+
+      // Validate name
+      const itemName = String(params.data.name ?? '').trim();
+      if (!itemName) return { error: 'name is required' };
+      if (itemName.length > MAX_NAME_LENGTH) return { error: `name must be ${MAX_NAME_LENGTH} characters or fewer` };
+
+      // Validate price
+      const priceCents = Number(params.data.priceCents ?? 0);
+      if (!Number.isFinite(priceCents) || priceCents < 0) return { error: 'priceCents must be a non-negative number' };
+
+      // Verify canvas ownership
+      const { data: canvas } = await supabase
+        .from('canvases')
+        .select('id')
+        .eq('id', canvasId)
+        .eq('owner_id', user.id)
+        .single();
+      if (!canvas) return { error: 'Canvas not found or you are not the owner' };
+
       const { data, error } = await supabase
         .from('shop_items')
         .insert({
-          creator_id: user.id,
-          canvas_id: params.data.canvasId ?? contextCanvasId,
-          name: params.data.name,
+          seller_id: user.id,
+          canvas_id: canvasId,
+          name: itemName,
           description: params.data.description ?? null,
-          price_cents: params.data.priceCents ?? 0,
+          price_cents: priceCents,
           currency: params.data.currency ?? 'usd',
           item_type: params.data.itemType ?? 'digital',
           fulfillment: params.data.fulfillment ?? 'auto',
@@ -315,9 +391,18 @@ async function handleCheckoutMutate(
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return { error: 'Not authenticated' };
       const updates: Record<string, unknown> = {};
-      if (params.data.name !== undefined) updates.name = params.data.name;
+      if (params.data.name !== undefined) {
+        const name = String(params.data.name).trim();
+        if (!name) return { error: 'name cannot be empty' };
+        if (name.length > MAX_NAME_LENGTH) return { error: `name must be ${MAX_NAME_LENGTH} characters or fewer` };
+        updates.name = name;
+      }
       if (params.data.description !== undefined) updates.description = params.data.description;
-      if (params.data.priceCents !== undefined) updates.price_cents = params.data.priceCents;
+      if (params.data.priceCents !== undefined) {
+        const pc = Number(params.data.priceCents);
+        if (!Number.isFinite(pc) || pc < 0) return { error: 'priceCents must be a non-negative number' };
+        updates.price_cents = pc;
+      }
       if (params.data.currency !== undefined) updates.currency = params.data.currency;
       if (params.data.itemType !== undefined) updates.item_type = params.data.itemType;
       if (params.data.fulfillment !== undefined) updates.fulfillment = params.data.fulfillment;
@@ -328,7 +413,7 @@ async function handleCheckoutMutate(
         .from('shop_items')
         .update(updates)
         .eq('id', params.itemId)
-        .eq('creator_id', user.id)
+        .eq('seller_id', user.id)
         .select()
         .single();
       if (error) return { error: error.message };
@@ -343,7 +428,7 @@ async function handleCheckoutMutate(
         .from('shop_items')
         .delete()
         .eq('id', params.itemId)
-        .eq('creator_id', user.id);
+        .eq('seller_id', user.id);
       if (error) return { error: error.message };
       return { success: true };
     }

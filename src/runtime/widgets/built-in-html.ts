@@ -139,12 +139,19 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
         clearError();
       };
 
+      // Allow Enter key to submit form
+      passwordInput.onkeydown = function(e) { if (e.key === 'Enter') submitBtn.click(); };
+      emailInput.onkeydown = function(e) { if (e.key === 'Enter') passwordInput.focus(); };
+
       submitBtn.onclick = function() {
         clearError();
         var email = emailInput.value.trim();
         var password = passwordInput.value;
         if (!email || !password) { showError('Email and password required'); return; }
-        if (password.length < 6) { showError('Password must be at least 6 characters'); return; }
+        if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) { showError('Please enter a valid email address'); return; }
+        if (password.length < 8) { showError('Password must be at least 8 characters'); return; }
+        if (!/[A-Z]/.test(password)) { showError('Password must contain at least one uppercase letter'); return; }
+        if (!/[0-9]/.test(password)) { showError('Password must contain at least one number'); return; }
         submitBtn.disabled = true;
         submitBtn.textContent = 'Loading...';
 
@@ -201,16 +208,28 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
       .btn-accent { background: var(--sn-accent, #6366f1); color: #fff; }
       .btn-muted { background: var(--sn-border, #e5e7eb); color: var(--sn-text-muted, #6b7280); cursor: default; }
       .loading { text-align: center; padding: 40px; color: var(--sn-text-muted, #6b7280); }
+      .empty { text-align: center; padding: 40px; color: var(--sn-text-muted, #6b7280); font-size: 14px; }
+      .error-toast { background: #fee2e2; color: #dc2626; padding: 8px 12px; border-radius: var(--sn-radius, 6px); font-size: 13px; margin-bottom: 12px; display: none; }
     </style>
     <div class="sub-root">
       <h2>Subscription Tiers</h2>
+      <div id="error-toast" class="error-toast"></div>
       <div id="loading" class="loading">Loading tiers...</div>
+      <div id="empty" class="empty" style="display:none;">No subscription tiers available yet.</div>
       <div id="tiers" class="tiers" style="display:none;"></div>
     </div>
     <script>
       var tiersEl = document.getElementById('tiers');
       var loadingEl = document.getElementById('loading');
+      var emptyEl = document.getElementById('empty');
+      var errorToast = document.getElementById('error-toast');
       var currentSub = null;
+
+      function showToast(msg) {
+        errorToast.textContent = msg;
+        errorToast.style.display = 'block';
+        setTimeout(function() { errorToast.style.display = 'none'; }, 5000);
+      }
 
       function formatPrice(cents, currency) {
         return (cents / 100).toLocaleString(undefined, { style: 'currency', currency: currency || 'usd' });
@@ -218,6 +237,12 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
 
       function renderTiers(tiers, mySub) {
         loadingEl.style.display = 'none';
+        if (!tiers || tiers.length === 0) {
+          emptyEl.style.display = 'block';
+          tiersEl.style.display = 'none';
+          return;
+        }
+        emptyEl.style.display = 'none';
         tiersEl.style.display = 'flex';
         tiersEl.innerHTML = '';
 
@@ -252,14 +277,19 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
             btn.textContent = 'Loading...';
             StickerNest.integration('checkout').mutate({ action: 'subscribe', tierId: tierId })
               .then(function(result) {
-                if (result.url) {
+                if (result.error) {
+                  showToast(result.error);
+                  btn.disabled = false;
+                  btn.textContent = 'Subscribe';
+                } else if (result.url) {
                   window.open(result.url, '_top');
                 } else if (result.free) {
                   btn.textContent = 'Subscribed!';
                   btn.className = 'btn btn-muted';
                 }
               })
-              .catch(function() {
+              .catch(function(err) {
+                showToast(err.message || 'Subscription failed. Please try again.');
                 btn.disabled = false;
                 btn.textContent = 'Subscribe';
               });
@@ -267,16 +297,30 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
         });
       }
 
-      // Load tiers and current subscription
-      var config = StickerNest.getConfig();
-      Promise.all([
-        StickerNest.integration('checkout').query({ action: 'tiers' }),
-        StickerNest.integration('checkout').query({ action: 'my_subscription' }),
-      ]).then(function(results) {
-        renderTiers(results[0] || [], results[1]);
-      }).catch(function() {
-        loadingEl.textContent = 'Failed to load tiers.';
-      });
+      function loadAll() {
+        loadingEl.style.display = 'block';
+        tiersEl.style.display = 'none';
+        emptyEl.style.display = 'none';
+        Promise.all([
+          StickerNest.integration('checkout').query({ action: 'tiers' }),
+          StickerNest.integration('checkout').query({ action: 'my_subscription' }),
+        ]).then(function(results) {
+          renderTiers(results[0] || [], results[1]);
+        }).catch(function() {
+          loadingEl.textContent = 'Failed to load tiers.';
+        });
+      }
+
+      // Initial load
+      loadAll();
+
+      // Refresh when tiers change or auth state changes
+      StickerNest.subscribe('commerce.tier.created', function() { loadAll(); });
+      StickerNest.subscribe('commerce.tier.updated', function() { loadAll(); });
+      StickerNest.subscribe('commerce.tier.deleted', function() { loadAll(); });
+      StickerNest.subscribe('auth.signed_in', function() { loadAll(); });
+      StickerNest.subscribe('auth.signed_up', function() { loadAll(); });
+      StickerNest.subscribe('auth.signed_out', function() { loadAll(); });
 
       StickerNest.register({ id: 'wgt-subscribe', name: 'Subscribe', version: '1.0.0' });
       StickerNest.ready();
@@ -301,9 +345,11 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
       .btn:disabled { background: var(--sn-border, #d1d5db); cursor: default; }
       .empty { text-align: center; padding: 40px; color: var(--sn-text-muted, #6b7280); font-size: 14px; }
       .loading { text-align: center; padding: 40px; color: var(--sn-text-muted, #6b7280); }
+      .error-toast { background: #fee2e2; color: #dc2626; padding: 8px 12px; border-radius: var(--sn-radius, 6px); font-size: 13px; margin-bottom: 12px; display: none; }
     </style>
     <div class="shop-root">
       <h2>Shop</h2>
+      <div id="error-toast" class="error-toast"></div>
       <div id="loading" class="loading">Loading items...</div>
       <div id="items" class="items-grid" style="display:none;"></div>
       <div id="empty" class="empty" style="display:none;">No items available.</div>
@@ -312,70 +358,104 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
       var itemsEl = document.getElementById('items');
       var loadingEl = document.getElementById('loading');
       var emptyEl = document.getElementById('empty');
+      var shopErrorToast = document.getElementById('error-toast');
+
+      function showShopToast(msg) {
+        shopErrorToast.textContent = msg;
+        shopErrorToast.style.display = 'block';
+        setTimeout(function() { shopErrorToast.style.display = 'none'; }, 5000);
+      }
 
       function formatPrice(cents, currency) {
         return (cents / 100).toLocaleString(undefined, { style: 'currency', currency: currency || 'usd' });
       }
 
-      StickerNest.integration('checkout').query({ action: 'shop_items' })
-        .then(function(items) {
-          loadingEl.style.display = 'none';
-          if (!items || items.length === 0) {
-            emptyEl.style.display = 'block';
-            return;
-          }
-          itemsEl.style.display = 'grid';
+      function esc(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
 
-          items.forEach(function(item) {
-            var card = document.createElement('div');
-            card.className = 'item-card';
+      function loadShopItems() {
+        loadingEl.style.display = 'block';
+        itemsEl.style.display = 'none';
+        emptyEl.style.display = 'none';
 
-            var imgHtml = item.thumbnail_url
-              ? '<img class="item-img" src="' + item.thumbnail_url + '" alt="' + item.name + '" />'
-              : '<div class="item-img"></div>';
+        StickerNest.integration('checkout').query({ action: 'shop_items' })
+          .then(function(result) {
+            // Handle both paginated { data, total } and raw array responses
+            var items = Array.isArray(result) ? result : (result && result.data ? result.data : []);
+            loadingEl.style.display = 'none';
+            if (!items || items.length === 0) {
+              emptyEl.style.display = 'block';
+              return;
+            }
+            itemsEl.style.display = 'grid';
+            itemsEl.innerHTML = '';
 
-            var shippingNote = item.requires_shipping && item.shipping_note
-              ? '<div class="item-shipping">' + item.shipping_note + '</div>'
-              : '';
+            items.forEach(function(item) {
+              var card = document.createElement('div');
+              card.className = 'item-card';
 
-            var stockLabel = item.stock_count !== null && item.stock_count <= 0
-              ? '<button class="btn" disabled>Sold Out</button>'
-              : '<button class="btn buy-btn" data-item-id="' + item.id + '">Buy ' + formatPrice(item.price_cents, item.currency) + '</button>';
+              var imgHtml = item.thumbnail_url
+                ? '<img class="item-img" src="' + item.thumbnail_url + '" alt="' + esc(item.name) + '" />'
+                : '<div class="item-img"></div>';
 
-            card.innerHTML = imgHtml +
-              '<div class="item-info">' +
-                '<div class="item-name">' + item.name + '</div>' +
-                '<div class="item-type">' + item.item_type + '</div>' +
-                shippingNote +
-                '<div class="item-price">' + formatPrice(item.price_cents, item.currency) + '</div>' +
-                stockLabel +
-              '</div>';
+              var shippingNote = item.requires_shipping && item.shipping_note
+                ? '<div class="item-shipping">' + esc(item.shipping_note) + '</div>'
+                : '';
 
-            itemsEl.appendChild(card);
+              var stockLabel = item.stock_count !== null && item.stock_count <= 0
+                ? '<button class="btn" disabled>Sold Out</button>'
+                : '<button class="btn buy-btn" data-item-id="' + item.id + '">Buy ' + formatPrice(item.price_cents, item.currency) + '</button>';
+
+              card.innerHTML = imgHtml +
+                '<div class="item-info">' +
+                  '<div class="item-name">' + esc(item.name) + '</div>' +
+                  '<div class="item-type">' + esc(item.item_type) + '</div>' +
+                  shippingNote +
+                  '<div class="item-price">' + formatPrice(item.price_cents, item.currency) + '</div>' +
+                  stockLabel +
+                '</div>';
+
+              itemsEl.appendChild(card);
+            });
+
+            // Buy button handlers
+            itemsEl.querySelectorAll('.buy-btn').forEach(function(btn) {
+              btn.onclick = function() {
+                var itemId = btn.getAttribute('data-item-id');
+                btn.disabled = true;
+                btn.textContent = 'Loading...';
+                StickerNest.integration('checkout').mutate({ action: 'buy', itemId: itemId })
+                  .then(function(result) {
+                    if (result.error) {
+                      showShopToast(result.error);
+                      btn.disabled = false;
+                      btn.textContent = 'Buy';
+                    } else if (result.url) {
+                      window.open(result.url, '_top');
+                    }
+                  })
+                  .catch(function(err) {
+                    showShopToast(err.message || 'Purchase failed. Please try again.');
+                    btn.disabled = false;
+                    btn.textContent = 'Buy';
+                  });
+              };
+            });
+          })
+          .catch(function() {
+            loadingEl.textContent = 'Failed to load items.';
           });
+      }
 
-          // Buy button handlers
-          itemsEl.querySelectorAll('.buy-btn').forEach(function(btn) {
-            btn.onclick = function() {
-              var itemId = btn.getAttribute('data-item-id');
-              btn.disabled = true;
-              btn.textContent = 'Loading...';
-              StickerNest.integration('checkout').mutate({ action: 'buy', itemId: itemId })
-                .then(function(result) {
-                  if (result.url) {
-                    window.open(result.url, '_top');
-                  }
-                })
-                .catch(function() {
-                  btn.disabled = false;
-                  btn.textContent = 'Buy';
-                });
-            };
-          });
-        })
-        .catch(function() {
-          loadingEl.textContent = 'Failed to load items.';
-        });
+      // Initial load
+      loadShopItems();
+
+      // Refresh when items change or auth state changes
+      StickerNest.subscribe('commerce.item.created', function() { loadShopItems(); });
+      StickerNest.subscribe('commerce.item.updated', function() { loadShopItems(); });
+      StickerNest.subscribe('commerce.item.deleted', function() { loadShopItems(); });
+      StickerNest.subscribe('auth.signed_in', function() { loadShopItems(); });
+      StickerNest.subscribe('auth.signed_up', function() { loadShopItems(); });
+      StickerNest.subscribe('auth.signed_out', function() { loadShopItems(); });
 
       StickerNest.register({ id: 'wgt-shop', name: 'Shop', version: '1.0.0' });
       StickerNest.ready();
@@ -994,8 +1074,9 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
       function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
       function loadItems() {
-        checkout.query({ action: 'my_items' }).then(function(data) {
-          items = data || [];
+        checkout.query({ action: 'my_items' }).then(function(result) {
+          // Handle both paginated { data } and raw array responses
+          items = Array.isArray(result) ? result : (result && result.data ? result.data : []);
           document.getElementById('loading').style.display = 'none';
           renderList();
           showPage('page-list');
@@ -1240,10 +1321,20 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
             btn.onclick = function() {
               var oid = btn.dataset.orderId;
               btn.textContent = '...';
+              btn.disabled = true;
               checkout.query({ action: 'download', orderId: oid }).then(function(r) {
-                if (r.downloadUrl) { window.open(r.downloadUrl, '_blank'); }
-                else { btn.textContent = r.error || 'N/A'; }
-              }).catch(function() { btn.textContent = 'Error'; });
+                if (r.downloadUrl) {
+                  window.open(r.downloadUrl, '_blank');
+                  btn.textContent = 'Download';
+                  btn.disabled = false;
+                } else {
+                  btn.textContent = r.error || 'Unavailable';
+                  setTimeout(function() { btn.textContent = 'Retry'; btn.disabled = false; }, 3000);
+                }
+              }).catch(function() {
+                btn.textContent = 'Error';
+                setTimeout(function() { btn.textContent = 'Retry'; btn.disabled = false; }, 3000);
+              });
             };
           });
         } else {
@@ -1257,18 +1348,32 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
         }
       }
 
-      Promise.all([
-        checkout.query({ action: 'my_orders' }),
-        checkout.query({ action: 'my_subscription' }),
-      ]).then(function(results) {
-        document.getElementById('loading').style.display = 'none';
-        orders = results[0] || [];
-        var sub = results[1];
-        subscriptions = sub ? (Array.isArray(sub) ? sub : [sub]) : [];
-        render();
-      }).catch(function() {
-        document.getElementById('loading').textContent = 'Failed to load orders.';
-      });
+      function loadOrders() {
+        document.getElementById('loading').style.display = 'block';
+        document.getElementById('content').innerHTML = '';
+        Promise.all([
+          checkout.query({ action: 'my_orders' }),
+          checkout.query({ action: 'my_subscription' }),
+        ]).then(function(results) {
+          document.getElementById('loading').style.display = 'none';
+          // Handle both paginated { data } and raw array responses
+          var rawOrders = results[0];
+          orders = Array.isArray(rawOrders) ? rawOrders : (rawOrders && rawOrders.data ? rawOrders.data : []);
+          var sub = results[1];
+          subscriptions = sub ? (Array.isArray(sub) ? sub : [sub]) : [];
+          render();
+        }).catch(function() {
+          document.getElementById('loading').textContent = 'Failed to load orders.';
+        });
+      }
+
+      // Initial load
+      loadOrders();
+
+      // Refresh on auth changes
+      StickerNest.subscribe('auth.signed_in', function() { loadOrders(); });
+      StickerNest.subscribe('auth.signed_up', function() { loadOrders(); });
+      StickerNest.subscribe('auth.signed_out', function() { loadOrders(); });
 
       StickerNest.register({ id: 'wgt-orders', name: 'My Orders', version: '1.0.0' });
       StickerNest.ready();
