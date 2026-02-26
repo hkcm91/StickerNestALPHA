@@ -14,15 +14,19 @@ import { MarketplaceEvents } from '@sn/types';
 
 import { bus } from '../kernel/bus';
 import { useAuthStore } from '../kernel/stores/auth/auth.store';
+import { useCanvasStore } from '../kernel/stores/canvas/canvas.store';
 import { useWidgetStore } from '../kernel/stores/widget/widget.store';
 import type { WidgetRegistryEntry } from '../kernel/stores/widget/widget.store';
 
 
 import { createAiHandler } from './integrations/ai-handler';
+import { createAuthHandler } from './integrations/auth-integration';
+import { createCheckoutHandler } from './integrations/checkout-integration';
 import { createNotionHandler } from './integrations/notion-handler';
 import { getIntegrationProxy } from './integrations/singleton';
 import { createSocialHandler } from './integrations/social-handler';
 import { createIframePool, DEFAULT_WARMUP_COUNT } from './pool/iframe-pool';
+import { BUILT_IN_WIDGET_HTML } from './widgets/built-in-html';
 import type { IframePool } from './pool/iframe-pool';
 import { createRateLimiter } from './security/rate-limiter';
 import type { RateLimiter } from './security/rate-limiter';
@@ -261,7 +265,88 @@ StickerNest.ready();
     isBuiltIn: true,
     installedAt: new Date().toISOString(),
   },
+  // ── Commerce Widgets ──────────────────────────────────────────────────
+  {
+    widgetId: 'sn.builtin.signup',
+    manifest: {
+      id: 'sn.builtin.signup',
+      name: 'Sign Up',
+      version: '1.0.0',
+      description: 'Email/password signup and login form for canvas visitors',
+      author: { name: 'StickerNest', url: 'https://stickernest.com' },
+      license: 'MIT',
+      tags: ['commerce', 'auth'],
+      category: 'commerce',
+      permissions: ['auth'],
+      events: {
+        emits: [
+          { name: 'auth.signed_up', description: 'User signed up' },
+          { name: 'auth.signed_in', description: 'User signed in' },
+          { name: 'auth.signed_out', description: 'User signed out' },
+        ],
+        subscribes: [],
+      },
+      config: { fields: [] },
+      size: { minWidth: 280, minHeight: 320, maxWidth: 500, maxHeight: 500, defaultWidth: 360, defaultHeight: 400, aspectLocked: false },
+      entry: 'inline',
+      spatialSupport: false,
+    },
+    htmlContent: '', // Loaded from BUILT_IN_WIDGET_HTML['wgt-signup'] at runtime
+    isBuiltIn: true,
+    installedAt: new Date().toISOString(),
+  },
+  {
+    widgetId: 'sn.builtin.subscribe',
+    manifest: {
+      id: 'sn.builtin.subscribe',
+      name: 'Subscribe',
+      version: '1.0.0',
+      description: 'Displays canvas subscription tiers for visitor purchase',
+      author: { name: 'StickerNest', url: 'https://stickernest.com' },
+      license: 'MIT',
+      tags: ['commerce', 'subscription'],
+      category: 'commerce',
+      permissions: ['checkout'],
+      events: { emits: [], subscribes: [] },
+      config: { fields: [] },
+      size: { minWidth: 280, minHeight: 300, maxWidth: 600, maxHeight: 800, defaultWidth: 360, defaultHeight: 500, aspectLocked: false },
+      entry: 'inline',
+      spatialSupport: false,
+    },
+    htmlContent: '', // Loaded from BUILT_IN_WIDGET_HTML['wgt-subscribe'] at runtime
+    isBuiltIn: true,
+    installedAt: new Date().toISOString(),
+  },
+  {
+    widgetId: 'sn.builtin.shop',
+    manifest: {
+      id: 'sn.builtin.shop',
+      name: 'Shop',
+      version: '1.0.0',
+      description: 'Displays canvas shop items for purchase',
+      author: { name: 'StickerNest', url: 'https://stickernest.com' },
+      license: 'MIT',
+      tags: ['commerce', 'shop'],
+      category: 'commerce',
+      permissions: ['checkout'],
+      events: { emits: [], subscribes: [] },
+      config: { fields: [] },
+      size: { minWidth: 300, minHeight: 300, maxWidth: 800, maxHeight: 800, defaultWidth: 480, defaultHeight: 500, aspectLocked: false },
+      entry: 'inline',
+      spatialSupport: false,
+    },
+    htmlContent: '', // Loaded from BUILT_IN_WIDGET_HTML['wgt-shop'] at runtime
+    isBuiltIn: true,
+    installedAt: new Date().toISOString(),
+  },
 ];
+
+/** Map from registry widgetId to built-in-html key */
+const WIDGET_HTML_KEY: Record<string, string> = {
+  'sn.builtin.signup': 'wgt-signup',
+  'sn.builtin.subscribe': 'wgt-subscribe',
+  'sn.builtin.shop': 'wgt-shop',
+};
 
 /**
  * Register built-in widgets in the widget store.
@@ -270,6 +355,11 @@ function registerBuiltInWidgets(): void {
   const store = useWidgetStore.getState();
   for (const widget of BUILTIN_WIDGETS) {
     if (!store.registry[widget.widgetId]) {
+      // Populate htmlContent from BUILT_IN_WIDGET_HTML for commerce widgets
+      const htmlKey = WIDGET_HTML_KEY[widget.widgetId];
+      if (htmlKey && !widget.htmlContent) {
+        widget.htmlContent = BUILT_IN_WIDGET_HTML[htmlKey] ?? '';
+      }
       store.registerWidget(widget);
     }
   }
@@ -302,6 +392,11 @@ export function initRuntime(): void {
       userId: useAuthStore.getState().user?.id ?? null,
       // widgetId and instanceId are set per-request by WidgetFrame
     })),
+  );
+  proxy.register('auth', createAuthHandler());
+  proxy.register(
+    'checkout',
+    createCheckoutHandler(() => useCanvasStore.getState().activeCanvasId),
   );
 
   // 5. Subscribe to bus events relevant to runtime
@@ -342,6 +437,8 @@ export function teardownRuntime(): void {
   getIntegrationProxy().unregister('ai');
   getIntegrationProxy().unregister('social');
   getIntegrationProxy().unregister('notion');
+  getIntegrationProxy().unregister('auth');
+  getIntegrationProxy().unregister('checkout');
 
   // Destroy pool
   pool?.destroy();

@@ -22,6 +22,7 @@ import {
   InvitePage,
   NotFoundPage,
 } from './pages';
+import { PricingPage } from '../pages/PricingPage';
 import { AuthGuard, TierGuard } from './route-guards';
 
 /**
@@ -75,6 +76,7 @@ export const AppRouter: React.FC = () => (
     <GlobalNav />
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/pricing" element={<PricingPage />} />
       <Route path="/invite/:token" element={<InvitePage />} />
       <Route path="/dev/test" element={<TestHarness />} />
 

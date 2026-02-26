@@ -16,3 +16,5 @@ export {
   getWidgetNotionPermissions,
 } from './notion-handler';
 export type { NotionHandlerContext } from './notion-handler';
+export { createAuthHandler } from './auth-integration';
+export { createCheckoutHandler } from './checkout-integration';

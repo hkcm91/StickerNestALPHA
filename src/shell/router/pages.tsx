@@ -5,7 +5,7 @@
  * @layer L6
  */
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
 import { initCanvasCore, teardownCanvasCore } from '../../canvas/core';
@@ -160,8 +160,45 @@ export const MarketplacePage: React.FC = () => (
   <div data-testid="page-marketplace"><h1>Marketplace</h1></div>
 );
 
-export const SettingsPage: React.FC = () => (
-  <div data-testid="page-settings"><h1>Settings</h1></div>
+export const SettingsPage: React.FC = () => {
+  const [tab, setTab] = React.useState<'billing' | 'commerce' | 'purchases'>('billing');
+
+  const tabBtnStyle = (active: boolean): React.CSSProperties => ({
+    padding: '8px 16px',
+    border: 'none',
+    borderBottom: active ? '2px solid var(--sn-accent, #6366f1)' : '2px solid transparent',
+    background: 'transparent',
+    cursor: 'pointer',
+    fontSize: 14,
+    fontWeight: active ? 600 : 400,
+    color: active ? 'var(--sn-text, #1a1a2e)' : 'var(--sn-text-muted, #6b7280)',
+  });
+
+  return (
+    <div data-testid="page-settings" style={{ padding: 24, maxWidth: 640, margin: '0 auto' }}>
+      <h1 style={{ marginBottom: 20 }}>Settings</h1>
+      <div style={{ display: 'flex', gap: 4, borderBottom: '1px solid var(--sn-border, #e5e7eb)', marginBottom: 24 }}>
+        <button style={tabBtnStyle(tab === 'billing')} onClick={() => setTab('billing')}>Billing</button>
+        <button style={tabBtnStyle(tab === 'commerce')} onClick={() => setTab('commerce')}>Creator Commerce</button>
+        <button style={tabBtnStyle(tab === 'purchases')} onClick={() => setTab('purchases')}>My Purchases</button>
+      </div>
+      <Suspense fallback={<div>Loading...</div>}>
+        {tab === 'billing' && <BillingSectionLazy />}
+        {tab === 'commerce' && <CreatorCommerceSectionLazy />}
+        {tab === 'purchases' && <MyPurchasesSectionLazy />}
+      </Suspense>
+    </div>
+  );
+};
+
+const BillingSectionLazy = React.lazy(() =>
+  import('../pages/settings/BillingSection').then((m) => ({ default: m.BillingSection })),
+);
+const CreatorCommerceSectionLazy = React.lazy(() =>
+  import('../pages/settings/CreatorCommerceSection').then((m) => ({ default: m.CreatorCommerceSection })),
+);
+const MyPurchasesSectionLazy = React.lazy(() =>
+  import('../pages/settings/MyPurchasesSection').then((m) => ({ default: m.MyPurchasesSection })),
 );
 
 export const InvitePage: React.FC = () => {
