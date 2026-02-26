@@ -14,6 +14,51 @@ import type { IntegrationHandler } from './integration-proxy';
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 8;
 
+// ── Rate limiter ────────────────────────────────────────────────────────────
+// Simple in-memory rate limiter for auth attempts. Keyed by action + email
+// since we can't access the client IP from an iframe context.
+// Resets on process restart, which is acceptable for iframe-scoped use.
+
+const RATE_LIMIT_MAX_ATTEMPTS = 5;
+const RATE_LIMIT_WINDOW_MS = 60_000; // 1 minute
+
+interface RateLimitEntry {
+  attempts: number;
+  resetAt: number;
+}
+
+const rateLimiter = new Map<string, RateLimitEntry>();
+
+/**
+ * Check and increment the rate limiter for a given key.
+ * Returns true if the request is allowed, false if rate-limited.
+ * Also cleans up stale entries on each call.
+ */
+function checkRateLimit(key: string): boolean {
+  const now = Date.now();
+
+  // Clean up stale entries
+  for (const [k, entry] of rateLimiter) {
+    if (entry.resetAt < now) {
+      rateLimiter.delete(k);
+    }
+  }
+
+  const existing = rateLimiter.get(key);
+  if (!existing || existing.resetAt < now) {
+    // No entry or expired — start a new window
+    rateLimiter.set(key, { attempts: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return true;
+  }
+
+  if (existing.attempts >= RATE_LIMIT_MAX_ATTEMPTS) {
+    return false;
+  }
+
+  existing.attempts += 1;
+  return true;
+}
+
 interface AuthQueryParams {
   action: 'session';
 }
@@ -46,6 +91,14 @@ async function handleAuthQuery(params: AuthQueryParams): Promise<unknown> {
 }
 
 async function handleAuthMutate(params: AuthMutateParams): Promise<unknown> {
+  // Rate-limit signup and signin attempts
+  if (params.action === 'signup' || params.action === 'signin') {
+    const rateLimitKey = `${params.action}:${(params.email ?? '').toLowerCase()}`;
+    if (!checkRateLimit(rateLimitKey)) {
+      return { error: 'Too many attempts. Please wait a moment and try again.' };
+    }
+  }
+
   switch (params.action) {
     case 'signup': {
       if (!params.email || !params.password) {

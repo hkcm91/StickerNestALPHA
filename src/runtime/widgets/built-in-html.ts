@@ -216,6 +216,10 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
       .btn { padding: 8px 16px; border: none; border-radius: var(--sn-radius, 6px); font-size: 13px; font-weight: 600; cursor: pointer; width: 100%; }
       .btn-accent { background: var(--sn-accent, #6366f1); color: #fff; }
       .btn-muted { background: var(--sn-border, #e5e7eb); color: var(--sn-text-muted, #6b7280); cursor: default; }
+      .btn-manage { margin-top: 6px; padding: 6px 12px; border: 1px solid var(--sn-accent, #6366f1); border-radius: var(--sn-radius, 6px); background: transparent; color: var(--sn-accent, #6366f1); font-size: 12px; font-weight: 600; cursor: pointer; width: 100%; transition: background 0.15s ease; }
+      .btn-manage:hover { background: rgba(99,102,241,0.08); }
+      .btn-manage:focus-visible { outline: 2px solid var(--sn-accent, #6366f1); outline-offset: 2px; }
+      .btn-manage:disabled { opacity: 0.6; cursor: default; }
       .loading { text-align: center; padding: 40px; color: var(--sn-text-muted, #6b7280); }
       .empty { text-align: center; padding: 40px; color: var(--sn-text-muted, #6b7280); font-size: 14px; }
       .error-toast { background: #fee2e2; color: #dc2626; padding: 8px 12px; border-radius: var(--sn-radius, 6px); font-size: 13px; margin-bottom: 12px; display: none; }
@@ -227,12 +231,15 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
       .tier-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
       .tiers { animation: fadeIn 0.2s ease; }
       @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+      .skeleton { background: linear-gradient(90deg, var(--sn-border, #e5e7eb) 25%, #f3f4f6 50%, var(--sn-border, #e5e7eb) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: var(--sn-radius, 8px); }
+      @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+      .skeleton-card { border: 1px solid var(--sn-border, #e5e7eb); border-radius: var(--sn-radius, 8px); padding: 16px; background: var(--sn-surface, #fff); margin-bottom: 12px; }
     </style>
     <div class="sub-root" role="region" aria-label="Subscription Tiers">
       <h2 id="sub-heading">Subscription Tiers</h2>
       <div id="success-toast" class="success-toast" role="status" aria-live="polite"></div>
       <div id="error-toast" class="error-toast" role="alert" aria-live="polite"></div>
-      <div id="loading" class="loading" role="status" aria-live="polite">Loading tiers...</div>
+      <div id="loading" class="loading" role="status" aria-live="polite" aria-label="Loading subscription tiers"><div class="skeleton-card"><div class="skeleton" style="height:16px;width:60%;margin-bottom:10px"></div><div class="skeleton" style="height:24px;width:40%;margin-bottom:10px"></div><div class="skeleton" style="height:36px;width:100%"></div></div><div class="skeleton-card"><div class="skeleton" style="height:16px;width:60%;margin-bottom:10px"></div><div class="skeleton" style="height:24px;width:40%;margin-bottom:10px"></div><div class="skeleton" style="height:36px;width:100%"></div></div><div class="skeleton-card"><div class="skeleton" style="height:16px;width:60%;margin-bottom:10px"></div><div class="skeleton" style="height:24px;width:40%;margin-bottom:10px"></div><div class="skeleton" style="height:36px;width:100%"></div></div></div>
       <div id="empty" class="empty" style="display:none;" role="status">No subscription tiers available yet.</div>
       <div id="tiers" class="tiers" style="display:none;" role="list" aria-labelledby="sub-heading"></div>
     </div>
@@ -288,6 +295,10 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
           var priceLabel = tier.price_cents === 0 ? 'Free' : formatPrice(tier.price_cents, tier.currency);
           var intervalLabel = tier.price_cents > 0 ? '<span>/' + (tier.interval || 'month') + '</span>' : '';
 
+          var manageBtn = isActive
+            ? '<button class="btn-manage" id="btn-manage-sub" aria-label="Manage subscription">Manage Subscription</button>'
+            : '';
+
           card.innerHTML =
             '<div class="tier-name">' + tier.name + '</div>' +
             '<div class="tier-price">' + priceLabel + intervalLabel + '</div>' +
@@ -295,7 +306,7 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
             (benefits ? '<ul class="tier-benefits">' + benefits + '</ul>' : '') +
             '<button class="btn ' + (isActive ? 'btn-muted' : 'btn-accent') + '" data-tier-id="' + tier.id + '" ' + (isActive ? 'disabled' : '') + '>' +
             (isActive ? 'Current' : tier.price_cents === 0 ? 'Select Free' : 'Subscribe') +
-            '</button>';
+            '</button>' + manageBtn;
 
           tiersEl.appendChild(card);
         });
@@ -326,6 +337,32 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
               });
           };
         });
+
+        // Manage Subscription button handler
+        var manageBtn = document.getElementById('btn-manage-sub');
+        if (manageBtn) {
+          manageBtn.onclick = function() {
+            manageBtn.disabled = true;
+            manageBtn.textContent = 'Loading...';
+            StickerNest.integration('checkout').mutate({ action: 'customer_portal' })
+              .then(function(result) {
+                if (result.url) {
+                  window.open(result.url, '_blank');
+                  manageBtn.disabled = false;
+                  manageBtn.textContent = 'Manage Subscription';
+                } else {
+                  showToast(result.error || 'Failed to open customer portal.');
+                  manageBtn.disabled = false;
+                  manageBtn.textContent = 'Manage Subscription';
+                }
+              })
+              .catch(function(err) {
+                showToast(err.message || 'Failed to open customer portal.');
+                manageBtn.disabled = false;
+                manageBtn.textContent = 'Manage Subscription';
+              });
+          };
+        }
       }
 
       function loadAll() {
@@ -384,12 +421,17 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
       .item-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); transform: translateY(-1px); }
       .items-grid { animation: fadeIn 0.2s ease; }
       @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+      .skeleton { background: linear-gradient(90deg, var(--sn-border, #e5e7eb) 25%, #f3f4f6 50%, var(--sn-border, #e5e7eb) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: var(--sn-radius, 8px); }
+      @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+      .skeleton-card { border: 1px solid var(--sn-border, #e5e7eb); border-radius: var(--sn-radius, 8px); overflow: hidden; background: var(--sn-surface, #fff); }
+      .skeleton-img { width: 100%; aspect-ratio: 1; }
+      .skeleton-info { padding: 10px; }
     </style>
     <div class="shop-root" role="region" aria-label="Shop">
       <h2 id="shop-heading">Shop</h2>
       <div id="success-toast" class="success-toast" role="status" aria-live="polite"></div>
       <div id="error-toast" class="error-toast" role="alert" aria-live="polite"></div>
-      <div id="loading" class="loading" role="status" aria-live="polite">Loading items...</div>
+      <div id="loading" class="loading" role="status" aria-live="polite" aria-label="Loading shop items"><div class="items-grid" style="display:grid"><div class="skeleton-card"><div class="skeleton skeleton-img"></div><div class="skeleton-info"><div class="skeleton" style="height:14px;width:70%;margin-bottom:8px"></div><div class="skeleton" style="height:16px;width:40%;margin-bottom:8px"></div><div class="skeleton" style="height:30px;width:100%"></div></div></div><div class="skeleton-card"><div class="skeleton skeleton-img"></div><div class="skeleton-info"><div class="skeleton" style="height:14px;width:70%;margin-bottom:8px"></div><div class="skeleton" style="height:16px;width:40%;margin-bottom:8px"></div><div class="skeleton" style="height:30px;width:100%"></div></div></div><div class="skeleton-card"><div class="skeleton skeleton-img"></div><div class="skeleton-info"><div class="skeleton" style="height:14px;width:70%;margin-bottom:8px"></div><div class="skeleton" style="height:16px;width:40%;margin-bottom:8px"></div><div class="skeleton" style="height:30px;width:100%"></div></div></div></div></div>
       <div id="items" class="items-grid" style="display:none;" role="list" aria-labelledby="shop-heading"></div>
       <div id="empty" class="empty" style="display:none;" role="status">No items available.</div>
     </div>
@@ -732,10 +774,11 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
       .tier-row{border:1px solid var(--sn-border,#e5e7eb);border-radius:var(--sn-radius,8px);padding:14px;background:var(--sn-surface,#fff);display:flex;justify-content:space-between;align-items:center}
       .tier-info h3{font-size:14px;font-weight:600;margin-bottom:2px}
       .tier-meta{font-size:12px;color:var(--sn-text-muted,#6b7280)}
-      .tier-actions{display:flex;gap:6px}
+      .tier-actions{display:flex;gap:6px;align-items:center}
       .btn-sm{padding:5px 10px;border:1px solid var(--sn-border,#e5e7eb);border-radius:var(--sn-radius,4px);background:var(--sn-surface,#fff);font-size:12px;cursor:pointer;color:var(--sn-text,#1a1a2e)}
       .btn-sm:hover{background:var(--sn-border,#f3f4f6)}
       .btn-sm.danger{color:#ef4444;border-color:#fca5a5}
+      .btn-sm:disabled{opacity:.4;cursor:default}
       .btn{width:100%;padding:10px;border:none;border-radius:var(--sn-radius,6px);font-size:14px;font-weight:600;cursor:pointer;margin-top:8px}
       .btn-primary{background:var(--sn-accent,#6366f1);color:#fff}
       .btn-secondary{background:transparent;border:1px solid var(--sn-border,#e5e7eb);color:var(--sn-text,#1a1a2e)}
@@ -756,7 +799,8 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
       .error{color:#ef4444;font-size:12px;margin-top:8px}
       .empty{text-align:center;padding:30px;color:var(--sn-text-muted,#6b7280);font-size:14px}
       .loading{text-align:center;padding:30px;color:var(--sn-text-muted,#6b7280)}
-      .success-msg{background:#dcfce7;color:#16a34a;padding:10px;border-radius:var(--sn-radius,6px);font-size:13px;text-align:center;margin-bottom:12px}
+      .success-msg{background:#dcfce7;color:#16a34a;padding:10px;border-radius:var(--sn-radius,6px);font-size:13px;text-align:center;margin-bottom:12px;animation:successPop 0.3s ease}
+      @keyframes successPop{0%{transform:scale(0.9);opacity:0}100%{transform:scale(1);opacity:1}}
       .btn{transition:background 0.15s ease,opacity 0.15s ease}
       .btn:disabled{opacity:.5;cursor:default}
       .btn:focus-visible,.btn-sm:focus-visible{outline:2px solid var(--sn-accent,#6366f1);outline-offset:2px}
@@ -765,9 +809,19 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
       .tier-row:hover{box-shadow:0 1px 6px rgba(0,0,0,0.06)}
       .page.active{animation:fadeIn 0.2s ease}
       @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+      .skeleton{background:linear-gradient(90deg,var(--sn-border,#e5e7eb) 25%,#f3f4f6 50%,var(--sn-border,#e5e7eb) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:var(--sn-radius,8px)}
+      @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+      .skeleton-tier-row{border:1px solid var(--sn-border,#e5e7eb);border-radius:var(--sn-radius,8px);padding:14px;background:var(--sn-surface,#fff);display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+      .toggle-switch{position:relative;display:inline-block;width:34px;height:18px;flex-shrink:0}
+      .toggle-switch input{opacity:0;width:0;height:0;position:absolute}
+      .toggle-slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:var(--sn-border,#d1d5db);border-radius:18px;transition:background 0.2s ease}
+      .toggle-slider:before{content:"";position:absolute;height:14px;width:14px;left:2px;bottom:2px;background:#fff;border-radius:50%;transition:transform 0.2s ease}
+      .toggle-switch input:checked+.toggle-slider{background:var(--sn-accent,#6366f1)}
+      .toggle-switch input:checked+.toggle-slider:before{transform:translateX(16px)}
+      .toggle-switch input:focus-visible+.toggle-slider{outline:2px solid var(--sn-accent,#6366f1);outline-offset:2px}
     </style>
     <div class="root" role="region" aria-label="Tier Manager">
-      <div id="loading" class="loading" role="status" aria-live="polite">Loading tiers...</div>
+      <div id="loading" class="loading" role="status" aria-live="polite" aria-label="Loading tiers"><div class="skeleton-tier-row"><div style="flex:1"><div class="skeleton" style="height:14px;width:50%;margin-bottom:8px"></div><div class="skeleton" style="height:12px;width:70%"></div></div><div style="display:flex;gap:6px"><div class="skeleton" style="height:28px;width:50px"></div><div class="skeleton" style="height:28px;width:56px"></div></div></div><div class="skeleton-tier-row"><div style="flex:1"><div class="skeleton" style="height:14px;width:50%;margin-bottom:8px"></div><div class="skeleton" style="height:12px;width:70%"></div></div><div style="display:flex;gap:6px"><div class="skeleton" style="height:28px;width:50px"></div><div class="skeleton" style="height:28px;width:56px"></div></div></div></div>
 
       <!-- Page 1: Tier list -->
       <div id="page-list" class="page" role="region" aria-label="Tier List">
@@ -836,6 +890,11 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
           document.getElementById(p).classList.remove('active');
         });
         document.getElementById(id).classList.add('active');
+        setTimeout(function() {
+          if (id === 'page-form') { var fn = document.getElementById('f-name'); if (fn) fn.focus(); }
+          else if (id === 'page-delete') { var cb = document.getElementById('btn-cancel-del'); if (cb) cb.focus(); }
+          else if (id === 'page-list') { var ab = document.getElementById('btn-add'); if (ab) ab.focus(); }
+        }, 50);
       }
 
       function formatPrice(cents, currency) {
@@ -846,6 +905,7 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
       function loadTiers() {
         checkout.query({ action: 'my_tiers' }).then(function(data) {
           tiers = data || [];
+          tiers.sort(function(a, b) { return (a.sort_order || 0) - (b.sort_order || 0); });
           document.getElementById('loading').style.display = 'none';
           renderList();
           showPage('page-list');
@@ -854,23 +914,70 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
         });
       }
 
+      window.moveTierUp = function(id) {
+        var idx = tiers.findIndex(function(x) { return x.id === id; });
+        if (idx <= 0) return;
+        var above = tiers[idx - 1];
+        var current = tiers[idx];
+        var orderA = above.sort_order !== undefined ? above.sort_order : idx - 1;
+        var orderB = current.sort_order !== undefined ? current.sort_order : idx;
+        Promise.all([
+          checkout.mutate({ action: 'update_tier', tierId: current.id, data: { sortOrder: orderA } }),
+          checkout.mutate({ action: 'update_tier', tierId: above.id, data: { sortOrder: orderB } })
+        ]).then(function() { loadTiers(); }).catch(function() {});
+      };
+
+      window.moveTierDown = function(id) {
+        var idx = tiers.findIndex(function(x) { return x.id === id; });
+        if (idx < 0 || idx >= tiers.length - 1) return;
+        var below = tiers[idx + 1];
+        var current = tiers[idx];
+        var orderA = current.sort_order !== undefined ? current.sort_order : idx;
+        var orderB = below.sort_order !== undefined ? below.sort_order : idx + 1;
+        Promise.all([
+          checkout.mutate({ action: 'update_tier', tierId: current.id, data: { sortOrder: orderB } }),
+          checkout.mutate({ action: 'update_tier', tierId: below.id, data: { sortOrder: orderA } })
+        ]).then(function() { loadTiers(); }).catch(function() {});
+      };
+
+      window.toggleTierActive = function(id) {
+        var t = tiers.find(function(x) { return x.id === id; });
+        if (!t) return;
+        checkout.mutate({ action: 'update_tier', tierId: id, data: { isActive: !t.is_active } }).then(function(r) {
+          if (!r.error) {
+            var msg = document.getElementById('success');
+            msg.textContent = t.is_active ? 'Tier deactivated.' : 'Tier activated.';
+            msg.style.display = 'block';
+            setTimeout(function() { msg.style.display = 'none'; }, 2000);
+            loadTiers();
+          }
+        }).catch(function() {});
+      };
+
       function renderList() {
         var el = document.getElementById('tier-list');
         if (!tiers.length) {
           el.innerHTML = '<div class="empty">No tiers yet. Add your first subscription tier!</div>';
           return;
         }
-        el.innerHTML = tiers.map(function(t) {
+        el.innerHTML = tiers.map(function(t, idx) {
           var statusBadge = t.is_active
             ? '<span class="badge badge-green">Active</span>'
             : '<span class="badge badge-gray">Inactive</span>';
+          var toggleChecked = t.is_active ? 'checked' : '';
+          var toggleHtml = '<label class="toggle-switch"><input type="checkbox" ' + toggleChecked + ' onchange="toggleTierActive(' + "'" + t.id + "'" + ')" role="switch" aria-checked="' + (t.is_active ? 'true' : 'false') + '" aria-label="Toggle active state for ' + esc(t.name) + '" /><span class="toggle-slider"></span></label>';
+          var upDisabled = idx === 0 ? ' disabled' : '';
+          var downDisabled = idx === tiers.length - 1 ? ' disabled' : '';
           return '<div class="tier-row">' +
             '<div class="tier-info"><h3>' + esc(t.name) + ' ' + statusBadge + '</h3>' +
             '<div class="tier-meta">' + formatPrice(t.price_cents, t.currency) + '/' + (t.interval || 'month') +
             (t.benefits && t.benefits.length ? ' &middot; ' + t.benefits.length + ' benefits' : '') + '</div></div>' +
             '<div class="tier-actions">' +
-            '<button class="btn-sm" onclick="editTier(' + "'" + t.id + "'" + ')">Edit</button>' +
-            '<button class="btn-sm danger" onclick="deleteTier(' + "'" + t.id + "'" + ')">Delete</button>' +
+            toggleHtml +
+            '<button class="btn-sm" onclick="moveTierUp(' + "'" + t.id + "'" + ')"' + upDisabled + ' aria-label="Move tier up">&uarr;</button>' +
+            '<button class="btn-sm" onclick="moveTierDown(' + "'" + t.id + "'" + ')"' + downDisabled + ' aria-label="Move tier down">&darr;</button>' +
+            '<button class="btn-sm" onclick="editTier(' + "'" + t.id + "'" + ')" aria-label="Edit ' + esc(t.name) + '">Edit</button>' +
+            '<button class="btn-sm danger" onclick="deleteTier(' + "'" + t.id + "'" + ')" aria-label="Delete ' + esc(t.name) + '">Delete</button>' +
             '</div></div>';
         }).join('');
       }
@@ -1035,7 +1142,7 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
       .item-row{border:1px solid var(--sn-border,#e5e7eb);border-radius:var(--sn-radius,8px);padding:14px;background:var(--sn-surface,#fff);display:flex;justify-content:space-between;align-items:center}
       .item-info h3{font-size:14px;font-weight:600;margin-bottom:2px}
       .item-meta{font-size:12px;color:var(--sn-text-muted,#6b7280)}
-      .item-actions{display:flex;gap:6px}
+      .item-actions{display:flex;gap:6px;align-items:center}
       .btn-sm{padding:5px 10px;border:1px solid var(--sn-border,#e5e7eb);border-radius:var(--sn-radius,4px);background:var(--sn-surface,#fff);font-size:12px;cursor:pointer;color:var(--sn-text,#1a1a2e)}
       .btn-sm:hover{background:var(--sn-border,#f3f4f6)}
       .btn-sm.danger{color:#ef4444;border-color:#fca5a5}
@@ -1059,7 +1166,8 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
       .error{color:#ef4444;font-size:12px;margin-top:8px}
       .empty{text-align:center;padding:30px;color:var(--sn-text-muted,#6b7280);font-size:14px}
       .loading{text-align:center;padding:30px;color:var(--sn-text-muted,#6b7280)}
-      .success-msg{background:#dcfce7;color:#16a34a;padding:10px;border-radius:var(--sn-radius,6px);font-size:13px;text-align:center;margin-bottom:12px}
+      .success-msg{background:#dcfce7;color:#16a34a;padding:10px;border-radius:var(--sn-radius,6px);font-size:13px;text-align:center;margin-bottom:12px;animation:successPop 0.3s ease}
+      @keyframes successPop{0%{transform:scale(0.9);opacity:0}100%{transform:scale(1);opacity:1}}
       .btn{transition:background 0.15s ease,opacity 0.15s ease}
       .btn:disabled{opacity:.5;cursor:default}
       .btn:focus-visible,.btn-sm:focus-visible{outline:2px solid var(--sn-accent,#6366f1);outline-offset:2px}
@@ -1068,9 +1176,19 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
       .item-row:hover{box-shadow:0 1px 6px rgba(0,0,0,0.06)}
       .page.active{animation:fadeIn 0.2s ease}
       @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+      .skeleton{background:linear-gradient(90deg,var(--sn-border,#e5e7eb) 25%,#f3f4f6 50%,var(--sn-border,#e5e7eb) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:var(--sn-radius,8px)}
+      @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+      .skeleton-item-row{border:1px solid var(--sn-border,#e5e7eb);border-radius:var(--sn-radius,8px);padding:14px;background:var(--sn-surface,#fff);display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+      .toggle-switch{position:relative;display:inline-block;width:34px;height:18px;flex-shrink:0}
+      .toggle-switch input{opacity:0;width:0;height:0;position:absolute}
+      .toggle-slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:var(--sn-border,#d1d5db);border-radius:18px;transition:background 0.2s ease}
+      .toggle-slider:before{content:"";position:absolute;height:14px;width:14px;left:2px;bottom:2px;background:#fff;border-radius:50%;transition:transform 0.2s ease}
+      .toggle-switch input:checked+.toggle-slider{background:var(--sn-accent,#6366f1)}
+      .toggle-switch input:checked+.toggle-slider:before{transform:translateX(16px)}
+      .toggle-switch input:focus-visible+.toggle-slider{outline:2px solid var(--sn-accent,#6366f1);outline-offset:2px}
     </style>
     <div class="root" role="region" aria-label="Item Manager">
-      <div id="loading" class="loading" role="status" aria-live="polite">Loading items...</div>
+      <div id="loading" class="loading" role="status" aria-live="polite" aria-label="Loading items"><div class="skeleton-item-row"><div style="flex:1"><div class="skeleton" style="height:14px;width:50%;margin-bottom:8px"></div><div class="skeleton" style="height:12px;width:70%"></div></div><div style="display:flex;gap:6px"><div class="skeleton" style="height:28px;width:50px"></div><div class="skeleton" style="height:28px;width:56px"></div></div></div><div class="skeleton-item-row"><div style="flex:1"><div class="skeleton" style="height:14px;width:50%;margin-bottom:8px"></div><div class="skeleton" style="height:12px;width:70%"></div></div><div style="display:flex;gap:6px"><div class="skeleton" style="height:28px;width:50px"></div><div class="skeleton" style="height:28px;width:56px"></div></div></div></div>
 
       <!-- Page 1: Item list -->
       <div id="page-list" class="page" role="region" aria-label="Item List">
@@ -1147,6 +1265,11 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
           document.getElementById(p).classList.remove('active');
         });
         document.getElementById(id).classList.add('active');
+        setTimeout(function() {
+          if (id === 'page-form') { var fn = document.getElementById('f-name'); if (fn) fn.focus(); }
+          else if (id === 'page-delete') { var cb = document.getElementById('btn-cancel-del'); if (cb) cb.focus(); }
+          else if (id === 'page-list') { var ab = document.getElementById('btn-add'); if (ab) ab.focus(); }
+        }, 50);
       }
 
       function formatPrice(cents, currency) {
@@ -1155,6 +1278,20 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
       }
 
       function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+      window.toggleItemActive = function(id) {
+        var t = items.find(function(x) { return x.id === id; });
+        if (!t) return;
+        checkout.mutate({ action: 'update_item', itemId: id, data: { isActive: !t.is_active } }).then(function(r) {
+          if (!r.error) {
+            var msg = document.getElementById('success');
+            msg.textContent = t.is_active ? 'Item deactivated.' : 'Item activated.';
+            msg.style.display = 'block';
+            setTimeout(function() { msg.style.display = 'none'; }, 2000);
+            loadItems();
+          }
+        }).catch(function() {});
+      };
 
       function loadItems() {
         checkout.query({ action: 'my_items' }).then(function(result) {
@@ -1178,13 +1315,16 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
           var statusBadge = t.is_active ? '<span class="badge badge-green">Active</span>' : '<span class="badge badge-gray">Inactive</span>';
           var typeBadge = '<span class="badge badge-blue">' + (t.item_type || 'digital') + '</span>';
           var stockStr = t.stock_count !== null && t.stock_count !== undefined ? t.stock_count + ' in stock' : 'Unlimited';
+          var toggleChecked = t.is_active ? 'checked' : '';
+          var toggleHtml = '<label class="toggle-switch"><input type="checkbox" ' + toggleChecked + ' onchange="toggleItemActive(' + "'" + t.id + "'" + ')" role="switch" aria-checked="' + (t.is_active ? 'true' : 'false') + '" aria-label="Toggle active state for ' + esc(t.name) + '" /><span class="toggle-slider"></span></label>';
           return '<div class="item-row">' +
             '<div class="item-info"><h3>' + esc(t.name) + ' ' + statusBadge + ' ' + typeBadge + '</h3>' +
             '<div class="item-meta">' + formatPrice(t.price_cents, t.currency) + ' &middot; ' + stockStr +
             (t.requires_shipping ? ' &middot; Ships' : '') + '</div></div>' +
             '<div class="item-actions">' +
-            '<button class="btn-sm" onclick="editItem(' + "'" + t.id + "'" + ')">Edit</button>' +
-            '<button class="btn-sm danger" onclick="deleteItem(' + "'" + t.id + "'" + ')">Delete</button>' +
+            toggleHtml +
+            '<button class="btn-sm" onclick="editItem(' + "'" + t.id + "'" + ')" aria-label="Edit ' + esc(t.name) + '">Edit</button>' +
+            '<button class="btn-sm danger" onclick="deleteItem(' + "'" + t.id + "'" + ')" aria-label="Delete ' + esc(t.name) + '">Delete</button>' +
             '</div></div>';
         }).join('');
       }
@@ -1344,21 +1484,42 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
       .btn-download{padding:4px 10px;border:1px solid var(--sn-accent,#6366f1);border-radius:var(--sn-radius,4px);background:transparent;color:var(--sn-accent,#6366f1);font-size:12px;cursor:pointer;font-weight:600;transition:background 0.15s ease}
       .btn-download:hover{background:rgba(99,102,241,0.08)}
       .btn-download:focus-visible{outline:2px solid var(--sn-accent,#6366f1);outline-offset:2px}
+      .btn-cancel{padding:4px 10px;border:1px solid #dc2626;border-radius:var(--sn-radius,4px);background:transparent;color:#dc2626;font-size:12px;cursor:pointer;font-weight:600;transition:background 0.15s ease}
+      .btn-cancel:hover{background:rgba(220,38,38,0.08)}
+      .btn-cancel:focus-visible{outline:2px solid #dc2626;outline-offset:2px}
+      .btn-cancel:disabled{opacity:0.6;cursor:default}
+      .btn-refund{padding:4px 10px;border:1px solid var(--sn-text-muted,#6b7280);border-radius:var(--sn-radius,4px);background:transparent;color:var(--sn-text-muted,#6b7280);font-size:12px;cursor:pointer;font-weight:600;transition:background 0.15s ease}
+      .btn-refund:hover{background:rgba(107,114,128,0.08)}
+      .btn-refund:focus-visible{outline:2px solid var(--sn-text-muted,#6b7280);outline-offset:2px}
+      .btn-refund:disabled{opacity:0.6;cursor:default}
+      .error-toast{background:#fee2e2;color:#dc2626;padding:8px 12px;border-radius:var(--sn-radius,6px);font-size:13px;margin-bottom:12px;display:none}
+      .success-toast{background:#dcfce7;color:#16a34a;padding:8px 12px;border-radius:var(--sn-radius,6px);font-size:13px;margin-bottom:12px;display:none}
       .tab{transition:color 0.15s ease,border-color 0.15s ease}
       .tab:focus-visible{outline:2px solid var(--sn-accent,#6366f1);outline-offset:2px}
       .order-row{transition:box-shadow 0.15s ease}
       .order-row:hover{box-shadow:0 1px 6px rgba(0,0,0,0.06)}
       .order-list{animation:fadeIn 0.2s ease}
       @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+      .skeleton{background:linear-gradient(90deg,var(--sn-border,#e5e7eb) 25%,#f3f4f6 50%,var(--sn-border,#e5e7eb) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:var(--sn-radius,8px)}
+      @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+      .skeleton-row{border:1px solid var(--sn-border,#e5e7eb);border-radius:var(--sn-radius,8px);padding:14px;background:var(--sn-surface,#fff);margin-bottom:8px}
+      .filter-bar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+      .filter-bar input,.filter-bar select{padding:6px 10px;border:1px solid var(--sn-border,#e5e7eb);border-radius:var(--sn-radius,6px);font-size:13px;background:var(--sn-surface,#fff);color:var(--sn-text,#1a1a2e);font-family:inherit}
+      .filter-bar input{flex:1;min-width:140px}
+      .filter-bar select{min-width:100px}
+      .filter-bar input:focus-visible,.filter-bar select:focus-visible{outline:2px solid var(--sn-accent,#6366f1);outline-offset:1px}
     </style>
     <div class="root" role="region" aria-label="My Orders">
       <h2 id="orders-heading">My Orders</h2>
       <p class="subtitle">Your purchases and subscriptions</p>
+      <div id="error-toast" class="error-toast" role="alert" aria-live="polite"></div>
+      <div id="success-toast" class="success-toast" role="status" aria-live="polite"></div>
       <div class="tabs" role="tablist" aria-label="Order categories">
         <div class="tab active" id="tab-purchases" data-tab="purchases" role="tab" tabindex="0" aria-selected="true" aria-controls="content">Purchases</div>
         <div class="tab" id="tab-subscriptions" data-tab="subscriptions" role="tab" tabindex="0" aria-selected="false" aria-controls="content">Subscriptions</div>
       </div>
-      <div id="loading" class="loading" role="status" aria-live="polite">Loading orders...</div>
+      <div id="filter-bar" class="filter-bar" style="display:none"><input id="search-input" type="text" placeholder="Search by item name..." aria-label="Search orders by item name" /><select id="status-filter" aria-label="Filter orders by status"><option value="">All Statuses</option><option value="paid">Paid</option><option value="fulfilled">Fulfilled</option><option value="refunded">Refunded</option><option value="pending">Pending</option></select></div>
+      <div id="loading" class="loading" role="status" aria-live="polite" aria-label="Loading orders"><div class="skeleton-row"><div class="skeleton" style="height:14px;width:50%;margin-bottom:8px"></div><div style="display:flex;gap:8px"><div class="skeleton" style="height:16px;width:60px"></div><div class="skeleton" style="height:16px;width:80px"></div><div class="skeleton" style="height:16px;width:60px"></div></div></div><div class="skeleton-row"><div class="skeleton" style="height:14px;width:50%;margin-bottom:8px"></div><div style="display:flex;gap:8px"><div class="skeleton" style="height:16px;width:60px"></div><div class="skeleton" style="height:16px;width:80px"></div><div class="skeleton" style="height:16px;width:60px"></div></div></div><div class="skeleton-row"><div class="skeleton" style="height:14px;width:50%;margin-bottom:8px"></div><div style="display:flex;gap:8px"><div class="skeleton" style="height:16px;width:60px"></div><div class="skeleton" style="height:16px;width:80px"></div><div class="skeleton" style="height:16px;width:60px"></div></div></div></div>
       <div id="content" role="tabpanel" aria-labelledby="tab-purchases"></div>
     </div>
     <script>
@@ -1379,8 +1540,48 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
       function esc(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
 
       function statusBadge(status) {
-        var map = { paid: 'badge-green', active: 'badge-green', fulfilled: 'badge-blue', pending: 'badge-yellow', refunded: 'badge-red', cancelled: 'badge-red', past_due: 'badge-yellow' };
+        var map = { paid: 'badge-green', active: 'badge-green', fulfilled: 'badge-blue', pending: 'badge-yellow', refunded: 'badge-red', cancelled: 'badge-red', refund_requested: 'badge-yellow', past_due: 'badge-yellow' };
         return '<span class="badge ' + (map[status] || 'badge-gray') + '">' + esc(status) + '</span>';
+      }
+
+      var ordersErrorToast = document.getElementById('error-toast');
+      var ordersSuccessToast = document.getElementById('success-toast');
+
+      function showOrdersError(msg) {
+        ordersErrorToast.textContent = msg;
+        ordersErrorToast.style.display = 'block';
+        setTimeout(function() { ordersErrorToast.style.display = 'none'; }, 5000);
+      }
+
+      function showOrdersSuccess(msg) {
+        ordersSuccessToast.textContent = msg;
+        ordersSuccessToast.style.display = 'block';
+        setTimeout(function() { ordersSuccessToast.style.display = 'none'; }, 5000);
+      }
+
+      function isRefundEligible(order) {
+        if (order.status !== 'paid' && order.status !== 'fulfilled') return false;
+        var orderDate = new Date(order.created_at);
+        var now = new Date();
+        var daysSince = (now.getTime() - orderDate.getTime()) / (1000 * 60 * 60 * 24);
+        return daysSince <= 30;
+      }
+
+      var searchInput = document.getElementById('search-input');
+      var statusFilter = document.getElementById('status-filter');
+      var filterBar = document.getElementById('filter-bar');
+
+      searchInput.oninput = function() { render(); };
+      statusFilter.onchange = function() { render(); };
+
+      function getFilteredOrders() {
+        var query = (searchInput.value || '').trim().toLowerCase();
+        var statusVal = statusFilter.value;
+        return orders.filter(function(o) {
+          var nameMatch = !query || ((o.item_name || o.type || '').toLowerCase().indexOf(query) !== -1);
+          var statusMatch = !statusVal || o.status === statusVal;
+          return nameMatch && statusMatch;
+        });
       }
 
       function switchTab(tab) {
@@ -1393,6 +1594,7 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
         activeTab.classList.add('active');
         activeTab.setAttribute('aria-selected', 'true');
         document.getElementById('content').setAttribute('aria-labelledby', 'tab-' + tab);
+        filterBar.style.display = tab === 'purchases' ? 'flex' : 'none';
         render();
       }
 
@@ -1413,16 +1615,20 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
       function render() {
         var el = document.getElementById('content');
         if (currentTab === 'purchases') {
+          var filtered = getFilteredOrders();
           if (!orders.length) { el.innerHTML = '<div class="empty">No purchases yet.</div>'; return; }
-          el.innerHTML = '<div class="order-list">' + orders.map(function(o) {
+          if (!filtered.length) { el.innerHTML = '<div class="empty">No orders match your filters.</div>'; return; }
+          el.innerHTML = '<div class="order-list">' + filtered.map(function(o) {
             var dlBtn = (o.type === 'shop_item' && (o.status === 'paid' || o.status === 'fulfilled'))
-              ? '<button class="btn-download" data-order-id="' + o.id + '">Download</button>' : '';
+              ? '<button class="btn-download" data-order-id="' + o.id + '" aria-label="Download ' + esc(o.item_name || o.type) + '">Download</button>' : '';
+            var refundBtn = isRefundEligible(o)
+              ? ' <button class="btn-refund" data-refund-order-id="' + o.id + '" aria-label="Request refund for ' + esc(o.item_name || o.type) + '">Request Refund</button>' : '';
             return '<div class="order-row">' +
               '<div class="order-header"><span class="order-name">' + esc(o.item_name || o.type) + '</span>' + statusBadge(o.status) + '</div>' +
               '<div class="order-meta"><span class="order-amount">' + formatPrice(o.amount_cents, o.currency) + '</span>' +
               '<span>' + formatDate(o.created_at) + '</span>' +
               '<span style="text-transform:uppercase;font-size:10px">' + esc(o.type) + '</span>' +
-              dlBtn + '</div></div>';
+              dlBtn + refundBtn + '</div></div>';
           }).join('') + '</div>';
           el.querySelectorAll('.btn-download').forEach(function(btn) {
             btn.onclick = function() {
@@ -1444,20 +1650,65 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
               });
             };
           });
+          el.querySelectorAll('.btn-refund').forEach(function(btn) {
+            btn.onclick = function() {
+              var oid = btn.dataset.refundOrderId;
+              btn.textContent = 'Requesting...';
+              btn.disabled = true;
+              checkout.mutate({ action: 'request_refund', orderId: oid }).then(function(r) {
+                if (r.success) {
+                  showOrdersSuccess('Refund requested successfully.');
+                  loadOrders();
+                } else {
+                  showOrdersError(r.error || 'Failed to request refund.');
+                  btn.textContent = 'Request Refund';
+                  btn.disabled = false;
+                }
+              }).catch(function(err) {
+                showOrdersError(err.message || 'Failed to request refund.');
+                btn.textContent = 'Request Refund';
+                btn.disabled = false;
+              });
+            };
+          });
         } else {
           if (!subscriptions.length) { el.innerHTML = '<div class="empty">No active subscriptions.</div>'; return; }
           el.innerHTML = '<div class="order-list">' + subscriptions.map(function(s) {
             var renewal = s.current_period_end ? 'Renews ' + formatDate(s.current_period_end) : '';
+            var cancelBtn = s.status === 'active'
+              ? ' <button class="btn-cancel" data-sub-id="' + s.id + '" aria-label="Cancel subscription ' + esc(s.tier_name || 'Subscription') + '">Cancel</button>' : '';
             return '<div class="order-row">' +
               '<div class="order-header"><span class="order-name">' + esc(s.tier_name || 'Subscription') + '</span>' + statusBadge(s.status) + '</div>' +
-              '<div class="order-meta">' + (renewal ? '<span>' + renewal + '</span>' : '') + '</div></div>';
+              '<div class="order-meta">' + (renewal ? '<span>' + renewal + '</span>' : '') + cancelBtn + '</div></div>';
           }).join('') + '</div>';
+          el.querySelectorAll('.btn-cancel').forEach(function(btn) {
+            btn.onclick = function() {
+              var sid = btn.dataset.subId;
+              btn.textContent = 'Cancelling...';
+              btn.disabled = true;
+              checkout.mutate({ action: 'cancel_subscription', subscriptionId: sid }).then(function(r) {
+                if (r.success) {
+                  showOrdersSuccess('Subscription cancelled.');
+                  loadOrders();
+                } else {
+                  showOrdersError(r.error || 'Failed to cancel subscription.');
+                  btn.textContent = 'Cancel';
+                  btn.disabled = false;
+                }
+              }).catch(function(err) {
+                showOrdersError(err.message || 'Failed to cancel subscription.');
+                btn.textContent = 'Cancel';
+                btn.disabled = false;
+              });
+            };
+          });
         }
       }
 
       function loadOrders() {
         document.getElementById('loading').style.display = 'block';
         document.getElementById('content').innerHTML = '';
+        filterBar.style.display = 'none';
         Promise.all([
           checkout.query({ action: 'my_orders' }),
           checkout.query({ action: 'my_subscription' }),
@@ -1468,6 +1719,7 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
           orders = Array.isArray(rawOrders) ? rawOrders : (rawOrders && rawOrders.data ? rawOrders.data : []);
           var sub = results[1];
           subscriptions = sub ? (Array.isArray(sub) ? sub : [sub]) : [];
+          if (currentTab === 'purchases') { filterBar.style.display = 'flex'; }
           render();
         }).catch(function() {
           document.getElementById('loading').textContent = 'Failed to load orders.';
@@ -1483,6 +1735,148 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
       StickerNest.subscribe('auth.signed_out', function() { loadOrders(); });
 
       StickerNest.register({ id: 'wgt-orders', name: 'My Orders', version: '1.0.0' });
+      StickerNest.ready();
+    </script>
+  `,
+
+  'wgt-creator-dashboard': `
+    <style>
+      *{box-sizing:border-box;margin:0;padding:0}
+      body{font-family:var(--sn-font-family,system-ui);color:var(--sn-text,#1a1a2e)}
+      .root{padding:20px;height:100%;overflow-y:auto}
+      h2{font-size:1.2em;margin-bottom:4px}
+      .subtitle{font-size:13px;color:var(--sn-text-muted,#6b7280);margin-bottom:16px}
+      .stats-row{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+      .stat-card{flex:1;min-width:120px;border:1px solid var(--sn-border,#e5e7eb);border-radius:var(--sn-radius,8px);padding:16px;background:var(--sn-surface,#fff);transition:box-shadow 0.15s ease,border-color 0.15s ease}
+      .stat-card:hover{box-shadow:0 2px 8px rgba(0,0,0,0.06)}
+      .stat-label{font-size:12px;font-weight:600;color:var(--sn-text-muted,#6b7280);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.03em}
+      .stat-value{font-size:24px;font-weight:700}
+      .section-title{font-size:14px;font-weight:600;margin-bottom:10px}
+      .activity-list{display:flex;flex-direction:column;gap:8px}
+      .activity-row{border:1px solid var(--sn-border,#e5e7eb);border-radius:var(--sn-radius,8px);padding:14px;background:var(--sn-surface,#fff);transition:box-shadow 0.15s ease}
+      .activity-row:hover{box-shadow:0 1px 6px rgba(0,0,0,0.06)}
+      .activity-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+      .activity-name{font-weight:600;font-size:14px}
+      .activity-meta{font-size:12px;color:var(--sn-text-muted,#6b7280);display:flex;gap:8px;align-items:center}
+      .activity-amount{font-weight:700;font-size:14px}
+      .badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
+      .badge-green{background:#dcfce7;color:#16a34a}
+      .badge-blue{background:#dbeafe;color:#2563eb}
+      .badge-yellow{background:#fef9c3;color:#a16207}
+      .badge-red{background:#fee2e2;color:#dc2626}
+      .badge-gray{background:#f3f4f6;color:#6b7280}
+      .empty{text-align:center;padding:40px;color:var(--sn-text-muted,#6b7280);font-size:14px}
+      .loading{text-align:center;padding:40px;color:var(--sn-text-muted,#6b7280)}
+      .error-toast{background:#fee2e2;color:#dc2626;padding:8px 12px;border-radius:var(--sn-radius,6px);font-size:13px;margin-bottom:12px;display:none}
+      .stats-row{animation:fadeIn 0.2s ease}
+      .activity-list{animation:fadeIn 0.25s ease}
+      @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+      .stat-card:focus-visible{outline:2px solid var(--sn-accent,#6366f1);outline-offset:2px}
+    </style>
+    <div class="root" role="region" aria-label="Creator Dashboard">
+      <h2 id="dashboard-heading">Creator Dashboard</h2>
+      <p class="subtitle">Overview of your revenue, subscribers, and orders</p>
+      <div id="error-toast" class="error-toast" role="alert" aria-live="polite"></div>
+      <div id="loading" class="loading" role="status" aria-live="polite">Loading dashboard...</div>
+      <div id="dashboard-content" style="display:none;">
+        <div class="stats-row" role="region" aria-label="Statistics">
+          <div class="stat-card" role="status" aria-label="Total Revenue" tabindex="0">
+            <div class="stat-label">Total Revenue</div>
+            <div class="stat-value" id="stat-revenue">--</div>
+          </div>
+          <div class="stat-card" role="status" aria-label="Active Subscribers" tabindex="0">
+            <div class="stat-label">Active Subscribers</div>
+            <div class="stat-value" id="stat-subscribers">--</div>
+          </div>
+          <div class="stat-card" role="status" aria-label="Total Orders" tabindex="0">
+            <div class="stat-label">Total Orders</div>
+            <div class="stat-value" id="stat-orders">--</div>
+          </div>
+        </div>
+        <div class="section-title" id="activity-heading">Recent Activity</div>
+        <div id="activity" class="activity-list" role="list" aria-labelledby="activity-heading"></div>
+      </div>
+    </div>
+    <script>
+      var checkout = StickerNest.integration('checkout');
+      var stats = null;
+      var recentOrders = [];
+
+      function formatPrice(cents, currency) {
+        if (cents === 0) return '$0.00';
+        return (cents / 100).toLocaleString(undefined, { style: 'currency', currency: currency || 'usd' });
+      }
+
+      function formatDate(d) {
+        return new Date(d).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+      }
+
+      function esc(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+
+      function statusBadge(status) {
+        var map = { paid: 'badge-green', active: 'badge-green', fulfilled: 'badge-blue', pending: 'badge-yellow', refunded: 'badge-red', cancelled: 'badge-red', refund_requested: 'badge-yellow', past_due: 'badge-yellow' };
+        return '<span class="badge ' + (map[status] || 'badge-gray') + '">' + esc(status) + '</span>';
+      }
+
+      var dashErrorToast = document.getElementById('error-toast');
+
+      function showDashError(msg) {
+        dashErrorToast.textContent = msg;
+        dashErrorToast.style.display = 'block';
+        setTimeout(function() { dashErrorToast.style.display = 'none'; }, 5000);
+      }
+
+      function renderStats() {
+        if (!stats) return;
+        document.getElementById('stat-revenue').textContent = formatPrice(stats.totalRevenue, 'usd');
+        document.getElementById('stat-subscribers').textContent = String(stats.activeSubscribers);
+        document.getElementById('stat-orders').textContent = String(stats.totalOrders);
+      }
+
+      function renderActivity() {
+        var el = document.getElementById('activity');
+        if (!recentOrders.length) {
+          el.innerHTML = '<div class="empty">No recent orders yet.</div>';
+          return;
+        }
+        el.innerHTML = recentOrders.map(function(o) {
+          return '<div class="activity-row" role="listitem">' +
+            '<div class="activity-header"><span class="activity-name">' + esc(o.item_name || o.tier_name || o.type || 'Order') + '</span>' + statusBadge(o.status) + '</div>' +
+            '<div class="activity-meta"><span class="activity-amount">' + formatPrice(o.amount_cents, o.currency) + '</span>' +
+            '<span>' + formatDate(o.created_at) + '</span></div></div>';
+        }).join('');
+      }
+
+      function loadDashboard() {
+        document.getElementById('loading').style.display = 'block';
+        document.getElementById('dashboard-content').style.display = 'none';
+        Promise.all([
+          checkout.query({ action: 'dashboard_stats' }),
+          checkout.query({ action: 'recent_activity' }),
+        ]).then(function(results) {
+          document.getElementById('loading').style.display = 'none';
+          document.getElementById('dashboard-content').style.display = 'block';
+          stats = results[0] || { totalRevenue: 0, activeSubscribers: 0, totalOrders: 0 };
+          recentOrders = Array.isArray(results[1]) ? results[1] : (results[1] && results[1].data ? results[1].data : []);
+          renderStats();
+          renderActivity();
+        }).catch(function(e) {
+          document.getElementById('loading').style.display = 'none';
+          document.getElementById('dashboard-content').style.display = 'block';
+          showDashError(e.message || 'Failed to load dashboard.');
+        });
+      }
+
+      // Initial load
+      loadDashboard();
+
+      // Refresh on relevant events
+      StickerNest.subscribe('commerce.order.created', function() { loadDashboard(); });
+      StickerNest.subscribe('commerce.tier.created', function() { loadDashboard(); });
+      StickerNest.subscribe('auth.signed_in', function() { loadDashboard(); });
+      StickerNest.subscribe('auth.signed_out', function() { loadDashboard(); });
+
+      StickerNest.register({ id: 'wgt-creator-dashboard', name: 'Creator Dashboard', version: '1.0.0' });
       StickerNest.ready();
     </script>
   `,

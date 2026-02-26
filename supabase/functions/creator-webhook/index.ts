@@ -78,6 +78,11 @@ Deno.serve(async (req: Request) => {
       await handleDisputeCreated(db, dispute);
       break;
     }
+    case "invoice.payment_failed": {
+      const invoice = event.data.object as Stripe.Invoice;
+      await handleInvoicePaymentFailed(db, invoice);
+      break;
+    }
     default:
       console.log(`Unhandled creator event: ${event.type}`);
   }
@@ -207,4 +212,44 @@ async function handleDisputeCreated(
     .from("orders")
     .update({ status: "disputed" })
     .eq("stripe_payment_intent_id", paymentIntentId);
+}
+
+async function handleInvoicePaymentFailed(
+  db: ReturnType<typeof createClient>,
+  invoice: Stripe.Invoice,
+) {
+  const stripeSubscriptionId =
+    typeof invoice.subscription === "string"
+      ? invoice.subscription
+      : invoice.subscription?.id ?? null;
+
+  if (!stripeSubscriptionId) return;
+
+  // Update the canvas subscription status to past_due
+  const { data: subscription } = await db
+    .from("canvas_subscriptions")
+    .update({ status: "past_due" })
+    .eq("stripe_subscription_id", stripeSubscriptionId)
+    .select("id, buyer_id, canvas_id")
+    .single();
+
+  if (!subscription) {
+    console.log(`No canvas_subscription found for Stripe subscription: ${stripeSubscriptionId}`);
+    return;
+  }
+
+  // Log the payment failure event for the seller
+  await db.from("seller_events").insert({
+    canvas_id: subscription.canvas_id,
+    event_type: "payment_failed",
+    payload: {
+      subscription_id: subscription.id,
+      buyer_id: subscription.buyer_id,
+      stripe_subscription_id: stripeSubscriptionId,
+      invoice_id: invoice.id,
+      amount_due: invoice.amount_due,
+      currency: invoice.currency,
+      attempt_count: invoice.attempt_count,
+    },
+  });
 }

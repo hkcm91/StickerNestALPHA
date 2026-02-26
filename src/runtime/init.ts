@@ -444,6 +444,28 @@ StickerNest.ready();
     isBuiltIn: true,
     installedAt: new Date().toISOString(),
   },
+  {
+    widgetId: 'sn.builtin.creator-dashboard',
+    manifest: {
+      id: 'sn.builtin.creator-dashboard',
+      name: 'Creator Dashboard',
+      version: '1.0.0',
+      description: 'Revenue, subscriber, and order overview for creators',
+      author: { name: 'StickerNest', url: 'https://stickernest.com' },
+      license: 'MIT',
+      tags: ['commerce', 'creator'],
+      category: 'commerce',
+      permissions: ['checkout'],
+      events: { emits: [], subscribes: [] },
+      config: { fields: [] },
+      size: { minWidth: 320, minHeight: 400, maxWidth: 700, maxHeight: 800, defaultWidth: 500, defaultHeight: 560, aspectLocked: false },
+      entry: 'inline',
+      spatialSupport: false,
+    },
+    htmlContent: '',
+    isBuiltIn: true,
+    installedAt: new Date().toISOString(),
+  },
 ];
 
 /** Map from registry widgetId to built-in-html key */
@@ -455,6 +477,7 @@ const WIDGET_HTML_KEY: Record<string, string> = {
   'sn.builtin.tier-manager': 'wgt-tier-manager',
   'sn.builtin.item-manager': 'wgt-item-manager',
   'sn.builtin.orders': 'wgt-orders',
+  'sn.builtin.creator-dashboard': 'wgt-creator-dashboard',
 };
 
 /**

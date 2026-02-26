@@ -12,10 +12,38 @@ import { supabase } from '../../kernel/supabase';
 
 import type { IntegrationHandler } from './integration-proxy';
 
+// ── Nonce infrastructure ────────────────────────────────────────────────────
+// Provides one-time-use nonces that widgets can include in mutation calls
+// to guard against replay attacks. Opt-in: mutations without a _nonce are
+// still accepted for backward compatibility.
+
+const activeNonces = new Set<string>();
+
+/** Generate a cryptographically random nonce and register it for one-time use. */
+export function generateNonce(): string {
+  const bytes = new Uint8Array(24);
+  crypto.getRandomValues(bytes);
+  const nonce = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+  activeNonces.add(nonce);
+  return nonce;
+}
+
+/**
+ * Validate and consume a nonce. Returns true if the nonce was valid (present
+ * and not yet consumed). Returns true when no nonce is provided (opt-in).
+ */
+function consumeNonce(nonce: string | undefined): boolean {
+  if (nonce === undefined) return true; // opt-in — no nonce supplied is fine
+  if (!activeNonces.has(nonce)) return false;
+  activeNonces.delete(nonce);
+  return true;
+}
+
 interface CheckoutQueryParams {
   action:
     | 'tiers' | 'my_subscription' | 'shop_items' | 'my_orders' | 'download'
-    | 'connect_status' | 'my_tiers' | 'my_items' | 'seller_orders';
+    | 'connect_status' | 'my_tiers' | 'my_items' | 'seller_orders'
+    | 'dashboard_stats' | 'recent_activity';
   canvasId?: string;
   orderId?: string;
   limit?: number;
@@ -39,12 +67,19 @@ const MAX_NAME_LENGTH = 200;
 interface CheckoutMutateParams {
   action:
     | 'subscribe' | 'buy'
+    | 'cancel_subscription' | 'customer_portal' | 'request_refund'
     | 'connect_onboard' | 'connect_dashboard'
     | 'create_tier' | 'update_tier' | 'delete_tier'
     | 'create_item' | 'update_item' | 'delete_item';
   tierId?: string;
   itemId?: string;
+  subscriptionId?: string;
+  orderId?: string;
   data?: Record<string, unknown>;
+  /** Revision-based concurrency: the revision the client last read */
+  lastSeenRevision?: number;
+  /** Optional one-time nonce to prevent replay attacks */
+  _nonce?: string;
 }
 
 async function handleCheckoutQuery(
@@ -53,23 +88,34 @@ async function handleCheckoutQuery(
   contextCanvasId?: string,
 ): Promise<unknown> {
   const canvasId = params.canvasId ?? contextCanvasId;
+  // Generate a nonce that the widget can attach to its next mutation call
+  const _nonce = generateNonce();
+
+  /** Attach the nonce to any query result before returning. */
+  function withNonce(result: unknown): unknown {
+    if (result && typeof result === 'object' && !Array.isArray(result)) {
+      return { ...(result as Record<string, unknown>), _nonce };
+    }
+    // For array or null/primitive results, wrap in an envelope
+    return { data: result, _nonce };
+  }
 
   switch (params.action) {
     case 'tiers': {
-      if (!canvasId) return [];
+      if (!canvasId) return withNonce([]);
       const { data } = await supabase
         .from('canvas_subscription_tiers')
         .select('*')
         .eq('canvas_id', canvasId)
         .eq('is_active', true)
         .order('sort_order', { ascending: true });
-      return data ?? [];
+      return withNonce(data ?? []);
     }
 
     case 'my_subscription': {
-      if (!canvasId) return null;
+      if (!canvasId) return withNonce(null);
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return null;
+      if (!user) return withNonce(null);
       const { data } = await supabase
         .from('canvas_subscriptions')
         .select('*')
@@ -77,11 +123,11 @@ async function handleCheckoutQuery(
         .eq('canvas_id', canvasId)
         .eq('status', 'active')
         .single();
-      return data;
+      return withNonce(data);
     }
 
     case 'shop_items': {
-      if (!canvasId) return [];
+      if (!canvasId) return withNonce({ data: [], total: 0, hasMore: false });
       const limit = clampLimit(params.limit);
       const offset = clampOffset(params.offset);
       const { data, count } = await supabase
@@ -91,12 +137,12 @@ async function handleCheckoutQuery(
         .eq('is_active', true)
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1);
-      return { data: data ?? [], total: count ?? 0, hasMore: (count ?? 0) > offset + limit };
+      return withNonce({ data: data ?? [], total: count ?? 0, hasMore: (count ?? 0) > offset + limit });
     }
 
     case 'my_orders': {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
+      if (!user) return withNonce([]);
       const limit = clampLimit(params.limit);
       const offset = clampOffset(params.offset);
       const { data, count } = await supabase
@@ -105,13 +151,13 @@ async function handleCheckoutQuery(
         .eq('buyer_id', user.id)
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1);
-      return { data: data ?? [], total: count ?? 0, hasMore: (count ?? 0) > offset + limit };
+      return withNonce({ data: data ?? [], total: count ?? 0, hasMore: (count ?? 0) > offset + limit });
     }
 
     case 'download': {
-      if (!params.orderId) return { error: 'orderId required' };
+      if (!params.orderId) return { error: 'orderId required', _nonce };
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return { error: 'Not authenticated' };
+      if (!user) return { error: 'Not authenticated', _nonce };
 
       // Verify the user owns this order and it's fulfilled
       const { data: order } = await supabase
@@ -122,49 +168,50 @@ async function handleCheckoutQuery(
         .in('status', ['paid', 'fulfilled'])
         .single();
 
-      if (!order) return { error: 'Order not found or not fulfilled' };
+      if (!order) return { error: 'Order not found or not fulfilled', _nonce };
 
       const assetUrl = (order as unknown as { shop_items: { digital_asset_url: string } }).shop_items?.digital_asset_url;
-      if (!assetUrl) return { error: 'No digital asset' };
+      if (!assetUrl) return { error: 'No digital asset', _nonce };
 
       // Return a signed/proxied URL (in production, this would be a signed Supabase Storage URL)
-      return { downloadUrl: assetUrl };
+      return { downloadUrl: assetUrl, _nonce };
     }
 
     // ── Creator management queries ──────────────────────────────────────
 
     case 'connect_status': {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return { connected: false, error: 'Not authenticated' };
+      if (!user) return { connected: false, error: 'Not authenticated', _nonce };
       const { data } = await supabase
         .from('creator_accounts')
         .select('*')
         .eq('user_id', user.id)
         .single();
-      if (!data) return { connected: false, chargesEnabled: false, payoutsEnabled: false };
+      if (!data) return { connected: false, chargesEnabled: false, payoutsEnabled: false, _nonce };
       return {
         connected: true,
         chargesEnabled: data.charges_enabled,
         payoutsEnabled: data.payouts_enabled,
         onboardingComplete: data.onboarding_complete,
         stripeAccountId: data.stripe_account_id,
+        _nonce,
       };
     }
 
     case 'my_tiers': {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
+      if (!user) return withNonce([]);
       const { data } = await supabase
         .from('canvas_subscription_tiers')
         .select('*')
         .eq('creator_id', user.id)
         .order('sort_order', { ascending: true });
-      return data ?? [];
+      return withNonce(data ?? []);
     }
 
     case 'my_items': {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
+      if (!user) return withNonce([]);
       const limit = clampLimit(params.limit);
       const offset = clampOffset(params.offset);
       const { data, count } = await supabase
@@ -173,12 +220,12 @@ async function handleCheckoutQuery(
         .eq('seller_id', user.id)
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1);
-      return { data: data ?? [], total: count ?? 0, hasMore: (count ?? 0) > offset + limit };
+      return withNonce({ data: data ?? [], total: count ?? 0, hasMore: (count ?? 0) > offset + limit });
     }
 
     case 'seller_orders': {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
+      if (!user) return withNonce([]);
       const limit = clampLimit(params.limit);
       const offset = clampOffset(params.offset);
       const { data, count } = await supabase
@@ -187,7 +234,57 @@ async function handleCheckoutQuery(
         .eq('seller_id', user.id)
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1);
-      return { data: data ?? [], total: count ?? 0, hasMore: (count ?? 0) > offset + limit };
+      return withNonce({ data: data ?? [], total: count ?? 0, hasMore: (count ?? 0) > offset + limit });
+    }
+
+    // ── Creator dashboard queries ───────────────────────────────────────
+
+    case 'dashboard_stats': {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return withNonce({ totalRevenue: 0, activeSubscribers: 0, totalOrders: 0 });
+
+      const [revenueResult, subscriberResult, orderCountResult] = await Promise.all([
+        supabase
+          .from('orders')
+          .select('amount_cents')
+          .eq('seller_id', user.id)
+          .in('status', ['paid', 'fulfilled']),
+        supabase
+          .from('canvas_subscriptions')
+          .select('id', { count: 'exact', head: true })
+          .in('canvas_id', (
+            await supabase
+              .from('canvases')
+              .select('id')
+              .eq('owner_id', user.id)
+          ).data?.map((c: { id: string }) => c.id) ?? [])
+          .eq('status', 'active'),
+        supabase
+          .from('orders')
+          .select('id', { count: 'exact', head: true })
+          .eq('seller_id', user.id),
+      ]);
+
+      const totalRevenue = (revenueResult.data ?? []).reduce(
+        (sum: number, row: { amount_cents: number }) => sum + (row.amount_cents ?? 0),
+        0,
+      );
+      const activeSubscribers = subscriberResult.count ?? 0;
+      const totalOrders = orderCountResult.count ?? 0;
+
+      return withNonce({ totalRevenue, activeSubscribers, totalOrders });
+    }
+
+    case 'recent_activity': {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return withNonce([]);
+      const { data } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('seller_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(10);
+      return withNonce(data ?? []);
     }
 
     default:
@@ -199,6 +296,11 @@ async function handleCheckoutMutate(
   params: CheckoutMutateParams,
   contextCanvasId?: string,
 ): Promise<unknown> {
+  // Validate nonce if provided (opt-in replay protection)
+  if (!consumeNonce(params._nonce)) {
+    return { error: 'Invalid or already-used nonce. Please refresh and try again.' };
+  }
+
   switch (params.action) {
     case 'subscribe': {
       if (!params.tierId) return { error: 'tierId required' };
@@ -231,6 +333,81 @@ async function handleCheckoutMutate(
         return { error: response.error.message };
       }
       return response.data;
+    }
+
+    case 'cancel_subscription': {
+      if (!params.subscriptionId) return { error: 'subscriptionId required' };
+      const { data: { user: cancelUser } } = await supabase.auth.getUser();
+      if (!cancelUser) return { error: 'Not authenticated' };
+
+      // Verify the authenticated user owns this subscription
+      const { data: sub } = await supabase
+        .from('canvas_subscriptions')
+        .select('id')
+        .eq('id', params.subscriptionId)
+        .eq('buyer_id', cancelUser.id)
+        .single();
+
+      if (!sub) return { error: 'Subscription not found or not owned by you' };
+
+      const { error: cancelError } = await supabase
+        .from('canvas_subscriptions')
+        .update({ status: 'cancelled' })
+        .eq('id', params.subscriptionId)
+        .eq('buyer_id', cancelUser.id);
+
+      if (cancelError) return { error: cancelError.message };
+      return { success: true };
+    }
+
+    case 'customer_portal': {
+      const { data: { user: portalUser } } = await supabase.auth.getUser();
+      if (!portalUser) return { error: 'Not authenticated' };
+
+      const resp = await supabase.functions.invoke('customer-portal', {
+        body: { userId: portalUser.id },
+      });
+
+      if (resp.error) return { error: resp.error.message };
+      return resp.data;
+    }
+
+    case 'request_refund': {
+      if (!params.orderId) return { error: 'orderId required' };
+      const { data: { user: refundUser } } = await supabase.auth.getUser();
+      if (!refundUser) return { error: 'Not authenticated' };
+
+      // Verify the authenticated user owns this order
+      const { data: order } = await supabase
+        .from('orders')
+        .select('id, created_at, status')
+        .eq('id', params.orderId)
+        .eq('buyer_id', refundUser.id)
+        .single();
+
+      if (!order) return { error: 'Order not found or not owned by you' };
+
+      // Check that the order is in a refundable status
+      if (order.status !== 'paid' && order.status !== 'fulfilled') {
+        return { error: 'Only paid or fulfilled orders can be refunded' };
+      }
+
+      // Check the 30-day refund window
+      const orderDate = new Date(order.created_at);
+      const now = new Date();
+      const daysSinceOrder = (now.getTime() - orderDate.getTime()) / (1000 * 60 * 60 * 24);
+      if (daysSinceOrder > 30) {
+        return { error: 'Refund window has expired (30 days)' };
+      }
+
+      const { error: refundError } = await supabase
+        .from('orders')
+        .update({ status: 'refund_requested' })
+        .eq('id', params.orderId)
+        .eq('buyer_id', refundUser.id);
+
+      if (refundError) return { error: refundError.message };
+      return { success: true };
     }
 
     // ── Creator management mutations ────────────────────────────────────
@@ -315,15 +492,30 @@ async function handleCheckoutMutate(
       if (params.data.benefits !== undefined) updates.benefits = params.data.benefits;
       if (params.data.isActive !== undefined) updates.is_active = params.data.isActive;
       if (params.data.sortOrder !== undefined) updates.sort_order = params.data.sortOrder;
-      const { data, error } = await supabase
+
+      // Build the query with ownership check
+      let query = supabase
         .from('canvas_subscription_tiers')
         .update(updates)
         .eq('id', params.tierId)
-        .eq('creator_id', user.id)
-        .select()
-        .single();
+        .eq('creator_id', user.id);
+
+      // Revision-based concurrency: if the client provides lastSeenRevision,
+      // only update if the row's current revision matches (optimistic lock).
+      if (params.lastSeenRevision !== undefined) {
+        query = query.eq('revision', params.lastSeenRevision);
+      }
+
+      const { data, error } = await query.select();
       if (error) return { error: error.message };
-      return data;
+
+      // If revision filtering was active and no rows matched, it means the
+      // tier was modified by someone else since the client last read it.
+      if (params.lastSeenRevision !== undefined && (!data || data.length === 0)) {
+        return { error: 'This tier was modified by someone else. Please refresh and try again.' };
+      }
+
+      return data?.[0] ?? null;
     }
 
     case 'delete_tier': {
@@ -409,15 +601,30 @@ async function handleCheckoutMutate(
       if (params.data.stockCount !== undefined) updates.stock_count = params.data.stockCount;
       if (params.data.requiresShipping !== undefined) updates.requires_shipping = params.data.requiresShipping;
       if (params.data.isActive !== undefined) updates.is_active = params.data.isActive;
-      const { data, error } = await supabase
+
+      // Build the query with ownership check
+      let query = supabase
         .from('shop_items')
         .update(updates)
         .eq('id', params.itemId)
-        .eq('seller_id', user.id)
-        .select()
-        .single();
+        .eq('seller_id', user.id);
+
+      // Revision-based concurrency: if the client provides lastSeenRevision,
+      // only update if the row's current revision matches (optimistic lock).
+      if (params.lastSeenRevision !== undefined) {
+        query = query.eq('revision', params.lastSeenRevision);
+      }
+
+      const { data, error } = await query.select();
       if (error) return { error: error.message };
-      return data;
+
+      // If revision filtering was active and no rows matched, it means the
+      // item was modified by someone else since the client last read it.
+      if (params.lastSeenRevision !== undefined && (!data || data.length === 0)) {
+        return { error: 'This item was modified by someone else. Please refresh and try again.' };
+      }
+
+      return data?.[0] ?? null;
     }
 
     case 'delete_item': {
