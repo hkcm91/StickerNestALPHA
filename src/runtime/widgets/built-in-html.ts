@@ -1892,4 +1892,188 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
       StickerNest.ready();
     </script>
   `,
+
+  'wgt-text-settings': `
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: var(--sn-font-family, system-ui); background: var(--sn-surface, #ffffff); color: var(--sn-text, #1a1a2e); }
+      .container { padding: 12px; display: flex; flex-direction: column; gap: 12px; height: 100%; overflow-y: auto; }
+      .empty-state { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--sn-text-muted, #666); font-size: 14px; text-align: center; padding: 16px; }
+      .field { display: flex; flex-direction: column; gap: 4px; }
+      .field-label { font-size: 11px; font-weight: 500; color: var(--sn-text-muted, #666); text-transform: uppercase; letter-spacing: 0.5px; }
+      .field-row { display: flex; gap: 8px; align-items: center; }
+      select, input[type="number"] { flex: 1; padding: 8px; border: 1px solid var(--sn-border, #e0e0e0); border-radius: 6px; background: var(--sn-bg, #fff); color: var(--sn-text, #1a1a2e); font-size: 13px; }
+      select:focus, input:focus { outline: none; border-color: var(--sn-accent, #6366f1); }
+      input[type="color"] { width: 40px; height: 36px; padding: 2px; border: 1px solid var(--sn-border, #e0e0e0); border-radius: 6px; cursor: pointer; }
+      .color-preview { width: 100%; height: 24px; border-radius: 4px; border: 1px solid var(--sn-border, #e0e0e0); }
+      .weight-buttons { display: flex; gap: 4px; }
+      .weight-btn { padding: 6px 10px; border: 1px solid var(--sn-border, #e0e0e0); border-radius: 4px; background: var(--sn-bg, #fff); cursor: pointer; font-size: 12px; color: var(--sn-text, #1a1a2e); transition: all 0.15s; }
+      .weight-btn:hover { background: var(--sn-surface, #f5f5f5); }
+      .weight-btn.active { background: var(--sn-accent, #6366f1); color: white; border-color: var(--sn-accent, #6366f1); }
+      .align-buttons { display: flex; gap: 4px; }
+      .align-btn { padding: 6px 12px; border: 1px solid var(--sn-border, #e0e0e0); border-radius: 4px; background: var(--sn-bg, #fff); cursor: pointer; font-size: 14px; transition: all 0.15s; }
+      .align-btn:hover { background: var(--sn-surface, #f5f5f5); }
+      .align-btn.active { background: var(--sn-accent, #6366f1); color: white; border-color: var(--sn-accent, #6366f1); }
+      .multi-hint { font-size: 11px; color: var(--sn-text-muted, #999); font-style: italic; }
+    </style>
+    <div id="empty" class="empty-state">Select a text entity to edit its properties</div>
+    <div id="editor" class="container" style="display:none;">
+      <div class="field">
+        <span class="field-label">Font Family</span>
+        <select id="fontFamily">
+          <option value="system-ui">System UI</option>
+          <option value="Arial, sans-serif">Arial</option>
+          <option value="Georgia, serif">Georgia</option>
+          <option value="Times New Roman, serif">Times New Roman</option>
+          <option value="Courier New, monospace">Courier New</option>
+          <option value="Verdana, sans-serif">Verdana</option>
+          <option value="Trebuchet MS, sans-serif">Trebuchet MS</option>
+          <option value="Comic Sans MS, cursive">Comic Sans MS</option>
+        </select>
+      </div>
+      <div class="field">
+        <span class="field-label">Font Size</span>
+        <input type="number" id="fontSize" min="8" max="200" step="1" />
+      </div>
+      <div class="field">
+        <span class="field-label">Font Weight</span>
+        <div class="weight-buttons" id="weightButtons">
+          <button class="weight-btn" data-weight="300">Light</button>
+          <button class="weight-btn" data-weight="400">Normal</button>
+          <button class="weight-btn" data-weight="500">Medium</button>
+          <button class="weight-btn" data-weight="700">Bold</button>
+        </div>
+      </div>
+      <div class="field">
+        <span class="field-label">Text Alignment</span>
+        <div class="align-buttons" id="alignButtons">
+          <button class="align-btn" data-align="left" title="Align Left">⬅</button>
+          <button class="align-btn" data-align="center" title="Center">⬌</button>
+          <button class="align-btn" data-align="right" title="Align Right">➡</button>
+        </div>
+      </div>
+      <div class="field">
+        <span class="field-label">Text Color</span>
+        <div class="field-row">
+          <input type="color" id="colorPicker" />
+          <input type="text" id="colorHex" style="flex:1;padding:8px;border:1px solid var(--sn-border,#e0e0e0);border-radius:6px;font-family:monospace;" placeholder="#000000" />
+        </div>
+      </div>
+      <div id="multiHint" class="multi-hint" style="display:none;">Changes apply to all selected text entities</div>
+    </div>
+    <script>
+      (function() {
+        var selectedTextEntities = [];
+        var emptyEl = document.getElementById('empty');
+        var editorEl = document.getElementById('editor');
+        var multiHintEl = document.getElementById('multiHint');
+        var fontFamilyEl = document.getElementById('fontFamily');
+        var fontSizeEl = document.getElementById('fontSize');
+        var weightButtonsEl = document.getElementById('weightButtons');
+        var alignButtonsEl = document.getElementById('alignButtons');
+        var colorPickerEl = document.getElementById('colorPicker');
+        var colorHexEl = document.getElementById('colorHex');
+
+        function updateUI() {
+          if (selectedTextEntities.length === 0) {
+            emptyEl.style.display = 'flex';
+            editorEl.style.display = 'none';
+            return;
+          }
+          emptyEl.style.display = 'none';
+          editorEl.style.display = 'flex';
+          multiHintEl.style.display = selectedTextEntities.length > 1 ? 'block' : 'none';
+
+          var first = selectedTextEntities[0];
+          fontFamilyEl.value = first.fontFamily || 'system-ui';
+          fontSizeEl.value = first.fontSize || 16;
+          colorPickerEl.value = first.color || '#000000';
+          colorHexEl.value = first.color || '#000000';
+
+          var weight = first.fontWeight || 400;
+          Array.from(weightButtonsEl.children).forEach(function(btn) {
+            btn.classList.toggle('active', parseInt(btn.dataset.weight) === weight);
+          });
+
+          var align = first.textAlign || 'left';
+          Array.from(alignButtonsEl.children).forEach(function(btn) {
+            btn.classList.toggle('active', btn.dataset.align === align);
+          });
+        }
+
+        function emitUpdates(updates) {
+          selectedTextEntities.forEach(function(entity) {
+            StickerNest.emit('canvas.entity.updated', { id: entity.id, updates: updates });
+          });
+        }
+
+        fontFamilyEl.addEventListener('change', function() {
+          emitUpdates({ fontFamily: fontFamilyEl.value });
+        });
+
+        fontSizeEl.addEventListener('input', function() {
+          var size = parseInt(fontSizeEl.value);
+          if (!isNaN(size) && size > 0) {
+            emitUpdates({ fontSize: size });
+          }
+        });
+
+        weightButtonsEl.addEventListener('click', function(e) {
+          if (e.target.classList.contains('weight-btn')) {
+            var weight = parseInt(e.target.dataset.weight);
+            emitUpdates({ fontWeight: weight });
+            Array.from(weightButtonsEl.children).forEach(function(btn) {
+              btn.classList.toggle('active', parseInt(btn.dataset.weight) === weight);
+            });
+          }
+        });
+
+        alignButtonsEl.addEventListener('click', function(e) {
+          if (e.target.classList.contains('align-btn')) {
+            var align = e.target.dataset.align;
+            emitUpdates({ textAlign: align });
+            Array.from(alignButtonsEl.children).forEach(function(btn) {
+              btn.classList.toggle('active', btn.dataset.align === align);
+            });
+          }
+        });
+
+        colorPickerEl.addEventListener('input', function() {
+          colorHexEl.value = colorPickerEl.value;
+          emitUpdates({ color: colorPickerEl.value });
+        });
+
+        colorHexEl.addEventListener('input', function() {
+          var val = colorHexEl.value;
+          if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+            colorPickerEl.value = val;
+            emitUpdates({ color: val });
+          }
+        });
+
+        StickerNest.subscribe('canvas.entity.selected', function(payload) {
+          var entities = payload.entities || [];
+          selectedTextEntities = entities.filter(function(e) { return e.type === 'text'; });
+          updateUI();
+        });
+
+        StickerNest.subscribe('canvas.selection.cleared', function() {
+          selectedTextEntities = [];
+          updateUI();
+        });
+
+        StickerNest.register({
+          id: 'wgt-text-settings',
+          name: 'Text Settings',
+          version: '1.0.0',
+          description: 'Configure font, weight, and color for selected text entities',
+          events: {
+            subscribes: ['canvas.entity.selected', 'canvas.selection.cleared'],
+            emits: ['canvas.entity.updated']
+          }
+        });
+        StickerNest.ready();
+      })();
+    </script>
+  `,
 };

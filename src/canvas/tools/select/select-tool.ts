@@ -5,7 +5,7 @@
  * @layer L4A-2
  */
 
-import type { Point2D } from '@sn/types';
+import type { Point2D, CanvasEntity } from '@sn/types';
 import { CanvasEvents } from '@sn/types';
 
 import { bus } from '../../../kernel/bus';
@@ -24,9 +24,27 @@ export function createSelectTool(sceneGraph: SceneGraph): SelectTool {
   let isMarquee = false;
   let marqueeStart: Point2D | null = null;
 
+  /** Emit batch selection event with full entity data for widgets */
+  function emitSelectionChanged() {
+    const entities: CanvasEntity[] = [];
+    for (const id of selected) {
+      const entity = sceneGraph.getEntity(id);
+      if (entity) {
+        entities.push(entity);
+      }
+    }
+    const payload = { entities };
+    // Emit to canvas namespace for internal use
+    bus.emit(CanvasEvents.ENTITY_SELECTED, payload);
+    // Also emit to widget namespace so widgets can subscribe
+    bus.emit(`widget.${CanvasEvents.ENTITY_SELECTED}`, payload);
+  }
+
   function clearSelection() {
     selected.clear();
     bus.emit(CanvasEvents.SELECTION_CLEARED, {});
+    // Also emit to widget namespace so widgets can subscribe
+    bus.emit(`widget.${CanvasEvents.SELECTION_CLEARED}`, {});
   }
 
   const tool: SelectTool = {
@@ -64,10 +82,21 @@ export function createSelectTool(sceneGraph: SceneGraph): SelectTool {
           },
         };
         const hits = hitTestRegion(sceneGraph, region);
-        if (!event.shiftKey) selected.clear();
-        for (const entity of hits) {
-          selected.add(entity.id);
-          bus.emit(CanvasEvents.ENTITY_SELECTED, { id: entity.id });
+        if (event.shiftKey) {
+          for (const entity of hits) {
+            selected.add(entity.id);
+          }
+          emitSelectionChanged();
+        } else if (hits.length > 0) {
+          selected.clear();
+          const topMost = hits.reduce((best, current) => {
+            if (!best) return current;
+            return current.zIndex > best.zIndex ? current : best;
+          }, hits[0]);
+          selected.add(topMost.id);
+          emitSelectionChanged();
+        } else {
+          clearSelection();
         }
       } else {
         // Click selection
@@ -80,13 +109,12 @@ export function createSelectTool(sceneGraph: SceneGraph): SelectTool {
               bus.emit(CanvasEvents.ENTITY_DESELECTED, { id: entityId });
             } else {
               selected.add(entityId);
-              bus.emit(CanvasEvents.ENTITY_SELECTED, { id: entityId });
             }
           } else {
             selected.clear();
             selected.add(entityId);
-            bus.emit(CanvasEvents.ENTITY_SELECTED, { id: entityId });
           }
+          emitSelectionChanged();
         } else {
           clearSelection();
         }

@@ -13,19 +13,21 @@ import { ShellEvents } from '@sn/types';
 import { bus } from '../../kernel/bus';
 import { DataManagerPage } from '../data';
 import { TestHarness } from '../dev';
+import { PricingPage } from '../pages/PricingPage';
 import { ProfilePage } from '../profile';
-
+import { themeVar } from '../theme/theme-vars';
 
 import {
   DashboardPage,
   LoginPage,
+  CanvasGalleryPage,
+  NewCanvasPage,
   CanvasPage,
   MarketplacePage,
   SettingsPage,
   InvitePage,
   NotFoundPage,
 } from './pages';
-import { PricingPage } from '../pages/PricingPage';
 import { AuthGuard, TierGuard } from './route-guards';
 
 /**
@@ -57,19 +59,51 @@ function RouteChangeEmitter(): null {
 /**
  * Global navigation bar — visible on every page including login.
  */
-const GlobalNav: React.FC = () => (
-  <nav data-testid="global-nav">
-    <Link to="/">Dashboard</Link>
-    <Link to="/canvas/demo">Canvas</Link>
-    <Link to="/data">Data</Link>
-    <Link to="/lab">Lab</Link>
-    <Link to="/marketplace">Marketplace</Link>
-    <Link to="/profile/me" data-testid="nav-profile">Profile</Link>
-    <Link to="/settings">Settings</Link>
-    <Link to="/dev/test">Dev</Link>
-    <Link to="/login">Login</Link>
-  </nav>
-);
+const GlobalNav: React.FC = () => {
+  return (
+    <nav
+      data-testid="global-nav"
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "12px",
+        padding: "10px 14px",
+        borderBottom: `1px solid ${themeVar("--sn-border")}`,
+        background: themeVar("--sn-surface"),
+        color: themeVar("--sn-text"),
+        fontFamily: themeVar("--sn-font-family"),
+      }}
+    >
+      <Link style={{ color: "inherit" }} to="/">
+        Dashboard
+      </Link>
+      <Link style={{ color: "inherit" }} to="/canvas">
+        Canvas
+      </Link>
+      <Link style={{ color: "inherit" }} to="/data">
+        Data
+      </Link>
+      <Link style={{ color: "inherit" }} to="/lab">
+        Lab
+      </Link>
+      <Link style={{ color: "inherit" }} to="/marketplace">
+        Marketplace
+      </Link>
+      <Link style={{ color: "inherit" }} to="/profile/me" data-testid="nav-profile">
+        Profile
+      </Link>
+      <Link style={{ color: "inherit" }} to="/settings">
+        Settings
+      </Link>
+      <Link style={{ color: "inherit" }} to="/dev/test">
+        Dev
+      </Link>
+      <Link style={{ color: "inherit" }} to="/login">
+        Login
+      </Link>
+    </nav>
+  );
+};
 
 /**
  * Main application router.
@@ -96,7 +130,9 @@ export const AppRouter: React.FC = () => (
 
       <Route path="/profile/:username" element={<ProfilePage />} />
 
-      <Route path="/canvas/:canvasParam" element={<CanvasPage />} />
+      <Route path="/canvas" element={<CanvasGalleryPage />} />
+      <Route path="/canvas/new" element={<NewCanvasPage />} />
+      <Route path="/canvas/:canvasSlug" element={<CanvasPage />} />
 
       <Route
         path="/lab"

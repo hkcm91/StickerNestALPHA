@@ -32,10 +32,29 @@ export interface SceneGraph {
 }
 
 function entityBoundsFromTransform(entity: CanvasEntity): BoundingBox2D {
-  const { position, size } = entity.transform;
+  const { position, size, rotation } = entity.transform;
+  const { width, height } = size;
+
+  if (!rotation) {
+    return {
+      min: { x: position.x, y: position.y },
+      max: { x: position.x + width, y: position.y + height },
+    };
+  }
+
+  const rad = (rotation * Math.PI) / 180;
+  const cos = Math.abs(Math.cos(rad));
+  const sin = Math.abs(Math.sin(rad));
+  
+  const newWidth = width * cos + height * sin;
+  const newHeight = width * sin + height * cos;
+  
+  const cx = position.x + width / 2;
+  const cy = position.y + height / 2;
+  
   return {
-    min: { x: position.x, y: position.y },
-    max: { x: position.x + size.width, y: position.y + size.height },
+    min: { x: cx - newWidth / 2, y: cy - newHeight / 2 },
+    max: { x: cx + newWidth / 2, y: cy + newHeight / 2 },
   };
 }
 

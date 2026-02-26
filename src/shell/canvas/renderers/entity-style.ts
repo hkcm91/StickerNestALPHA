@@ -5,14 +5,20 @@
  * @layer L6
  */
 
-import type { CanvasEntityBase } from '@sn/types';
+import type { CanvasEntityBase } from "@sn/types";
+
+/** 
+ * Multiplier for rendering assets at higher resolution than their canvas size.
+ * Ensures sharpness when zooming or scaling up entities.
+ */
+export const RENDER_SIZE_MULTIPLIER = 2;
 
 /**
  * Build a CSS `clip-path: inset(...)` value from a CropRect.
  * Returns `undefined` when there is no crop to apply.
  */
 function cropToClipPath(
-  crop: CanvasEntityBase['cropRect'],
+  crop: CanvasEntityBase["cropRect"],
 ): string | undefined {
   if (!crop) return undefined;
   const { top, right, bottom, left } = crop;
@@ -23,25 +29,79 @@ function cropToClipPath(
 
 /**
  * Convert entity transform into CSS styles for positioned rendering.
+ *
+ * @remarks
+ * Entities are positioned with their center at the transform position.
+ * This makes alignment tools more intuitive — aligning entity centers
+ * means simply matching their position coordinates.
  */
-export function entityTransformStyle(entity: CanvasEntityBase): React.CSSProperties {
+export function entityTransformStyle(
+  entity: CanvasEntityBase,
+): React.CSSProperties {
   const { position, size, rotation, scale } = entity.transform;
 
+  // Center-based positioning: offset by half the size so the entity's
+  // center aligns with the position coordinate
+  const left = position.x - size.width / 2;
+  const top = position.y - size.height / 2;
+
+  const flipX = (entity as any).flipH ? -1 : 1;
+  const flipY = (entity as any).flipV ? -1 : 1;
+
   return {
-    position: 'absolute',
-    left: position.x,
-    top: position.y,
+    position: "absolute",
+    left,
+    top,
     width: size.width,
     height: size.height,
-    transform: `rotate(${rotation}deg) scale(${scale})`,
-    transformOrigin: 'center center',
+    transform: `rotate(${rotation}deg) scale(${scale * flipX}, ${scale * flipY})`,
+    transformOrigin: "center center",
     opacity: entity.opacity,
     borderRadius: entity.borderRadius > 0 ? entity.borderRadius : undefined,
     clipPath: cropToClipPath(entity.cropRect),
-    overflow: 'hidden',
+    overflow: "hidden",
     zIndex: entity.zIndex,
-    pointerEvents: entity.locked ? 'none' : 'auto',
-    visibility: entity.visible ? 'visible' : 'hidden',
-    boxSizing: 'border-box',
+    pointerEvents: entity.locked ? "none" : "auto",
+    visibility: entity.visible ? "visible" : "hidden",
+    boxSizing: "border-box",
+    // Center content within the entity container
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  };
+}
+
+/**
+ * Get the top-left corner position from a center-based entity transform.
+ * Useful for bounding box calculations.
+ */
+export function getEntityTopLeft(entity: CanvasEntityBase): {
+  x: number;
+  y: number;
+} {
+  const { position, size } = entity.transform;
+  return {
+    x: position.x - size.width / 2,
+    y: position.y - size.height / 2,
+  };
+}
+
+/**
+ * Get the bounding box for an entity (min/max corners).
+ */
+export function getEntityBoundingBox(entity: CanvasEntityBase): {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+} {
+  const { position, size } = entity.transform;
+  const halfW = size.width / 2;
+  const halfH = size.height / 2;
+  return {
+    minX: position.x - halfW,
+    minY: position.y - halfH,
+    maxX: position.x + halfW,
+    maxY: position.y + halfH,
   };
 }

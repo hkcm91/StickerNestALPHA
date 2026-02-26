@@ -28,6 +28,20 @@ INSERT INTO auth.users (
     raw_app_meta_data,
     raw_user_meta_data
 ) VALUES
+    -- Admin User: Kimber
+    (
+        '00000000-0000-0000-0000-000000000000',
+        '00000000-0000-0000-0000-000000000000',
+        'authenticated',
+        'authenticated',
+        'woahitskimber@gmail.com',
+        crypt('password123', gen_salt('bf')),
+        NOW(),
+        NOW(),
+        NOW(),
+        '{"provider": "email", "providers": ["email"]}',
+        '{"full_name": "Kimber Admin"}'
+    ),
     -- Test User 1: Alice (Creator tier)
     (
         '11111111-1111-1111-1111-111111111111',
@@ -74,6 +88,7 @@ ON CONFLICT (id) DO NOTHING;
 
 -- Create corresponding user profiles
 INSERT INTO users (id, email, display_name, tier, metadata) VALUES
+    ('00000000-0000-0000-0000-000000000000', 'woahitskimber@gmail.com', 'Kimber Admin', 'pro', '{"bio": "System Administrator"}'),
     ('11111111-1111-1111-1111-111111111111', 'alice@example.com', 'Alice Developer', 'creator', '{"bio": "Widget creator and canvas enthusiast"}'),
     ('22222222-2222-2222-2222-222222222222', 'bob@example.com', 'Bob User', 'free', '{"bio": "Just getting started"}'),
     ('33333333-3333-3333-3333-333333333333', 'charlie@example.com', 'Charlie Pro', 'pro', '{"bio": "Power user"}')

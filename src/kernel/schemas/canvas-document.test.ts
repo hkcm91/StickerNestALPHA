@@ -124,6 +124,7 @@ describe('BackgroundSpec schemas', () => {
     it('should parse gradient backgrounds', () => {
       const bg: BackgroundSpec = {
         type: 'gradient',
+        gradientType: 'linear',
         stops: [
           { offset: 0, color: '#fff' },
           { offset: 1, color: '#000' },
@@ -266,9 +267,12 @@ describe('CanvasDocumentSchema', () => {
         width: 1920,
         height: 1080,
         background: { type: 'solid', color: '#f0f0f0', opacity: 1 },
+        isPreviewMode: false,
       },
       entities: [],
       layoutMode: 'bento',
+      platform: 'web',
+      spatialMode: '2d',
     };
     const result = CanvasDocumentSchema.parse(doc);
     expect(result).toEqual(doc);

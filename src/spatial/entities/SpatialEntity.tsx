@@ -9,9 +9,9 @@
  * @layer L4B
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo } from "react";
 
-import type { CanvasEntityBase, Transform3D } from '@sn/types';
+import type { CanvasEntityBase, Transform3D } from "@sn/types";
 
 /** Thin panel depth in meters for flat canvas entities */
 const PANEL_DEPTH = 0.02;
@@ -83,7 +83,11 @@ export const SpatialEntity = React.memo<SpatialEntityProps>(
         entity.spatialTransform
           ? extractTransform3D(entity.spatialTransform)
           : deriveDefaultTransform(entity),
-      [entity.spatialTransform, entity.transform.position.x, entity.transform.position.y],
+      [
+        entity.spatialTransform,
+        entity.transform.position.x,
+        entity.transform.position.y,
+      ],
     );
 
     const geometry = useMemo(() => {
@@ -100,19 +104,44 @@ export const SpatialEntity = React.memo<SpatialEntityProps>(
       };
     }, [onSelect, entity.id]);
 
+    const isObject3D = entity.type === "object3d";
+    const obj3D = isObject3D ? (entity as any) : null;
+    const baseColor = isObject3D ? obj3D.color : "#e5e7eb";
+
+    const flipX = (entity as any).flipH ? -1 : 1;
+    const flipY = (entity as any).flipV ? -1 : 1;
+
     return (
       <group
         position={transform.position}
         quaternion={transform.rotation}
-        scale={transform.scale}
+        scale={[
+          transform.scale[0] * flipX,
+          transform.scale[1] * flipY,
+          transform.scale[2],
+        ]}
       >
         <mesh onClick={handleClick}>
-          <boxGeometry args={geometry} />
+          {isObject3D && obj3D.primitive === "sphere" && (
+            <sphereGeometry args={[geometry[0] / 2, 32, 32]} />
+          )}
+          {isObject3D && obj3D.primitive === "cylinder" && (
+            <cylinderGeometry
+              args={[geometry[0] / 2, geometry[0] / 2, geometry[1], 32]}
+            />
+          )}
+          {isObject3D && obj3D.primitive === "plane" && (
+            <planeGeometry args={[geometry[0], geometry[1]]} />
+          )}
+          {(!isObject3D || obj3D.primitive === "box") && (
+            <boxGeometry args={geometry} />
+          )}
+
           <meshStandardMaterial
-            color={selected ? '#8b5cf6' : '#e5e7eb'}
+            color={selected ? "#8b5cf6" : baseColor}
             transparent={entity.opacity < 1}
             opacity={entity.opacity}
-            emissive={selected ? '#6366f1' : '#000000'}
+            emissive={selected ? "#6366f1" : "#000000"}
             emissiveIntensity={selected ? 0.4 : 0}
           />
         </mesh>

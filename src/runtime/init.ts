@@ -29,6 +29,7 @@ import { createIframePool, DEFAULT_WARMUP_COUNT } from './pool/iframe-pool';
 import type { IframePool } from './pool/iframe-pool';
 import { createRateLimiter } from './security/rate-limiter';
 import type { RateLimiter } from './security/rate-limiter';
+import { imageGeneratorManifest } from './widgets';
 import { BUILT_IN_WIDGET_HTML } from './widgets/built-in-html';
 
 let initialized = false;
@@ -40,6 +41,13 @@ const busUnsubscribes: Array<() => void> = [];
  * Built-in widget definitions.
  */
 const BUILTIN_WIDGETS: WidgetRegistryEntry[] = [
+  {
+    widgetId: 'sn.builtin.image-generator',
+    manifest: imageGeneratorManifest,
+    htmlContent: '', // Not used for inline widgets
+    isBuiltIn: true,
+    installedAt: new Date().toISOString(),
+  },
   {
     widgetId: 'sn.builtin.sticky-note',
     manifest: {
@@ -164,7 +172,7 @@ const BUILTIN_WIDGETS: WidgetRegistryEntry[] = [
       license: 'MIT',
       tags: ['social'],
       category: 'social',
-      permissions: ['social'],
+      permissions: ['ai'],
       events: {
         emits: [
           { name: 'social.post.liked', description: 'User liked a post' },

@@ -14,13 +14,50 @@ import { CanvasEvents } from '@sn/types';
 import { bus } from '../../kernel/bus';
 
 const DEMO_CANVAS_ID = '00000000-0000-4000-8000-000000000001';
+const DEMO_DOCKER_ID = 'demo-docker-001';
+const DEMO_CHILD_ENTITY_IDS = [
+  'demo-text-001',
+  'demo-sticker-001',
+  'demo-shape-001',
+  'demo-drawing-001',
+  'demo-svg-001',
+];
+const DEMO_USER_ID = 'demo-user-001';
 
 /**
  * Creates and emits demo entities onto the canvas via the event bus.
  * Call once after Canvas Core has been initialized.
  */
 export function seedDemoEntities(): void {
+  const now = new Date().toISOString();
   const entities: CanvasEntity[] = [
+    // --- Docker folder entity (parent for all demo entities) ---
+    {
+      id: DEMO_DOCKER_ID,
+      type: 'docker',
+      canvasId: DEMO_CANVAS_ID,
+      transform: {
+        position: { x: 88, y: 44 },
+        size: { width: 72, height: 64 },
+        rotation: 0,
+        scale: 1,
+      },
+      zIndex: 6,
+      visible: true,
+      canvasVisibility: 'both' as const,
+      locked: false,
+      flipH: false,
+      flipV: false,
+      opacity: 1,
+      createdAt: now,
+      updatedAt: now,
+      createdBy: DEMO_USER_ID,
+      borderRadius: 12,
+      name: 'Canvas Folder',
+      children: DEMO_CHILD_ENTITY_IDS,
+      layout: 'free',
+    } as CanvasEntity,
+
     // --- Text entity ---
     {
       id: 'demo-text-001',
@@ -34,14 +71,21 @@ export function seedDemoEntities(): void {
       },
       zIndex: 3,
       visible: true,
+      canvasVisibility: 'both' as const,
       locked: false,
+      flipH: false,
+      flipV: false,
       opacity: 1,
+      createdAt: now,
+      updatedAt: now,
+      createdBy: DEMO_USER_ID,
       borderRadius: 0,
+      parentId: DEMO_DOCKER_ID,
       name: 'Welcome Text',
       content: 'Welcome to StickerNest Canvas',
       fontSize: 28,
       fontFamily: 'var(--sn-font-family, sans-serif)',
-      fontWeight: 'bold',
+      fontWeight: 700,
       color: '#ffffff',
       textAlign: 'left',
     } as CanvasEntity,
@@ -59,9 +103,16 @@ export function seedDemoEntities(): void {
       },
       zIndex: 2,
       visible: true,
+      canvasVisibility: 'both' as const,
       locked: false,
+      flipH: false,
+      flipV: false,
       opacity: 1,
+      createdAt: now,
+      updatedAt: now,
+      createdBy: DEMO_USER_ID,
       borderRadius: 8,
+      parentId: DEMO_DOCKER_ID,
       name: 'Demo Star',
       assetUrl: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><polygon points="50,5 63,38 98,38 70,60 80,95 50,73 20,95 30,60 2,38 37,38" fill="%23f9ca24" stroke="%23f0932b" stroke-width="2"/></svg>'),
       assetType: 'image',
@@ -80,11 +131,18 @@ export function seedDemoEntities(): void {
       },
       zIndex: 1,
       visible: true,
+      canvasVisibility: 'both' as const,
       locked: false,
+      flipH: false,
+      flipV: false,
       opacity: 0.85,
+      createdAt: now,
+      updatedAt: now,
+      createdBy: DEMO_USER_ID,
       borderRadius: 12,
+      parentId: DEMO_DOCKER_ID,
       name: 'Blue Card',
-      shapeType: 'rect',
+      shapeType: 'rectangle',
       fill: 'var(--sn-accent, #6c5ce7)',
       stroke: 'var(--sn-border, #ddd)',
       strokeWidth: 2,
@@ -103,9 +161,16 @@ export function seedDemoEntities(): void {
       },
       zIndex: 4,
       visible: true,
+      canvasVisibility: 'both' as const,
       locked: false,
+      flipH: false,
+      flipV: false,
       opacity: 1,
+      createdAt: now,
+      updatedAt: now,
+      createdBy: DEMO_USER_ID,
       borderRadius: 0,
+      parentId: DEMO_DOCKER_ID,
       name: 'Squiggle',
       points: [
         { x: 0, y: 40 },
@@ -136,9 +201,16 @@ export function seedDemoEntities(): void {
       },
       zIndex: 5,
       visible: true,
+      canvasVisibility: 'both' as const,
       locked: false,
+      flipH: false,
+      flipV: false,
       opacity: 1,
+      createdAt: now,
+      updatedAt: now,
+      createdBy: DEMO_USER_ID,
       borderRadius: 0,
+      parentId: DEMO_DOCKER_ID,
       name: 'Heart Icon',
       svgContent:
         '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" fill="currentColor"/></svg>',

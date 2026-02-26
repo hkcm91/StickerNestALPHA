@@ -6,7 +6,7 @@
 import { create } from 'zustand';
 import { devtools, subscribeWithSelector } from 'zustand/middleware';
 
-import type { BusEvent } from '@sn/types';
+import type { BusEvent, CanvasPlatform, SpatialMode, ViewportConfig } from '@sn/types';
 import { CanvasEvents, ShellEvents, InteractionModeEvents } from '@sn/types';
 
 import { bus } from '../../bus';
@@ -42,6 +42,11 @@ export interface UIState {
   theme: 'light' | 'dark' | 'high-contrast';
   isGlobalLoading: boolean;
   toasts: Toast[];
+  spatialMode: SpatialMode;
+  canvasPlatform: CanvasPlatform;
+  artboardPreviewMode: boolean;
+  /** Platform-specific viewport configurations (size) */
+  platformConfigs: Record<CanvasPlatform, Partial<ViewportConfig>>;
 }
 
 export interface UIActions {
@@ -56,6 +61,10 @@ export interface UIActions {
   setGlobalLoading: (loading: boolean) => void;
   addToast: (toast: Toast) => void;
   removeToast: (id: string) => void;
+  setSpatialMode: (mode: SpatialMode) => void;
+  setCanvasPlatform: (platform: CanvasPlatform) => void;
+  setPlatformConfig: (platform: CanvasPlatform, config: Partial<ViewportConfig>) => void;
+  setArtboardPreviewMode: (preview: boolean) => void;
   reset: () => void;
 }
 
@@ -72,6 +81,14 @@ const initialState: UIState = {
   theme: 'light',
   isGlobalLoading: false,
   toasts: [],
+  spatialMode: '2d',
+  canvasPlatform: 'web',
+  artboardPreviewMode: false,
+  platformConfigs: {
+    web: { width: 1440, height: 900 },
+    mobile: { width: 375, height: 812 },
+    desktop: { width: 1920, height: 1080 },
+  },
 };
 
 export const useUIStore = create<UIStore>()(
@@ -84,7 +101,8 @@ export const useUIStore = create<UIStore>()(
 
       setChromeMode: (chromeMode) => set({ chromeMode }),
 
-      setActiveTool: (activeTool) => set({ activeTool }),
+      setActiveTool: (activeTool) =>
+        set({ activeTool: activeTool === 'move' ? 'select' : activeTool }),
 
       setPendingToolData: (pendingToolData) => set({ pendingToolData }),
 
@@ -112,6 +130,17 @@ export const useUIStore = create<UIStore>()(
         set((state) => ({
           toasts: state.toasts.filter((t) => t.id !== id),
         })),
+
+            setSpatialMode: (spatialMode) => set({ spatialMode }),
+            setCanvasPlatform: (canvasPlatform) => set({ canvasPlatform }),
+            setPlatformConfig: (platform, config) =>
+              set((state) => ({
+                platformConfigs: {
+                  ...state.platformConfigs,
+                  [platform]: { ...state.platformConfigs[platform], ...config },
+                },
+              })),
+            setArtboardPreviewMode: (artboardPreviewMode) => set({ artboardPreviewMode }),
 
       reset: () => set(initialState),
     })),
@@ -155,7 +184,7 @@ export function setupUIBusSubscriptions(): void {
     const payload = event.payload as { tool: string; [key: string]: unknown } | null;
     if (payload && typeof payload.tool === 'string') {
       const { tool, ...rest } = payload;
-      useUIStore.getState().setActiveTool(tool);
+      useUIStore.getState().setActiveTool(tool === 'move' ? 'select' : tool);
       useUIStore.getState().setPendingToolData(Object.keys(rest).length > 0 ? rest : null);
     }
   });

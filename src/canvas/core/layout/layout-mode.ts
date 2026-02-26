@@ -18,6 +18,8 @@ import type { Point2D, Size2D, BoundingBox2D } from '@sn/types';
 export interface ConstraintContext {
   /** The entity being constrained */
   entityId: string;
+  /** The type of the entity being constrained (e.g. 'folder', 'widget') */
+  entityType?: string;
   /** Current entity bounds */
   currentBounds: BoundingBox2D;
   /** Viewport state (pan/zoom) */

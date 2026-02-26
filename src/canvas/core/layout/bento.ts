@@ -194,21 +194,85 @@ export function createBentoLayout(config: Partial<BentoConfig> = {}): LayoutMode
       return snapPoints;
     },
 
-    isValidPosition(position: Point2D, _ctx: ConstraintContext): boolean {
+    isValidPosition(position: Point2D, ctx: ConstraintContext): boolean {
       // Position is valid if it aligns to a cell
       const cell = positionToCell(position, mergedConfig);
       const snappedPosition = cellToPosition(cell.col, cell.row, mergedConfig);
 
       const tolerance = 1; // 1px tolerance
-      return (
+      const isAligned = (
         Math.abs(position.x - snappedPosition.x) <= tolerance &&
         Math.abs(position.y - snappedPosition.y) <= tolerance
       );
+
+      if (!isAligned) return false;
+
+      // Check for overlaps if other entities exist
+      if (ctx.otherEntities && ctx.otherEntities.length > 0) {
+        const width = ctx.currentBounds.max.x - ctx.currentBounds.min.x;
+        const height = ctx.currentBounds.max.y - ctx.currentBounds.min.y;
+        
+        for (const other of ctx.otherEntities) {
+          const overlaps = !(
+            position.x + width - tolerance <= other.min.x ||
+            position.x + tolerance >= other.max.x ||
+            position.y + height - tolerance <= other.min.y ||
+            position.y + tolerance >= other.max.y
+          );
+          if (overlaps) return false;
+        }
+      }
+
+      return true;
     },
 
-    getNearestValidPosition(position: Point2D, _ctx: ConstraintContext): Point2D {
-      const cell = positionToCell(position, mergedConfig);
-      return cellToPosition(cell.col, cell.row, mergedConfig);
+    getNearestValidPosition(position: Point2D, ctx: ConstraintContext): Point2D {
+      const startCell = positionToCell(position, mergedConfig);
+      
+      if (!ctx.otherEntities || ctx.otherEntities.length === 0) {
+        return cellToPosition(startCell.col, startCell.row, mergedConfig);
+      }
+
+      const width = ctx.currentBounds.max.x - ctx.currentBounds.min.x;
+      const height = ctx.currentBounds.max.y - ctx.currentBounds.min.y;
+      const tolerance = 1;
+      
+      // Spiral search for nearest empty cell
+      let radius = 0;
+      const maxRadius = 20; // Limit search space
+      
+      while (radius <= maxRadius) {
+        for (let dx = -radius; dx <= radius; dx++) {
+          for (let dy = -radius; dy <= radius; dy++) {
+            // Only check perimeter of current radius to ensure spiral outward
+            if (Math.abs(dx) !== radius && Math.abs(dy) !== radius && radius !== 0) continue;
+            
+            const col = Math.max(0, startCell.col + dx);
+            const row = Math.max(0, startCell.row + dy);
+            const testPos = cellToPosition(col, row, mergedConfig);
+            
+            let overlaps = false;
+            for (const other of ctx.otherEntities) {
+              if (!(
+                testPos.x + width - tolerance <= other.min.x ||
+                testPos.x + tolerance >= other.max.x ||
+                testPos.y + height - tolerance <= other.min.y ||
+                testPos.y + tolerance >= other.max.y
+              )) {
+                overlaps = true;
+                break;
+              }
+            }
+            
+            if (!overlaps) {
+              return testPos;
+            }
+          }
+        }
+        radius++;
+      }
+      
+      return cellToPosition(startCell.col, startCell.row, mergedConfig);
     },
   };
 }

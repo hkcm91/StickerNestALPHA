@@ -34,7 +34,7 @@ function entriesToLayers(entities: CanvasEntity[]): LayerEntry[] {
     .sort((a, b) => b.zIndex - a.zIndex)
     .map((e) => ({
       id: e.id,
-      name: e.name ?? `${e.type}-${e.id.slice(0, 8)}`,
+      name: e.name ?? `${e.type}-${(e.id || 'unknown').slice(0, 8)}`,
       type: e.type,
       visible: e.visible,
       locked: e.locked,
@@ -194,7 +194,7 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({ entities }) => {
                     textAlign: 'center',
                   }}
                 >
-                  {ENTITY_TYPE_LABELS[layer.type] ?? layer.type.slice(0, 3).toUpperCase()}
+                  {ENTITY_TYPE_LABELS[layer.type] ?? (layer.type || '???').slice(0, 3).toUpperCase()}
                 </span>
 
                 {/* Name (or rename input) */}

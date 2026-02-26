@@ -43,22 +43,33 @@ export function initCanvasCore(): CanvasCoreContext {
     }),
   );
 
+  // Handler for entity update events
+  const handleEntityUpdated = (event: BusEvent<{ id: string; updates: Partial<CanvasEntity> }>) => {
+    const existing = sceneGraph.getEntity(event.payload.id);
+    if (existing) {
+      const oldBounds = entityBounds(existing);
+      dirtyTracker.markDirty(oldBounds);
+    }
+    sceneGraph.updateEntity(event.payload.id, event.payload.updates);
+    const updated = sceneGraph.getEntity(event.payload.id);
+    if (updated) {
+      const newBounds = entityBounds(updated);
+      dirtyTracker.markDirty(newBounds);
+    }
+  };
+
   unsubscribers.push(
     bus.subscribe<{ id: string; updates: Partial<CanvasEntity> }>(
       CanvasEvents.ENTITY_UPDATED,
-      (event: BusEvent<{ id: string; updates: Partial<CanvasEntity> }>) => {
-        const existing = sceneGraph.getEntity(event.payload.id);
-        if (existing) {
-          const oldBounds = entityBounds(existing);
-          dirtyTracker.markDirty(oldBounds);
-        }
-        sceneGraph.updateEntity(event.payload.id, event.payload.updates);
-        const updated = sceneGraph.getEntity(event.payload.id);
-        if (updated) {
-          const newBounds = entityBounds(updated);
-          dirtyTracker.markDirty(newBounds);
-        }
-      },
+      handleEntityUpdated,
+    ),
+  );
+
+  // Also subscribe to widget-namespaced events for widget-emitted updates
+  unsubscribers.push(
+    bus.subscribe<{ id: string; updates: Partial<CanvasEntity> }>(
+      `widget.${CanvasEvents.ENTITY_UPDATED}`,
+      handleEntityUpdated,
     ),
   );
 

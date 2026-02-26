@@ -1,12 +1,12 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
-const REPLICATE_API_URL = "https://api.replicate.com/v1/predictions";
+const REPLICATE_API_BASE = "https://api.replicate.com/v1";
 const POLL_INTERVAL_MS = 2_000;
 const POLL_TIMEOUT_MS = 120_000;
 
 interface AiRequest {
   action: string;
-  model: string;
+  model: string; // "owner/model-name" or specific version ID
   input: Record<string, unknown>;
 }
 
@@ -36,7 +36,7 @@ async function pollPrediction(
   const start = Date.now();
 
   while (Date.now() - start < POLL_TIMEOUT_MS) {
-    const res = await fetch(`${REPLICATE_API_URL}/${id}`, {
+    const res = await fetch(`${REPLICATE_API_BASE}/predictions/${id}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -90,7 +90,7 @@ Deno.serve(async (req: Request) => {
   const replicateToken = Deno.env.get("REPLICATE_API_TOKEN");
   if (!replicateToken) {
     return jsonResponse(
-      { success: false, error: "AI service not configured", code: "CONFIG_ERROR" },
+      { success: false, error: "AI service not configured on server (REPLICATE_API_TOKEN missing)", code: "CONFIG_ERROR" },
       500,
     );
   }
@@ -120,16 +120,22 @@ Deno.serve(async (req: Request) => {
 
   // Create prediction on Replicate
   try {
-    const createRes = await fetch(REPLICATE_API_URL, {
+    const isFullModelPath = body.model.includes("/");
+    const url = isFullModelPath 
+      ? `${REPLICATE_API_BASE}/models/${body.model}/predictions`
+      : `${REPLICATE_API_BASE}/predictions`;
+
+    const createBody = isFullModelPath
+      ? { input: body.input }
+      : { version: body.model, input: body.input };
+
+    const createRes = await fetch(url, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${replicateToken}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        version: body.model,
-        input: body.input,
-      }),
+      body: JSON.stringify(createBody),
     });
 
     if (!createRes.ok) {
@@ -140,7 +146,7 @@ Deno.serve(async (req: Request) => {
           error: `Replicate error: ${errorText}`,
           code: "PROVIDER_ERROR",
         },
-        502,
+        createRes.status,
       );
     }
 

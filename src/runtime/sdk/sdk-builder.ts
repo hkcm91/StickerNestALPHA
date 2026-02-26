@@ -58,7 +58,7 @@ export function buildSrcdoc(options: SrcdocBuildOptions): string {
   <meta name="sn-instance-id" content="${escapeHtml(instanceId)}">
   <style>
     *, *::before, *::after { box-sizing: border-box; }
-    html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; }
+    html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: auto; }
   </style>
   <script>${sdkSource}</script>
 </head>

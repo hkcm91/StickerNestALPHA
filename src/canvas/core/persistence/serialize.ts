@@ -13,6 +13,8 @@ import type {
   CanvasEntity,
   ViewportConfig,
   LayoutMode,
+  CanvasPlatform,
+  SpatialMode,
 } from '@sn/types';
 import { DEFAULT_BACKGROUND } from '@sn/types';
 
@@ -32,6 +34,12 @@ export interface SerializeContext {
   viewportConfig?: Partial<ViewportConfig>;
   /** Optional layout mode (defaults to 'freeform') */
   layoutMode?: LayoutMode;
+  /** Optional platform (defaults to 'web') */
+  platform?: CanvasPlatform;
+  /** Optional spatial mode (defaults to '2d') */
+  spatialMode?: SpatialMode;
+  /** Optional platform-specific configs */
+  platformConfigs?: Record<string, ViewportConfig>;
 }
 
 /**
@@ -80,6 +88,7 @@ function buildViewportConfig(config?: Partial<ViewportConfig>): ViewportConfig {
     width: config?.width,
     height: config?.height,
     background: config?.background ?? DEFAULT_BACKGROUND,
+    isPreviewMode: config?.isPreviewMode ?? false,
   };
 }
 
@@ -120,6 +129,9 @@ export function serialize(
     viewport,
     entities,
     layoutMode: context.layoutMode ?? 'freeform',
+    platform: context.platform ?? 'web',
+    spatialMode: context.spatialMode ?? '2d',
+    platformConfigs: context.platformConfigs,
   };
 }
 
@@ -143,10 +155,20 @@ export function createEmptyDocument(
   options?: {
     viewport?: Partial<ViewportConfig>;
     layoutMode?: LayoutMode;
+    platform?: CanvasPlatform;
+    spatialMode?: SpatialMode;
+    platformConfigs?: Record<string, Partial<ViewportConfig>>;
     description?: string;
   }
 ): CanvasDocument {
   const now = new Date().toISOString();
+
+  const platformConfigs: Record<string, ViewportConfig> = {};
+  if (options?.platformConfigs) {
+    for (const [p, config] of Object.entries(options.platformConfigs)) {
+      platformConfigs[p] = buildViewportConfig(config);
+    }
+  }
 
   return {
     version: CURRENT_VERSION,
@@ -160,6 +182,9 @@ export function createEmptyDocument(
     viewport: buildViewportConfig(options?.viewport),
     entities: [],
     layoutMode: options?.layoutMode ?? 'freeform',
+    platform: options?.platform ?? 'web',
+    spatialMode: options?.spatialMode ?? '2d',
+    platformConfigs: Object.keys(platformConfigs).length > 0 ? platformConfigs : undefined,
   };
 }
 

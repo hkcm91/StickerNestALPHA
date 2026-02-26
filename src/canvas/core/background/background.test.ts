@@ -69,6 +69,7 @@ describe('BackgroundRenderer', () => {
       const renderer = createBackgroundRenderer();
       const newSpec: BackgroundSpec = {
         type: 'gradient',
+        gradientType: 'linear',
         stops: [
           { offset: 0, color: '#ff0000' },
           { offset: 1, color: '#0000ff' },
@@ -146,6 +147,7 @@ describe('BackgroundRenderer', () => {
     it('should render gradient background', () => {
       const renderer = createBackgroundRenderer({
         type: 'gradient',
+        gradientType: 'linear',
         stops: [
           { offset: 0, color: '#ff0000' },
           { offset: 1, color: '#0000ff' },
@@ -292,6 +294,7 @@ describe('backgroundSpecToCSS', () => {
   it('should convert gradient to CSS', () => {
     const spec: BackgroundSpec = {
       type: 'gradient',
+      gradientType: 'linear',
       stops: [
         { offset: 0, color: '#ff0000' },
         { offset: 1, color: '#0000ff' },

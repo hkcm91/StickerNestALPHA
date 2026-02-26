@@ -39,6 +39,35 @@ describe('HitTest', () => {
     expect(bounds.max).toEqual({ x: 110, y: 70 });
   });
 
+  it('entityBounds computes correct bounding box with rotation', () => {
+    // 100x100 entity at (0,0) rotated 90 degrees
+    // Center is (50, 50). Rotated size is still 100x100 but width/height swapped.
+    const e = makeEntity('e1', 0, 0, 100, 100, 0, 90);
+    const bounds = entityBounds(e);
+    expect(bounds.min.x).toBeCloseTo(0);
+    expect(bounds.min.y).toBeCloseTo(0);
+    expect(bounds.max.x).toBeCloseTo(100);
+    expect(bounds.max.y).toBeCloseTo(100);
+
+    // 100x10 rectangle at (0,0) rotated 90 degrees
+    // Center is (50, 5). Rotated size is 10x100.
+    // New width: 100*sin(90) + 10*cos(90) = 100
+    // New height: 100*cos(90) + 10*sin(90) = 10
+    // Wait, let's re-calculate.
+    // rad = 90 deg = PI/2. cos=0, sin=1.
+    // newWidth = 100*0 + 10*1 = 10.
+    // newHeight = 100*1 + 10*0 = 100.
+    // Center: cx = 50, cy = 5.
+    // min: (50-5, 5-50) = (45, -45)
+    // max: (50+5, 5+50) = (55, 55)
+    const e2 = makeEntity('e2', 0, 0, 100, 10, 0, 90);
+    const bounds2 = entityBounds(e2);
+    expect(bounds2.min.x).toBeCloseTo(45);
+    expect(bounds2.min.y).toBeCloseTo(-45);
+    expect(bounds2.max.x).toBeCloseTo(55);
+    expect(bounds2.max.y).toBeCloseTo(55);
+  });
+
   it('pointInEntity returns true for point inside non-rotated entity', () => {
     const e = makeEntity('e1', 0, 0, 100, 100, 0);
     expect(pointInEntity({ x: 50, y: 50 }, e)).toBe(true);

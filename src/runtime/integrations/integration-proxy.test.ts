@@ -166,4 +166,57 @@ describe('IntegrationProxy', () => {
     // Should not throw
     expect(() => proxy.unregister('nonexistent')).not.toThrow();
   });
+
+  describe('integration() handle', () => {
+    it('returns a handle that correctly routes query/mutate calls', async () => {
+      const proxy = createIntegrationProxy();
+      const handler = createMockHandler({
+        query: vi.fn().mockResolvedValue('query-data'),
+        mutate: vi.fn().mockResolvedValue('mutate-data'),
+      });
+
+      proxy.register('github', handler);
+      const handle = proxy.integration('github');
+
+      const queryResult = await handle.query({ repo: 'my-repo' });
+      const mutateResult = await handle.mutate({ action: 'create' });
+
+      expect(queryResult).toBe('query-data');
+      expect(mutateResult).toBe('mutate-data');
+      expect(handler.query).toHaveBeenCalledWith({ repo: 'my-repo' });
+      expect(handler.mutate).toHaveBeenCalledWith({ action: 'create' });
+    });
+
+    it('handle query/mutate still fails if the integration is not registered', async () => {
+      const proxy = createIntegrationProxy();
+      const handle = proxy.integration('github');
+
+      await expect(handle.query({})).rejects.toThrow(
+        'Integration "github" is not registered',
+      );
+      await expect(handle.mutate({})).rejects.toThrow(
+        'Integration "github" is not registered',
+      );
+    });
+
+    it('handle reflects changes in the registry (register/unregister after handle creation)', async () => {
+      const proxy = createIntegrationProxy();
+      const handle = proxy.integration('github');
+
+      const handler = createMockHandler({
+        query: vi.fn().mockResolvedValue('success'),
+      });
+
+      // Register AFTER creating the handle
+      proxy.register('github', handler);
+      const result = await handle.query({});
+      expect(result).toBe('success');
+
+      // Unregister AFTER creating the handle
+      proxy.unregister('github');
+      await expect(handle.query({})).rejects.toThrow(
+        'Integration "github" is not registered',
+      );
+    });
+  });
 });

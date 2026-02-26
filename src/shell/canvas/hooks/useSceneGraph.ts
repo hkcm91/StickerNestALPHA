@@ -8,10 +8,10 @@
 import { useEffect, useReducer, useRef } from 'react';
 
 import type { CanvasEntity } from '@sn/types';
-import { CanvasEvents } from '@sn/types';
+import { CanvasDocumentEvents, CanvasEvents } from '@sn/types';
 
-import { bus } from '../../../kernel/bus';
 import type { SceneGraph } from '../../../canvas/core';
+import { bus } from '../../../kernel/bus';
 
 /**
  * Hook that subscribes to scene graph mutation events and
@@ -27,9 +27,17 @@ export function useSceneGraph(sceneGraph: SceneGraph | null) {
   useEffect(() => {
     const unsubs: (() => void)[] = [];
 
-    unsubs.push(bus.subscribe(CanvasEvents.ENTITY_CREATED, () => forceUpdate()));
+    unsubs.push(bus.subscribe(CanvasEvents.ENTITY_CREATED, () => {
+      console.log('[useSceneGraph] ENTITY_CREATED received, entityCount:', sgRef.current?.entityCount);
+      forceUpdate();
+    }));
     unsubs.push(bus.subscribe(CanvasEvents.ENTITY_UPDATED, () => forceUpdate()));
     unsubs.push(bus.subscribe(CanvasEvents.ENTITY_DELETED, () => forceUpdate()));
+    // Re-render after persistence loads entities (bypasses individual ENTITY_CREATED events)
+    unsubs.push(bus.subscribe(CanvasDocumentEvents.LOADED, () => {
+      console.log('[useSceneGraph] LOADED received, entityCount:', sgRef.current?.entityCount);
+      forceUpdate();
+    }));
 
     return () => {
       for (const u of unsubs) u();

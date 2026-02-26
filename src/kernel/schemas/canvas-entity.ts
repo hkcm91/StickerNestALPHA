@@ -3,10 +3,16 @@
  * @module @sn/types/canvas-entity
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { Point2DSchema, Size2DSchema, BoundingBox2DSchema, Vector3Schema, QuaternionSchema } from './spatial';
-import { AnchorPointSchema, PathFillRuleSchema } from './path';
+import { AnchorPointSchema, PathFillRuleSchema } from "./path";
+import {
+  Point2DSchema,
+  Size2DSchema,
+  BoundingBox2DSchema,
+  Vector3Schema,
+  QuaternionSchema,
+} from "./spatial";
 
 /**
  * Entity type enum
@@ -24,17 +30,20 @@ import { AnchorPointSchema, PathFillRuleSchema } from './path';
  * - `svg` - Vector graphic (inline SVG markup)
  */
 export const CanvasEntityTypeSchema = z.enum([
-  'sticker',
-  'text',
-  'widget',
-  'shape',
-  'drawing',
-  'group',
-  'docker',
-  'lottie',
-  'audio',
-  'svg',
-  'path',
+  "sticker",
+  "text",
+  "widget",
+  "shape",
+  "drawing",
+  "group",
+  "docker",
+  "lottie",
+  "audio",
+  "svg",
+  "path",
+  "object3d",
+  "artboard",
+  "folder",
 ]);
 
 export type CanvasEntityType = z.infer<typeof CanvasEntityTypeSchema>;
@@ -116,8 +125,14 @@ export const CanvasEntityBaseSchema = z.object({
   zIndex: z.number().int(),
   /** Whether entity is visible */
   visible: z.boolean().default(true),
+  /** Which canvas types this entity should appear in */
+  canvasVisibility: z.enum(["2d", "3d", "both"]).default("both"),
   /** Whether entity is locked from editing */
   locked: z.boolean().default(false),
+  /** Whether entity is flipped horizontally */
+  flipH: z.boolean().default(false),
+  /** Whether entity is flipped vertically */
+  flipV: z.boolean().default(false),
   /** Opacity (0 = fully transparent, 1 = fully opaque) */
   opacity: z.number().min(0).max(1).default(1),
   /** Border radius in canvas units */
@@ -139,24 +154,69 @@ export const CanvasEntityBaseSchema = z.object({
 export type CanvasEntityBase = z.infer<typeof CanvasEntityBaseSchema>;
 
 /**
+ * Sticker click action type enum.
+ *
+ * @remarks
+ * Defines what happens when a sticker is clicked:
+ * - `none` - No action, sticker is purely decorative
+ * - `open-url` - Opens a URL in a new tab
+ * - `launch-widget` - Launches/creates a widget on the canvas
+ * - `emit-event` - Emits a custom bus event for pipeline integration
+ */
+export const StickerClickActionTypeSchema = z.enum([
+  "none",
+  "open-url",
+  "launch-widget",
+  "emit-event",
+]);
+
+export type StickerClickActionType = z.infer<
+  typeof StickerClickActionTypeSchema
+>;
+
+/**
+ * Sticker click action schema — defines behavior when sticker is clicked.
+ */
+export const StickerClickActionSchema = z.object({
+  /** Action type */
+  type: StickerClickActionTypeSchema.default("none"),
+  /** URL to open (for 'open-url' action) */
+  url: z.string().url().optional(),
+  /** Whether to open URL in new tab (default: true) */
+  urlNewTab: z.boolean().default(true),
+  /** Widget ID to launch (for 'launch-widget' action) */
+  widgetId: z.string().optional(),
+  /** Widget configuration to apply when launching */
+  widgetConfig: z.record(z.string(), z.unknown()).optional(),
+  /** Bus event type to emit (for 'emit-event' action) */
+  eventType: z.string().optional(),
+  /** Custom payload data for the emitted event */
+  eventPayload: z.record(z.string(), z.unknown()).optional(),
+});
+
+export type StickerClickAction = z.infer<typeof StickerClickActionSchema>;
+
+/**
  * Sticker entity schema
+ *
+ * @remarks
+ * Stickers are visual assets that can act as interactive buttons on the canvas.
+ * They can launch widgets, open URLs, or emit events when clicked.
  */
 export const StickerEntitySchema = CanvasEntityBaseSchema.extend({
-  type: z.literal('sticker'),
+  type: z.literal("sticker"),
   /** Asset URL (proxied, never direct bucket URL) */
   assetUrl: z.string().url(),
   /** Asset type */
-  assetType: z.enum(['image', 'gif', 'video']),
+  assetType: z.enum(["image", "gif", "video"]),
   /** Alt text for accessibility */
   altText: z.string().optional(),
   /** Aspect ratio lock */
   aspectLocked: z.boolean().default(true),
-  /** Bus event type emitted on click */
-  clickEventType: z.string().optional(),
-  /** Custom payload data attached to the click event */
-  clickEventPayload: z.record(z.string(), z.unknown()).optional(),
+  /** Click action configuration */
+  clickAction: StickerClickActionSchema.optional(),
   /** Hover effect style */
-  hoverEffect: z.enum(['none', 'scale', 'glow', 'opacity']).default('none'),
+  hoverEffect: z.enum(["none", "scale", "glow", "opacity"]).default("none"),
 });
 
 export type StickerEntity = z.infer<typeof StickerEntitySchema>;
@@ -165,7 +225,7 @@ export type StickerEntity = z.infer<typeof StickerEntitySchema>;
  * Lottie animation entity schema
  */
 export const LottieEntitySchema = CanvasEntityBaseSchema.extend({
-  type: z.literal('lottie'),
+  type: z.literal("lottie"),
   /** URL to the .lottie or .json animation file */
   assetUrl: z.string().url(),
   /** Whether animation loops */
@@ -188,19 +248,19 @@ export type LottieEntity = z.infer<typeof LottieEntitySchema>;
  * Text entity schema
  */
 export const TextEntitySchema = CanvasEntityBaseSchema.extend({
-  type: z.literal('text'),
+  type: z.literal("text"),
   /** Text content (may include basic formatting) */
   content: z.string(),
   /** Font family */
-  fontFamily: z.string().default('system-ui'),
+  fontFamily: z.string().default("system-ui"),
   /** Font size in canvas units */
   fontSize: z.number().positive().default(16),
   /** Font weight */
   fontWeight: z.number().int().min(100).max(900).default(400),
   /** Text color */
-  color: z.string().default('#000000'),
+  color: z.string().default("#000000"),
   /** Text alignment */
-  textAlign: z.enum(['left', 'center', 'right']).default('left'),
+  textAlign: z.enum(["left", "center", "right"]).default("left"),
 });
 
 export type TextEntity = z.infer<typeof TextEntitySchema>;
@@ -234,7 +294,11 @@ export type WidgetIntrinsicSize = z.infer<typeof WidgetIntrinsicSizeSchema>;
  * - `orientation`: Scales differently for portrait vs landscape containers
  * - `fit`: Content at natural size with scrollbars if needed
  */
-export const WidgetScalingModeSchema = z.enum(['proportional', 'orientation', 'fit']);
+export const WidgetScalingModeSchema = z.enum([
+  "proportional",
+  "orientation",
+  "fit",
+]);
 
 export type WidgetScalingMode = z.infer<typeof WidgetScalingModeSchema>;
 
@@ -261,7 +325,7 @@ export type WidgetCropConfig = z.infer<typeof WidgetCropConfigSchema>;
  * Widget container entity schema
  */
 export const WidgetContainerEntitySchema = CanvasEntityBaseSchema.extend({
-  type: z.literal('widget'),
+  type: z.literal("widget"),
   /** Widget instance ID */
   widgetInstanceId: z.string().uuid(),
   /** Widget definition ID (from marketplace/registry) */
@@ -290,19 +354,24 @@ export type WidgetContainerEntity = z.infer<typeof WidgetContainerEntitySchema>;
 /**
  * Shape type enum
  */
-export const ShapeTypeSchema = z.enum(['rectangle', 'ellipse', 'line', 'polygon']);
+export const ShapeTypeSchema = z.enum([
+  "rectangle",
+  "ellipse",
+  "line",
+  "polygon",
+]);
 
 /**
  * Shape entity schema
  */
 export const ShapeEntitySchema = CanvasEntityBaseSchema.extend({
-  type: z.literal('shape'),
+  type: z.literal("shape"),
   /** Shape sub-type */
   shapeType: ShapeTypeSchema,
   /** Fill color (null for transparent) */
   fill: z.string().nullable().default(null),
   /** Stroke color */
-  stroke: z.string().default('#000000'),
+  stroke: z.string().default("#000000"),
   /** Stroke width */
   strokeWidth: z.number().nonnegative().default(1),
   /** Corner radius for rectangles */
@@ -317,11 +386,11 @@ export type ShapeEntity = z.infer<typeof ShapeEntitySchema>;
  * Drawing (pen stroke) entity schema
  */
 export const DrawingEntitySchema = CanvasEntityBaseSchema.extend({
-  type: z.literal('drawing'),
+  type: z.literal("drawing"),
   /** Path points */
   points: z.array(Point2DSchema),
   /** Stroke color */
-  stroke: z.string().default('#000000'),
+  stroke: z.string().default("#000000"),
   /** Stroke width */
   strokeWidth: z.number().positive().default(2),
   /** Smoothing factor */
@@ -334,7 +403,7 @@ export type DrawingEntity = z.infer<typeof DrawingEntitySchema>;
  * Group entity schema
  */
 export const GroupEntitySchema = CanvasEntityBaseSchema.extend({
-  type: z.literal('group'),
+  type: z.literal("group"),
   /** Child entity IDs */
   children: z.array(z.string().uuid()),
 });
@@ -345,11 +414,15 @@ export type GroupEntity = z.infer<typeof GroupEntitySchema>;
  * Docker (container widget) entity schema
  */
 export const DockerEntitySchema = CanvasEntityBaseSchema.extend({
-  type: z.literal('docker'),
+  type: z.literal("docker"),
   /** Child widget instance IDs */
   children: z.array(z.string().uuid()),
   /** Layout mode */
-  layout: z.enum(['free', 'stack', 'grid']).default('free'),
+  layout: z.enum(["free", "stack", "grid", "folder"]).default("free"),
+  /** Optional Widget definition ID if this docker uses a custom widget renderer */
+  widgetId: z.string().optional(),
+  /** Widget configuration if widgetId is provided */
+  config: z.record(z.string(), z.unknown()).default({}),
 });
 
 export type DockerEntity = z.infer<typeof DockerEntitySchema>;
@@ -358,7 +431,7 @@ export type DockerEntity = z.infer<typeof DockerEntitySchema>;
  * Audio entity schema
  */
 export const AudioEntitySchema = CanvasEntityBaseSchema.extend({
-  type: z.literal('audio'),
+  type: z.literal("audio"),
   /** URL to the audio file (proxied, never direct bucket URL) */
   assetUrl: z.string().url(),
   /** Whether audio starts playing immediately */
@@ -379,7 +452,7 @@ export type AudioEntity = z.infer<typeof AudioEntitySchema>;
  * SVG vector graphic entity schema
  */
 export const SvgEntitySchema = CanvasEntityBaseSchema.extend({
-  type: z.literal('svg'),
+  type: z.literal("svg"),
   /** Raw SVG markup (sanitized before rendering) */
   svgContent: z.string(),
   /** Optional URL to load SVG from */
@@ -405,7 +478,7 @@ export type SvgEntity = z.infer<typeof SvgEntitySchema>;
  * `transform.size`) encompasses all anchors and their control handles.
  */
 export const PathEntitySchema = CanvasEntityBaseSchema.extend({
-  type: z.literal('path'),
+  type: z.literal("path"),
   /** Ordered list of anchor points defining the path */
   anchors: z.array(AnchorPointSchema).min(1),
   /** Whether the path is closed (last anchor connects back to first) */
@@ -413,15 +486,15 @@ export const PathEntitySchema = CanvasEntityBaseSchema.extend({
   /** Fill color (null for no fill / transparent) */
   fill: z.string().nullable().default(null),
   /** SVG fill-rule for complex/self-intersecting paths */
-  fillRule: PathFillRuleSchema.default('nonzero'),
+  fillRule: PathFillRuleSchema.default("nonzero"),
   /** Stroke color */
-  stroke: z.string().default('#000000'),
+  stroke: z.string().default("#000000"),
   /** Stroke width in canvas units */
   strokeWidth: z.number().nonnegative().default(2),
   /** Stroke line cap style */
-  strokeLinecap: z.enum(['butt', 'round', 'square']).default('round'),
+  strokeLinecap: z.enum(["butt", "round", "square"]).default("round"),
   /** Stroke line join style */
-  strokeLinejoin: z.enum(['miter', 'round', 'bevel']).default('round'),
+  strokeLinejoin: z.enum(["miter", "round", "bevel"]).default("round"),
   /** SVG stroke-dasharray for dashed/dotted lines */
   strokeDasharray: z.string().optional(),
 });
@@ -429,9 +502,54 @@ export const PathEntitySchema = CanvasEntityBaseSchema.extend({
 export type PathEntity = z.infer<typeof PathEntitySchema>;
 
 /**
+ * 3D Object entity schema
+ */
+export const Object3DEntitySchema = CanvasEntityBaseSchema.extend({
+  type: z.literal("object3d"),
+  /** Asset URL for 3D model (GLTF/GLB) */
+  assetUrl: z.string().url().optional(),
+  /** Basic primitive type if no assetUrl */
+  primitive: z.enum(["box", "sphere", "cylinder", "plane"]).default("box"),
+  /** Color of primitive */
+  color: z.string().default("#cccccc"),
+});
+
+export type Object3DEntity = z.infer<typeof Object3DEntitySchema>;
+
+/**
+ * Artboard entity schema
+ */
+export const ArtboardEntitySchema = CanvasEntityBaseSchema.extend({
+  type: z.literal("artboard"),
+  /** Child entity IDs specifically for this artboard */
+  children: z.array(z.string().uuid()).default([]),
+  /** Device preset name (e.g., 'iPhone 15', 'Pixel 8') */
+  devicePreset: z.string().optional(),
+  /** Linked canvas document ID */
+  childCanvasId: z.string().uuid().optional(),
+  /** Linked canvas document slug */
+  childCanvasSlug: z.string().optional(),
+});
+
+export type ArtboardEntity = z.infer<typeof ArtboardEntitySchema>;
+
+/**
+ * Folder entity schema for desktop experience
+ */
+export const FolderEntitySchema = CanvasEntityBaseSchema.extend({
+  type: z.literal("folder"),
+  /** Child entity IDs (files, shortcuts, or other folders) */
+  children: z.array(z.string().uuid()).default([]),
+  /** Icon asset URL */
+  iconUrl: z.string().url().optional(),
+});
+
+export type FolderEntity = z.infer<typeof FolderEntitySchema>;
+
+/**
  * Union of all entity types
  */
-export const CanvasEntitySchema = z.discriminatedUnion('type', [
+export const CanvasEntitySchema = z.discriminatedUnion("type", [
   StickerEntitySchema,
   LottieEntitySchema,
   TextEntitySchema,
@@ -443,6 +561,9 @@ export const CanvasEntitySchema = z.discriminatedUnion('type', [
   AudioEntitySchema,
   SvgEntitySchema,
   PathEntitySchema,
+  Object3DEntitySchema,
+  ArtboardEntitySchema,
+  FolderEntitySchema,
 ]);
 
 export type CanvasEntity = z.infer<typeof CanvasEntitySchema>;
@@ -455,8 +576,14 @@ export const CanvasEntityBaseJSONSchema = CanvasEntityBaseSchema.toJSONSchema();
 export const LottieEntityJSONSchema = LottieEntitySchema.toJSONSchema();
 export const AudioEntityJSONSchema = AudioEntitySchema.toJSONSchema();
 export const SvgEntityJSONSchema = SvgEntitySchema.toJSONSchema();
+export const PathEntityJSONSchema = PathEntitySchema.toJSONSchema();
+export const ArtboardEntityJSONSchema = ArtboardEntitySchema.toJSONSchema();
+export const FolderEntityJSONSchema = FolderEntitySchema.toJSONSchema();
 export const CanvasEntityJSONSchema = CanvasEntitySchema.toJSONSchema();
-export const WidgetIntrinsicSizeJSONSchema = WidgetIntrinsicSizeSchema.toJSONSchema();
-export const WidgetScalingModeJSONSchema = WidgetScalingModeSchema.toJSONSchema();
+export const WidgetIntrinsicSizeJSONSchema =
+  WidgetIntrinsicSizeSchema.toJSONSchema();
+export const WidgetScalingModeJSONSchema =
+  WidgetScalingModeSchema.toJSONSchema();
 export const WidgetCropConfigJSONSchema = WidgetCropConfigSchema.toJSONSchema();
-export const WidgetContainerEntityJSONSchema = WidgetContainerEntitySchema.toJSONSchema();
+export const WidgetContainerEntityJSONSchema =
+  WidgetContainerEntitySchema.toJSONSchema();

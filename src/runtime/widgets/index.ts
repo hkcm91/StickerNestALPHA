@@ -12,3 +12,10 @@
 // Built-in widgets will be exported here as they are implemented.
 // Each built-in must use the same SDK interface as sandboxed widgets.
 // No privileged internal APIs — this ensures portability.
+
+export { ImageGeneratorWidget } from './image-generator/image-generator.widget';
+export { imageGeneratorManifest } from './image-generator/image-generator.widget';
+export { PathfinderWidget } from './pathfinder/pathfinder.widget';
+export { pathfinderManifest } from './pathfinder/pathfinder.widget';
+export { BUILT_IN_WIDGET_HTML } from './built-in-html';
+export { BUILT_IN_WIDGET_COMPONENTS } from './built-in-components';

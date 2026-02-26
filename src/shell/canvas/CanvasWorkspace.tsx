@@ -18,33 +18,50 @@
  * @layer L6
  */
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from "react";
 
-import type { BackgroundSpec, GridConfig, Point2D } from '@sn/types';
-import { DEFAULT_BACKGROUND, GridEvents } from '@sn/types';
+import type { BackgroundSpec, GridConfig, Point2D } from "@sn/types";
+import { DEFAULT_BACKGROUND, GridEvents } from "@sn/types";
 
+import { DEFAULT_GRID_CONFIG, useInteractionStore } from "../../canvas/core";
+import type { SceneGraph } from "../../canvas/core";
+import { bus } from "../../kernel/bus";
+import { useUIStore } from "../../kernel/stores/ui/ui.store";
+import { themeVar } from "../theme/theme-vars";
+
+import { CanvasEntityLayer } from "./CanvasEntityLayer";
+import { CanvasOverlayLayer } from "./CanvasOverlayLayer";
+import { CanvasToolLayer } from "./CanvasToolLayer";
+import { CanvasViewportLayer } from "./CanvasViewportLayer";
+import { PresenceCursorsLayer, SelectionOverlay } from "./components";
 import {
-  DEFAULT_GRID_CONFIG,
-  useInteractionStore,
-} from '../../canvas/core';
-import type { SceneGraph } from '../../canvas/core';
-import { bus } from '../../kernel/bus';
+  initAlignHandler,
+  initCropHandler,
+  initGroupHandler,
+} from "./handlers";
+import {
+  useActiveTool,
+  useCanvasInput,
+  useCanvasShortcuts,
+  useSceneGraph,
+  useSelection,
+  useViewport,
+} from "./hooks";
+import { SpatialCanvasLayer } from "./SpatialCanvasLayer";
 
-import { CanvasEntityLayer } from './CanvasEntityLayer';
-import { CanvasOverlayLayer } from './CanvasOverlayLayer';
-import { CanvasToolLayer } from './CanvasToolLayer';
-import { CanvasViewportLayer } from './CanvasViewportLayer';
-import { SelectionOverlay } from './components';
-import { initAlignHandler, initCropHandler, initGroupHandler } from './handlers';
-import { useActiveTool, useCanvasInput, useCanvasShortcuts, useSceneGraph, useSelection, useViewport } from './hooks';
+const FOLDER_TOGGLE_EVENT = "canvas.folder.toggled";
 
 export interface CanvasWorkspaceProps {
   /** Scene graph from Canvas Core — managed by the parent (CanvasPage) */
   sceneGraph: SceneGraph | null;
+  /** Current dashboard/canvas slug for artboard-linked canvas creation */
+  dashboardSlug?: string;
   /** Background specification (solid, gradient, or image) */
   background?: BackgroundSpec;
   /** Grid configuration */
   gridConfig?: GridConfig;
+  /** Maximum artboards allowed in this dashboard canvas */
+  maxArtboardsPerDashboard?: number;
   /** Widget HTML lookup: widgetInstanceId -> html string */
   widgetHtmlMap?: Map<string, string>;
   /** Theme token map for widgets */
@@ -58,8 +75,10 @@ export interface CanvasWorkspaceProps {
  */
 export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   sceneGraph,
+  dashboardSlug,
   background = DEFAULT_BACKGROUND,
   gridConfig: gridConfigProp = DEFAULT_GRID_CONFIG,
+  maxArtboardsPerDashboard,
   widgetHtmlMap,
   theme,
   onSelectionChange,
@@ -71,7 +90,10 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     const rect = containerRef.current?.getBoundingClientRect();
     if (rect) {
-      lastCursorScreen.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+      lastCursorScreen.current = {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+      };
     }
   }, []);
   const handleMouseLeave = useCallback(() => {
@@ -80,6 +102,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
 
   // Reactive grid config — merges prop defaults with bus event updates
   const [gridConfig, setGridConfig] = useState<GridConfig>(gridConfigProp);
+  const [openFolderIds, setOpenFolderIds] = useState<Set<string>>(new Set());
 
   // Centralized selection state (shared with panels)
   const { selectedIds, select: setSelectedIds } = useSelection();
@@ -104,6 +127,26 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
       unsubConfig();
       unsubToggle();
     };
+  }, []);
+
+  useEffect(() => {
+    const unsubFolderToggle = bus.subscribe(
+      FOLDER_TOGGLE_EVENT,
+      (event: { payload: { folderId: string } }) => {
+        const folderId = event.payload.folderId;
+        setOpenFolderIds((prev) => {
+          const next = new Set(prev);
+          if (next.has(folderId)) {
+            next.delete(folderId);
+          } else {
+            next.add(folderId);
+          }
+          return next;
+        });
+      },
+    );
+
+    return unsubFolderToggle;
   }, []);
 
   // Initialize alignment handler — subscribes to align/distribute bus events
@@ -143,7 +186,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   const { onKeyDown: handleKeyDown } = useCanvasShortcuts({
     sceneGraph,
     selectedIds,
-    isEditMode: interactionMode === 'edit',
+    isEditMode: interactionMode === "edit",
     selectIds: setSelectedIds,
     clearSelection: () => setSelectedIds(new Set()),
     setTool,
@@ -172,12 +215,14 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
     (ids: Set<string>) => {
       setSelectedIds(ids);
       onSelectionChange?.(ids);
+      // Emit selection change on bus for Toolbar (outside workspace)
+      bus.emit("shell.selection.changed", { ids: Array.from(ids) });
     },
     [setSelectedIds, onSelectionChange],
   );
 
   // Map interaction mode 'edit' | 'play' to renderer mode 'edit' | 'preview'
-  const rendererMode = interactionMode === 'edit' ? 'edit' : 'preview';
+  const rendererMode = interactionMode === "edit" ? "edit" : "preview";
 
   // Pan callback for CanvasToolLayer (space+drag)
   const handlePan = useCallback(
@@ -186,7 +231,12 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   );
 
   // Zoom getter for CanvasToolLayer (needed for pan delta calculation)
-  const getZoom = useCallback(() => viewportStore.getState().zoom, [viewportStore]);
+  const getZoom = useCallback(
+    () => viewportStore.getState().zoom,
+    [viewportStore],
+  );
+
+  const spatialMode = useUIStore((s) => s.spatialMode);
 
   return (
     <div
@@ -197,55 +247,260 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
       style={{
-        position: 'relative',
-        width: '100%',
-        height: '100%',
-        overflow: 'hidden',
-        background: 'var(--sn-bg, #f8f9fa)',
-        touchAction: 'none',
-        userSelect: 'none',
-        outline: 'none',
+        position: "relative",
+        width: "100%",
+        height: "100%",
+        overflow: "hidden",
+        background: themeVar("--sn-bg"),
+        touchAction: "none",
+        userSelect: "none",
+        outline: "none",
       }}
     >
-      {/* Layer 1: Background + Grid (behind entities) */}
-      <CanvasOverlayLayer
-        viewport={viewport}
-        background={background}
-        gridConfig={gridConfig}
-      />
+      {spatialMode !== '2d' ? (
+        <>
+          <div
+            style={{
+              position: "absolute",
+              top: 70,
+              right: 16,
+              zIndex: 100,
+              display: "flex",
+              flexDirection: "column",
+              gap: 8,
+            }}
+          >
+            <button
+              onClick={() => {
+                bus.emit("canvas.entity.created", {
+                  entity: {
+                    id: `3d-${Date.now()}`,
+                    type: "object3d",
+                    canvasId: "default",
+                    transform: {
+                      position: { x: 0, y: 0 },
+                      size: { width: 100, height: 100 },
+                      rotation: 0,
+                      scale: 1,
+                    },
+                    spatialTransform: {
+                      position: { x: 0, y: 0.5, z: 0 },
+                      rotation: { x: 0, y: 0, z: 0, w: 1 },
+                      scale: { x: 1, y: 1, z: 1 },
+                    },
+                    zIndex: 10,
+                    visible: true,
+                    canvasVisibility: 'both',
+                    locked: false,
+                    flipH: false,
+                    flipV: false,
+                    primitive: "box",
+                    color: "#6366f1",
+                    opacity: 1,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    createdBy: "user",
+                  },
+                });
+              }}
+              style={{
+                background: "var(--sn-surface)",
+                color: "var(--sn-text)",
+                border: "1px solid var(--sn-border)",
+                borderRadius: 4,
+                padding: "4px 8px",
+                cursor: "pointer",
+                fontSize: 12,
+              }}
+            >
+              + Add Box
+            </button>
+            <button
+              onClick={() => {
+                bus.emit("canvas.entity.created", {
+                  entity: {
+                    id: `3d-${Date.now()}`,
+                    type: "object3d",
+                    canvasId: "default",
+                    transform: {
+                      position: { x: 100, y: 100 },
+                      size: { width: 100, height: 100 },
+                      rotation: 0,
+                      scale: 1,
+                    },
+                    spatialTransform: {
+                      position: { x: 1, y: 0.5, z: 0 },
+                      rotation: { x: 0, y: 0, z: 0, w: 1 },
+                      scale: { x: 1, y: 1, z: 1 },
+                    },
+                    zIndex: 10,
+                    visible: true,
+                    canvasVisibility: "3d",
+                    locked: false,
+                    primitive: "sphere",
+                    color: "#f43f5e",
+                    opacity: 1,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    createdBy: "user",
+                  },
+                });
+              }}
+              style={{
+                background: "var(--sn-surface)",
+                color: "var(--sn-text)",
+                border: "1px solid var(--sn-border)",
+                borderRadius: 4,
+                padding: "4px 8px",
+                cursor: "pointer",
+                fontSize: 12,
+              }}
+            >
+              + Add 3D Sphere
+            </button>
+            <button
+              onClick={() => {
+                bus.emit("canvas.entity.created", {
+                  entity: {
+                    id: `2d-${Date.now()}`,
+                    type: "object3d",
+                    canvasId: "default",
+                    transform: {
+                      position: { x: 200, y: 200 },
+                      size: { width: 80, height: 80 },
+                      rotation: 0,
+                      scale: 1,
+                    },
+                    zIndex: 10,
+                    visible: true,
+                    canvasVisibility: "2d",
+                    locked: false,
+                    primitive: "box",
+                    color: "#10b981",
+                    opacity: 1,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    createdBy: "user",
+                  },
+                });
+              }}
+              style={{
+                background: "var(--sn-surface)",
+                color: "var(--sn-text)",
+                border: "1px solid var(--sn-border)",
+                borderRadius: 4,
+                padding: "4px 8px",
+                cursor: "pointer",
+                fontSize: 12,
+              }}
+            >
+              + Add 2D Box
+            </button>
+            {selectedIds.size > 0 && (
+              <button
+                onClick={() => {
+                  const id = Array.from(selectedIds)[0];
+                  const entity = entities.find((e) => e.id === id);
+                  if (entity) {
+                    const nextMode: "2d" | "3d" | "both" =
+                      entity.canvasVisibility === "both"
+                        ? "2d"
+                        : entity.canvasVisibility === "2d"
+                          ? "3d"
+                          : "both";
+                    bus.emit("canvas.entity.updated", {
+                      entity: { ...entity, canvasVisibility: nextMode },
+                    });
+                  }
+                }}
+                style={{
+                  background: "#10b981",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 4,
+                  padding: "4px 8px",
+                  cursor: "pointer",
+                  fontSize: 11,
+                  marginTop: 8,
+                }}
+              >
+                Visibility:{" "}
+                {entities.find((e) => e.id === Array.from(selectedIds)[0])
+                  ?.canvasVisibility || "both"}
+              </button>
+            )}
+          </div>
+          <SpatialCanvasLayer
+            entities={entities}
+            selectedIds={selectedIds}
+            widgetHtmlMap={widgetHtmlMap}
+            theme={theme}
+            onSelect={(id) => {
+              const newSet = new Set<string>();
+              newSet.add(id);
+              handleSelectionChange(newSet);
+            }}
+          />
+        </>
+      ) : (
+        <>
+          {/* Layer 1: Background + Grid (behind entities) */}
+          <CanvasOverlayLayer
+            viewport={viewport}
+            background={background}
+            gridConfig={gridConfig}
+          />
 
-      {/* Layer 2: Viewport transform — entities render ON TOP of background */}
-      <CanvasViewportLayer viewport={viewport}>
-        <CanvasEntityLayer
-          entities={entities}
-          selectedIds={selectedIds}
-          widgetHtmlMap={widgetHtmlMap}
-          theme={theme}
-          interactionMode={rendererMode}
-        />
-      </CanvasViewportLayer>
+          {/* Layer 1.5: Background Interaction (portal target for tool-layer empty space clicks) */}
+          <div
+            id="canvas-bg-interaction"
+            style={{ position: "absolute", inset: 0, zIndex: 1 }}
+          />
 
-      {/* Layer 3: Tool interaction layer (transparent input capture) */}
-      <CanvasToolLayer
-        viewport={viewport}
-        sceneGraph={sceneGraph}
-        activeTool={activeTool}
-        toolsEnabled={toolsEnabled}
-        selectedIds={selectedIds}
-        onSelectionChange={handleSelectionChange}
-        onPan={handlePan}
-        getZoom={getZoom}
-      />
+          {/* Layer 2: Viewport transform — entities render ON TOP of background */}
+          <CanvasViewportLayer viewport={viewport} style={{ zIndex: 2, pointerEvents: "none" }}>
+            <CanvasEntityLayer
+              entities={entities}
+              selectedIds={selectedIds}
+              openFolderIds={openFolderIds}
+              widgetHtmlMap={widgetHtmlMap}
+              theme={theme}
+              interactionMode={rendererMode}
+            />
+            {/* Remote user cursors — rendered in canvas space */}
+            <PresenceCursorsLayer zoom={viewport.zoom} />
+          </CanvasViewportLayer>
 
-      {/* Layer 4: Selection handles — ABOVE tool layer so handles receive pointer events.
-          Wrapper has pointer-events: none; individual handles set pointer-events: auto. */}
-      <CanvasViewportLayer viewport={viewport} style={{ pointerEvents: 'none' }}>
-        <SelectionOverlay
-          selectedIds={selectedIds}
-          sceneGraph={sceneGraph}
-          interactionMode={rendererMode}
-        />
-      </CanvasViewportLayer>
+          {/* Layer 3: Tool interaction layer (foreground hit-boxes and tool previews) */}
+          <CanvasToolLayer
+            viewport={viewport}
+            sceneGraph={sceneGraph}
+            dashboardSlug={dashboardSlug}
+            activeTool={activeTool}
+            toolsEnabled={toolsEnabled}
+            maxArtboardsPerDashboard={maxArtboardsPerDashboard}
+            selectedIds={selectedIds}
+            openFolderIds={openFolderIds}
+            onSelectionChange={handleSelectionChange}
+            onPan={handlePan}
+            getZoom={getZoom}
+            backgroundPortalId="canvas-bg-interaction"
+          />
+
+          {/* Layer 4: Selection handles — ABOVE tool layer so handles receive pointer events.
+              Wrapper has pointer-events: none; individual handles set pointer-events: auto. */}
+          <CanvasViewportLayer
+            viewport={viewport}
+            style={{ pointerEvents: "none", zIndex: 3 }}
+          >
+            <SelectionOverlay
+              selectedIds={selectedIds}
+              sceneGraph={sceneGraph}
+              interactionMode={rendererMode}
+            />
+          </CanvasViewportLayer>
+        </>
+      )}
     </div>
   );
 };

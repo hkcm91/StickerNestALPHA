@@ -93,14 +93,13 @@ describe('AppRouter', () => {
       expect(screen.getByTestId('page-login')).toBeTruthy();
     });
 
-    it('renders canvas page at /canvas/my-slug', () => {
-      renderAtRoute('/canvas/my-slug');
-      expect(screen.getByTestId('page-canvas')).toBeTruthy();
-      expect(screen.getByTestId('page-canvas').getAttribute('data-mode')).toBe('preview');
+    it('renders canvas gallery at /canvas', () => {
+      renderAtRoute('/canvas');
+      expect(screen.getByTestId('page-canvas-gallery')).toBeTruthy();
     });
 
-    it('renders canvas in edit mode for UUID param', () => {
-      renderAtRoute('/canvas/550e8400-e29b-41d4-a716-446655440000');
+    it('renders canvas page at /canvas/my-slug', () => {
+      renderAtRoute('/canvas/my-slug');
       expect(screen.getByTestId('page-canvas')).toBeTruthy();
       expect(screen.getByTestId('page-canvas').getAttribute('data-mode')).toBe('edit');
     });

@@ -43,6 +43,9 @@ export {
 } from './desktop';
 export type { DesktopConfig, DockingZone } from './desktop';
 
+// Artboard layout
+export { artboardLayout, createArtboardLayout } from './artboard';
+
 // Registry
 export {
   registerLayoutMode,

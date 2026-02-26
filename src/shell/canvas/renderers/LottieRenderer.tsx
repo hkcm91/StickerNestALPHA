@@ -12,7 +12,7 @@ import React, { useEffect, useRef } from 'react';
 
 import type { LottieEntity } from '@sn/types';
 
-import { entityTransformStyle } from './entity-style';
+import { entityTransformStyle, RENDER_SIZE_MULTIPLIER } from './entity-style';
 
 export interface LottieRendererProps {
   entity: LottieEntity;
@@ -45,7 +45,14 @@ export const LottieRenderer: React.FC<LottieRendererProps> = ({ entity, isSelect
       <img
         src={entity.assetUrl}
         alt={entity.altText ?? 'Lottie animation'}
-        style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+        style={{ 
+          width: `${100 * RENDER_SIZE_MULTIPLIER}%`, 
+          height: `${100 * RENDER_SIZE_MULTIPLIER}%`, 
+          transform: `scale(${1 / RENDER_SIZE_MULTIPLIER})`,
+          transformOrigin: 'center center',
+          objectFit: 'contain',
+          flexShrink: 0,
+        }}
         draggable={false}
       />
     </div>

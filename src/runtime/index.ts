@@ -13,12 +13,17 @@
 // WidgetFrame component
 export { WidgetFrame } from './WidgetFrame';
 export type { WidgetFrameProps } from './WidgetFrame';
+export { InlineWidgetFrame } from './InlineWidgetFrame';
+export type { InlineWidgetFrameProps } from './InlineWidgetFrame';
 
 // Bridge protocol
 export { createWidgetBridge } from './bridge';
 export type { WidgetBridge, HostMessage, WidgetMessage, ThemeTokens } from './bridge';
 export { validateWidgetMessage, validateHostMessage, createMessageQueue, MAX_QUEUE_SIZE } from './bridge';
 export type { MessageQueue } from './bridge';
+
+// Widget Hooks
+export { useEmit, useSubscribe, useWidgetState } from './hooks';
 
 // Widget SDK
 export { generateSDKTemplate, buildSrcdoc } from './sdk';

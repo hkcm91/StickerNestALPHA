@@ -84,7 +84,15 @@
       "Bash(done)",
       "Bash(while read dts)",
       "Bash(base=\"$dts%.d.ts\")",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(start http://localhost:5173/)",
+      "Bash(npm run type-check:*)",
+      "Bash(tasklist:*)",
+      "Bash(powershell -Command \"Get-ChildItem -Path src -Recurse -Include ''*.js'',''*.js.map'',''*.d.ts'',''*.d.ts.map'' | Remove-Item -Force; Write-Host ''Deleted compiled files''\")",
+      "Bash(powershell -Command:*)",
+      "Skill(superpowers:brainstorming)",
+      "Bash(xargs cat:*)",
+      "Bash(npx supabase:*)"
     ]
   }
 }

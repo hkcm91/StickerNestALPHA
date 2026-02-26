@@ -111,6 +111,16 @@ export const CanvasEvents = {
   PATH_POINT_ADDED: 'canvas.path.point.added',
   PATH_CLOSED: 'canvas.path.closed',
   PATH_POINT_CONVERTED: 'canvas.path.point.converted',
+
+  // Tool input bridge — shell forwards pointer/key events to L4A-2 tools via bus
+  TOOL_INPUT_DOWN: 'canvas.tool.input.down',
+  TOOL_INPUT_MOVE: 'canvas.tool.input.move',
+  TOOL_INPUT_UP: 'canvas.tool.input.up',
+  TOOL_INPUT_KEY: 'canvas.tool.input.key',
+  TOOL_COMMAND: 'canvas.tool.command',
+
+  // Pen-path tool preview state (emitted by tool for shell overlay rendering)
+  PEN_PATH_PREVIEW: 'canvas.tool.penpath.preview',
 } as const;
 
 /**
@@ -234,6 +244,23 @@ export const CanvasDocumentEvents = {
   LAYOUT_MODE_CHANGED: 'canvas.document.layoutMode.changed',
   /** Canvas document version migrated */
   MIGRATED: 'canvas.document.migrated',
+  /** Canvas border radius changed */
+  BORDER_RADIUS_CHANGED: 'canvas.document.borderRadius.changed',
+  /** Canvas position changed */
+  CANVAS_POSITION_CHANGED: 'canvas.document.position.changed',
+} as const;
+
+/**
+ * Event type constants for User Gallery (Layer 0 - Kernel)
+ * Manages user-uploaded assets (photos, stickers, etc.)
+ */
+export const GalleryEvents = {
+  /** A new asset was uploaded to the gallery */
+  ASSET_UPLOADED: 'kernel.gallery.asset.uploaded',
+  /** An asset was deleted from the gallery */
+  ASSET_DELETED: 'kernel.gallery.asset.deleted',
+  /** The gallery was loaded/refreshed */
+  GALLERY_LOADED: 'kernel.gallery.loaded',
 } as const;
 
 /**
@@ -364,6 +391,40 @@ export const SocialGraphEvents = {
 
   // Message events
   MESSAGE_SENT: 'kernel.socialgraph.message.sent',
+} as const;
+
+/**
+ * Event type constants for Docker system (Shell layer - L6)
+ * Docker events are emitted when shell-level docker panels change.
+ * Dockers are user-level UI preferences, not canvas entities.
+ */
+export const DockerEvents = {
+  /** A new docker was created */
+  CREATED: 'docker.created',
+  /** A docker was deleted */
+  DELETED: 'docker.deleted',
+  /** A docker was updated (position, size, name, etc.) */
+  UPDATED: 'docker.updated',
+  /** Docker dock mode changed (floating / docked-left / docked-right) */
+  DOCK_MODE_CHANGED: 'docker.dock_mode.changed',
+  /** Docker visibility changed (shown/hidden) */
+  VISIBILITY_CHANGED: 'docker.visibility.changed',
+  /** A tab was added to a docker */
+  TAB_ADDED: 'docker.tab.added',
+  /** A tab was removed from a docker */
+  TAB_REMOVED: 'docker.tab.removed',
+  /** Active tab changed in a docker */
+  TAB_ACTIVATED: 'docker.tab.activated',
+  /** A widget was added to a docker tab */
+  WIDGET_ADDED: 'docker.widget.added',
+  /** A widget was removed from a docker tab */
+  WIDGET_REMOVED: 'docker.widget.removed',
+  /** A widget was resized within a docker tab */
+  WIDGET_RESIZED: 'docker.widget.resized',
+  /** Docker configuration was loaded from backend */
+  CONFIG_LOADED: 'docker.config.loaded',
+  /** Docker configuration was saved to backend */
+  CONFIG_SAVED: 'docker.config.saved',
 } as const;
 
 /**
