@@ -55,16 +55,20 @@ function RouteChangeEmitter(): null {
 /**
  * Global navigation bar — visible on every page including login.
  */
+const navStyles: Record<string, React.CSSProperties> = {
+  nav: { display: 'flex', alignItems: 'center', gap: '4px', padding: '8px 16px', background: 'var(--sn-surface, #fff)', borderBottom: '1px solid var(--sn-border, #ddd)', zIndex: 100, position: 'relative' as const },
+  link: { padding: '6px 12px', fontSize: '13px', fontWeight: 500, color: 'var(--sn-text-muted, #555)', textDecoration: 'none', borderRadius: 'var(--sn-radius, 6px)' },
+};
+
 const GlobalNav: React.FC = () => (
-  <nav data-testid="global-nav">
-    <Link to="/">Dashboard</Link>
-    <Link to="/canvas/demo">Canvas</Link>
-    <Link to="/data">Data</Link>
-    <Link to="/lab">Lab</Link>
-    <Link to="/marketplace">Marketplace</Link>
-    <Link to="/settings">Settings</Link>
-    <Link to="/dev/test">Dev</Link>
-    <Link to="/login">Login</Link>
+  <nav data-testid="global-nav" style={navStyles.nav}>
+    <Link to="/" style={navStyles.link}>Dashboard</Link>
+    <Link to="/canvas/demo" style={navStyles.link}>Canvas</Link>
+    <Link to="/data" style={navStyles.link}>Databases</Link>
+    <Link to="/lab" style={navStyles.link}>Lab</Link>
+    <Link to="/marketplace" style={navStyles.link}>Marketplace</Link>
+    <Link to="/settings" style={navStyles.link}>Settings</Link>
+    <Link to="/dev/test" style={navStyles.link}>Dev</Link>
   </nav>
 );
 
