@@ -53,3 +53,16 @@ export type { DataSourceResult, DataSourceError, ListDataSourcesOptions } from '
 
 // Kernel Init
 export { initKernel, teardownKernel, isKernelInitialized } from './init';
+
+// API Keys (BYOK)
+export {
+  saveApiKey,
+  listApiKeys,
+  getApiKey,
+  getApiKeyByProvider,
+  deleteApiKey,
+  revalidateApiKey,
+  hasActiveApiKey,
+  type ApiKeyError,
+  type ApiKeyResult,
+} from './api-keys';

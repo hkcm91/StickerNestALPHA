@@ -22,6 +22,8 @@ import type {
 
 import {
   createDataSource,
+  updateDataSource,
+  deleteDataSource,
   addColumn,
   updateColumn,
   removeColumn,
@@ -30,9 +32,11 @@ import {
   createDatabaseFromPrompt,
 } from '../../kernel/datasource';
 import { useAuthStore } from '../../kernel/stores/auth/auth.store';
+import { useUIStore } from '../../kernel/stores/ui/ui.store';
 
 import { AIAssistant } from './components/AIAssistant';
 import { ColumnEditor } from './components/ColumnEditor';
+import { DatabaseCreateModal } from './components/DatabaseCreateModal';
 import { DatabaseList } from './components/DatabaseList';
 import { NotionImport } from './components/NotionImport';
 import { TableView } from './components/TableView';
@@ -48,6 +52,7 @@ type View =
 
 type Modal =
   | null
+  | { type: 'create' }
   | { type: 'template' }
   | { type: 'notion' }
   | { type: 'column-edit'; column?: TableColumn; dataSourceId: string }
@@ -59,6 +64,7 @@ type Modal =
 
 export const DataManagerPage: React.FC = () => {
   const user = useAuthStore((s: { user: { id: string } | null }) => s.user);
+  const addToast = useUIStore((s) => s.addToast);
   const [view, setView] = useState<View>({ type: 'list' });
   const [modal, setModal] = useState<Modal>(null);
   const [showAIPanel, setShowAIPanel] = useState(false);
@@ -77,24 +83,50 @@ export const DataManagerPage: React.FC = () => {
     setView({ type: 'detail', dataSource });
   }, []);
 
-  // --- Create Empty Database ---
+  // --- DataSource Operations ---
 
-  const handleCreate = useCallback(async () => {
+  const handleCreate = useCallback(async (name: string, type: DataSourceType) => {
     if (!user) return;
     const result = await createDataSource(
       {
-        type: 'table',
+        type,
         ownerId: user.id,
         scope: 'user',
         schema: { columns: [], views: [] },
-        metadata: { name: 'Untitled Database' },
+        metadata: { name },
       },
       user.id,
     );
     if (result.success) {
+      addToast({ id: crypto.randomUUID(), type: 'success', message: `Database "${name}" created` });
+      setModal(null);
       goToDetail(result.data);
+    } else {
+      addToast({ id: crypto.randomUUID(), type: 'error', message: result.error.message });
     }
-  }, [user, goToDetail]);
+  }, [user, goToDetail, addToast]);
+
+  const handleRename = useCallback(async (id: string, name: string) => {
+    if (!user) return;
+    const result = await updateDataSource(id, { metadata: { name } }, user.id);
+    if (result.success) {
+      addToast({ id: crypto.randomUUID(), type: 'success', message: 'Database renamed' });
+      refresh();
+    } else {
+      addToast({ id: crypto.randomUUID(), type: 'error', message: result.error.message });
+    }
+  }, [user, refresh, addToast]);
+
+  const handleDelete = useCallback(async (id: string) => {
+    if (!user) return;
+    const result = await deleteDataSource(id, user.id);
+    if (result.success) {
+      addToast({ id: crypto.randomUUID(), type: 'success', message: 'Database deleted' });
+      refresh();
+    } else {
+      addToast({ id: crypto.randomUUID(), type: 'error', message: result.error.message });
+    }
+  }, [user, refresh, addToast]);
 
   // --- Template Applied ---
 
@@ -106,13 +138,16 @@ export const DataManagerPage: React.FC = () => {
       });
       if (result.success) {
         setModal(null);
+        addToast({ id: crypto.randomUUID(), type: 'success', message: `Template "${template.name}" applied` });
         // Navigate to the new database (need to load it)
         const { readDataSource } = await import('../../kernel/datasource');
         const ds = await readDataSource(result.data.dataSourceId, user.id);
         if (ds.success) goToDetail(ds.data);
+      } else {
+        addToast({ id: crypto.randomUUID(), type: 'error', message: result.error.message });
       }
     },
-    [user, goToDetail],
+    [user, goToDetail, addToast],
   );
 
   // --- Notion Import ---
@@ -121,11 +156,12 @@ export const DataManagerPage: React.FC = () => {
     async (dataSourceId: string) => {
       if (!user) return;
       setModal(null);
+      addToast({ id: crypto.randomUUID(), type: 'success', message: 'Notion database imported' });
       const { readDataSource } = await import('../../kernel/datasource');
       const ds = await readDataSource(dataSourceId, user.id);
       if (ds.success) goToDetail(ds.data);
     },
-    [user, goToDetail],
+    [user, goToDetail, addToast],
   );
 
   // --- Column Operations ---
@@ -169,21 +205,25 @@ export const DataManagerPage: React.FC = () => {
         user.id,
       );
       if (result.success) {
+        addToast({ id: crypto.randomUUID(), type: 'success', message: 'AI Database created' });
         const { readDataSource } = await import('../../kernel/datasource');
         const ds = await readDataSource(result.data.dataSourceId, user.id);
         if (ds.success) goToDetail(ds.data);
+      } else {
+        addToast({ id: crypto.randomUUID(), type: 'error', message: result.error.message });
       }
     },
-    [user, goToDetail],
+    [user, goToDetail, addToast],
   );
 
   const handleColumnSuggested = useCallback(
     async (suggestion: AISuggestColumnResponse) => {
       if (!user || view.type !== 'detail') return;
       await addColumn(view.dataSource.id, suggestion.column, user.id);
+      addToast({ id: crypto.randomUUID(), type: 'success', message: `Column "${suggestion.column.name}" added` });
       refresh();
     },
-    [user, view, refresh],
+    [user, view, refresh, addToast],
   );
 
   const handleQueryResult = useCallback(
@@ -200,9 +240,10 @@ export const DataManagerPage: React.FC = () => {
     async (data: AIExtractDataResponse) => {
       if (!user || view.type !== 'detail') return;
       await addRows(view.dataSource.id, data.rows, user.id);
+      addToast({ id: crypto.randomUUID(), type: 'success', message: `Extracted ${data.rows.length} rows` });
       refresh();
     },
-    [user, view, refresh],
+    [user, view, refresh, addToast],
   );
 
   // --- Render ---
@@ -216,7 +257,9 @@ export const DataManagerPage: React.FC = () => {
           <DatabaseList
             key={refreshKey}
             onSelect={goToDetail}
-            onCreate={handleCreate}
+            onCreate={() => setModal({ type: 'create' })}
+            onRename={handleRename}
+            onDelete={handleDelete}
             onImportNotion={() => setModal({ type: 'notion' })}
             onUseTemplate={() => setModal({ type: 'template' })}
           />
@@ -257,6 +300,13 @@ export const DataManagerPage: React.FC = () => {
       )}
 
       {/* Modals */}
+      {modal?.type === 'create' && (
+        <DatabaseCreateModal
+          onCreate={handleCreate}
+          onClose={() => setModal(null)}
+        />
+      )}
+
       {modal?.type === 'template' && (
         <TemplateSelector
           onSelect={handleTemplateSelect}

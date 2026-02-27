@@ -97,7 +97,7 @@ export const CreatorCommerceSection: React.FC = () => {
     async function load() {
       setLoading(true);
       const [accountRes, tiersRes, itemsRes] = await Promise.all([
-        supabase.from('creator_accounts').select('*').eq('user_id', user!.id).single(),
+        supabase.from('creator_accounts').select('*').eq('user_id', user!.id).maybeSingle(),
         supabase
           .from('canvas_subscription_tiers')
           .select('*')

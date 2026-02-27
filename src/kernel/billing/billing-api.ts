@@ -47,7 +47,7 @@ export async function getSubscription(): Promise<Subscription | null> {
     .from('subscriptions')
     .select('*')
     .eq('user_id', user.id)
-    .single();
+    .maybeSingle();
 
   if (error || !data) return null;
 

@@ -159,6 +159,8 @@ export async function signInWithOAuth(
     return { data: null, error };
   }
 
+  // Avoid a stuck spinner if redirect is blocked/misconfigured.
+  store.setLoading(false);
   return { data, error: null };
 }
 
@@ -187,6 +189,27 @@ export async function refreshSession(): Promise<{
  * Listens for Supabase auth state changes and bridges them to the bus.
  */
 export function initAuthListener(): { unsubscribe: () => void } {
+  // Bootstrap auth state immediately so route guards don't wait on an event.
+  if (typeof supabase.auth.getSession === 'function') {
+    supabase.auth
+      .getSession()
+      .then(({ data, error }) => {
+        if (error) {
+          useAuthStore.getState().setLoading(false);
+          useAuthStore.getState().setInitialized();
+          return;
+        }
+        handleAuthChange(data.session?.user ?? null, data.session ?? null);
+      })
+      .catch(() => {
+        useAuthStore.getState().setLoading(false);
+        useAuthStore.getState().setInitialized();
+      });
+  } else {
+    useAuthStore.getState().setLoading(false);
+    useAuthStore.getState().setInitialized();
+  }
+
   const {
     data: { subscription },
   } = supabase.auth.onAuthStateChange((_event, session) => {
