@@ -11,8 +11,10 @@ import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import { ShellEvents } from '@sn/types';
 
 import { bus } from '../../kernel/bus';
+import { NotionPermissionModal } from '../components/NotionPermissionModal';
 import { DataManagerPage } from '../data';
 import { TestHarness } from '../dev';
+import { EmbedPage } from '../pages/EmbedPage';
 import { PricingPage } from '../pages/PricingPage';
 import { ProfilePage } from '../profile';
 import { themeVar } from '../theme/theme-vars';
@@ -97,11 +99,18 @@ const GlobalNav: React.FC = () => (
  * Main application router.
  * BrowserRouter must be provided by a parent (main.tsx).
  */
-export const AppRouter: React.FC = () => (
-  <>
-    <RouteChangeEmitter />
-    <GlobalNav />
-    <Routes>
+export const AppRouter: React.FC = () => {
+  const location = useLocation();
+  const isEmbedRoute = location.pathname.startsWith('/embed/');
+
+  return (
+    <>
+      <RouteChangeEmitter />
+      {!isEmbedRoute && <GlobalNav />}
+      <Routes>
+        {/* Embed route — no chrome, no auth */}
+        <Route path="/embed/:slug" element={<EmbedPage />} />
+
       <Route path="/login" element={<LoginPage />} />
       <Route path="/pricing" element={<PricingPage />} />
       <Route path="/invite/:token" element={<InvitePage />} />
@@ -163,6 +172,8 @@ export const AppRouter: React.FC = () => (
       />
 
       <Route path="*" element={<NotFoundPage />} />
-    </Routes>
-  </>
-);
+      </Routes>
+      <NotionPermissionModal />
+    </>
+  );
+};

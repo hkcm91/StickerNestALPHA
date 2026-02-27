@@ -836,12 +836,18 @@ export const CanvasPage: React.FC = () => {
   );
 };
 
+const MarketplacePageLazy = React.lazy(() =>
+  import('../pages/MarketplacePageFull').then((m) => ({ default: m.MarketplacePageFull })),
+);
+
 export const MarketplacePage: React.FC = () => (
-  <div data-testid="page-marketplace" style={appPageStyle}><h1>Marketplace</h1></div>
+  <Suspense fallback={<div data-testid="page-marketplace" style={appPageStyle}>Loading marketplace...</div>}>
+    <MarketplacePageLazy />
+  </Suspense>
 );
 
 export const SettingsPage: React.FC = () => {
-  const [tab, setTab] = React.useState<'billing' | 'commerce' | 'purchases'>('billing');
+  const [tab, setTab] = React.useState<'billing' | 'commerce' | 'purchases' | 'integrations'>('billing');
 
   const tabBtnStyle = (active: boolean): React.CSSProperties => ({
     padding: '8px 16px',
@@ -861,11 +867,13 @@ export const SettingsPage: React.FC = () => {
         <button style={tabBtnStyle(tab === 'billing')} onClick={() => setTab('billing')}>Billing</button>
         <button style={tabBtnStyle(tab === 'commerce')} onClick={() => setTab('commerce')}>Creator Commerce</button>
         <button style={tabBtnStyle(tab === 'purchases')} onClick={() => setTab('purchases')}>My Purchases</button>
+        <button style={tabBtnStyle(tab === 'integrations')} onClick={() => setTab('integrations')}>Integrations</button>
       </div>
       <Suspense fallback={<div>Loading...</div>}>
         {tab === 'billing' && <BillingSectionLazy />}
         {tab === 'commerce' && <CreatorCommerceSectionLazy />}
         {tab === 'purchases' && <MyPurchasesSectionLazy />}
+        {tab === 'integrations' && <IntegrationsSectionLazy />}
       </Suspense>
     </div>
   );
@@ -879,6 +887,9 @@ const CreatorCommerceSectionLazy = React.lazy(() =>
 );
 const MyPurchasesSectionLazy = React.lazy(() =>
   import('../pages/settings/MyPurchasesSection').then((m) => ({ default: m.MyPurchasesSection })),
+);
+const IntegrationsSectionLazy = React.lazy(() =>
+  import('../pages/settings/IntegrationsSection').then((m) => ({ default: m.IntegrationsSection })),
 );
 
 export const InvitePage: React.FC = () => {
