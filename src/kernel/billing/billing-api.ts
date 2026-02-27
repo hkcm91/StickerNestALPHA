@@ -8,6 +8,10 @@
  */
 
 import { supabase } from '../supabase';
+import type { Database } from '../supabase/types';
+
+type SubscriptionRow = Database['public']['Tables']['subscriptions']['Row'];
+type TierQuotaRow = Database['public']['Tables']['tier_quotas']['Row'];
 
 export interface Subscription {
   id: string;
@@ -43,11 +47,11 @@ export async function getSubscription(): Promise<Subscription | null> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const { data, error } = await supabase
+  const { data, error } = (await supabase
     .from('subscriptions')
     .select('*')
     .eq('user_id', user.id)
-    .single();
+    .single()) as { data: SubscriptionRow | null; error: { message: string } | null };
 
   if (error || !data) return null;
 
@@ -57,7 +61,7 @@ export async function getSubscription(): Promise<Subscription | null> {
     stripeCustomerId: data.stripe_customer_id,
     stripeSubscriptionId: data.stripe_subscription_id,
     stripePriceId: data.stripe_price_id,
-    tier: data.tier,
+    tier: data.tier as Subscription['tier'],
     status: data.status,
     currentPeriodStart: data.current_period_start,
     currentPeriodEnd: data.current_period_end,
@@ -72,16 +76,16 @@ export async function getSubscription(): Promise<Subscription | null> {
 export async function getTierQuota(
   tier: 'free' | 'creator' | 'pro' | 'enterprise',
 ): Promise<TierQuota | null> {
-  const { data, error } = await supabase
+  const { data, error } = (await supabase
     .from('tier_quotas')
     .select('*')
     .eq('tier', tier)
-    .single();
+    .single()) as { data: TierQuotaRow | null; error: { message: string } | null };
 
   if (error || !data) return null;
 
   return {
-    tier: data.tier,
+    tier: data.tier as TierQuota['tier'],
     maxCanvases: data.max_canvases,
     maxStorageMb: data.max_storage_mb,
     maxWidgetsPerCanvas: data.max_widgets_per_canvas,

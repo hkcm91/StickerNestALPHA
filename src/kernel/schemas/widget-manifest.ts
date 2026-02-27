@@ -39,6 +39,10 @@ export const WidgetPermissionSchema = z.enum([
   'cross-canvas',
   /** Access to AI generation APIs (image, video, etc.) */
   'ai',
+  /** Access to checkout/payment APIs */
+  'checkout',
+  /** Access to auth APIs (signup/login) */
+  'auth',
 ]);
 
 export type WidgetPermission = z.infer<typeof WidgetPermissionSchema>;
@@ -222,6 +226,7 @@ export const WidgetManifestSchema = z.object({
     'utilities',
     'games',
     'media',
+    'commerce',
     'other',
   ]).default('other'),
   /** Required permissions */

@@ -93,7 +93,7 @@ describe('Blocks API', () => {
       }
 
       let callCount = 0;
-      mockFromFn.mockImplementation((table: string) => {
+      (mockFromFn as any).mockImplementation((table: string) => {
         callCount++;
         if (callCount === 1) {
           // First call: blocks table check

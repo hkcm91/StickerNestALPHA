@@ -11,7 +11,6 @@
  */
 
 import { WidgetManifestSchema, MarketplaceEvents } from '@sn/types';
-import type { WidgetManifest } from '@sn/types';
 
 import { bus } from '../../kernel/bus';
 import { useWidgetStore } from '../../kernel/stores/widget/widget.store';

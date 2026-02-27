@@ -108,7 +108,7 @@ test.describe('Canvas Viewport', () => {
       // TODO: Enable when canvas is implemented
       await canvasPage.goto('test-canvas-id');
 
-      const _initialState = await canvasPage.getViewportState();
+      await canvasPage.getViewportState();
 
       await canvasPage.zoom(1.5);
 
@@ -128,7 +128,7 @@ test.describe('Canvas Viewport', () => {
 
       // Pan first
       await canvasPage.pan(100, 100);
-      const _afterPan = await canvasPage.getViewportState();
+      await canvasPage.getViewportState();
 
       // Then zoom
       await canvasPage.zoom(1.5);

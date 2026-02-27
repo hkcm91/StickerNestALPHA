@@ -31,10 +31,10 @@ import type {
 } from '@sn/types';
 import { WorldEvents, WorldOptionsSchema } from '@sn/types';
 
-import { createRingBuffer, type RingBuffer } from '../bus/ring-buffer';
+import { createRingBuffer } from '../bus/ring-buffer';
 import type { BusHandler, SubscribeOptions, Unsubscribe, IEventBus } from '../bus/types';
 
-import { createTickLoop, type ITickLoop, type TickSystem } from './tick-loop';
+import { createTickLoop, type ITickLoop } from './tick-loop';
 
 // =============================================================================
 // World-Scoped Event Bus
@@ -405,7 +405,7 @@ export function createWorldInstance(
 ): WorldInstance {
   // Parse and apply defaults
   const parsedOptions = WorldOptionsSchema.parse(options ?? {});
-  const { mode, tickRate, maxHistorySize, enablePresence, preloadWidgets } = parsedOptions;
+  const { mode, tickRate, maxHistorySize, enablePresence, preloadWidgets: _preloadWidgets } = parsedOptions;
 
   // Generate unique world ID
   const id = crypto.randomUUID();
@@ -421,11 +421,11 @@ export function createWorldInstance(
   const stateStore = createStore<InternalWorldState>()(
     subscribeWithSelector(() => ({
       status: 'initializing' as WorldStatus,
-      canvas: null,
-      widgetInstances: new Map(),
-      presence: new Map(),
-      undoStack: [],
-      redoStack: [],
+      canvas: null as WorldCanvasState | null,
+      widgetInstances: new Map<string, WorldWidgetInstance>(),
+      presence: new Map<string, WorldPresenceEntry>(),
+      undoStack: [] as WorldHistoryEntry[],
+      redoStack: [] as WorldHistoryEntry[],
     })),
   );
 

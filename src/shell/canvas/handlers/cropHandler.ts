@@ -8,7 +8,7 @@
  * @layer L6
  */
 
-import type { CanvasEntity, CropRect } from '@sn/types';
+import type { CropRect } from '@sn/types';
 import { CanvasEvents } from '@sn/types';
 
 import type { SceneGraph } from '../../../canvas/core';

@@ -9,7 +9,7 @@
  * @see .claude/rules/L3-runtime.md
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect } from 'react';
 
 import { bus } from '../kernel/bus';
 import { useWidgetStore } from '../kernel/stores/widget/widget.store';

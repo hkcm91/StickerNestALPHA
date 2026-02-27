@@ -40,7 +40,7 @@ export interface PublisherDashboard {
   ): Promise<UpdateResult>;
   deprecate(widgetId: string): Promise<void>;
   deleteWidget(widgetId: string): Promise<void>;
-  getMyWidgets(authorId: string): Promise<MarketplaceWidgetListing[]>;
+  getMyWidgets(): Promise<MarketplaceWidgetListing[]>;
   getVersionHistory(widgetId: string): Promise<WidgetVersion[]>;
 }
 

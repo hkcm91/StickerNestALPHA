@@ -58,7 +58,7 @@ export function createVersionManager(widgetId: string, userId?: string): Version
         html_content: html,
         manifest: manifest as unknown as Record<string, unknown>,
         created_by: userId ?? '',
-      }).select().single();
+      } as any).select().single();
 
       if (error) throw new Error(`Failed to save snapshot: ${error.message}`);
       return mapRow(data as Record<string, unknown>);

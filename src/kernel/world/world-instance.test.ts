@@ -4,7 +4,7 @@
  * @module kernel/world/world-instance.test
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 
 import { WorldEvents } from '@sn/types';
 
@@ -54,7 +54,6 @@ describe('createWorldInstance', () => {
     });
 
     it('should emit CREATED and READY events on creation', () => {
-      const events: string[] = [];
       const newWorld = createWorldInstance(CANVAS_ID);
 
       // Check history for creation events

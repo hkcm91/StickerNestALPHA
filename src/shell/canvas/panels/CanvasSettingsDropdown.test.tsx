@@ -27,8 +27,7 @@ describe('CanvasSettingsDropdown', () => {
     const ref = createRef<HTMLButtonElement>();
     const anchor = document.createElement('button');
     document.body.appendChild(anchor);
-    // @ts-expect-error - Assigning to read-only property for test purposes
-    ref.current = anchor;
+    (ref as { current: HTMLButtonElement | null }).current = anchor;
     return ref;
   };
 

@@ -50,7 +50,7 @@ export const ArtboardRenderer: React.FC<ArtboardRendererProps> = ({
 
   const headerStyle: React.CSSProperties = {
     padding: "4px 8px",
-    background: themeVar("--sn-surface-alt"),
+    background: themeVar("--sn-surface" as any),
     borderBottom: `1px solid ${themeVar("--sn-border")}`,
     fontSize: "11px",
     fontWeight: 600,

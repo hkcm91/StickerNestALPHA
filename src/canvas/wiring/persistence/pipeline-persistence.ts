@@ -37,7 +37,7 @@ export function createPipelinePersistence(): PipelinePersistence {
         edges: pipeline.edges as unknown as Record<string, unknown>[],
         created_at: pipeline.createdAt,
         updated_at: pipeline.updatedAt,
-      });
+      } as any);
       if (error) throw new Error(`Failed to save pipeline: ${error.message}`);
     },
 

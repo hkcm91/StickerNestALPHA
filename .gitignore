@@ -60,6 +60,12 @@ firebase-debug.*.log
 # TypeScript
 *.tsbuildinfo
 
+# E2E compiled output
+e2e/**/*.js
+e2e/**/*.js.map
+e2e/**/*.d.ts
+e2e/**/*.d.ts.map
+
 # Misc
 .cache/
 .temp/

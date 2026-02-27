@@ -18,7 +18,7 @@ import { createDirectSelectTool } from './direct-select';
 import { createPathfinderTool } from './pathfinder-tool';
 import { createPenTool as createBrushTool } from './pen/brush-tool';
 import { createPenPathTool as createPenTool } from './pen-path';
-import type { PenPathToolState } from './pen-path';
+import type { PenToolState as PenPathToolState } from './pen-path';
 import { createToolRegistry } from './registry';
 import type { ToolRegistry, CanvasPointerEvent, CanvasKeyEvent } from './registry';
 import { createResizeTool } from './resize';

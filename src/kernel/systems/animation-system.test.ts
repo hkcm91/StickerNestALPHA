@@ -6,7 +6,9 @@
 
 import { describe, it, expect, vi } from 'vitest';
 
-import { createAnimationSystem, Easing, type TickContext } from './animation-system';
+import type { TickContext } from '../world/tick-loop';
+
+import { createAnimationSystem, Easing } from './animation-system';
 
 // Helper to create a tick context
 function createTickContext(deltaTime = 1 / 60, elapsedTime = deltaTime): TickContext {

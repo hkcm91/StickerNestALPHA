@@ -227,7 +227,7 @@ export function usePersistence(
         },
         platform: uiState.canvasPlatform,
         spatialMode: uiState.spatialMode,
-        platformConfigs: uiState.platformConfigs,
+        platformConfigs: uiState.platformConfigs as any,
       });
 
       const storageKey = getStorageKey(canvasSlug);

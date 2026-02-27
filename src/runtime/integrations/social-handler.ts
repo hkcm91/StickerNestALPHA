@@ -54,7 +54,7 @@ export function createSocialHandler(getUserId: () => string | null): Integration
         case 'searchProfiles': {
           const result = await social.searchProfiles(
             parsed.data.query,
-            { limit: parsed.data.limit, cursor: parsed.data.cursor },
+            parsed.data.limit,
           );
           if (!result.success) throw new Error(result.error.message);
           return result.data;
@@ -219,6 +219,29 @@ export function createSocialHandler(getUserId: () => string | null): Integration
           return result.data;
         }
 
+        // Block queries
+        case 'isBlocked': {
+          if (!userId) throw new Error('Authentication required');
+          return social.isBlocked(userId, parsed.data.userId);
+        }
+
+        // Message queries
+        case 'getConversation': {
+          if (!userId) throw new Error('Authentication required');
+          const result = await social.getConversation(
+            parsed.data.userId,
+            userId,
+            { limit: parsed.data.limit, cursor: parsed.data.cursor },
+          );
+          if (!result.success) throw new Error(result.error.message);
+          return result.data;
+        }
+
+        case 'canMessage': {
+          if (!userId) throw new Error('Authentication required');
+          return social.canMessage(userId, parsed.data.userId);
+        }
+
         default: {
           const _exhaustive: never = type;
           throw new Error(`Unknown social query type: ${String(_exhaustive)}`);
@@ -244,13 +267,17 @@ export function createSocialHandler(getUserId: () => string | null): Integration
       switch (type) {
         // Profile mutations
         case 'createProfile': {
-          const result = await social.createProfile(parsed.data.profile, userId);
+          const result = await social.createProfile(
+            userId,
+            parsed.data.profile.displayName,
+            parsed.data.profile.username,
+          );
           if (!result.success) throw new Error(result.error.message);
           return result.data;
         }
 
         case 'updateProfile': {
-          const result = await social.updateProfile(parsed.data.updates, userId);
+          const result = await social.updateProfile(userId, parsed.data.updates, userId);
           if (!result.success) throw new Error(result.error.message);
           return result.data;
         }
@@ -381,6 +408,30 @@ export function createSocialHandler(getUserId: () => string | null): Integration
 
         case 'deleteReadNotifications': {
           const result = await social.deleteReadNotifications(userId);
+          if (!result.success) throw new Error(result.error.message);
+          return result.data;
+        }
+
+        // Block mutations
+        case 'blockUser': {
+          const result = await social.blockUser(parsed.data.userId, userId);
+          if (!result.success) throw new Error(result.error.message);
+          return result.data;
+        }
+
+        case 'unblockUser': {
+          const result = await social.unblockUser(parsed.data.userId, userId);
+          if (!result.success) throw new Error(result.error.message);
+          return result.data;
+        }
+
+        // Message mutations
+        case 'sendMessage': {
+          const result = await social.sendMessage(
+            parsed.data.recipientId,
+            parsed.data.content,
+            userId,
+          );
           if (!result.success) throw new Error(result.error.message);
           return result.data;
         }
