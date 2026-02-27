@@ -243,107 +243,129 @@ export const TableView: React.FC<TableViewProps> = ({
 
       {/* Table */}
       <div style={styles.tableWrapper}>
-        <table data-testid="data-table" style={styles.table}>
-          <thead>
-            <tr>
-              {columns.map((col: TableColumn) => (
-                <th
-                  key={col.id}
-                  data-testid={`col-header-${col.id}`}
-                  style={styles.th}
-                >
-                  <button
-                    onClick={() => toggleSort(col.id)}
-                    style={styles.headerBtn}
+        {columns.length === 0 ? (
+          <div data-testid="empty-columns" style={styles.emptyColumns}>
+            <h3>No columns in this database</h3>
+            <p>Add your first column to start entering data, or use the AI Assistant to generate a schema for you.</p>
+            <div style={styles.emptyActions}>
+              <button
+                data-testid="btn-add-first-column"
+                onClick={onAddColumn}
+                style={styles.addRowBtn}
+              >
+                + Add Column
+              </button>
+              <button
+                onClick={onOpenAI}
+                style={styles.aiBtn}
+              >
+                Ask AI Assistant
+              </button>
+            </div>
+          </div>
+        ) : (
+          <table data-testid="data-table" style={styles.table}>
+            <thead>
+              <tr>
+                {columns.map((col: TableColumn) => (
+                  <th
+                    key={col.id}
+                    data-testid={`col-header-${col.id}`}
+                    style={styles.th}
                   >
-                    {col.name}
-                    <span style={styles.sortIndicator}>
-                      {sorts.find((s: SortRule) => s.columnId === col.id)?.direction === 'asc'
-                        ? ' ^'
-                        : sorts.find((s: SortRule) => s.columnId === col.id)?.direction === 'desc'
-                          ? ' v'
-                          : ''}
-                    </span>
-                  </button>
+                    <button
+                      onClick={() => toggleSort(col.id)}
+                      style={styles.headerBtn}
+                    >
+                      {col.name}
+                      <span style={styles.sortIndicator}>
+                        {sorts.find((s: SortRule) => s.columnId === col.id)?.direction === 'asc'
+                          ? ' ^'
+                          : sorts.find((s: SortRule) => s.columnId === col.id)?.direction === 'desc'
+                            ? ' v'
+                            : ''}
+                      </span>
+                    </button>
+                    <button
+                      data-testid={`col-edit-${col.id}`}
+                      onClick={() => onColumnEdit(col)}
+                      style={styles.colEditBtn}
+                      title="Edit column"
+                    >
+                      ...
+                    </button>
+                  </th>
+                ))}
+                <th style={styles.thAction}>
                   <button
-                    data-testid={`col-edit-${col.id}`}
-                    onClick={() => onColumnEdit(col)}
-                    style={styles.colEditBtn}
-                    title="Edit column"
+                    data-testid="btn-add-column"
+                    onClick={onAddColumn}
+                    style={styles.addColBtn}
                   >
-                    ...
+                    +
                   </button>
                 </th>
-              ))}
-              <th style={styles.thAction}>
-                <button
-                  data-testid="btn-add-column"
-                  onClick={onAddColumn}
-                  style={styles.addColBtn}
-                >
-                  +
-                </button>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row: TableRow) => (
-              <tr key={row.id} data-testid={`row-${row.id}`}>
-                {columns.map((col: TableColumn) => {
-                  const isEditing =
-                    editingCell?.rowId === row.id &&
-                    editingCell?.columnId === col.id;
-                  const value = row.cells[col.id];
-
-                  return (
-                    <td
-                      key={col.id}
-                      data-testid={`cell-${row.id}-${col.id}`}
-                      style={styles.td}
-                      onDoubleClick={() => startEdit(row.id, col.id, value)}
-                    >
-                      {isEditing ? (
-                        <input
-                          data-testid="cell-editor"
-                          type={col.type === 'number' ? 'number' : col.type === 'checkbox' ? 'checkbox' : 'text'}
-                          value={editValue}
-                          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                            setEditValue(
-                              col.type === 'checkbox'
-                                ? String(e.target.checked)
-                                : e.target.value,
-                            )
-                          }
-                          onBlur={commitEdit}
-                          onKeyDown={handleKeyDown}
-                          autoFocus
-                          style={styles.cellInput}
-                        />
-                      ) : (
-                        <span style={styles.cellValue}>
-                          {renderCellValue(value, col)}
-                        </span>
-                      )}
-                    </td>
-                  );
-                })}
-                <td style={styles.tdAction}>
-                  <button
-                    data-testid={`btn-delete-row-${row.id}`}
-                    onClick={() => handleDeleteRow(row.id)}
-                    style={styles.deleteRowBtn}
-                    title="Delete row"
-                  >
-                    x
-                  </button>
-                </td>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {rows.map((row: TableRow) => (
+                <tr key={row.id} data-testid={`row-${row.id}`}>
+                  {columns.map((col: TableColumn) => {
+                    const isEditing =
+                      editingCell?.rowId === row.id &&
+                      editingCell?.columnId === col.id;
+                    const value = row.cells[col.id];
+
+                    return (
+                      <td
+                        key={col.id}
+                        data-testid={`cell-${row.id}-${col.id}`}
+                        style={styles.td}
+                        onDoubleClick={() => startEdit(row.id, col.id, value)}
+                      >
+                        {isEditing ? (
+                          <input
+                            data-testid="cell-editor"
+                            type={col.type === 'number' ? 'number' : col.type === 'checkbox' ? 'checkbox' : 'text'}
+                            value={editValue}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                              setEditValue(
+                                col.type === 'checkbox'
+                                  ? String(e.target.checked)
+                                  : e.target.value,
+                              )
+                            }
+                            onBlur={commitEdit}
+                            onKeyDown={handleKeyDown}
+                            autoFocus
+                            style={styles.cellInput}
+                          />
+                        ) : (
+                          <span style={styles.cellValue}>
+                            {renderCellValue(value, col)}
+                          </span>
+                        )}
+                      </td>
+                    );
+                  })}
+                  <td style={styles.tdAction}>
+                    <button
+                      data-testid={`btn-delete-row-${row.id}`}
+                      onClick={() => handleDeleteRow(row.id)}
+                      style={styles.deleteRowBtn}
+                      title="Delete row"
+                    >
+                      x
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
-      {rows.length === 0 && (
+      {columns.length > 0 && rows.length === 0 && (
         <div style={styles.emptyTable}>
           <p>No rows yet. Click "+ Row" to add data.</p>
         </div>
@@ -392,4 +414,6 @@ const styles: Record<string, React.CSSProperties> = {
   cellInput: { width: '100%', padding: '4px 6px', border: '2px solid var(--sn-accent, #2563eb)', borderRadius: '3px', fontSize: '14px', outline: 'none', background: 'var(--sn-bg, #fff)' },
   deleteRowBtn: { background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sn-text-muted, #ccc)', fontSize: '14px', padding: '2px 6px' },
   emptyTable: { textAlign: 'center' as const, padding: '32px', color: 'var(--sn-text-muted, #666)' },
+  emptyColumns: { textAlign: 'center' as const, padding: '64px 32px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' },
+  emptyActions: { display: 'flex', gap: '12px', marginTop: '12px' },
 };

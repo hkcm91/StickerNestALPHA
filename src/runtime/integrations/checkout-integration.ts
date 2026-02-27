@@ -85,6 +85,13 @@ interface CheckoutMutateParams {
   _nonce?: string;
 }
 
+interface CreatorAccountRow {
+  charges_enabled: boolean;
+  payouts_enabled: boolean;
+  onboarding_complete: boolean;
+  stripe_account_id: string | null;
+}
+
 async function handleCheckoutQuery(
   params: CheckoutQueryParams,
   /** Canvas ID from the widget's host context */
@@ -125,7 +132,7 @@ async function handleCheckoutQuery(
         .eq('buyer_id', user.id)
         .eq('canvas_id', canvasId)
         .eq('status', 'active')
-        .single();
+        .maybeSingle();
       return withNonce(data);
     }
 
@@ -169,7 +176,7 @@ async function handleCheckoutQuery(
         .eq('id', params.orderId)
         .eq('buyer_id', user.id)
         .in('status', ['paid', 'fulfilled'])
-        .single();
+        .maybeSingle();
 
       if (!order) return { error: 'Order not found or not fulfilled', _nonce };
 
@@ -189,7 +196,7 @@ async function handleCheckoutQuery(
         .from('creator_accounts')
         .select('*')
         .eq('user_id', user.id)
-        .single()) as { data: CreatorAccountRow | null; error: unknown };
+        .maybeSingle()) as { data: CreatorAccountRow | null; error: unknown };
       if (!data) return { connected: false, chargesEnabled: false, payoutsEnabled: false, _nonce };
       return {
         connected: true,
@@ -352,7 +359,7 @@ async function handleCheckoutMutate(
         .select('id')
         .eq('id', params.subscriptionId)
         .eq('buyer_id', cancelUser.id)
-        .single();
+        .maybeSingle();
 
       if (!sub) return { error: 'Subscription not found or not owned by you' };
 
@@ -430,7 +437,7 @@ async function handleCheckoutMutate(
         .select('id')
         .eq('id', canvasId)
         .eq('owner_id', user.id)
-        .single();
+        .maybeSingle();
       if (!canvas) return { error: 'Canvas not found or you are not the owner' };
 
       const { data, error } = (await supabase
@@ -537,7 +544,7 @@ async function handleCheckoutMutate(
         .select('id')
         .eq('id', canvasId)
         .eq('owner_id', user.id)
-        .single();
+        .maybeSingle();
       if (!canvas) return { error: 'Canvas not found or you are not the owner' };
 
       const { data, error } = (await supabase

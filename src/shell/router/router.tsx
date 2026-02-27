@@ -18,6 +18,7 @@ import { EmbedPage } from '../pages/EmbedPage';
 import { PricingPage } from '../pages/PricingPage';
 import { ProfilePage } from '../profile';
 import { themeVar } from '../theme/theme-vars';
+import { ToastContainer } from '../components/ToastContainer';
 
 import {
   DashboardPage,
@@ -124,6 +125,14 @@ export const AppRouter: React.FC = () => {
           </AuthGuard>
         }
       />
+      <Route
+        path="/dashboard"
+        element={
+          <AuthGuard>
+            <DashboardPage />
+          </AuthGuard>
+        }
+      />
 
       <Route path="/profile/:username" element={<ProfilePage />} />
 
@@ -174,6 +183,7 @@ export const AppRouter: React.FC = () => {
       <Route path="*" element={<NotFoundPage />} />
       </Routes>
       <NotionPermissionModal />
+      <ToastContainer />
     </>
   );
 };

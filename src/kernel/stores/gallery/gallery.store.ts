@@ -27,6 +27,12 @@ interface GalleryRow {
   updated_at: string;
 }
 
+interface SupabaseErrorShape {
+  code?: string;
+  message?: string;
+  details?: string;
+}
+
 export interface GalleryAsset {
   id: string;
   name: string;
@@ -72,6 +78,8 @@ const initialState: GalleryState = {
   isInitialized: false,
 };
 
+let galleryAssetsTableUnavailable = false;
+
 /**
  * Gets the public URL for a storage path
  */
@@ -101,6 +109,13 @@ function mapRowToAsset(row: GalleryRow): GalleryAsset {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
+}
+
+function isMissingGalleryAssetsTable(error: SupabaseErrorShape | null | undefined): boolean {
+  if (!error) return false;
+  if (error.code === '42P01' || error.code === 'PGRST205') return true;
+  const text = `${error.message ?? ''} ${error.details ?? ''}`.toLowerCase();
+  return text.includes('gallery_assets') && (text.includes('not found') || text.includes('does not exist'));
 }
 
 export const useGalleryStore = create<GalleryStore>()(
@@ -245,6 +260,12 @@ export const useGalleryStore = create<GalleryStore>()(
         const user = useAuthStore.getState().user;
         if (!user) return;
 
+        if (galleryAssetsTableUnavailable) {
+          set({ assets: [], isLoading: false, error: null, isInitialized: true });
+          bus.emit(GalleryEvents.GALLERY_LOADED, { assets: [] });
+          return;
+        }
+
         set({ isLoading: true, error: null });
 
         try {
@@ -256,7 +277,19 @@ export const useGalleryStore = create<GalleryStore>()(
             .order('created_at', { ascending: false })
             .limit(100)) as { data: GalleryRow[] | null; error: { message: string } | null };
 
-          if (error) throw new Error(error.message);
+          if (error) {
+            if (isMissingGalleryAssetsTable(error)) {
+              galleryAssetsTableUnavailable = true;
+              console.warn(
+                '[GalleryStore] gallery_assets table is missing in this Supabase project. Returning empty gallery.',
+                error
+              );
+              set({ assets: [], isLoading: false, error: null, isInitialized: true });
+              bus.emit(GalleryEvents.GALLERY_LOADED, { assets: [] });
+              return;
+            }
+            throw new Error(error.message);
+          }
 
           const assets: GalleryAsset[] = (data ?? []).map(mapRowToAsset);
 

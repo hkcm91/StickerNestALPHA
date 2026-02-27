@@ -51,7 +51,7 @@ export async function getSubscription(): Promise<Subscription | null> {
     .from('subscriptions')
     .select('*')
     .eq('user_id', user.id)
-    .single()) as { data: SubscriptionRow | null; error: { message: string } | null };
+    .maybeSingle()) as { data: SubscriptionRow | null; error: { message: string } | null };
 
   if (error || !data) return null;
 

@@ -1,8 +1,16 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const REPLICATE_API_BASE = "https://api.replicate.com/v1";
 const POLL_INTERVAL_MS = 2_000;
 const POLL_TIMEOUT_MS = 120_000;
+const API_KEY_SECRET = Deno.env.get("API_KEY_SECRET");
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-api-version",
+};
 
 interface AiRequest {
   action: string;
@@ -25,7 +33,10 @@ function isValidRequest(body: unknown): body is AiRequest {
 function jsonResponse(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...CORS_HEADERS,
+    },
   });
 }
 
@@ -68,7 +79,106 @@ async function pollPrediction(
   throw new Error("Generation timed out after 120 seconds");
 }
 
+async function getUserReplicateKey(
+  serviceClient: ReturnType<typeof createClient>,
+  userId: string,
+): Promise<{ keyId: string; keyValue: string } | null> {
+  function decodeHexToText(hexValue: string): string | null {
+    const hex = hexValue.startsWith("\\x") ? hexValue.slice(2) : hexValue;
+    if (hex.length === 0 || hex.length % 2 !== 0) return null;
+    if (!/^[0-9a-fA-F]+$/.test(hex)) return null;
+    const bytes = new Uint8Array(hex.length / 2);
+    for (let i = 0; i < hex.length; i += 2) {
+      bytes[i / 2] = parseInt(hex.slice(i, i + 2), 16);
+    }
+    return new TextDecoder().decode(bytes);
+  }
+
+  function decodeStoredKey(value: unknown): string | null {
+    if (typeof value === "string") {
+      if (value.startsWith("\\x")) {
+        return decodeHexToText(value);
+      }
+
+      try {
+        return atob(value);
+      } catch {
+        return value;
+      }
+    }
+
+    if (value instanceof Uint8Array) {
+      const asText = new TextDecoder().decode(value);
+      try {
+        return atob(asText);
+      } catch {
+        return asText;
+      }
+    }
+
+    return null;
+  }
+
+  // Set the encryption secret for decryption
+  if (API_KEY_SECRET) {
+    await serviceClient.rpc("set_config", {
+      setting_name: "app.api_key_secret",
+      setting_value: API_KEY_SECRET,
+      is_local: true,
+    }).catch(() => {
+      // Ignore if RPC doesn't exist
+    });
+  }
+
+  // Try to get user's Replicate key
+  const { data: decryptedData, error } = await serviceClient.rpc(
+    "get_decrypted_api_key",
+    { p_user_id: userId, p_provider: "replicate" }
+  );
+
+  if (error || !decryptedData?.[0]?.key_value) {
+    // Fallback: try to get the base64-encoded key directly
+    const { data: keyData } = await serviceClient
+      .from("user_api_keys")
+      .select("id, encrypted_key")
+      .eq("user_id", userId)
+      .eq("provider", "replicate")
+      .eq("status", "active")
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (keyData?.encrypted_key) {
+      const decoded = decodeStoredKey(keyData.encrypted_key);
+      if (decoded) {
+        return { keyId: keyData.id, keyValue: decoded };
+      }
+    }
+    return null;
+  }
+
+  return {
+    keyId: decryptedData[0].id,
+    keyValue: decryptedData[0].key_value,
+  };
+}
+
+async function updateKeyLastUsed(
+  serviceClient: ReturnType<typeof createClient>,
+  keyId: string,
+): Promise<void> {
+  await serviceClient
+    .from("user_api_keys")
+    .update({ last_used_at: new Date().toISOString() })
+    .eq("id", keyId);
+}
+
 Deno.serve(async (req: Request) => {
+  // Handle CORS preflight
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: CORS_HEADERS });
+  }
+
   // Only accept POST
   if (req.method !== "POST") {
     return jsonResponse(
@@ -77,7 +187,7 @@ Deno.serve(async (req: Request) => {
     );
   }
 
-  // Check auth header exists (Supabase validates the JWT)
+  // Authenticate the request via Supabase JWT
   const authHeader = req.headers.get("Authorization");
   if (!authHeader) {
     return jsonResponse(
@@ -86,14 +196,46 @@ Deno.serve(async (req: Request) => {
     );
   }
 
-  // Get API token from secrets
-  const replicateToken = Deno.env.get("REPLICATE_API_TOKEN");
-  if (!replicateToken) {
+  // Create authenticated client to verify user
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_ANON_KEY")!,
+    { global: { headers: { Authorization: authHeader } } }
+  );
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
     return jsonResponse(
-      { success: false, error: "AI service not configured on server (REPLICATE_API_TOKEN missing)", code: "CONFIG_ERROR" },
-      500,
+      { success: false, error: "Unauthorized", code: "AUTH_ERROR" },
+      401,
     );
   }
+
+  // Create service client for key lookup
+  const serviceClient = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+  );
+
+  // Get user's Replicate API key
+  const userKey = await getUserReplicateKey(serviceClient, user.id);
+
+  if (!userKey) {
+    return jsonResponse(
+      {
+        success: false,
+        error: "No Replicate API key configured. Please add your API key in Settings > Integrations.",
+        code: "NO_API_KEY",
+      },
+      400,
+    );
+  }
+
+  const replicateToken = userKey.keyValue;
 
   // Parse and validate request body
   let body: unknown;
@@ -121,7 +263,7 @@ Deno.serve(async (req: Request) => {
   // Create prediction on Replicate
   try {
     const isFullModelPath = body.model.includes("/");
-    const url = isFullModelPath 
+    const url = isFullModelPath
       ? `${REPLICATE_API_BASE}/models/${body.model}/predictions`
       : `${REPLICATE_API_BASE}/predictions`;
 
@@ -140,6 +282,29 @@ Deno.serve(async (req: Request) => {
 
     if (!createRes.ok) {
       const errorText = await createRes.text();
+
+      // Check if this is an auth error (invalid key)
+      if (createRes.status === 401 || createRes.status === 403) {
+        // Mark the key as invalid
+        await serviceClient
+          .from("user_api_keys")
+          .update({
+            status: "invalid",
+            validation_error: "Key rejected by Replicate API",
+            last_validated_at: new Date().toISOString(),
+          })
+          .eq("id", userKey.keyId);
+
+        return jsonResponse(
+          {
+            success: false,
+            error: "Your Replicate API key is invalid. Please update it in Settings > Integrations.",
+            code: "INVALID_API_KEY",
+          },
+          401,
+        );
+      }
+
       return jsonResponse(
         {
           success: false,
@@ -151,6 +316,9 @@ Deno.serve(async (req: Request) => {
     }
 
     const prediction = await createRes.json();
+
+    // Update last_used_at for the key
+    await updateKeyLastUsed(serviceClient, userKey.keyId);
 
     // If already succeeded (some models return immediately)
     if (prediction.status === "succeeded") {

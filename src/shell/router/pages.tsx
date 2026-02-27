@@ -6,7 +6,7 @@
  */
 
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 
 import type { BackgroundSpec, CanvasEntity, StickerEntity, ViewportConfig } from '@sn/types';
 import { CanvasDocumentEvents, CanvasEvents, DEFAULT_BACKGROUND, DockerEvents } from '@sn/types';
@@ -16,6 +16,7 @@ import type { SceneGraph } from '../../canvas/core';
 // Canvas sub-layer init/teardown loaded via dynamic import (L6 boundary rule allows dynamic imports only)
 import { bus } from '../../kernel/bus';
 import { useAuthStore, selectIsAuthenticated } from '../../kernel/stores/auth/auth.store';
+import { useCanvasStore } from '../../kernel/stores/canvas/canvas.store';
 import { useDockerStore } from '../../kernel/stores/docker';
 import { useUIStore } from '../../kernel/stores/ui/ui.store';
 import { WidgetFrame, InlineWidgetFrame } from '../../runtime';
@@ -37,7 +38,7 @@ import {
 import type { LocalCanvasSummary } from '../canvas';
 import { HistoryPanel } from '../canvas/panels';
 import type { CanvasPositionConfig } from '../canvas/panels/CanvasSettingsDropdown';
-import { seedDemoEntities } from '../canvas/seedDemoEntities';
+import { seedDemoEntities, seedCommerceCanvas } from '../canvas/seedDemoEntities';
 import { StickerSettingsModal, LoginForm } from '../components';
 import type { StickerSettings } from '../components/StickerSettingsModal';
 import { ShellLayout } from '../layout';
@@ -53,6 +54,27 @@ const DEFAULT_DOCKER_WIDGET_ENTITY_ID = 'docker-widget-clock-default';
 const DEMO_CANVAS_ID = '00000000-0000-4000-8000-000000000001';
 const DEFAULT_CANVAS_TOP_SPACING = 40;
 const DEFAULT_ARTBOARD_LIMIT_PER_DASHBOARD = 10;
+const BUILT_IN_WIDGET_HTML_KEY_BY_WIDGET_ID: Record<string, string> = {
+  'sn.builtin.clock': 'wgt-clock',
+  'sn.builtin.sticky-note': 'wgt-note',
+  'sn.builtin.counter': 'wgt-counter',
+  'sn.builtin.signup': 'wgt-signup',
+  'sn.builtin.subscribe': 'wgt-subscribe',
+  'sn.builtin.shop': 'wgt-shop',
+  'sn.builtin.creator-setup': 'wgt-creator-setup',
+  'sn.builtin.tier-manager': 'wgt-tier-manager',
+  'sn.builtin.item-manager': 'wgt-item-manager',
+  'sn.builtin.orders': 'wgt-orders',
+  'sn.builtin.creator-dashboard': 'wgt-creator-dashboard',
+};
+
+function resolveBuiltInWidgetHtml(widgetId: string): string {
+  if (BUILT_IN_WIDGET_HTML[widgetId]) {
+    return BUILT_IN_WIDGET_HTML[widgetId];
+  }
+  const htmlKey = BUILT_IN_WIDGET_HTML_KEY_BY_WIDGET_ID[widgetId];
+  return htmlKey ? (BUILT_IN_WIDGET_HTML[htmlKey] ?? '') : '';
+}
 
 function titleFromSlug(slug: string): string {
   return slug
@@ -108,14 +130,16 @@ export const DashboardPage: React.FC = () => (
 );
 
 export const LoginPage: React.FC = () => {
+  const location = useLocation();
   const navigate = useNavigate();
   const isAuthenticated = useAuthStore(selectIsAuthenticated);
+  const forceLogin = new URLSearchParams(location.search).get('force') === '1';
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && !forceLogin) {
       navigate('/dashboard', { replace: true });
     }
-  }, [isAuthenticated, navigate]);
+  }, [forceLogin, isAuthenticated, navigate]);
 
   return (
     <div data-testid="page-login" style={appPageStyle}>
@@ -260,6 +284,8 @@ function resolveStickerSource(entity: CanvasEntity): {
 export const CanvasPage: React.FC = () => {
   const { canvasSlug = '' } = useParams<{ canvasSlug: string }>();
   const setMode = useUIStore((s) => s.setCanvasInteractionMode);
+  const setActiveCanvas = useCanvasStore((s) => s.setActiveCanvas);
+  const user = useAuthStore((s) => s.user);
   const mode = useUIStore((s) => s.canvasInteractionMode);
   const activeTheme = useUIStore((s) => s.theme);
   const canvasPlatform = useUIStore((s) => s.canvasPlatform);
@@ -267,6 +293,7 @@ export const CanvasPage: React.FC = () => {
   const setPlatformConfig = useUIStore((s) => s.setPlatformConfig);
   const normalizedSlug = canvasSlug.trim().toLowerCase();
   const isDemo = normalizedSlug === 'demo';
+  const isCommerceDemo = normalizedSlug === 'alice-art-shop';
   const seededRef = useRef(false);
   const [sceneGraph, setSceneGraph] = useState<SceneGraph | null>(null);
   const [canvasSummary, setCanvasSummary] = useState<LocalCanvasSummary | null>(null);
@@ -325,6 +352,25 @@ export const CanvasPage: React.FC = () => {
     setCanvasSummary(ensured);
   }, [canvasKey]);
 
+  // Keep canvas context in kernel store so integrations (e.g. checkout) can resolve canvas-scoped queries.
+  useEffect(() => {
+    if (!canvasSummary) return;
+    setActiveCanvas(canvasSummary.id, {
+      id: canvasSummary.id,
+      name: canvasSummary.name,
+      slug: canvasSummary.slug,
+      ownerId: user?.id ?? '00000000-0000-4000-a000-000000000001',
+      description: null,
+      thumbnailUrl: null,
+      isPublic: true,
+      settings: {},
+    });
+
+    return () => {
+      setActiveCanvas(null, null);
+    };
+  }, [canvasSummary, setActiveCanvas, user?.id]);
+
   // Initialize Canvas Core + Panels on canvas change.
   // Canvas sub-layers are dynamically imported to satisfy L6 boundary rules.
   useEffect(() => {
@@ -359,6 +405,39 @@ export const CanvasPage: React.FC = () => {
 
     setup();
 
+    // Seed commerce demo canvas if missing built-in commerce widgets.
+    if (isCommerceDemo && !seededRef.current) {
+      seededRef.current = true;
+      const storageKey = `sn:canvas:${canvasKey}`;
+      const raw = localStorage.getItem(storageKey);
+      let hasCommerceWidgets = false;
+      const isUuid = (value: unknown): value is string =>
+        typeof value === 'string'
+        && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw) as {
+            entities?: Array<{ id?: unknown; type?: string; widgetId?: string; widgetInstanceId?: unknown }>;
+          };
+          hasCommerceWidgets = Boolean(parsed.entities?.some((entity) =>
+            entity.type === 'widget'
+            && isUuid(entity.id)
+            && (entity.widgetId === 'sn.builtin.shop' || entity.widgetId === 'sn.builtin.subscribe')));
+          hasCommerceWidgets = hasCommerceWidgets && Boolean(
+            parsed.entities?.some((entity) =>
+              entity.type === 'widget'
+              && (entity.widgetId === 'sn.builtin.shop' || entity.widgetId === 'sn.builtin.subscribe')
+              && isUuid(entity.widgetInstanceId)),
+          );
+        } catch {
+          hasCommerceWidgets = false;
+        }
+      }
+      if (!hasCommerceWidgets) {
+        seedCommerceCanvas();
+      }
+    }
+
     return () => {
       disposed = true;
       cleanupTools?.();
@@ -367,7 +446,7 @@ export const CanvasPage: React.FC = () => {
       setSceneGraph(null);
       seededRef.current = false;
     };
-  }, [canvasKey, isDemo]);
+  }, [canvasKey, isCommerceDemo, isDemo]);
 
   // Get viewport store for toolbar zoom controls
   const { store: viewportStore } = useViewport();
@@ -399,7 +478,7 @@ export const CanvasPage: React.FC = () => {
     for (const entity of entities) {
       if (entity.type === 'widget') {
         const wEntity = entity as { widgetInstanceId: string; widgetId: string };
-        const html = BUILT_IN_WIDGET_HTML[wEntity.widgetId];
+        const html = resolveBuiltInWidgetHtml(wEntity.widgetId);
         if (html) {
           map.set(wEntity.widgetInstanceId, html);
         }
@@ -443,7 +522,7 @@ export const CanvasPage: React.FC = () => {
         );
       }
 
-      const widgetHtml = BUILT_IN_WIDGET_HTML[entity.widgetId] ?? '';
+      const widgetHtml = resolveBuiltInWidgetHtml(entity.widgetId);
       return (
         <WidgetFrame
           widgetId={entity.widgetId}
@@ -847,7 +926,7 @@ export const MarketplacePage: React.FC = () => (
 );
 
 export const SettingsPage: React.FC = () => {
-  const [tab, setTab] = React.useState<'billing' | 'commerce' | 'purchases' | 'integrations'>('billing');
+  const [tab, setTab] = React.useState<'billing' | 'integrations' | 'commerce' | 'purchases'>('billing');
 
   const tabBtnStyle = (active: boolean): React.CSSProperties => ({
     padding: '8px 16px',
@@ -865,15 +944,15 @@ export const SettingsPage: React.FC = () => {
       <h1 style={{ marginBottom: 20 }}>Settings</h1>
       <div style={{ display: 'flex', gap: 4, borderBottom: '1px solid var(--sn-border, #e5e7eb)', marginBottom: 24 }}>
         <button style={tabBtnStyle(tab === 'billing')} onClick={() => setTab('billing')}>Billing</button>
+        <button style={tabBtnStyle(tab === 'integrations')} onClick={() => setTab('integrations')}>Integrations</button>
         <button style={tabBtnStyle(tab === 'commerce')} onClick={() => setTab('commerce')}>Creator Commerce</button>
         <button style={tabBtnStyle(tab === 'purchases')} onClick={() => setTab('purchases')}>My Purchases</button>
-        <button style={tabBtnStyle(tab === 'integrations')} onClick={() => setTab('integrations')}>Integrations</button>
       </div>
       <Suspense fallback={<div>Loading...</div>}>
         {tab === 'billing' && <BillingSectionLazy />}
+        {tab === 'integrations' && <IntegrationsSectionLazy />}
         {tab === 'commerce' && <CreatorCommerceSectionLazy />}
         {tab === 'purchases' && <MyPurchasesSectionLazy />}
-        {tab === 'integrations' && <IntegrationsSectionLazy />}
       </Suspense>
     </div>
   );
@@ -882,14 +961,14 @@ export const SettingsPage: React.FC = () => {
 const BillingSectionLazy = React.lazy(() =>
   import('../pages/settings/BillingSection').then((m) => ({ default: m.BillingSection })),
 );
+const IntegrationsSectionLazy = React.lazy(() =>
+  import('../pages/settings/IntegrationsSection').then((m) => ({ default: m.IntegrationsSection })),
+);
 const CreatorCommerceSectionLazy = React.lazy(() =>
   import('../pages/settings/CreatorCommerceSection').then((m) => ({ default: m.CreatorCommerceSection })),
 );
 const MyPurchasesSectionLazy = React.lazy(() =>
   import('../pages/settings/MyPurchasesSection').then((m) => ({ default: m.MyPurchasesSection })),
-);
-const IntegrationsSectionLazy = React.lazy(() =>
-  import('../pages/settings/IntegrationsSection').then((m) => ({ default: m.IntegrationsSection })),
 );
 
 export const InvitePage: React.FC = () => {

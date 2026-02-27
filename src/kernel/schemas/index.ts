@@ -630,3 +630,32 @@ export {
   // JSON Schemas
   GalleryAssetJSONSchema,
 } from "./gallery";
+
+// =============================================================================
+// User API Key Schemas (BYOK)
+// =============================================================================
+export {
+  // Schemas
+  ApiKeyProviderSchema,
+  ApiKeyStatusSchema,
+  UserApiKeySchema,
+  CreateApiKeyInputSchema,
+  UpdateApiKeyInputSchema,
+  SaveApiKeyResponseSchema,
+  ApiKeyValidationResultSchema,
+  // Types
+  type ApiKeyProvider,
+  type ApiKeyStatus,
+  type UserApiKey,
+  type CreateApiKeyInput,
+  type UpdateApiKeyInput,
+  type SaveApiKeyResponse,
+  type ApiKeyValidationResult,
+  // Constants
+  API_KEY_PROVIDER_INFO,
+  // JSON Schemas
+  UserApiKeyJSONSchema,
+  CreateApiKeyInputJSONSchema,
+  ApiKeyProviderJSONSchema,
+  ApiKeyStatusJSONSchema,
+} from "./api-key";

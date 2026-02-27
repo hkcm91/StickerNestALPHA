@@ -37,6 +37,7 @@ vi.mock('../../canvas/tools', () => ({
 
 vi.mock('../canvas/seedDemoEntities', () => ({
   seedDemoEntities: vi.fn(),
+  seedCommerceCanvas: vi.fn(),
 }));
 
 vi.mock('../../runtime', () => ({
@@ -101,6 +102,7 @@ vi.mock('../canvas', async () => {
 describe('CanvasPage', () => {
   beforeEach(() => {
     useUIStore.getState().reset();
+    localStorage.clear();
   });
 
   it('applies preset size and border radius from canvas settings to workspace wrapper', async () => {
@@ -166,5 +168,20 @@ describe('CanvasPage', () => {
     expect(layoutWrapper.style.justifyContent).toBe('center');
     expect(layoutWrapper.style.alignItems).toBe('center');
     expect(layoutWrapper.style.padding).toBe('40px 24px 24px');
+  });
+
+  it('seeds commerce demo canvas on /canvas/alice-art-shop when missing commerce widgets', async () => {
+    const { CanvasPage } = await import('./pages');
+    const { seedCommerceCanvas } = await import('../canvas/seedDemoEntities');
+
+    render(
+      <MemoryRouter initialEntries={['/canvas/alice-art-shop']}>
+        <Routes>
+          <Route path="/canvas/:canvasSlug" element={<CanvasPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(seedCommerceCanvas).toHaveBeenCalledTimes(1);
   });
 });

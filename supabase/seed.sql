@@ -406,6 +406,343 @@ INSERT INTO pipelines (id, canvas_id, name, description, nodes, edges, created_b
 ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================================
+-- CREATOR COMMERCE: STRIPE CONNECT ACCOUNTS
+-- ============================================================================
+
+INSERT INTO creator_accounts (user_id, stripe_connect_account_id, onboarding_complete, charges_enabled, payouts_enabled, country, default_currency) VALUES
+    -- Alice is a fully onboarded creator with Stripe Connect
+    (
+        '11111111-1111-1111-1111-111111111111',
+        'acct_test_alice_creator',
+        TRUE,
+        TRUE,
+        TRUE,
+        'US',
+        'usd'
+    )
+ON CONFLICT (user_id) DO NOTHING;
+
+-- ============================================================================
+-- CREATOR COMMERCE: ALICE'S ART SHOP CANVAS
+-- ============================================================================
+
+INSERT INTO canvases (id, owner_id, name, slug, description, is_public, default_role, settings) VALUES
+    -- Alice's Art Shop - public shopping canvas
+    (
+        'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1',
+        '11111111-1111-1111-1111-111111111111',
+        'Alice''s Art Shop',
+        'alice-art-shop',
+        'Digital art, stickers, and exclusive content from Alice',
+        TRUE,
+        'viewer',
+        '{"gridSize": 20, "snapToGrid": true, "backgroundColor": "#fff5f5", "isShop": true}'
+    )
+ON CONFLICT (id) DO NOTHING;
+
+-- ============================================================================
+-- CREATOR COMMERCE: SUBSCRIPTION TIERS
+-- ============================================================================
+
+INSERT INTO canvas_subscription_tiers (id, canvas_id, name, description, price_cents, currency, interval, benefits, canvas_role, sort_order, is_active) VALUES
+    -- Free tier
+    (
+        '50000000-0000-0000-0000-000000000001',
+        'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1',
+        'Free Supporter',
+        'Follow along with my art journey — totally free!',
+        0,
+        'usd',
+        'month',
+        '["Access to community chat", "Early previews of new work", "Monthly wallpaper"]',
+        'viewer',
+        0,
+        TRUE
+    ),
+    -- Paid tier - $5/month
+    (
+        '50000000-0000-0000-0000-000000000002',
+        'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1',
+        'Art Patron',
+        'Support my work and get exclusive perks!',
+        500,
+        'usd',
+        'month',
+        '["Everything in Free tier", "HD artwork downloads", "Behind-the-scenes content", "Vote on next artwork"]',
+        'commenter',
+        1,
+        TRUE
+    ),
+    -- Premium tier - $15/month
+    (
+        '50000000-0000-0000-0000-000000000003',
+        'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1',
+        'VIP Collector',
+        'The ultimate supporter experience with exclusive access',
+        1500,
+        'usd',
+        'month',
+        '["Everything in Art Patron", "Monthly exclusive sticker pack", "1-on-1 art critique sessions", "Name in credits", "Early access to shop items"]',
+        'editor',
+        2,
+        TRUE
+    )
+ON CONFLICT (id) DO NOTHING;
+
+-- ============================================================================
+-- CREATOR COMMERCE: SHOP ITEMS
+-- ============================================================================
+
+INSERT INTO shop_items (id, canvas_id, seller_id, name, description, item_type, fulfillment, price_cents, currency, stock_count, max_per_buyer, tags, is_active) VALUES
+    -- Free starter pack
+    (
+        '60000000-0000-0000-0000-000000000001',
+        'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1',
+        '11111111-1111-1111-1111-111111111111',
+        'Starter Sticker Pack',
+        'A free pack of 5 cute cat stickers to get you started!',
+        'digital',
+        'instant',
+        0,
+        'usd',
+        NULL,
+        1,
+        ARRAY['free', 'stickers', 'cats', 'starter'],
+        TRUE
+    ),
+    -- Paid digital item - $3
+    (
+        '60000000-0000-0000-0000-000000000002',
+        'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1',
+        '11111111-1111-1111-1111-111111111111',
+        'Kawaii Animals Bundle',
+        '20 adorable kawaii animal stickers - cats, dogs, bunnies, and more!',
+        'digital',
+        'instant',
+        300,
+        'usd',
+        NULL,
+        3,
+        ARRAY['stickers', 'kawaii', 'animals', 'bundle'],
+        TRUE
+    ),
+    -- Paid digital item - $8
+    (
+        '60000000-0000-0000-0000-000000000003',
+        'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1',
+        '11111111-1111-1111-1111-111111111111',
+        'Artist Wallpaper Collection',
+        'High-resolution wallpapers for desktop and mobile - 10 unique designs',
+        'digital',
+        'instant',
+        800,
+        'usd',
+        100,
+        NULL,
+        ARRAY['wallpaper', 'hd', 'collection', 'digital-art'],
+        TRUE
+    ),
+    -- Physical item - $25
+    (
+        '60000000-0000-0000-0000-000000000004',
+        'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1',
+        '11111111-1111-1111-1111-111111111111',
+        'Holographic Sticker Sheet',
+        'A beautiful holographic sticker sheet with 15 unique stickers - ships worldwide!',
+        'physical',
+        'manual',
+        2500,
+        'usd',
+        50,
+        2,
+        ARRAY['physical', 'holographic', 'stickers', 'premium'],
+        TRUE
+    ),
+    -- Limited edition - $50
+    (
+        '60000000-0000-0000-0000-000000000005',
+        'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1',
+        '11111111-1111-1111-1111-111111111111',
+        'Signed Art Print (Limited Edition)',
+        'Hand-signed 11x14 art print on premium paper - only 25 available!',
+        'physical',
+        'manual',
+        5000,
+        'usd',
+        25,
+        1,
+        ARRAY['physical', 'signed', 'limited-edition', 'art-print'],
+        TRUE
+    )
+ON CONFLICT (id) DO NOTHING;
+
+-- ============================================================================
+-- CREATOR COMMERCE: SAMPLE ORDERS
+-- ============================================================================
+
+INSERT INTO orders (id, buyer_id, seller_id, order_type, item_id, amount_cents, currency, platform_fee_cents, status, metadata) VALUES
+    -- Bob subscribes to Free tier
+    (
+        '70000000-0000-0000-0000-000000000001',
+        '22222222-2222-2222-2222-222222222222',
+        '11111111-1111-1111-1111-111111111111',
+        'canvas_subscription',
+        '50000000-0000-0000-0000-000000000001',
+        0,
+        'usd',
+        0,
+        'paid',
+        '{"tier_name": "Free Supporter"}'
+    ),
+    -- Bob buys free starter pack
+    (
+        '70000000-0000-0000-0000-000000000002',
+        '22222222-2222-2222-2222-222222222222',
+        '11111111-1111-1111-1111-111111111111',
+        'shop_item',
+        '60000000-0000-0000-0000-000000000001',
+        0,
+        'usd',
+        0,
+        'fulfilled',
+        '{"item_name": "Starter Sticker Pack"}'
+    ),
+    -- Charlie subscribes to Art Patron tier ($5)
+    (
+        '70000000-0000-0000-0000-000000000003',
+        '33333333-3333-3333-3333-333333333333',
+        '11111111-1111-1111-1111-111111111111',
+        'canvas_subscription',
+        '50000000-0000-0000-0000-000000000002',
+        500,
+        'usd',
+        60,
+        'paid',
+        '{"tier_name": "Art Patron", "stripe_payment_intent": "pi_test_charlie_sub"}'
+    ),
+    -- Charlie buys Kawaii Animals Bundle ($3)
+    (
+        '70000000-0000-0000-0000-000000000004',
+        '33333333-3333-3333-3333-333333333333',
+        '11111111-1111-1111-1111-111111111111',
+        'shop_item',
+        '60000000-0000-0000-0000-000000000002',
+        300,
+        'usd',
+        36,
+        'fulfilled',
+        '{"item_name": "Kawaii Animals Bundle"}'
+    ),
+    -- Charlie buys Holographic Sticker Sheet ($25) - shipped
+    (
+        '70000000-0000-0000-0000-000000000005',
+        '33333333-3333-3333-3333-333333333333',
+        '11111111-1111-1111-1111-111111111111',
+        'shop_item',
+        '60000000-0000-0000-0000-000000000004',
+        2500,
+        'usd',
+        300,
+        'shipped',
+        '{"item_name": "Holographic Sticker Sheet", "tracking_number": "1Z999AA10123456784"}'
+    )
+ON CONFLICT (id) DO NOTHING;
+
+-- Create canvas subscription records for Bob and Charlie
+INSERT INTO canvas_subscriptions (id, buyer_id, canvas_id, tier_id, status, current_period_end) VALUES
+    -- Bob's free subscription
+    (
+        '80000000-0000-0000-0000-000000000001',
+        '22222222-2222-2222-2222-222222222222',
+        'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1',
+        '50000000-0000-0000-0000-000000000001',
+        'active',
+        NOW() + INTERVAL '30 days'
+    ),
+    -- Charlie's paid subscription
+    (
+        '80000000-0000-0000-0000-000000000002',
+        '33333333-3333-3333-3333-333333333333',
+        'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1',
+        '50000000-0000-0000-0000-000000000002',
+        'active',
+        NOW() + INTERVAL '30 days'
+    )
+ON CONFLICT (buyer_id, canvas_id) DO NOTHING;
+
+-- ============================================================================
+-- ALICE'S ART SHOP ENTITIES
+-- ============================================================================
+
+INSERT INTO entities (id, canvas_id, type, position_x, position_y, width, height, z_order, properties, created_by) VALUES
+    -- Shop welcome header
+    (
+        '10000000-0000-0000-0000-000000000101',
+        'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1',
+        'text',
+        100,
+        50,
+        500,
+        80,
+        1,
+        '{"text": "🎨 Welcome to Alice''s Art Shop!", "fontSize": 36, "fontWeight": "bold", "color": "#e91e63"}',
+        '11111111-1111-1111-1111-111111111111'
+    ),
+    -- Shop description
+    (
+        '10000000-0000-0000-0000-000000000102',
+        'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1',
+        'text',
+        100,
+        140,
+        600,
+        60,
+        2,
+        '{"text": "Digital stickers, wallpapers, and exclusive content for art lovers", "fontSize": 18, "color": "#666"}',
+        '11111111-1111-1111-1111-111111111111'
+    ),
+    -- Decorative shape
+    (
+        '10000000-0000-0000-0000-000000000103',
+        'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1',
+        'shape',
+        100,
+        220,
+        600,
+        4,
+        3,
+        '{"shapeType": "rectangle", "fill": "#e91e63", "stroke": "none"}',
+        '11111111-1111-1111-1111-111111111111'
+    ),
+    -- Featured items section header
+    (
+        '10000000-0000-0000-0000-000000000104',
+        'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1',
+        'text',
+        100,
+        260,
+        300,
+        40,
+        4,
+        '{"text": "✨ Featured Items", "fontSize": 24, "fontWeight": "bold"}',
+        '11111111-1111-1111-1111-111111111111'
+    ),
+    -- Subscription section header
+    (
+        '10000000-0000-0000-0000-000000000105',
+        'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1',
+        'text',
+        100,
+        550,
+        300,
+        40,
+        5,
+        '{"text": "💖 Support My Work", "fontSize": 24, "fontWeight": "bold"}',
+        '11111111-1111-1111-1111-111111111111'
+    )
+ON CONFLICT (id) DO NOTHING;
+
+-- ============================================================================
 -- OUTPUT
 -- ============================================================================
 
@@ -416,4 +753,10 @@ BEGIN
     RAISE NOTICE '  - alice@example.com (Creator tier) - password: password123';
     RAISE NOTICE '  - bob@example.com (Free tier) - password: password123';
     RAISE NOTICE '  - charlie@example.com (Pro tier) - password: password123';
+    RAISE NOTICE '';
+    RAISE NOTICE 'Commerce test data:';
+    RAISE NOTICE '  - Alice''s Art Shop canvas: /canvas/alice-art-shop';
+    RAISE NOTICE '  - 3 subscription tiers (Free, $5/mo, $15/mo)';
+    RAISE NOTICE '  - 5 shop items (free to $50)';
+    RAISE NOTICE '  - 5 sample orders from Bob and Charlie';
 END $$;

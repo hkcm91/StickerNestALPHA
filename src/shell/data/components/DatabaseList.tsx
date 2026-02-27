@@ -21,6 +21,8 @@ export interface DatabaseListProps {
   onCreate: () => void;
   onImportNotion: () => void;
   onUseTemplate: () => void;
+  onDelete?: (id: string) => void;
+  onRename?: (id: string, name: string) => void;
 }
 
 // =============================================================================
@@ -32,6 +34,8 @@ export const DatabaseList: React.FC<DatabaseListProps> = ({
   onCreate,
   onImportNotion,
   onUseTemplate,
+  onDelete,
+  onRename,
 }: DatabaseListProps) => {
   const user = useAuthStore((s: { user: { id: string } | null }) => s.user);
   const [databases, setDatabases] = useState<DataSource[]>([]);
@@ -67,6 +71,21 @@ export const DatabaseList: React.FC<DatabaseListProps> = ({
         ds.type.includes(q),
     );
   }, [databases, search]);
+
+  const handleRename = useCallback((e: React.MouseEvent, id: string, currentName: string) => {
+    e.stopPropagation();
+    const newName = window.prompt('Enter new name:', currentName);
+    if (newName && newName !== currentName && onRename) {
+      onRename(id, newName);
+    }
+  }, [onRename]);
+
+  const handleDelete = useCallback((e: React.MouseEvent, id: string, name: string) => {
+    e.stopPropagation();
+    if (window.confirm(`Are you sure you want to delete "${name}"?`) && onDelete) {
+      onDelete(id);
+    }
+  }, [onDelete]);
 
   return (
     <div data-testid="database-list" style={styles.container}>
@@ -139,7 +158,7 @@ export const DatabaseList: React.FC<DatabaseListProps> = ({
       ) : (
         <div style={styles.grid}>
           {filtered.map((ds: DataSource) => (
-            <button
+            <div
               key={ds.id}
               data-testid={`database-card-${ds.id}`}
               onClick={() => onSelect(ds)}
@@ -149,8 +168,28 @@ export const DatabaseList: React.FC<DatabaseListProps> = ({
                 {ds.metadata?.icon || typeIcon(ds.type)}
               </div>
               <div style={styles.cardContent}>
-                <div style={styles.cardName}>
-                  {ds.metadata?.name || 'Untitled'}
+                <div style={styles.cardHeaderRow}>
+                  <div style={styles.cardName}>
+                    {ds.metadata?.name || 'Untitled'}
+                  </div>
+                  <div style={styles.cardActions}>
+                    <button
+                      data-testid={`btn-rename-${ds.id}`}
+                      onClick={(e) => handleRename(e, ds.id, ds.metadata?.name || '')}
+                      style={styles.iconBtn}
+                      title="Rename"
+                    >
+                      ✎
+                    </button>
+                    <button
+                      data-testid={`btn-delete-${ds.id}`}
+                      onClick={(e) => handleDelete(e, ds.id, ds.metadata?.name || 'Untitled')}
+                      style={styles.iconBtnDelete}
+                      title="Delete"
+                    >
+                      ×
+                    </button>
+                  </div>
                 </div>
                 <div style={styles.cardMeta}>
                   <span style={styles.typeBadge}>{ds.type}</span>
@@ -163,7 +202,7 @@ export const DatabaseList: React.FC<DatabaseListProps> = ({
                   Updated {new Date(ds.updatedAt).toLocaleDateString()}
                 </div>
               </div>
-            </button>
+            </div>
           ))}
         </div>
       )}
@@ -205,7 +244,11 @@ const styles: Record<string, React.CSSProperties> = {
   card: { display: 'flex', gap: '12px', padding: '16px', background: 'var(--sn-surface, #fff)', border: '1px solid var(--sn-border, #ddd)', borderRadius: 'var(--sn-radius, 6px)', cursor: 'pointer', textAlign: 'left' as const, width: '100%', transition: 'border-color 0.15s', fontFamily: 'inherit' },
   cardIcon: { width: '40px', height: '40px', borderRadius: '8px', background: 'var(--sn-bg, #f0f0f0)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', fontWeight: 700, flexShrink: 0 },
   cardContent: { flex: 1, minWidth: 0 },
-  cardName: { fontWeight: 600, fontSize: '15px', color: 'var(--sn-text, #111)', marginBottom: '4px' },
+  cardHeaderRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' },
+  cardName: { fontWeight: 600, fontSize: '15px', color: 'var(--sn-text, #111)', flex: 1, marginRight: '8px' },
+  cardActions: { display: 'flex', gap: '4px' },
+  iconBtn: { background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', fontSize: '14px', color: 'var(--sn-text-muted, #999)', transition: 'color 0.1s' },
+  iconBtnDelete: { background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', fontSize: '18px', color: 'var(--sn-text-muted, #999)', transition: 'color 0.1s', lineHeight: 1 },
   cardMeta: { display: 'flex', gap: '6px', marginBottom: '4px' },
   typeBadge: { fontSize: '11px', padding: '2px 6px', background: 'var(--sn-bg, #f0f0f0)', borderRadius: '4px', color: 'var(--sn-text-muted, #666)', textTransform: 'uppercase' as const },
   scopeBadge: { fontSize: '11px', padding: '2px 6px', background: 'var(--sn-bg, #f0f0f0)', borderRadius: '4px', color: 'var(--sn-text-muted, #666)' },
