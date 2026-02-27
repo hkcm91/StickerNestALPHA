@@ -7,7 +7,7 @@
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 
-import type { GridConfig, GridSnapMode, GridProjectionMode } from '@sn/types';
+import type { GridSnapMode, GridProjectionMode } from '@sn/types';
 
 import {
   createGridLayer,

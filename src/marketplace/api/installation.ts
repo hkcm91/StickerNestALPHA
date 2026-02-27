@@ -41,7 +41,7 @@ export async function install(
   });
 
   // Increment install count
-  await supabase.rpc('increment_install_count', { widget_id_input: widgetId }).catch(() => {
+  await (supabase.rpc as any)('increment_install_count', { widget_id_input: widgetId }).catch(() => {
     return supabase
       .from('widgets')
       .update({ install_count: (data as Record<string, unknown>).install_count as number })

@@ -13,9 +13,7 @@ import { CanvasDocumentEvents, CanvasEvents, DEFAULT_BACKGROUND, DockerEvents } 
 
 import { initCanvasCore, teardownCanvasCore } from '../../canvas/core';
 import type { SceneGraph } from '../../canvas/core';
-// eslint-disable-next-line boundaries/element-types -- shell mounts canvas panels at route level
-import { initCanvasPanels, teardownCanvasPanels } from '../../canvas/panels/init';
-import { initCanvasTools, teardownCanvasTools } from '../../canvas/tools';
+// Canvas sub-layer init/teardown loaded via dynamic import (L6 boundary rule allows dynamic imports only)
 import { bus } from '../../kernel/bus';
 import { useAuthStore, selectIsAuthenticated } from '../../kernel/stores/auth/auth.store';
 import { useDockerStore } from '../../kernel/stores/docker';
@@ -328,24 +326,43 @@ export const CanvasPage: React.FC = () => {
   }, [canvasKey]);
 
   // Initialize Canvas Core + Panels on canvas change.
+  // Canvas sub-layers are dynamically imported to satisfy L6 boundary rules.
   useEffect(() => {
+    let disposed = false;
+    let cleanupTools: (() => void) | undefined;
+    let cleanupPanels: (() => void) | undefined;
+
     const coreCtx = initCanvasCore();
     setSceneGraph(coreCtx.sceneGraph);
-    initCanvasPanels(() => coreCtx.sceneGraph.entityCount > 0 ? 1 : 1);
 
-    // Initialize Canvas Tools — sets up bus-based input bridge for pen-path, direct-select
-    const getMode = () => useUIStore.getState().canvasInteractionMode;
-    initCanvasTools(coreCtx.sceneGraph, getMode);
+    // Dynamic imports for canvas sub-layers (L4A-2 tools, L4A-4 panels)
+    const setup = async () => {
+      const [toolsMod, panelsMod] = await Promise.all([
+        import('../../canvas/tools'),
+        import('../../canvas/panels/init'),
+      ]);
+      if (disposed) return;
 
-    // Seed demo entities for /canvas/demo route
-    if (isDemo && !seededRef.current) {
-      seededRef.current = true;
-      seedDemoEntities();
-    }
+      panelsMod.initCanvasPanels(() => coreCtx.sceneGraph.entityCount > 0 ? 1 : 1);
+      cleanupPanels = panelsMod.teardownCanvasPanels;
+
+      const getMode = () => useUIStore.getState().canvasInteractionMode;
+      toolsMod.initCanvasTools(coreCtx.sceneGraph, getMode);
+      cleanupTools = toolsMod.teardownCanvasTools;
+
+      // Seed demo entities for /canvas/demo route
+      if (isDemo && !seededRef.current) {
+        seededRef.current = true;
+        seedDemoEntities();
+      }
+    };
+
+    setup();
 
     return () => {
-      teardownCanvasTools();
-      teardownCanvasPanels();
+      disposed = true;
+      cleanupTools?.();
+      cleanupPanels?.();
       teardownCanvasCore();
       setSceneGraph(null);
       seededRef.current = false;

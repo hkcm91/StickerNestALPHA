@@ -33,6 +33,11 @@ export const BusEventSchema = z.object({
    * Never default to zero vectors.
    */
   spatial: SpatialContextSchema.optional(),
+  /**
+   * Event creation timestamp (milliseconds since epoch).
+   * Optional — populated by the bus implementation.
+   */
+  timestamp: z.number().optional(),
 });
 
 /**

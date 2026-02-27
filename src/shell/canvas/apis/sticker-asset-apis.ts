@@ -245,13 +245,13 @@ export async function searchLottieAssets(query: string, limit = 8): Promise<Lott
             id: String(item.id ?? `lottie-${index}`),
             name: item.name ?? item.title ?? `Lottie ${index + 1}`,
             assetUrl,
-            previewUrl: item.previewUrl ?? item.thumbnailUrl ?? item.image,
+            previewUrl: item.previewUrl ?? item.thumbnailUrl ?? item.image ?? '',
             tags,
             source: 'lottie-api' as const,
           };
         })
-        .filter((item): item is LottieApiAsset => Boolean(item))
-        .slice(0, limit);
+        .filter((item): item is NonNullable<typeof item> => Boolean(item))
+        .slice(0, limit) as LottieApiAsset[];
 
       if (normalized.length > 0) {
         return normalized;

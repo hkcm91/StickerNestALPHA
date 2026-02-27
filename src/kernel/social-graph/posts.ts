@@ -65,7 +65,7 @@ export async function createPost(
       reply_to_id: input.replyToId ?? null,
       repost_of_id: input.repostOfId ?? null,
       mentioned_user_ids: input.mentionedUserIds ?? [],
-    })
+    } as any)
     .select()
     .single()) as QueryResult<Record<string, unknown>>;
 

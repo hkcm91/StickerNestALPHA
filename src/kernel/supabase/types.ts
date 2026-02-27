@@ -64,6 +64,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
 
       canvases: {
@@ -109,6 +110,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
 
       canvas_members: {
@@ -136,6 +138,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
 
       entities: {
@@ -208,6 +211,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
 
       widgets: {
@@ -290,6 +294,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
 
       stickers: {
@@ -341,6 +346,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
 
       pipelines: {
@@ -383,6 +389,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
 
       widget_connections: {
@@ -416,6 +423,7 @@ export interface Database {
           metadata?: Json;
           created_at?: string;
         };
+        Relationships: [];
       };
 
       presence: {
@@ -452,6 +460,7 @@ export interface Database {
           status?: string | null;
           last_seen_at?: string;
         };
+        Relationships: [];
       };
 
       data_sources: {
@@ -497,6 +506,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
 
       data_source_acl: {
@@ -524,6 +534,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
 
       widget_instances: {
@@ -560,6 +571,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
 
       user_installed_widgets: {
@@ -578,6 +590,7 @@ export interface Database {
           widget_id?: string;
           installed_at?: string;
         };
+        Relationships: [];
       };
 
       user_widget_state: {
@@ -611,6 +624,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
 
       widget_snapshots: {
@@ -641,6 +655,7 @@ export interface Database {
           created_by?: string | null;
           created_at?: string;
         };
+        Relationships: [];
       };
 
       widget_reviews: {
@@ -671,6 +686,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
 
       widget_versions: {
@@ -701,6 +717,7 @@ export interface Database {
           changelog?: string | null;
           created_at?: string;
         };
+        Relationships: [];
       };
 
       user_profiles: {
@@ -755,6 +772,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
 
       gallery_assets: {
@@ -803,6 +821,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
 
       follows: {
@@ -827,6 +846,7 @@ export interface Database {
           status?: 'active' | 'pending' | 'blocked';
           created_at?: string;
         };
+        Relationships: [];
       };
 
       blocks: {
@@ -845,6 +865,7 @@ export interface Database {
           blocked_id?: string;
           created_at?: string;
         };
+        Relationships: [];
       };
 
       direct_messages: {
@@ -872,8 +893,508 @@ export interface Database {
           is_read?: boolean;
           created_at?: string;
         };
+        Relationships: [];
+      };
+
+      posts: {
+        Row: {
+          id: string;
+          author_id: string;
+          content_type: string;
+          content: string;
+          visibility: string;
+          attachments: Json;
+          canvas_id: string | null;
+          widget_id: string | null;
+          reply_to_id: string | null;
+          repost_of_id: string | null;
+          mentioned_user_ids: string[];
+          reply_count: number;
+          repost_count: number;
+          reaction_count: number;
+          is_deleted: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          author_id: string;
+          content_type?: string;
+          content: string;
+          visibility?: string;
+          attachments?: Json;
+          canvas_id?: string | null;
+          widget_id?: string | null;
+          reply_to_id?: string | null;
+          repost_of_id?: string | null;
+          mentioned_user_ids?: string[];
+          reply_count?: number;
+          repost_count?: number;
+          reaction_count?: number;
+          is_deleted?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          author_id?: string;
+          content_type?: string;
+          content?: string;
+          visibility?: string;
+          attachments?: Json;
+          canvas_id?: string | null;
+          widget_id?: string | null;
+          reply_to_id?: string | null;
+          repost_of_id?: string | null;
+          mentioned_user_ids?: string[];
+          reply_count?: number;
+          repost_count?: number;
+          reaction_count?: number;
+          is_deleted?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+
+      comments: {
+        Row: {
+          id: string;
+          author_id: string;
+          target_type: string;
+          target_id: string;
+          content: string;
+          parent_id: string | null;
+          mentioned_user_ids: string[];
+          reply_count: number;
+          reaction_count: number;
+          is_deleted: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          author_id: string;
+          target_type: string;
+          target_id: string;
+          content: string;
+          parent_id?: string | null;
+          mentioned_user_ids?: string[];
+          reply_count?: number;
+          reaction_count?: number;
+          is_deleted?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          author_id?: string;
+          target_type?: string;
+          target_id?: string;
+          content?: string;
+          parent_id?: string | null;
+          mentioned_user_ids?: string[];
+          reply_count?: number;
+          reaction_count?: number;
+          is_deleted?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+
+      notifications: {
+        Row: {
+          id: string;
+          recipient_id: string;
+          actor_id: string;
+          type: string;
+          target_type: string | null;
+          target_id: string | null;
+          is_read: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          recipient_id: string;
+          actor_id: string;
+          type: string;
+          target_type?: string | null;
+          target_id?: string | null;
+          is_read?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          recipient_id?: string;
+          actor_id?: string;
+          type?: string;
+          target_type?: string | null;
+          target_id?: string | null;
+          is_read?: boolean;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+
+      reactions: {
+        Row: {
+          id: string;
+          user_id: string;
+          target_type: string;
+          target_id: string;
+          type: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          target_type: string;
+          target_id: string;
+          type: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          target_type?: string;
+          target_id?: string;
+          type?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+
+      bookmarks: {
+        Row: {
+          user_id: string;
+          post_id: string;
+          created_at: string;
+        };
+        Insert: {
+          user_id: string;
+          post_id: string;
+          created_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          post_id?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+
+      subscriptions: {
+        Row: {
+          id: string;
+          user_id: string;
+          stripe_customer_id: string;
+          stripe_subscription_id: string | null;
+          stripe_price_id: string | null;
+          tier: string;
+          status: string;
+          current_period_start: string | null;
+          current_period_end: string | null;
+          cancel_at_period_end: boolean;
+          trial_end: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          stripe_customer_id: string;
+          stripe_subscription_id?: string | null;
+          stripe_price_id?: string | null;
+          tier?: string;
+          status?: string;
+          current_period_start?: string | null;
+          current_period_end?: string | null;
+          cancel_at_period_end?: boolean;
+          trial_end?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          stripe_customer_id?: string;
+          stripe_subscription_id?: string | null;
+          stripe_price_id?: string | null;
+          tier?: string;
+          status?: string;
+          current_period_start?: string | null;
+          current_period_end?: string | null;
+          cancel_at_period_end?: boolean;
+          trial_end?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+
+      tier_quotas: {
+        Row: {
+          tier: string;
+          max_canvases: number;
+          max_storage_mb: number;
+          max_widgets_per_canvas: number;
+          max_collaborators_per_canvas: number;
+          can_use_custom_domain: boolean;
+          can_use_integrations: boolean;
+          can_publish_widgets: boolean;
+          can_sell: boolean;
+        };
+        Insert: {
+          tier: string;
+          max_canvases?: number;
+          max_storage_mb?: number;
+          max_widgets_per_canvas?: number;
+          max_collaborators_per_canvas?: number;
+          can_use_custom_domain?: boolean;
+          can_use_integrations?: boolean;
+          can_publish_widgets?: boolean;
+          can_sell?: boolean;
+        };
+        Update: {
+          tier?: string;
+          max_canvases?: number;
+          max_storage_mb?: number;
+          max_widgets_per_canvas?: number;
+          max_collaborators_per_canvas?: number;
+          can_use_custom_domain?: boolean;
+          can_use_integrations?: boolean;
+          can_publish_widgets?: boolean;
+          can_sell?: boolean;
+        };
+        Relationships: [];
+      };
+
+      creator_accounts: {
+        Row: {
+          id: string;
+          user_id: string;
+          stripe_account_id: string;
+          charges_enabled: boolean;
+          payouts_enabled: boolean;
+          onboarding_complete: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          stripe_account_id: string;
+          charges_enabled?: boolean;
+          payouts_enabled?: boolean;
+          onboarding_complete?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          stripe_account_id?: string;
+          charges_enabled?: boolean;
+          payouts_enabled?: boolean;
+          onboarding_complete?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+
+      canvas_subscription_tiers: {
+        Row: {
+          id: string;
+          creator_id: string;
+          canvas_id: string;
+          name: string;
+          description: string | null;
+          price_cents: number;
+          currency: string;
+          interval: string;
+          benefits: Json;
+          is_active: boolean;
+          sort_order: number;
+          revision: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          creator_id: string;
+          canvas_id: string;
+          name: string;
+          description?: string | null;
+          price_cents: number;
+          currency?: string;
+          interval?: string;
+          benefits?: Json;
+          is_active?: boolean;
+          sort_order?: number;
+          revision?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          creator_id?: string;
+          canvas_id?: string;
+          name?: string;
+          description?: string | null;
+          price_cents?: number;
+          currency?: string;
+          interval?: string;
+          benefits?: Json;
+          is_active?: boolean;
+          sort_order?: number;
+          revision?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+
+      canvas_subscriptions: {
+        Row: {
+          id: string;
+          buyer_id: string;
+          tier_id: string;
+          canvas_id: string;
+          status: string;
+          stripe_subscription_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          buyer_id: string;
+          tier_id: string;
+          canvas_id: string;
+          status?: string;
+          stripe_subscription_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          buyer_id?: string;
+          tier_id?: string;
+          canvas_id?: string;
+          status?: string;
+          stripe_subscription_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+
+      orders: {
+        Row: {
+          id: string;
+          buyer_id: string;
+          seller_id: string;
+          item_id: string;
+          canvas_id: string;
+          status: string;
+          total_cents: number;
+          currency: string;
+          stripe_payment_intent_id: string | null;
+          fulfillment_status: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          buyer_id: string;
+          seller_id: string;
+          item_id: string;
+          canvas_id: string;
+          status?: string;
+          total_cents: number;
+          currency?: string;
+          stripe_payment_intent_id?: string | null;
+          fulfillment_status?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          buyer_id?: string;
+          seller_id?: string;
+          item_id?: string;
+          canvas_id?: string;
+          status?: string;
+          total_cents?: number;
+          currency?: string;
+          stripe_payment_intent_id?: string | null;
+          fulfillment_status?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+
+      shop_items: {
+        Row: {
+          id: string;
+          seller_id: string;
+          canvas_id: string;
+          name: string;
+          description: string | null;
+          price_cents: number;
+          currency: string;
+          item_type: string;
+          fulfillment: string;
+          stock_count: number | null;
+          requires_shipping: boolean;
+          is_active: boolean;
+          revision: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          seller_id: string;
+          canvas_id: string;
+          name: string;
+          description?: string | null;
+          price_cents: number;
+          currency?: string;
+          item_type?: string;
+          fulfillment?: string;
+          stock_count?: number | null;
+          requires_shipping?: boolean;
+          is_active?: boolean;
+          revision?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          seller_id?: string;
+          canvas_id?: string;
+          name?: string;
+          description?: string | null;
+          price_cents?: number;
+          currency?: string;
+          item_type?: string;
+          fulfillment?: string;
+          stock_count?: number | null;
+          requires_shipping?: boolean;
+          is_active?: boolean;
+          revision?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
       };
     };
+
+    Views: Record<string, never>;
+
+    Functions: Record<string, never>;
 
     Enums: {
       user_tier: 'free' | 'creator' | 'pro' | 'enterprise';

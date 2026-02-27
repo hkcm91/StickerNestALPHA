@@ -217,7 +217,7 @@ describe('usePointerDrag', () => {
           clientX: 100,
           clientY: 100,
           pointerId: 5,
-          currentTarget: { setPointerCapture: setCapture, releasePointerCapture: vi.fn() } as unknown as EventTarget,
+          currentTarget: { setPointerCapture: setCapture, releasePointerCapture: vi.fn() } as unknown as EventTarget & Element,
         }),
         'entity-8',
       );

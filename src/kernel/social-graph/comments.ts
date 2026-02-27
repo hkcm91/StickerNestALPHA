@@ -73,7 +73,7 @@ export async function createComment(
 
   // Update parent comment reply count if this is a reply
   if (input.parentId) {
-    await supabase.rpc('increment_comment_reply_count', { comment_id: input.parentId });
+    await (supabase.rpc as any)('increment_comment_reply_count', { comment_id: input.parentId });
   }
 
   return { success: true, data: comment };
@@ -192,7 +192,7 @@ export async function deleteComment(
 
   // Update parent comment reply count if this was a reply
   if (existing.parent_id) {
-    await supabase.rpc('decrement_comment_reply_count', { comment_id: existing.parent_id });
+    await (supabase.rpc as any)('decrement_comment_reply_count', { comment_id: existing.parent_id });
   }
 
   bus.emit(SocialGraphEvents.COMMENT_DELETED, { commentId });

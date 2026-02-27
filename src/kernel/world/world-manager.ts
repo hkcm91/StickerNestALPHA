@@ -12,7 +12,7 @@
  * - World lookup by ID or canvasId
  */
 
-import type { WorldOptions, WorldStatus } from '@sn/types';
+import type { WorldOptions } from '@sn/types';
 import { WorldEvents } from '@sn/types';
 
 import { bus } from '../bus';

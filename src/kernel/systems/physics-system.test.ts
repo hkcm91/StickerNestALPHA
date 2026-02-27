@@ -4,9 +4,11 @@
  * @module kernel/systems/physics-system.test
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
-import { createPhysicsSystem, type PhysicsEntity, type TickContext } from './physics-system';
+import type { TickContext } from '../world/tick-loop';
+
+import { createPhysicsSystem, type PhysicsEntity } from './physics-system';
 
 // Helper to create a tick context
 function createTickContext(deltaTime = 1 / 60): TickContext {

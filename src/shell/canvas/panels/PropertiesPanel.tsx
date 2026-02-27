@@ -8,11 +8,23 @@
 
 import React, { useCallback, useMemo } from 'react';
 
-import type { CanvasEntity } from '@sn/types';
 import { CanvasEvents } from '@sn/types';
+import type { CanvasEntity , Point2D, Size2D } from '@sn/types';
 
-import type { PropertyValue, EntityProperties } from '../../../canvas/panels/properties';
+
 import { bus } from '../../../kernel/bus';
+
+// Local type mirrors to avoid L6 → L4A-4 cross-layer import
+type PropertyValue<T> = T | 'mixed';
+
+interface EntityProperties {
+  position: PropertyValue<Point2D>;
+  size: PropertyValue<Size2D>;
+  rotation: PropertyValue<number>;
+  visible: PropertyValue<boolean>;
+  locked: PropertyValue<boolean>;
+  name: PropertyValue<string | undefined>;
+}
 import { useDockerStore } from '../../../kernel/stores/docker';
 import { useUIStore } from '../../../kernel/stores/ui/ui.store';
 import { useSelection } from '../hooks';

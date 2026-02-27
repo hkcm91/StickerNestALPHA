@@ -19,7 +19,7 @@ import type { Point2D, AnchorPoint } from '@sn/types';
 import { CanvasEvents } from '@sn/types';
 
 import { bus } from '../../../kernel/bus';
-import { pathBounds, mirrorHandle, enforceSmooth, enforceSymmetric, anchorsToSvgPath, distanceToCubicBezier } from '../../core';
+import { pathBounds, mirrorHandle, distanceToCubicBezier } from '../../core';
 import type { Tool, CanvasPointerEvent, CanvasKeyEvent } from '../registry';
 
 /** Distance threshold (px in canvas space) before a click becomes a drag */

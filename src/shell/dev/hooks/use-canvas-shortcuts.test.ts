@@ -8,7 +8,7 @@
 import { renderHook } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 
-import { useCanvasShortcuts, type CanvasShortcutActions } from './use-canvas-shortcuts';
+import { useCanvasShortcuts } from './use-canvas-shortcuts';
 
 function makeKeyEvent(overrides: Partial<React.KeyboardEvent> = {}): React.KeyboardEvent {
   return {

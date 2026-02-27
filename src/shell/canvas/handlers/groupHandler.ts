@@ -41,8 +41,6 @@ interface GroupPayload {
 // Helpers
 // ---------------------------------------------------------------------------
 
-const PADDING = 0;
-
 /**
  * Compute the bounding box encompassing all given entities.
  */

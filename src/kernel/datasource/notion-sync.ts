@@ -228,7 +228,7 @@ function extractCellValue(prop: NotionPropertyValue): CellValue {
       return prop.files.map((f: { name: string }) => f.name).join(', ');
     case 'rollup': {
       const r = prop.rollup;
-      if (r.type === 'number') return r.number;
+      if (r.type === 'number') return r.number ?? null;
       if (r.type === 'date') return r.date?.start ?? null;
       return null;
     }

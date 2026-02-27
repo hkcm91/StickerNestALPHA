@@ -9,8 +9,11 @@
  */
 
 import { supabase } from '../../kernel/supabase';
+import type { Database } from '../../kernel/supabase/types';
 
 import type { IntegrationHandler } from './integration-proxy';
+
+type CreatorAccountRow = Database['public']['Tables']['creator_accounts']['Row'];
 
 // ── Nonce infrastructure ────────────────────────────────────────────────────
 // Provides one-time-use nonces that widgets can include in mutation calls
@@ -182,11 +185,11 @@ async function handleCheckoutQuery(
     case 'connect_status': {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return { connected: false, error: 'Not authenticated', _nonce };
-      const { data } = await supabase
+      const { data } = (await supabase
         .from('creator_accounts')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .single()) as { data: CreatorAccountRow | null; error: unknown };
       if (!data) return { connected: false, chargesEnabled: false, payoutsEnabled: false, _nonce };
       return {
         connected: true,
@@ -268,8 +271,8 @@ async function handleCheckoutQuery(
           .eq('seller_id', user.id),
       ]);
 
-      const totalRevenue = (revenueResult.data ?? []).reduce(
-        (sum: number, row: { amount_cents: number }) => sum + (row.amount_cents ?? 0),
+      const totalRevenue = ((revenueResult.data ?? []) as unknown as Array<{ amount_cents: number }>).reduce(
+        (sum, row) => sum + (row.amount_cents ?? 0),
         0,
       );
       const activeSubscribers = subscriberResult.count ?? 0;
@@ -430,7 +433,7 @@ async function handleCheckoutMutate(
         .single();
       if (!canvas) return { error: 'Canvas not found or you are not the owner' };
 
-      const { data, error } = await supabase
+      const { data, error } = (await supabase
         .from('canvas_subscription_tiers')
         .insert({
           creator_id: user.id,
@@ -443,9 +446,9 @@ async function handleCheckoutMutate(
           benefits: params.data.benefits ?? [],
           is_active: true,
           sort_order: params.data.sortOrder ?? 0,
-        })
+        } as any)
         .select()
-        .single();
+        .single()) as { data: Record<string, unknown> | null; error: { message: string } | null };
       if (error) return { error: error.message };
       return data;
     }
@@ -537,7 +540,7 @@ async function handleCheckoutMutate(
         .single();
       if (!canvas) return { error: 'Canvas not found or you are not the owner' };
 
-      const { data, error } = await supabase
+      const { data, error } = (await supabase
         .from('shop_items')
         .insert({
           seller_id: user.id,
@@ -551,9 +554,9 @@ async function handleCheckoutMutate(
           stock_count: params.data.stockCount ?? null,
           requires_shipping: params.data.requiresShipping ?? false,
           is_active: true,
-        })
+        } as any)
         .select()
-        .single();
+        .single()) as { data: Record<string, unknown> | null; error: { message: string } | null };
       if (error) return { error: error.message };
       return data;
     }

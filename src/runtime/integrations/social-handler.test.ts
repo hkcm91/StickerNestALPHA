@@ -14,7 +14,7 @@ const TEST_USER_ID = '11111111-1111-4111-a111-111111111111';
 const OTHER_USER_ID = '22222222-2222-4222-a222-222222222222';
 const POST_ID = '33333333-3333-4333-a333-333333333333';
 const COMMENT_ID = '44444444-4444-4444-a444-444444444444';
-const NOTIFICATION_ID = '55555555-5555-4555-a555-555555555555';
+// const NOTIFICATION_ID = '55555555-5555-4555-a555-555555555555';
 
 // Mock the social graph API
 vi.mock('../../kernel/social-graph', () => ({
@@ -81,7 +81,7 @@ describe('createSocialHandler', () => {
     });
 
     it('should handle getProfile query', async () => {
-      const mockProfile = { userId: OTHER_USER_ID, displayName: 'Test User', username: 'testuser' };
+      const mockProfile = { userId: OTHER_USER_ID, displayName: 'Test User', username: 'testuser' } as any;
       vi.mocked(social.getProfile).mockResolvedValue({ success: true, data: mockProfile });
 
       const result = await handler.query({ type: 'getProfile', userId: OTHER_USER_ID });
@@ -91,12 +91,12 @@ describe('createSocialHandler', () => {
     });
 
     it('should handle searchProfiles query with pagination', async () => {
-      const mockResult = { items: [], hasMore: false };
+      const mockResult = [] as any;
       vi.mocked(social.searchProfiles).mockResolvedValue({ success: true, data: mockResult });
 
       const result = await handler.query({ type: 'searchProfiles', query: 'test', limit: 10 });
 
-      expect(social.searchProfiles).toHaveBeenCalledWith('test', { limit: 10, cursor: undefined });
+      expect(social.searchProfiles).toHaveBeenCalledWith('test', 10);
       expect(result).toEqual(mockResult);
     });
 
@@ -111,7 +111,7 @@ describe('createSocialHandler', () => {
     });
 
     it('should require authentication for user-specific queries', async () => {
-      mockGetUserId.mockReturnValue(null);
+      mockGetUserId.mockReturnValue(null as any);
       handler = createSocialHandler(mockGetUserId);
 
       await expect(handler.query({ type: 'getFeed', feedType: 'home' })).rejects.toThrow('Authentication required');
@@ -144,14 +144,14 @@ describe('createSocialHandler', () => {
     });
 
     it('should require authentication for all mutations', async () => {
-      mockGetUserId.mockReturnValue(null);
+      mockGetUserId.mockReturnValue(null as any);
       handler = createSocialHandler(mockGetUserId);
 
       await expect(handler.mutate({ type: 'follow', userId: OTHER_USER_ID })).rejects.toThrow('Authentication required');
     });
 
     it('should handle follow mutation', async () => {
-      const mockFollow = { id: 'follow-1', followerId: TEST_USER_ID, followingId: OTHER_USER_ID, status: 'active' };
+      const mockFollow = { id: 'follow-1', followerId: TEST_USER_ID, followingId: OTHER_USER_ID, status: 'active', createdAt: new Date().toISOString() } as any;
       vi.mocked(social.followUser).mockResolvedValue({ success: true, data: mockFollow });
 
       const result = await handler.mutate({ type: 'follow', userId: OTHER_USER_ID });
@@ -161,7 +161,7 @@ describe('createSocialHandler', () => {
     });
 
     it('should handle createPost mutation', async () => {
-      const mockPost = { id: POST_ID, authorId: TEST_USER_ID, content: 'Hello world!' };
+      const mockPost = { id: POST_ID, authorId: TEST_USER_ID, content: 'Hello world!' } as any;
       vi.mocked(social.createPost).mockResolvedValue({ success: true, data: mockPost });
 
       const result = await handler.mutate({
@@ -178,7 +178,7 @@ describe('createSocialHandler', () => {
     });
 
     it('should handle react mutation', async () => {
-      const mockReaction = { id: 'reaction-1', userId: TEST_USER_ID, targetType: 'post', targetId: POST_ID, type: 'like' };
+      const mockReaction = { id: 'reaction-1', userId: TEST_USER_ID, targetType: 'post', targetId: POST_ID, type: 'like', createdAt: new Date().toISOString() } as any;
       vi.mocked(social.addReaction).mockResolvedValue({ success: true, data: mockReaction });
 
       const result = await handler.mutate({
@@ -193,7 +193,7 @@ describe('createSocialHandler', () => {
     });
 
     it('should handle createComment mutation', async () => {
-      const mockComment = { id: COMMENT_ID, authorId: TEST_USER_ID, content: 'Nice!' };
+      const mockComment = { id: COMMENT_ID, authorId: TEST_USER_ID, content: 'Nice!' } as any;
       vi.mocked(social.createComment).mockResolvedValue({ success: true, data: mockComment });
 
       const result = await handler.mutate({

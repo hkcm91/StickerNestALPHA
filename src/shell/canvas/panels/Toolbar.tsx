@@ -127,7 +127,8 @@ const LibraryIcon = () => (
   </svg>
 );
 
-const XRIcon = () => (
+/** XR icon — reserved for future spatial toolbar button */
+export const XRIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="2" y="6" width="20" height="12" rx="2" />
     <circle cx="7" cy="12" r="2" />

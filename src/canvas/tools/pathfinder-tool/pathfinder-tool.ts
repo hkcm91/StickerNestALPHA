@@ -111,7 +111,7 @@ export function createPathfinderTool(
         bus.emit(PATHFINDER_EVENTS.emits.HOVER_REGION, { instanceId: 'tool', pathData: undefined });
       }
     }));
-    unsubs.push(bus.subscribe(CanvasEvents.SELECTION_CHANGED, (event: any) => {
+    unsubs.push(bus.subscribe(CanvasEvents.SELECTION_CLEARED, (event: any) => {
       selectedEntities = event.payload.selectedIds || [];
     }));
   };

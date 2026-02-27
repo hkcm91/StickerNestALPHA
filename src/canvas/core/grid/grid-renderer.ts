@@ -19,7 +19,6 @@ import {
   type CellBounds,
   getVisibleCellBounds,
   cellToPosition,
-  cellCenter,
   getIsometricCellCorners,
   getTriangularCellCorners,
   getHexagonalCellCorners,
