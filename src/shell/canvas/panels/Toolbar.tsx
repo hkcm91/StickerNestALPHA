@@ -113,6 +113,60 @@ const RedoIcon = () => (
   </svg>
 );
 
+const AlignLeftIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="4" y1="2" x2="4" y2="22" />
+    <rect x="8" y="6" width="12" height="4" rx="1" />
+    <rect x="8" y="14" width="8" height="4" rx="1" />
+  </svg>
+);
+
+const AlignCenterHIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="12" y1="2" x2="12" y2="22" />
+    <rect x="5" y="6" width="14" height="4" rx="1" />
+    <rect x="7" y="14" width="10" height="4" rx="1" />
+  </svg>
+);
+
+const AlignRightIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="20" y1="2" x2="20" y2="22" />
+    <rect x="4" y="6" width="12" height="4" rx="1" />
+    <rect x="8" y="14" width="8" height="4" rx="1" />
+  </svg>
+);
+
+const AlignTopIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="2" y1="4" x2="22" y2="4" />
+    <rect x="6" y="8" width="4" height="12" rx="1" />
+    <rect x="14" y="8" width="4" height="8" rx="1" />
+  </svg>
+);
+
+const AlignCenterVIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="2" y1="12" x2="22" y2="12" />
+    <rect x="6" y="5" width="4" height="14" rx="1" />
+    <rect x="14" y="7" width="4" height="10" rx="1" />
+  </svg>
+);
+
+const AlignBottomIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="2" y1="20" x2="22" y2="20" />
+    <rect x="6" y="4" width="4" height="12" rx="1" />
+    <rect x="14" y="8" width="4" height="8" rx="1" />
+  </svg>
+);
+
+const XRGogglesIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M2 10a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-3.5a2 2 0 0 1-1.7-1l-1.6-2.6a2 2 0 0 0-3.4 0L8.2 15a2 2 0 0 1-1.7 1H4a2 2 0 0 1-2-2v-4z" />
+  </svg>
+);
+
 const HistoryIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="10" />
@@ -538,13 +592,13 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             }}
           />
           <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
-            <button onClick={() => handleAlign('left')} disabled={selectedIds.size < 2} title="Align Left" style={{ ...smallBtnBase, opacity: selectedIds.size < 2 ? 0.4 : 1 }}>⇤</button>
-            <button onClick={() => handleAlign('centerH')} disabled={selectedIds.size < 2} title="Align Horizontal Center" style={{ ...smallBtnBase, opacity: selectedIds.size < 2 ? 0.4 : 1 }}>↔️</button>
-            <button onClick={() => handleAlign('right')} disabled={selectedIds.size < 2} title="Align Right" style={{ ...smallBtnBase, opacity: selectedIds.size < 2 ? 0.4 : 1 }}>⇥</button>
+            <button onClick={() => handleAlign('left')} disabled={selectedIds.size < 2} title="Align Left" style={{ ...smallBtnBase, opacity: selectedIds.size < 2 ? 0.4 : 1 }}><AlignLeftIcon /></button>
+            <button onClick={() => handleAlign('centerH')} disabled={selectedIds.size < 2} title="Align Horizontal Center" style={{ ...smallBtnBase, opacity: selectedIds.size < 2 ? 0.4 : 1 }}><AlignCenterHIcon /></button>
+            <button onClick={() => handleAlign('right')} disabled={selectedIds.size < 2} title="Align Right" style={{ ...smallBtnBase, opacity: selectedIds.size < 2 ? 0.4 : 1 }}><AlignRightIcon /></button>
             <div style={{ width: '2px' }} />
-            <button onClick={() => handleAlign('top')} disabled={selectedIds.size < 2} title="Align Top" style={{ ...smallBtnBase, opacity: selectedIds.size < 2 ? 0.4 : 1 }}>⤒</button>
-            <button onClick={() => handleAlign('centerV')} disabled={selectedIds.size < 2} title="Align Vertical Center" style={{ ...smallBtnBase, opacity: selectedIds.size < 2 ? 0.4 : 1 }}>↕️</button>
-            <button onClick={() => handleAlign('bottom')} disabled={selectedIds.size < 2} title="Align Bottom" style={{ ...smallBtnBase, opacity: selectedIds.size < 2 ? 0.4 : 1 }}>⤓</button>
+            <button onClick={() => handleAlign('top')} disabled={selectedIds.size < 2} title="Align Top" style={{ ...smallBtnBase, opacity: selectedIds.size < 2 ? 0.4 : 1 }}><AlignTopIcon /></button>
+            <button onClick={() => handleAlign('centerV')} disabled={selectedIds.size < 2} title="Align Vertical Center" style={{ ...smallBtnBase, opacity: selectedIds.size < 2 ? 0.4 : 1 }}><AlignCenterVIcon /></button>
+            <button onClick={() => handleAlign('bottom')} disabled={selectedIds.size < 2} title="Align Bottom" style={{ ...smallBtnBase, opacity: selectedIds.size < 2 ? 0.4 : 1 }}><AlignBottomIcon /></button>
           </div>
         </>
       )}
@@ -790,9 +844,9 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           <button
             onClick={handleEnterXR}
             title={`Enter WebXR (${spatialMode.toUpperCase()})`}
-            style={{ ...smallBtnBase, fontSize: '16px' }}
+            style={smallBtnBase}
           >
-            🥽
+            <XRGogglesIcon />
           </button>
         )}
         <button

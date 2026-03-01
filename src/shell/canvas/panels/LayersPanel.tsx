@@ -59,6 +59,34 @@ const ENTITY_TYPE_LABELS: Record<string, string> = {
  * Layers Panel — lists entities sorted by z-order with controls.
  * Hidden in preview mode.
  */
+const EyeIcon = ({ visible }: { visible: boolean }) => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    {visible ? (
+      <>
+        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+        <circle cx="12" cy="12" r="3" />
+      </>
+    ) : (
+      <>
+        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+        <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+        <line x1="1" y1="1" x2="23" y2="23" />
+      </>
+    )}
+  </svg>
+);
+
+const LockIcon = ({ locked }: { locked: boolean }) => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+    {locked ? (
+      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    ) : (
+      <path d="M7 11V7a5 5 0 0 1 9.9-1" />
+    )}
+  </svg>
+);
+
 export const LayersPanel: React.FC<LayersPanelProps> = ({ entities }) => {
   const mode = useUIStore((s) => s.canvasInteractionMode);
   const { selectedIds, select } = useSelection();
@@ -253,7 +281,7 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({ entities }) => {
                     opacity: layer.visible ? 1 : 0.4,
                   }}
                 >
-                  {layer.visible ? '\u{1F441}' : '\u{1F441}'}
+                  <EyeIcon visible={layer.visible} />
                 </button>
 
                 {/* Lock toggle */}
@@ -272,7 +300,7 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({ entities }) => {
                     padding: '0 2px',
                   }}
                 >
-                  {layer.locked ? '\u{1F512}' : '\u{1F513}'}
+                  <LockIcon locked={layer.locked} />
                 </button>
               </div>
             );

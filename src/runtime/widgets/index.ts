@@ -15,6 +15,8 @@
 
 export { ImageGeneratorWidget } from './image-generator/image-generator.widget';
 export { imageGeneratorManifest } from './image-generator/image-generator.widget';
+export { KanbanWidget } from './kanban/kanban.widget';
+export { kanbanManifest } from './kanban/kanban.widget';
 export { PathfinderWidget } from './pathfinder/pathfinder.widget';
 export { pathfinderManifest } from './pathfinder/pathfinder.widget';
 export { BUILT_IN_WIDGET_HTML } from './built-in-html';

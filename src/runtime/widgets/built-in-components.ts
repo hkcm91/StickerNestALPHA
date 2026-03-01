@@ -10,6 +10,7 @@
 import type React from 'react';
 
 import { ImageGeneratorWidget } from './image-generator/image-generator.widget';
+import { KanbanWidget } from './kanban/kanban.widget';
 import { PathfinderWidget } from './pathfinder/pathfinder.widget';
 
 /**
@@ -17,5 +18,6 @@ import { PathfinderWidget } from './pathfinder/pathfinder.widget';
  */
 export const BUILT_IN_WIDGET_COMPONENTS: Record<string, React.ComponentType<any>> = {
   'sn.builtin.image-generator': ImageGeneratorWidget,
+  'sn.builtin.kanban': KanbanWidget,
   'sn.builtin.pathfinder': PathfinderWidget,
 };
