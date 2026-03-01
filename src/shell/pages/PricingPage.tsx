@@ -106,8 +106,8 @@ export const PricingPage: React.FC = () => {
     setLoadingTier(tier);
     setError(null);
     try {
-      const url = await createCheckoutSession(tier);
-      window.location.href = url;
+      const result = await createCheckoutSession(tier);
+      window.location.href = result.url;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to start checkout');
     } finally {

@@ -1390,6 +1390,141 @@ export interface Database {
         };
         Relationships: [];
       };
+
+      user_integrations: {
+        Row: {
+          id: string;
+          user_id: string;
+          provider: 'notion' | 'google_sheets' | 'airtable' | 'github' | 'spotify' | 'weather' | 'openai';
+          access_token: string;
+          refresh_token: string | null;
+          token_type: string | null;
+          expires_at: string | null;
+          provider_data: Json;
+          scopes: string[];
+          status: 'active' | 'expired' | 'revoked' | 'error';
+          last_error: string | null;
+          last_used_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          provider: 'notion' | 'google_sheets' | 'airtable' | 'github' | 'spotify' | 'weather' | 'openai';
+          access_token: string;
+          refresh_token?: string | null;
+          token_type?: string | null;
+          expires_at?: string | null;
+          provider_data?: Json;
+          scopes?: string[];
+          status?: 'active' | 'expired' | 'revoked' | 'error';
+          last_error?: string | null;
+          last_used_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          provider?: 'notion' | 'google_sheets' | 'airtable' | 'github' | 'spotify' | 'weather' | 'openai';
+          access_token?: string;
+          refresh_token?: string | null;
+          token_type?: string | null;
+          expires_at?: string | null;
+          provider_data?: Json;
+          scopes?: string[];
+          status?: 'active' | 'expired' | 'revoked' | 'error';
+          last_error?: string | null;
+          last_used_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+
+      widget_integration_permissions: {
+        Row: {
+          id: string;
+          user_id: string;
+          widget_id: string;
+          integration_id: string;
+          allowed_resources: Json;
+          can_read: boolean;
+          can_write: boolean;
+          granted_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          widget_id: string;
+          integration_id: string;
+          allowed_resources?: Json;
+          can_read?: boolean;
+          can_write?: boolean;
+          granted_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          widget_id?: string;
+          integration_id?: string;
+          allowed_resources?: Json;
+          can_read?: boolean;
+          can_write?: boolean;
+          granted_at?: string;
+        };
+        Relationships: [];
+      };
+
+      todos: {
+        Row: {
+          id: string;
+          user_id: string;
+          title: string;
+          description: string | null;
+          is_completed: boolean;
+          priority: Database['public']['Enums']['todo_priority'];
+          due_date: string | null;
+          completed_at: string | null;
+          sort_order: number;
+          tags: string[];
+          metadata: Json;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          title: string;
+          description?: string | null;
+          is_completed?: boolean;
+          priority?: Database['public']['Enums']['todo_priority'];
+          due_date?: string | null;
+          completed_at?: string | null;
+          sort_order?: number;
+          tags?: string[];
+          metadata?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          title?: string;
+          description?: string | null;
+          is_completed?: boolean;
+          priority?: Database['public']['Enums']['todo_priority'];
+          due_date?: string | null;
+          completed_at?: string | null;
+          sort_order?: number;
+          tags?: string[];
+          metadata?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
 
     Views: Record<string, never>;
@@ -1404,6 +1539,7 @@ export interface Database {
       data_source_type: 'doc' | 'table' | 'note' | 'folder' | 'file' | 'custom';
       data_source_scope: 'canvas' | 'user' | 'shared' | 'public';
       acl_role: 'owner' | 'editor' | 'commenter' | 'viewer';
+      todo_priority: 'low' | 'medium' | 'high' | 'urgent';
     };
   };
 }

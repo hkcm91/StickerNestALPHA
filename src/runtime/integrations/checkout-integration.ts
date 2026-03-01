@@ -44,9 +44,9 @@ function consumeNonce(nonce: string | undefined): boolean {
 
 interface CheckoutQueryParams {
   action:
-    | 'tiers' | 'my_subscription' | 'shop_items' | 'my_orders' | 'download'
-    | 'connect_status' | 'my_tiers' | 'my_items' | 'seller_orders'
-    | 'dashboard_stats' | 'recent_activity';
+  | 'tiers' | 'my_subscription' | 'shop_items' | 'my_orders' | 'download'
+  | 'connect_status' | 'my_tiers' | 'my_items' | 'seller_orders'
+  | 'dashboard_stats' | 'recent_activity';
   canvasId?: string;
   orderId?: string;
   limit?: number;
@@ -69,11 +69,11 @@ const MAX_NAME_LENGTH = 200;
 
 interface CheckoutMutateParams {
   action:
-    | 'subscribe' | 'buy'
-    | 'cancel_subscription' | 'customer_portal' | 'request_refund'
-    | 'connect_onboard' | 'connect_dashboard'
-    | 'create_tier' | 'update_tier' | 'delete_tier'
-    | 'create_item' | 'update_item' | 'delete_item';
+  | 'subscribe' | 'buy'
+  | 'cancel_subscription' | 'customer_portal' | 'request_refund'
+  | 'connect_onboard' | 'connect_dashboard'
+  | 'create_tier' | 'update_tier' | 'delete_tier'
+  | 'create_item' | 'update_item' | 'delete_item';
   tierId?: string;
   itemId?: string;
   subscriptionId?: string;
@@ -85,12 +85,6 @@ interface CheckoutMutateParams {
   _nonce?: string;
 }
 
-interface CreatorAccountRow {
-  charges_enabled: boolean;
-  payouts_enabled: boolean;
-  onboarding_complete: boolean;
-  stripe_account_id: string | null;
-}
 
 async function handleCheckoutQuery(
   params: CheckoutQueryParams,

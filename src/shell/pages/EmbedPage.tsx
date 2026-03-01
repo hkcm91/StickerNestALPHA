@@ -12,15 +12,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
-import type { BackgroundSpec, ViewportConfig } from '@sn/types';
+import type { BackgroundSpec } from '@sn/types';
 import { DEFAULT_BACKGROUND } from '@sn/types';
 
 import { initCanvasCore, teardownCanvasCore } from '../../canvas/core';
 import type { SceneGraph } from '../../canvas/core';
-import { supabase } from '../../kernel/supabase/client';
 import { useUIStore } from '../../kernel/stores/ui/ui.store';
-import { WidgetFrame, InlineWidgetFrame } from '../../runtime';
-import { BUILT_IN_WIDGET_HTML, BUILT_IN_WIDGET_COMPONENTS } from '../../runtime/widgets';
+import { supabase } from '../../kernel/supabase/client';
+import { BUILT_IN_WIDGET_HTML } from '../../runtime/widgets';
 import { CanvasWorkspace, useSceneGraph } from '../canvas';
 import { THEME_TOKENS } from '../theme/theme-tokens';
 import { themeVar } from '../theme/theme-vars';
@@ -117,7 +116,7 @@ export const EmbedPage: React.FC = () => {
       }
       hydratedRef.current = true;
     }
-    hydrate().catch(() => {});
+    hydrate().catch(() => { });
     return () => { cancelled = true; };
   }, [canvasData, sceneGraph]);
 

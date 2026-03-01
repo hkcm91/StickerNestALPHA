@@ -121,13 +121,15 @@ async function getUserReplicateKey(
 
   // Set the encryption secret for decryption
   if (API_KEY_SECRET) {
-    await serviceClient.rpc("set_config", {
-      setting_name: "app.api_key_secret",
-      setting_value: API_KEY_SECRET,
-      is_local: true,
-    }).catch(() => {
+    try {
+      await serviceClient.rpc("set_config", {
+        setting_name: "app.api_key_secret",
+        setting_value: API_KEY_SECRET,
+        is_local: true,
+      });
+    } catch {
       // Ignore if RPC doesn't exist
-    });
+    }
   }
 
   // Try to get user's Replicate key

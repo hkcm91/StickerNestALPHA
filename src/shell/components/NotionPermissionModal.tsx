@@ -94,23 +94,52 @@ export const NotionPermissionModal: React.FC = () => {
     if (!request || selected.size === 0) return;
     setSaving(true);
     try {
-      const allowedResources = Array.from(selected).map((dbId) => ({
-        resource_type: 'database', resource_id: dbId, access_level: accessLevel,
-      }));
-      await supabase.from('widget_integration_permissions').upsert({
+      // 1. Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      // 2. Find Notion integration for this user
+      const { data: integration } = await supabase
+        .from('user_integrations')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('provider', 'notion')
+        .maybeSingle();
+
+      if (!integration) {
+        // This shouldn't happen if they are here, but handle just in case
+        throw new Error('Notion not connected');
+      }
+
+      // 3. Prepare allowed resources
+      const allowedResources = {
+        databases: Array.from(selected),
+      };
+
+      // 4. Upsert permission (using widget_id + integration_id + user_id unique constraint)
+      const { error } = await supabase.from('widget_integration_permissions').upsert({
+        user_id: user.id,
         widget_id: request.widgetId,
-        widget_instance_id: request.instanceId,
-        integration_name: 'notion',
+        integration_id: integration.id,
         allowed_resources: allowedResources,
-        updated_at: new Date().toISOString(),
+        can_read: true,
+        can_write: accessLevel === 'read_write',
+        granted_at: new Date().toISOString(),
       });
+
+      if (error) throw error;
+
       bus.emit('widget.notion.permissionGranted', {
-        widgetId: request.widgetId, instanceId: request.instanceId,
-        databases: Array.from(selected), accessLevel,
+        widgetId: request.widgetId,
+        instanceId: request.instanceId,
+        databases: Array.from(selected),
+        accessLevel,
       });
+
       setRequest(null);
-    } catch {
-      // Keep modal open on error
+    } catch (err) {
+      console.error('[NotionPermissionModal] Failed to grant permission:', err);
+      // Keep modal open, maybe show an error toast
     } finally {
       setSaving(false);
     }

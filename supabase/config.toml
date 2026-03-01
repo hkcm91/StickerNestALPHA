@@ -130,6 +130,58 @@ redirect_uri = ""
 # Overrides the default auth provider URL. Used to support self-hosted auth service
 url = ""
 
+[functions]
+# Allow functions to handle their own JWT verification
+# This is necessary because some functions need to:
+# 1. Accept OAuth callbacks (no JWT)
+# 2. Accept Stripe webhooks (no JWT, uses signature verification)
+# 3. Return proper error messages instead of generic 401
+
+[functions.notion-oauth]
+verify_jwt = false
+
+[functions.notion-proxy]
+verify_jwt = false
+
+[functions.stripe-webhook]
+verify_jwt = false
+
+[functions.stripe-checkout]
+verify_jwt = false
+
+[functions.stripe-portal]
+verify_jwt = false
+
+[functions.creator-checkout]
+verify_jwt = false
+
+[functions.creator-webhook]
+verify_jwt = false
+
+[functions.connect-webhook]
+verify_jwt = false
+
+[functions.connect-onboard]
+verify_jwt = false
+
+[functions.connect-dashboard]
+verify_jwt = false
+
+[functions.customer-portal]
+verify_jwt = false
+
+[functions.cancel-subscription]
+verify_jwt = false
+
+[functions.request-refund]
+verify_jwt = false
+
+[functions.ai-generate]
+verify_jwt = false
+
+[functions.api-key-save]
+verify_jwt = false
+
 [analytics]
 enabled = false
 port = 54327

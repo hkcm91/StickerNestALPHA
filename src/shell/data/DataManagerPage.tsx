@@ -41,10 +41,13 @@ import { DatabaseList } from './components/DatabaseList';
 import { NotionImport } from './components/NotionImport';
 import { TableView } from './components/TableView';
 import { TemplateSelector } from './components/TemplateSelector';
+import { TodoManager } from './components/TodoManager';
 
 // =============================================================================
 // Types
 // =============================================================================
+
+type Tab = 'databases' | 'todos';
 
 type View =
   | { type: 'list' }
@@ -65,6 +68,7 @@ type Modal =
 export const DataManagerPage: React.FC = () => {
   const user = useAuthStore((s: { user: { id: string } | null }) => s.user);
   const addToast = useUIStore((s) => s.addToast);
+  const [activeTab, setActiveTab] = useState<Tab>('databases');
   const [view, setView] = useState<View>({ type: 'list' });
   const [modal, setModal] = useState<Modal>(null);
   const [showAIPanel, setShowAIPanel] = useState(false);
@@ -85,7 +89,7 @@ export const DataManagerPage: React.FC = () => {
 
   // --- DataSource Operations ---
 
-  const handleCreate = useCallback(async (name: string, type: DataSourceType) => {
+  const handleCreate = useCallback(async (name: string, type: DataSource['type']) => {
     if (!user) return;
     const result = await createDataSource(
       {
@@ -252,8 +256,35 @@ export const DataManagerPage: React.FC = () => {
 
   return (
     <div data-testid="page-data" style={styles.page}>
+      {/* Tab Navigation */}
+      <div style={styles.tabBar}>
+        <button
+          style={{
+            ...styles.tab,
+            ...(activeTab === 'databases' ? styles.tabActive : {}),
+          }}
+          onClick={() => {
+            setActiveTab('databases');
+            setView({ type: 'list' });
+          }}
+        >
+          Databases
+        </button>
+        <button
+          style={{
+            ...styles.tab,
+            ...(activeTab === 'todos' ? styles.tabActive : {}),
+          }}
+          onClick={() => setActiveTab('todos')}
+        >
+          Todos
+        </button>
+      </div>
+
       <div style={styles.main}>
-        {view.type === 'list' ? (
+        {activeTab === 'todos' ? (
+          <TodoManager />
+        ) : view.type === 'list' ? (
           <DatabaseList
             key={refreshKey}
             onSelect={goToDetail}
@@ -340,8 +371,31 @@ export const DataManagerPage: React.FC = () => {
 const styles: Record<string, React.CSSProperties> = {
   page: {
     display: 'flex',
+    flexDirection: 'column',
     height: 'calc(100vh - 48px)',
     background: 'var(--sn-bg, #fff)',
+  },
+  tabBar: {
+    display: 'flex',
+    gap: '4px',
+    padding: '12px 16px',
+    borderBottom: '1px solid var(--sn-border, #e5e7eb)',
+    background: 'var(--sn-surface, #f9fafb)',
+  },
+  tab: {
+    padding: '8px 16px',
+    border: 'none',
+    borderRadius: 'var(--sn-radius, 6px)',
+    background: 'transparent',
+    color: 'var(--sn-text-muted, #6b7280)',
+    fontSize: '14px',
+    fontWeight: 500,
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+  tabActive: {
+    background: 'var(--sn-accent, #6366f1)',
+    color: '#fff',
   },
   main: {
     flex: 1,

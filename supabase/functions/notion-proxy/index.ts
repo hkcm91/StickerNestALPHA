@@ -16,6 +16,13 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 const NOTION_API_VERSION = "2022-06-28";
 const NOTION_API_BASE = "https://api.notion.com/v1";
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-api-version",
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
@@ -57,7 +64,7 @@ function jsonResponse(
 ): Response {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...CORS_HEADERS },
   });
 }
 
@@ -276,8 +283,7 @@ async function logUsage(
   integrationId: string,
   operation: string,
   type: string,
-  widgetId?: string,
-  instanceId?: string,
+  widgetInstanceId?: string,
   success = true,
   errorCode?: string,
 ): Promise<void> {
@@ -285,9 +291,8 @@ async function logUsage(
     await supabase.from("integration_usage_log").insert({
       user_id: userId,
       integration_id: integrationId,
-      operation_type: `${operation}:${type}`,
-      widget_id: widgetId,
-      instance_id: instanceId,
+      operation: `${operation}:${type}`,
+      widget_instance_id: widgetInstanceId,
       success,
       error_code: errorCode,
     });
@@ -302,6 +307,11 @@ async function logUsage(
 // ─────────────────────────────────────────────────────────────────────────────
 
 Deno.serve(async (req: Request) => {
+  // Handle CORS preflight
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: CORS_HEADERS });
+  }
+
   // Only accept POST
   if (req.method !== "POST") {
     return jsonResponse(
@@ -430,7 +440,6 @@ Deno.serve(async (req: Request) => {
           typedIntegration.id,
           operation,
           type,
-          widgetId,
           instanceId,
           false,
           "permission_denied",
@@ -493,7 +502,6 @@ Deno.serve(async (req: Request) => {
         typedIntegration.id,
         operation,
         type,
-        widgetId,
         instanceId,
         false,
         errorCode,
@@ -526,7 +534,6 @@ Deno.serve(async (req: Request) => {
       typedIntegration.id,
       operation,
       type,
-      widgetId,
       instanceId,
       true,
     );
@@ -541,7 +548,6 @@ Deno.serve(async (req: Request) => {
       typedIntegration.id,
       operation,
       type,
-      widgetId,
       instanceId,
       false,
       "network_error",

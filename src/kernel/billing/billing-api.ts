@@ -97,13 +97,21 @@ export async function getTierQuota(
   };
 }
 
+export interface CheckoutResult {
+  /** URL to redirect to (Stripe Checkout or success page) */
+  url: string;
+  /** True if tier was granted immediately (no payment required) */
+  free?: boolean;
+}
+
 /**
  * Creates a Stripe Checkout session for a platform subscription.
- * Returns the Checkout URL to redirect the user to.
+ * For free tiers, grants the tier immediately and returns a success URL.
+ * For paid tiers, returns the Stripe Checkout URL to redirect the user to.
  */
 export async function createCheckoutSession(
   tier: 'creator' | 'pro' | 'enterprise',
-): Promise<string> {
+): Promise<CheckoutResult> {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) throw new Error('Not authenticated');
 
@@ -118,7 +126,10 @@ export async function createCheckoutSession(
   const url = response.data?.url;
   if (!url) throw new Error('No checkout URL returned');
 
-  return url;
+  return {
+    url,
+    free: response.data?.free === true,
+  };
 }
 
 /**

@@ -102,7 +102,10 @@
       "mcp__claude_ai_Supabase__apply_migration",
       "mcp__claude_ai_Supabase__list_edge_functions",
       "mcp__claude_ai_Supabase__deploy_edge_function",
-      "Bash(git rebase:*)"
+      "Bash(git rebase:*)",
+      "Bash(openssl rand:*)",
+      "Bash(supabase functions deploy:*)",
+      "mcp__claude_ai_Supabase__get_logs"
     ]
   }
 }

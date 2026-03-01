@@ -15,10 +15,17 @@ const PLATFORM_FEE_MAP: Record<string, number> = {
   enterprise: 5,
 };
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-api-version",
+};
+
 function jsonResponse(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...CORS_HEADERS },
   });
 }
 
@@ -31,49 +38,49 @@ function getServiceClient() {
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, {
-      headers: {
-        "Access-Control-Allow-Origin": SITE_URL,
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "authorization, content-type",
-      },
-    });
+    return new Response(null, { headers: CORS_HEADERS });
   }
 
   if (req.method !== "POST") {
     return jsonResponse({ error: "Method not allowed" }, 405);
   }
 
-  const authHeader = req.headers.get("Authorization");
-  if (!authHeader) {
-    return jsonResponse({ error: "Missing authorization header" }, 401);
-  }
+  try {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return jsonResponse({ error: "Missing authorization header" }, 401);
+    }
 
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_ANON_KEY")!,
-    { global: { headers: { Authorization: authHeader } } },
-  );
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } },
+    );
 
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
 
-  if (authError || !user) {
-    return jsonResponse({ error: "Unauthorized" }, 401);
-  }
+    if (authError || !user) {
+      return jsonResponse({ error: "Unauthorized" }, 401);
+    }
 
-  const body = await req.json();
-  const { action } = body;
+    const body = await req.json();
+    const { action } = body;
 
-  switch (action) {
-    case "subscribe":
-      return handleSubscribe(user, body);
-    case "buy":
-      return handleBuyItem(user, body);
-    default:
-      return jsonResponse({ error: `Unknown action: ${action}` }, 400);
+    switch (action) {
+      case "subscribe":
+        return await handleSubscribe(user, body);
+      case "buy":
+        return await handleBuyItem(user, body);
+      default:
+        return jsonResponse({ error: `Unknown action: ${action}` }, 400);
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error(`creator-checkout error: ${message}`);
+    return jsonResponse({ error: message }, 500);
   }
 });
 

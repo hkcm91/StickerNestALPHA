@@ -14,15 +14,62 @@ import { supabase } from '../supabase';
 
 /**
  * Map Supabase user to AuthUser.
+ * The tier is fetched separately from the users table (source of truth).
  */
-function mapUser(user: User): AuthUser {
+function mapUser(user: User, tier: AuthUser['tier'] = 'free'): AuthUser {
   return {
     id: user.id,
     email: user.email ?? '',
     displayName: user.user_metadata?.display_name ?? user.email ?? null,
     avatarUrl: user.user_metadata?.avatar_url ?? null,
-    tier: (user.user_metadata?.tier as AuthUser['tier']) ?? 'free',
+    tier,
   };
+}
+
+/**
+ * Fetch the user's tier from the users table (source of truth).
+ * Creates a user row if one doesn't exist (handles OAuth signups).
+ */
+async function fetchUserTier(userId: string): Promise<AuthUser['tier']> {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('tier')
+      .eq('id', userId)
+      .maybeSingle();
+
+    // Row exists - return the tier
+    if (data?.tier) {
+      return data.tier as AuthUser['tier'];
+    }
+
+    // No row found (new OAuth user) - try to create one
+    if (!data && !error) {
+      // Get user info from Supabase Auth
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        // Insert new user row with default tier
+        const { error: insertError } = await supabase
+          .from('users')
+          .insert({
+            id: user.id,
+            email: user.email ?? '',
+            display_name: user.user_metadata?.display_name ?? user.user_metadata?.full_name ?? user.email?.split('@')[0] ?? null,
+            avatar_url: user.user_metadata?.avatar_url ?? null,
+            tier: 'free',
+          });
+
+        if (insertError) {
+          console.warn('Failed to create user row:', insertError.message);
+        }
+      }
+    }
+
+    return 'free';
+  } catch (err) {
+    console.warn('Failed to fetch user tier:', err);
+    return 'free';
+  }
 }
 
 /**
@@ -38,27 +85,33 @@ function mapSession(session: Session) {
 
 /**
  * Update auth store and emit bus event on auth state change.
+ * Fetches the user's tier from the database (source of truth).
  */
-function handleAuthChange(user: User | null, session: Session | null): void {
+async function handleAuthChange(user: User | null, session: Session | null): Promise<void> {
   const store = useAuthStore.getState();
 
   if (user && session) {
-    store.setUser(mapUser(user));
+    // Fetch tier from users table (source of truth)
+    const tier = await fetchUserTier(user.id);
+    store.setUser(mapUser(user, tier));
     store.setSession(mapSession(session));
+
+    bus.emit(KernelEvents.AUTH_STATE_CHANGED, {
+      user: mapUser(user, tier),
+      session: { accessToken: session.access_token, expiresAt: session.expires_at },
+    });
   } else {
     store.setUser(null);
     store.setSession(null);
+
+    bus.emit(KernelEvents.AUTH_STATE_CHANGED, {
+      user: null,
+      session: null,
+    });
   }
 
   store.setLoading(false);
   store.setInitialized();
-
-  bus.emit(KernelEvents.AUTH_STATE_CHANGED, {
-    user: user ? mapUser(user) : null,
-    session: session
-      ? { accessToken: session.access_token, expiresAt: session.expires_at }
-      : null,
-  });
 }
 
 /**
@@ -83,7 +136,7 @@ export async function signInWithEmail(
     return { error };
   }
 
-  handleAuthChange(data.user, data.session);
+  await handleAuthChange(data.user, data.session);
   return { error: null };
 }
 
@@ -113,7 +166,7 @@ export async function signUp(
     return { error };
   }
 
-  handleAuthChange(data.user, data.session);
+  await handleAuthChange(data.user, data.session);
   return { error: null };
 }
 
@@ -178,7 +231,7 @@ export async function refreshSession(): Promise<{
   }
 
   if (data.session && data.user) {
-    handleAuthChange(data.user, data.session);
+    await handleAuthChange(data.user, data.session);
   }
 
   return { error: null };
@@ -193,13 +246,13 @@ export function initAuthListener(): { unsubscribe: () => void } {
   if (typeof supabase.auth.getSession === 'function') {
     supabase.auth
       .getSession()
-      .then(({ data, error }) => {
+      .then(async ({ data, error }) => {
         if (error) {
           useAuthStore.getState().setLoading(false);
           useAuthStore.getState().setInitialized();
           return;
         }
-        handleAuthChange(data.session?.user ?? null, data.session ?? null);
+        await handleAuthChange(data.session?.user ?? null, data.session ?? null);
       })
       .catch(() => {
         useAuthStore.getState().setLoading(false);
@@ -213,7 +266,8 @@ export function initAuthListener(): { unsubscribe: () => void } {
   const {
     data: { subscription },
   } = supabase.auth.onAuthStateChange((_event, session) => {
-    handleAuthChange(session?.user ?? null, session);
+    // Fire and forget - tier fetch happens asynchronously
+    void handleAuthChange(session?.user ?? null, session);
   });
 
   return {

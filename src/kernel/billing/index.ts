@@ -5,4 +5,5 @@ export {
   createPortalSession,
   type Subscription,
   type TierQuota,
+  type CheckoutResult,
 } from './billing-api';

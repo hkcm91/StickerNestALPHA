@@ -44,8 +44,8 @@ export const UpgradePrompt: React.FC<UpgradePromptProps> = ({
     }
     setLoading(true);
     try {
-      const url = await createCheckoutSession(upgradeTier);
-      window.location.href = url;
+      const result = await createCheckoutSession(upgradeTier);
+      window.location.href = result.url;
     } catch {
       window.location.href = '/pricing';
     }
