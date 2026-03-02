@@ -53,6 +53,10 @@ export const MarketplacePageFull: React.FC = () => {
   const [detail, setDetail] = useState<MarketplaceWidgetDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [installStatus, setInstallStatus] = useState<Record<string, 'installing' | 'installed' | 'error'>>({});
+  const [uninstallStatus, setUninstallStatus] = useState<
+    Record<string, 'uninstalling' | 'uninstalled' | 'error'>
+  >({});
+  const [confirmingUninstall, setConfirmingUninstall] = useState<string | null>(null);
 
   const fetchListings = useCallback(async () => {
     setLoading(true);
@@ -76,7 +80,7 @@ export const MarketplacePageFull: React.FC = () => {
     try {
       const widget = await api.getWidget(widgetId);
       if (widget) { setDetail(widget); setView('detail'); }
-    } catch {} finally { setLoading(false); }
+    } catch { /* ignore fetch error */ } finally { setLoading(false); }
   }, [api]);
 
   const goBackToListing = useCallback(() => { setView('listing'); setDetail(null); }, []);
@@ -92,9 +96,30 @@ export const MarketplacePageFull: React.FC = () => {
     }
   }, [userId, installService]);
 
+  const handleUninstall = useCallback(async (widgetId: string) => {
+    if (!userId) return;
+    setUninstallStatus((prev) => ({ ...prev, [widgetId]: 'uninstalling' }));
+    try {
+      const result = await installService.uninstall(userId, widgetId, { confirmed: true });
+      if (result.success) {
+        setUninstallStatus((prev) => ({ ...prev, [widgetId]: 'uninstalled' }));
+        setConfirmingUninstall(null);
+      } else {
+        setUninstallStatus((prev) => ({ ...prev, [widgetId]: 'error' }));
+      }
+    } catch {
+      setUninstallStatus((prev) => ({ ...prev, [widgetId]: 'error' }));
+    }
+  }, [userId, installService]);
+
   const isInstalled = useCallback((widgetId: string) => {
+    if (uninstallStatus[widgetId] === 'uninstalled') return false;
     return widgetId in widgetRegistry || installStatus[widgetId] === 'installed';
-  }, [widgetRegistry, installStatus]);
+  }, [widgetRegistry, installStatus, uninstallStatus]);
+
+  const isBuiltIn = useCallback((widgetId: string) => {
+    return widgetRegistry[widgetId]?.isBuiltIn === true;
+  }, [widgetRegistry]);
 
   const handleSearchKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter') { setPage(1); fetchListings(); }
@@ -120,6 +145,15 @@ export const MarketplacePageFull: React.FC = () => {
     ...btnPrimary, background: 'transparent',
     border: `1px solid ${themeVar('--sn-border')}`, color: themeVar('--sn-text'),
   };
+  const btnDanger: React.CSSProperties = {
+    padding: '8px 20px', borderRadius: 8, border: 'none',
+    background: '#dc2626', color: '#fff', fontWeight: 600,
+    cursor: 'pointer', fontSize: '14px', fontFamily: 'inherit',
+  };
+  const labelBuiltIn: React.CSSProperties = {
+    padding: '4px 12px', borderRadius: 8, background: 'rgba(255,255,255,0.1)',
+    color: 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: 500,
+  };
 
   // Detail view
   if (view === 'detail' && detail) {
@@ -137,7 +171,28 @@ export const MarketplacePageFull: React.FC = () => {
             )}
             <div style={{ marginTop: '16px' }}>
               {isInstalled(detail.id) ? (
-                <button type="button" disabled style={{ ...btnPrimary, opacity: 0.6, cursor: 'default' }}>Installed</button>
+                isBuiltIn(detail.id) ? (
+                  <span style={labelBuiltIn}>Built-in</span>
+                ) : confirmingUninstall === detail.id ? (
+                  <div>
+                    <div style={{ fontSize: '13px', marginBottom: '8px', color: '#ef4444' }}>
+                      This will remove the widget and delete all saved state. Are you sure?
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button type="button" onClick={() => setConfirmingUninstall(null)} style={btnSecondary}>Cancel</button>
+                      <button type="button" onClick={() => handleUninstall(detail.id)}
+                        disabled={uninstallStatus[detail.id] === 'uninstalling'}
+                        style={{ ...btnDanger, opacity: uninstallStatus[detail.id] === 'uninstalling' ? 0.6 : 1 }}>
+                        {uninstallStatus[detail.id] === 'uninstalling' ? 'Uninstalling...' : 'Yes, Uninstall'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => setConfirmingUninstall(detail.id)}
+                    style={btnDanger} data-testid="marketplace-uninstall-btn">
+                    Uninstall
+                  </button>
+                )
               ) : (
                 <button type="button" onClick={() => handleInstall(detail.id)}
                   disabled={installStatus[detail.id] === 'installing'}
@@ -149,10 +204,18 @@ export const MarketplacePageFull: React.FC = () => {
               {installStatus[detail.id] === 'error' && (
                 <div style={{ color: '#ef4444', fontSize: '13px', marginTop: '4px' }}>Installation failed. Please try again.</div>
               )}
+              {uninstallStatus[detail.id] === 'error' && (
+                <div style={{ color: '#ef4444', fontSize: '13px', marginTop: '4px' }}>Uninstall failed. Please try again.</div>
+              )}
             </div>
           </div>
           <div style={{ flex: 1, minWidth: '300px' }}>
-            <h1 style={{ margin: '0 0 4px', fontSize: '24px' }}>{detail.name}</h1>
+            <h1 style={{ margin: '0 0 4px', fontSize: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {detail.name}
+              {!!(detail.metadata as Record<string, unknown>)?.official && (
+                <span style={{ fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '10px', background: '#2563eb', color: '#fff', lineHeight: '16px', whiteSpace: 'nowrap' }}>Official</span>
+              )}
+            </h1>
             <div style={{ fontSize: '13px', color: themeVar('--sn-text-muted'), marginBottom: '12px' }}>
               v{detail.version}
               {detail.ratingAverage !== null && <span> — {detail.ratingAverage.toFixed(1)} rating ({detail.ratingCount} reviews)</span>}
@@ -175,10 +238,10 @@ export const MarketplacePageFull: React.FC = () => {
                 <h3 style={{ fontSize: '14px', marginBottom: '8px' }}>Event Contract</h3>
                 <div style={{ fontSize: '13px', fontFamily: 'monospace', background: themeVar('--sn-surface'), padding: '12px', borderRadius: '6px', border: `1px solid ${themeVar('--sn-border')}` }}>
                   {detail.manifest.events.emits && detail.manifest.events.emits.length > 0 && (
-                    <div style={{ marginBottom: '8px' }}><strong>Emits:</strong> {detail.manifest.events.emits.join(', ')}</div>
+                    <div style={{ marginBottom: '8px' }}><strong>Emits:</strong> {detail.manifest.events.emits.map((e: unknown) => typeof e === 'string' ? e : (e as Record<string, unknown>)?.name ?? (e as Record<string, unknown>)?.type ?? String(e)).join(', ')}</div>
                   )}
                   {detail.manifest.events.subscribes && detail.manifest.events.subscribes.length > 0 && (
-                    <div><strong>Subscribes:</strong> {detail.manifest.events.subscribes.join(', ')}</div>
+                    <div><strong>Subscribes:</strong> {detail.manifest.events.subscribes.map((e: unknown) => typeof e === 'string' ? e : (e as Record<string, unknown>)?.name ?? (e as Record<string, unknown>)?.type ?? String(e)).join(', ')}</div>
                   )}
                 </div>
               </div>
@@ -231,7 +294,12 @@ export const MarketplacePageFull: React.FC = () => {
                   <div style={{ width: '100%', height: '140px', background: themeVar('--sn-bg'), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', color: themeVar('--sn-text-muted') }}>W</div>
                 )}
                 <div style={{ padding: '12px' }}>
-                  <div style={{ fontWeight: 600, fontSize: '15px', marginBottom: '4px' }}>{widget.name}</div>
+                  <div style={{ fontWeight: 600, fontSize: '15px', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    {widget.name}
+                    {!!(widget.metadata as Record<string, unknown>)?.official && (
+                      <span style={{ fontSize: '10px', fontWeight: 600, padding: '1px 6px', borderRadius: '8px', background: '#2563eb', color: '#fff', lineHeight: '14px', whiteSpace: 'nowrap' }}>Official</span>
+                    )}
+                  </div>
                   {widget.description && (
                     <div style={{ fontSize: '13px', color: themeVar('--sn-text-muted'), marginBottom: '8px', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
                       {widget.description}
@@ -245,7 +313,11 @@ export const MarketplacePageFull: React.FC = () => {
                   </div>
                   <div style={{ marginTop: '8px' }}>
                     {isInstalled(widget.id) ? (
-                      <span style={{ fontSize: '12px', color: themeVar('--sn-text-muted') }}>Installed</span>
+                      isBuiltIn(widget.id) ? (
+                        <span style={labelBuiltIn}>Built-in</span>
+                      ) : (
+                        <span style={{ fontSize: '12px', color: themeVar('--sn-text-muted') }}>Installed</span>
+                      )
                     ) : (
                       <button type="button" onClick={(e) => { e.stopPropagation(); handleInstall(widget.id); }}
                         disabled={installStatus[widget.id] === 'installing'}
