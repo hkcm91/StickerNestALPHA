@@ -205,6 +205,119 @@ INSERT INTO widgets (id, name, slug, description, version, author_id, html_conte
     )
 ON CONFLICT (id) DO NOTHING;
 
+-- Kanban Board widget (built-in, official marketplace listing)
+INSERT INTO widgets (id, name, slug, description, version, author_id, html_content, manifest, category, tags, license, is_published, install_count, price_cents, metadata) VALUES
+    (
+        'abababab-abab-abab-abab-abababababab',
+        'Kanban Board',
+        'kanban-board',
+        'Drag-and-drop Kanban board with columns, cards, color labels, and inline editing. Organize tasks across customizable columns, add color-coded labels, and drag cards between stages. Perfect for project management, sprint planning, and personal task tracking.',
+        '1.0.0',
+        NULL,
+        '<!-- sn:inline-widget -->',
+        '{
+            "id": "sn.builtin.kanban",
+            "name": "Kanban Board",
+            "version": "1.0.0",
+            "description": "Drag-and-drop Kanban board with columns, cards, color labels, and inline editing",
+            "author": {"name": "StickerNest", "url": "https://stickernest.com"},
+            "category": "productivity",
+            "tags": ["kanban", "board", "tasks", "project", "productivity", "drag-and-drop"],
+            "permissions": [],
+            "size": {
+                "defaultWidth": 640,
+                "defaultHeight": 480,
+                "minWidth": 400,
+                "minHeight": 300,
+                "aspectLocked": false
+            },
+            "license": "MIT",
+            "config": {"fields": []},
+            "spatialSupport": false,
+            "entry": "inline",
+            "events": {
+                "emits": [
+                    {"name": "widget.kanban.ready"},
+                    {"name": "widget.kanban.card.created"},
+                    {"name": "widget.kanban.card.moved"},
+                    {"name": "widget.kanban.card.deleted"},
+                    {"name": "widget.kanban.card.updated"},
+                    {"name": "widget.kanban.column.created"},
+                    {"name": "widget.kanban.column.deleted"},
+                    {"name": "widget.kanban.board.cleared"}
+                ],
+                "subscribes": [
+                    {"name": "widget.kanban.command.add-card"},
+                    {"name": "widget.kanban.command.clear-board"}
+                ]
+            }
+        }',
+        'productivity',
+        ARRAY['kanban', 'board', 'tasks', 'project', 'productivity', 'drag-and-drop'],
+        'MIT',
+        TRUE,
+        0,
+        0,
+        '{"rendering": "inline", "builtIn": true, "official": true}'
+    )
+ON CONFLICT (id) DO NOTHING;
+
+-- Todo List widget (built-in, official marketplace listing)
+INSERT INTO widgets (id, name, slug, description, version, author_id, html_content, manifest, category, tags, license, is_published, install_count, price_cents, metadata) VALUES
+    (
+        'cdcdcdcd-cdcd-cdcd-cdcd-cdcdcdcdcdcd',
+        'Todo List',
+        'todo-list',
+        'Task manager with priorities, filtering, and sorting. Add, complete, edit, and organize your tasks with color-coded priority levels.',
+        '1.0.0',
+        NULL,
+        '<!-- sn:inline-widget -->',
+        '{
+            "id": "sn.builtin.todo-list",
+            "name": "Todo List",
+            "version": "1.0.0",
+            "description": "Task manager with priorities, filtering, and sorting. Add, complete, edit, and organize your tasks with color-coded priority levels.",
+            "author": {"name": "StickerNest", "url": "https://stickernest.com"},
+            "category": "productivity",
+            "tags": ["todo", "tasks", "productivity", "checklist", "organizer"],
+            "permissions": [],
+            "size": {
+                "defaultWidth": 360,
+                "defaultHeight": 480,
+                "minWidth": 280,
+                "minHeight": 300,
+                "aspectLocked": false
+            },
+            "license": "MIT",
+            "config": {"fields": []},
+            "spatialSupport": false,
+            "entry": "inline",
+            "events": {
+                "emits": [
+                    {"name": "widget.todo.ready"},
+                    {"name": "widget.todo.item.created"},
+                    {"name": "widget.todo.item.completed"},
+                    {"name": "widget.todo.item.uncompleted"},
+                    {"name": "widget.todo.item.deleted"},
+                    {"name": "widget.todo.item.updated"},
+                    {"name": "widget.todo.list.cleared"}
+                ],
+                "subscribes": [
+                    {"name": "widget.todo.command.add-item"},
+                    {"name": "widget.todo.command.clear-completed"}
+                ]
+            }
+        }',
+        'productivity',
+        ARRAY['todo', 'tasks', 'productivity', 'checklist', 'organizer'],
+        'MIT',
+        TRUE,
+        0,
+        0,
+        '{"rendering": "inline", "builtIn": true, "official": true}'
+    )
+ON CONFLICT (id) DO NOTHING;
+
 -- Install widgets for users
 INSERT INTO user_installed_widgets (user_id, widget_id) VALUES
     ('11111111-1111-1111-1111-111111111111', 'dddddddd-dddd-dddd-dddd-dddddddddddd'),
@@ -212,7 +325,17 @@ INSERT INTO user_installed_widgets (user_id, widget_id) VALUES
     ('11111111-1111-1111-1111-111111111111', 'ffffffff-ffff-ffff-ffff-ffffffffffff'),
     ('22222222-2222-2222-2222-222222222222', 'dddddddd-dddd-dddd-dddd-dddddddddddd'),
     ('33333333-3333-3333-3333-333333333333', 'dddddddd-dddd-dddd-dddd-dddddddddddd'),
-    ('33333333-3333-3333-3333-333333333333', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee')
+    ('33333333-3333-3333-3333-333333333333', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'),
+    -- Kanban Board (official built-in) installed for all seed users
+    ('00000000-0000-0000-0000-000000000000', 'abababab-abab-abab-abab-abababababab'),
+    ('11111111-1111-1111-1111-111111111111', 'abababab-abab-abab-abab-abababababab'),
+    ('22222222-2222-2222-2222-222222222222', 'abababab-abab-abab-abab-abababababab'),
+    ('33333333-3333-3333-3333-333333333333', 'abababab-abab-abab-abab-abababababab'),
+    -- Todo List (official built-in) installed for all seed users
+    ('00000000-0000-0000-0000-000000000000', 'cdcdcdcd-cdcd-cdcd-cdcd-cdcdcdcdcdcd'),
+    ('11111111-1111-1111-1111-111111111111', 'cdcdcdcd-cdcd-cdcd-cdcd-cdcdcdcdcdcd'),
+    ('22222222-2222-2222-2222-222222222222', 'cdcdcdcd-cdcd-cdcd-cdcd-cdcdcdcdcdcd'),
+    ('33333333-3333-3333-3333-333333333333', 'cdcdcdcd-cdcd-cdcd-cdcd-cdcdcdcdcdcd')
 ON CONFLICT (user_id, widget_id) DO NOTHING;
 
 -- ============================================================================
