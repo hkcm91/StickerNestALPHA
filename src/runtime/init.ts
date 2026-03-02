@@ -29,7 +29,7 @@ import { createIframePool, DEFAULT_WARMUP_COUNT } from './pool/iframe-pool';
 import type { IframePool } from './pool/iframe-pool';
 import { createRateLimiter } from './security/rate-limiter';
 import type { RateLimiter } from './security/rate-limiter';
-import { imageGeneratorManifest } from './widgets';
+import { imageGeneratorManifest, kanbanManifest, todoListManifest } from './widgets';
 import { BUILT_IN_WIDGET_HTML } from './widgets/built-in-html';
 
 let initialized = false;
@@ -44,6 +44,20 @@ const BUILTIN_WIDGETS: WidgetRegistryEntry[] = [
   {
     widgetId: 'sn.builtin.image-generator',
     manifest: imageGeneratorManifest,
+    htmlContent: '', // Not used for inline widgets
+    isBuiltIn: true,
+    installedAt: new Date().toISOString(),
+  },
+  {
+    widgetId: 'sn.builtin.kanban',
+    manifest: kanbanManifest,
+    htmlContent: '', // Not used for inline widgets
+    isBuiltIn: true,
+    installedAt: new Date().toISOString(),
+  },
+  {
+    widgetId: 'sn.builtin.todo-list',
+    manifest: todoListManifest,
     htmlContent: '', // Not used for inline widgets
     isBuiltIn: true,
     installedAt: new Date().toISOString(),

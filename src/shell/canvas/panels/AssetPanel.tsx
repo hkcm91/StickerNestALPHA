@@ -133,6 +133,26 @@ const DEFAULT_ASSETS: AssetItem[] = [
     widgetType: 'utility',
     metadata: { widgetId: 'sn.builtin.pathfinder' },
   },
+  {
+    id: 'sn.builtin.kanban',
+    name: 'Kanban Board',
+    type: 'widget',
+    icon: '📋',
+    description: 'Drag-and-drop Kanban board with columns, cards, and color labels.',
+    tags: ['productivity', 'project', 'tasks', 'kanban', 'board'],
+    widgetType: 'productivity',
+    metadata: { widgetId: 'sn.builtin.kanban' },
+  },
+  {
+    id: 'sn.builtin.todo-list',
+    name: 'Todo List',
+    type: 'widget',
+    icon: '✅',
+    description: 'Task manager with priorities, filtering, and sorting.',
+    tags: ['productivity', 'tasks', 'todo', 'checklist', 'organizer'],
+    widgetType: 'productivity',
+    metadata: { widgetId: 'sn.builtin.todo-list' },
+  },
 ];
 
 export const AssetPanel: React.FC<AssetPanelProps> = ({ assets = DEFAULT_ASSETS }) => {
