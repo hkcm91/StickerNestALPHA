@@ -18,7 +18,7 @@ import type {
 
 export async function search(params: SearchParams): Promise<PaginatedResult<MarketplaceWidgetListing>> {
   const { page, pageSize, query, category, sortBy } = params;
-  const from = page * pageSize;
+  const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
 
   let q = supabase

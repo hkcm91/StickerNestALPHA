@@ -11,7 +11,14 @@ import { CanvasEvents } from '@sn/types';
 import { bus } from '../../../kernel/bus';
 import { PATHFINDER_EVENTS } from '../../../runtime/widgets/pathfinder/pathfinder.events';
 import type { SceneGraph } from '../../core';
-import { anchorsToSvgPath, dividePaths } from '../../core/geometry';
+import {
+  anchorsToSvgPath,
+  dividePaths,
+  unitePaths,
+  subtractPaths,
+  intersectPaths,
+  excludePaths,
+} from '../../core/geometry';
 import type { Tool, CanvasPointerEvent } from '../registry';
 
 export function createPathfinderTool(
@@ -26,25 +33,73 @@ export function createPathfinderTool(
   // Pathfinder Operations
   // ---------------------------------------------------------------------------
 
+  /** Helper: convert selected PathEntities to PathInput array for boolean ops */
+  const toPathInputs = (targets: PathEntity[]) =>
+    targets.map(t => ({ anchors: t.anchors, closed: t.closed }));
+
+  /** Helper: create result entities from boolean operation output */
+  const createResultEntities = (
+    resultAnchors: import('@sn/types').AnchorPoint[][],
+    template: PathEntity,
+    opName: string,
+  ) => {
+    resultAnchors.forEach((anchors, i) => {
+      bus.emit(CanvasEvents.ENTITY_CREATED, {
+        type: 'path' as const,
+        id: `path-${opName}-${Date.now()}-${i}`,
+        name: `${opName} Path${resultAnchors.length > 1 ? ` ${i}` : ''}`,
+        anchors,
+        closed: true,
+        fill: template.fill,
+        stroke: template.stroke || '#000',
+        strokeWidth: template.strokeWidth || 1,
+        transform: template.transform,
+      });
+    });
+  };
+
   const performUnite = (altKey: boolean = false) => {
     if (altKey) {
       console.warn('[Pathfinder] Compound Shapes (non-destructive) not yet implemented');
     }
     const targets = getSelectedPathEntities();
     if (targets.length < 2) return;
-    
-    // Simple placeholder Unite: merge all anchors into a single path
-    const resultAnchors = targets.flatMap(t => t.anchors);
-    const top = targets[targets.length - 1];
-    
+
+    const result = unitePaths(toPathInputs(targets));
+    const template = targets[targets.length - 1];
     targets.forEach(t => bus.emit(CanvasEvents.ENTITY_DELETED, { id: t.id }));
-    
-    bus.emit(CanvasEvents.ENTITY_CREATED, {
-      ...top,
-      id: `path-unite-${Date.now()}`,
-      name: 'United Path',
-      anchors: resultAnchors,
-    });
+    createResultEntities(result, template, 'unite');
+  };
+
+  const performSubtract = () => {
+    const targets = getSelectedPathEntities();
+    if (targets.length < 2) return;
+
+    const base = { anchors: targets[0].anchors, closed: targets[0].closed };
+    const subtract = targets.slice(1).map(t => ({ anchors: t.anchors, closed: t.closed }));
+    const result = subtractPaths(base, subtract);
+    targets.forEach(t => bus.emit(CanvasEvents.ENTITY_DELETED, { id: t.id }));
+    createResultEntities(result, targets[0], 'subtract');
+  };
+
+  const performIntersect = () => {
+    const targets = getSelectedPathEntities();
+    if (targets.length < 2) return;
+
+    const result = intersectPaths(toPathInputs(targets));
+    const template = targets[targets.length - 1];
+    targets.forEach(t => bus.emit(CanvasEvents.ENTITY_DELETED, { id: t.id }));
+    createResultEntities(result, template, 'intersect');
+  };
+
+  const performExclude = () => {
+    const targets = getSelectedPathEntities();
+    if (targets.length < 2) return;
+
+    const result = excludePaths(toPathInputs(targets));
+    const template = targets[targets.length - 1];
+    targets.forEach(t => bus.emit(CanvasEvents.ENTITY_DELETED, { id: t.id }));
+    createResultEntities(result, template, 'exclude');
   };
 
   const performDivide = () => {
@@ -101,18 +156,39 @@ export function createPathfinderTool(
 
   const setupSubscriptions = () => {
     unsubs.push(bus.subscribe(PATHFINDER_EVENTS.emits.UNION, (e: any) => performUnite(e.payload?.altKey)));
-    unsubs.push(bus.subscribe(PATHFINDER_EVENTS.emits.SUBTRACT, () => {}));
-    unsubs.push(bus.subscribe(PATHFINDER_EVENTS.emits.INTERSECT, () => {}));
-    unsubs.push(bus.subscribe(PATHFINDER_EVENTS.emits.EXCLUDE, () => {}));
+    unsubs.push(bus.subscribe(PATHFINDER_EVENTS.emits.SUBTRACT, performSubtract));
+    unsubs.push(bus.subscribe(PATHFINDER_EVENTS.emits.INTERSECT, performIntersect));
+    unsubs.push(bus.subscribe(PATHFINDER_EVENTS.emits.EXCLUDE, performExclude));
     unsubs.push(bus.subscribe(PATHFINDER_EVENTS.emits.DIVIDE, performDivide));
+    unsubs.push(bus.subscribe(PATHFINDER_EVENTS.emits.TRIM, () => {
+      console.warn('[Pathfinder] Trim not yet implemented');
+    }));
+    unsubs.push(bus.subscribe(PATHFINDER_EVENTS.emits.MERGE, () => {
+      console.warn('[Pathfinder] Merge not yet implemented');
+    }));
+    unsubs.push(bus.subscribe(PATHFINDER_EVENTS.emits.CROP, () => {
+      console.warn('[Pathfinder] Crop not yet implemented');
+    }));
     unsubs.push(bus.subscribe(PATHFINDER_EVENTS.emits.SHAPE_BUILDER_TOGGLE, (event: any) => {
       isShapeBuilderActive = event.payload.active;
       if (!isShapeBuilderActive) {
         bus.emit(PATHFINDER_EVENTS.emits.HOVER_REGION, { instanceId: 'tool', pathData: undefined });
       }
     }));
-    unsubs.push(bus.subscribe(CanvasEvents.SELECTION_CLEARED, (event: any) => {
-      selectedEntities = event.payload.selectedIds || [];
+    unsubs.push(bus.subscribe(CanvasEvents.ENTITY_SELECTED, (event: any) => {
+      const entities = event.payload?.entities;
+      if (Array.isArray(entities)) {
+        selectedEntities = entities.map((e: any) => e.id);
+      }
+    }));
+    unsubs.push(bus.subscribe(CanvasEvents.ENTITY_DESELECTED, (event: any) => {
+      const id = event.payload?.id;
+      if (id) {
+        selectedEntities = selectedEntities.filter(eid => eid !== id);
+      }
+    }));
+    unsubs.push(bus.subscribe(CanvasEvents.SELECTION_CLEARED, () => {
+      selectedEntities = [];
     }));
   };
 

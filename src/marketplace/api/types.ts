@@ -33,6 +33,8 @@ export interface MarketplaceWidgetListing {
   currency: string;
   /** Stripe price ID for paid widgets */
   stripePriceId: string | null;
+  /** Arbitrary metadata (e.g. { official: true, builtIn: true, rendering: "inline" }) */
+  metadata: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
 }

@@ -35,6 +35,9 @@ export const PATHFINDER_EVENTS = {
     INTERSECT: 'widget.pathfinder.intersect',
     EXCLUDE: 'widget.pathfinder.exclude',
     DIVIDE: 'widget.pathfinder.divide',
+    TRIM: 'widget.pathfinder.trim',
+    MERGE: 'widget.pathfinder.merge',
+    CROP: 'widget.pathfinder.crop',
     SHAPE_BUILDER_TOGGLE: 'widget.pathfinder.shape-builder-toggle',
     HOVER_REGION: 'widget.pathfinder.hover-region',
   },
@@ -94,6 +97,9 @@ export interface PathfinderEmitPayloads {
   ['widget.pathfinder.intersect']: { instanceId: string };
   ['widget.pathfinder.exclude']: { instanceId: string };
   ['widget.pathfinder.divide']: { instanceId: string };
+  ['widget.pathfinder.trim']: { instanceId: string };
+  ['widget.pathfinder.merge']: { instanceId: string };
+  ['widget.pathfinder.crop']: { instanceId: string };
   ['widget.pathfinder.shape-builder-toggle']: { instanceId: string; active: boolean };
   ['widget.pathfinder.hover-region']: {
     instanceId: string;
