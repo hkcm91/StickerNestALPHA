@@ -1,6 +1,10 @@
 /**
  * Theme Provider — injects CSS custom properties and emits bus events on theme change.
  *
+ * Critical boundary: `applyThemeTokens` applies ALL tokens (core + extended) to the DOM,
+ * but `emitThemeChange` emits ONLY core tokens on the bus. This preserves the Runtime
+ * bridge contract — extended tokens never cross the iframe boundary.
+ *
  * @module shell/theme
  * @layer L6
  */
@@ -13,10 +17,10 @@ import { bus } from '../../kernel/bus';
 import { useUIStore } from '../../kernel/stores/ui/ui.store';
 
 import type { ThemeName } from './theme-tokens';
-import { THEME_TOKENS } from './theme-tokens';
+import { THEME_TOKENS, extractCoreTokens } from './theme-tokens';
 
 /**
- * Apply theme CSS variables to document.documentElement.
+ * Apply all theme CSS variables (core + extended) to document.documentElement.
  */
 export function applyThemeTokens(theme: ThemeName): void {
   const tokens = THEME_TOKENS[theme];
@@ -29,11 +33,14 @@ export function applyThemeTokens(theme: ThemeName): void {
 }
 
 /**
- * Emit a theme change event on the bus so runtime/lab can react.
+ * Emit a theme change event on the bus with ONLY core tokens.
+ * The Runtime layer forwards this payload to widget iframes — extended
+ * tokens must not leak across the bridge boundary.
  */
 export function emitThemeChange(theme: ThemeName): void {
   const tokens = THEME_TOKENS[theme];
-  bus.emit(ShellEvents.THEME_CHANGED, { theme, tokens });
+  const coreTokens = extractCoreTokens(tokens);
+  bus.emit(ShellEvents.THEME_CHANGED, { theme, tokens: coreTokens });
 }
 
 /**
