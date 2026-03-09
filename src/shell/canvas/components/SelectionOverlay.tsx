@@ -41,7 +41,7 @@ import { EntityFloatingToolbar } from "./EntityFloatingToolbar";
 const HANDLE_SIZE = 8;
 const HALF_HANDLE = HANDLE_SIZE / 2;
 const MIN_ENTITY_SIZE = 20;
-const SELECTION_BORDER_WIDTH = 1;
+const SELECTION_BORDER_RADIUS = 4;
 
 /** Width of the crop edge handle bar. */
 const CROP_HANDLE_THICKNESS = 6;
@@ -428,18 +428,25 @@ export const SelectionOverlay: React.FC<SelectionOverlayProps> = ({
         />
       )}
 
-      {/* Selection bounding box outline */}
+      {/* P5: Selection halo — soft glow, not a hard rectangle */}
       <div
         data-testid="selection-overlay"
         style={{
           position: "absolute",
-          left: displayPosition.x,
-          top: displayPosition.y,
-          width: displaySize.width,
-          height: displaySize.height,
-          border: `${SELECTION_BORDER_WIDTH}px solid ${isCropMode ? "#e17055" : "#4a90d9"}`,
+          left: displayPosition.x - 1,
+          top: displayPosition.y - 1,
+          width: displaySize.width + 2,
+          height: displaySize.height + 2,
+          border: isCropMode
+            ? "1px solid var(--sn-ember, #E8806C)"
+            : "1px solid color-mix(in srgb, var(--sn-accent, #3E7D94) 35%, transparent)",
+          borderRadius: SELECTION_BORDER_RADIUS,
+          boxShadow: isCropMode
+            ? "none"
+            : "0 0 24px color-mix(in srgb, var(--sn-accent, #3E7D94) 12%, transparent), inset 0 0 16px color-mix(in srgb, var(--sn-accent, #3E7D94) 4%, transparent)",
           pointerEvents: "none",
           boxSizing: "border-box",
+          transition: "box-shadow 0.5s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.5s cubic-bezier(0.16, 1, 0.3, 1)",
         }}
       />
 
@@ -637,12 +644,15 @@ export const SelectionOverlay: React.FC<SelectionOverlayProps> = ({
                 top: displayPosition.y + offset.y,
                 width: HANDLE_SIZE,
                 height: HANDLE_SIZE,
-                background: "#ffffff",
-                border: "1px solid #4a90d9",
-                borderRadius: 1,
+                background: "var(--sn-accent, #3E7D94)",
+                border: "none",
+                borderRadius: HALF_HANDLE,
                 cursor: h.cursor,
                 pointerEvents: "auto",
                 boxSizing: "border-box",
+                boxShadow: "0 0 8px color-mix(in srgb, var(--sn-accent, #3E7D94) 50%, transparent)",
+                animation: "sn-handle-pulse 3s ease-in-out infinite",
+                animationDelay: `${handles.indexOf(h) * 200}ms`,
                 zIndex: 1,
               }}
             />

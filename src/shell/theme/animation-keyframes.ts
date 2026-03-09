@@ -11,11 +11,13 @@
 const STYLE_ID = 'sn-animation-keyframes';
 
 const KEYFRAMES_CSS = `
-/* ── Arrival ────────────────────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════════════
+   P1: Arrival — widgets drift up and fade in
+   ═══════════════════════════════════════════════════════════════════════ */
 
 @keyframes sn-arrive {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(20px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 @keyframes sn-fade-in {
@@ -24,8 +26,8 @@ const KEYFRAMES_CSS = `
 }
 
 @keyframes sn-pop {
-  from { transform: scale(0.9); opacity: 0; }
-  to   { transform: scale(1);   opacity: 1; }
+  from { transform: scale(0.85); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
 }
 
 @keyframes sn-toast-in {
@@ -33,28 +35,150 @@ const KEYFRAMES_CSS = `
   to   { transform: translateX(0);    opacity: 1; }
 }
 
-/* ── Breathing / Idle ───────────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════════════
+   P2: Breathing / Idle — nothing is ever completely still
+   ═══════════════════════════════════════════════════════════════════════ */
 
 @keyframes sn-breathe {
-  0%   { transform: scale(1); }
-  50%  { transform: scale(1.02); }
-  100% { transform: scale(1); }
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.015); }
 }
 
 @keyframes sn-glow {
-  0%   { box-shadow: 0 0 0 0 var(--sn-glow-color, var(--sn-accent)); }
-  50%  { box-shadow: 0 0 12px 2px var(--sn-glow-color, var(--sn-accent)); }
-  100% { box-shadow: 0 0 0 0 var(--sn-glow-color, var(--sn-accent)); }
+  0%, 100% { box-shadow: 0 0 4px 0 var(--sn-glow-color, var(--sn-accent)); }
+  50%      { box-shadow: 0 0 14px 3px var(--sn-glow-color, var(--sn-accent)); }
 }
 
-/* ── Loading ────────────────────────────────────────────────────────── */
+@keyframes sn-breathe-dot {
+  0%, 100% { opacity: 0.4; box-shadow: 0 0 4px var(--sn-glow-color, var(--sn-accent)); }
+  50%      { opacity: 1;   box-shadow: 0 0 12px var(--sn-glow-color, var(--sn-accent)); }
+}
+
+@keyframes sn-breathe-bar {
+  0%, 100% { opacity: 0.65; }
+  50%      { opacity: 1; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   P3: Invisible Toolbar — contextual, spring entry
+   ═══════════════════════════════════════════════════════════════════════ */
+
+@keyframes sn-toolbar-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(8px) scale(0.95); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   P5: Halo handles — gentle pulse on selection handles
+   ═══════════════════════════════════════════════════════════════════════ */
+
+@keyframes sn-handle-pulse {
+  0%, 100% { opacity: 0.75; transform: scale(1); }
+  50%      { opacity: 1;    transform: scale(1.2); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   P6: Feedback through light — color flood on action
+   ═══════════════════════════════════════════════════════════════════════ */
+
+@keyframes sn-light-feedback {
+  0%   { box-shadow: inset 0 0 0 0 var(--sn-feedback-color, var(--sn-accent)); }
+  30%  { box-shadow: inset 0 0 30px 4px var(--sn-feedback-color, var(--sn-accent)); }
+  100% { box-shadow: inset 0 0 0 0 var(--sn-feedback-color, var(--sn-accent)); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   P10: Context menu — scale-in with slight offset
+   ═══════════════════════════════════════════════════════════════════════ */
+
+@keyframes sn-menu-in {
+  from { opacity: 0; transform: scale(0.95) translateY(-4px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   P12: Widget states — loading dots + sync bar
+   ═══════════════════════════════════════════════════════════════════════ */
+
+@keyframes sn-loading-dot {
+  0%, 100% { opacity: 0.2; transform: scale(0.8); }
+  50%      { opacity: 1;   transform: scale(1.2); }
+}
+
+@keyframes sn-sync-pulse {
+  0%, 100% { opacity: 0.5; }
+  50%      { opacity: 1; }
+}
+
+@keyframes sn-sync-bar {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+
+@keyframes sn-sync-shimmer {
+  0%, 100% { opacity: 0.3; }
+  50%      { opacity: 0.6; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   P14: Panel slide — curtain entry
+   ═══════════════════════════════════════════════════════════════════════ */
+
+@keyframes sn-panel-in-right {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
+@keyframes sn-panel-in-left {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(0); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   P15: Command palette — search portal
+   ═══════════════════════════════════════════════════════════════════════ */
+
+@keyframes sn-backdrop-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes sn-search-in {
+  from { opacity: 0; transform: scale(0.96) translateY(-8px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   P17: Rothko field — slow ambient drift
+   ═══════════════════════════════════════════════════════════════════════ */
+
+@keyframes sn-rothko-drift-1 {
+  0%, 100% { transform: translateX(0)    translateY(0); }
+  50%      { transform: translateX(20px) translateY(-10px); }
+}
+
+@keyframes sn-rothko-drift-2 {
+  0%, 100% { transform: translateX(0)     translateY(0); }
+  50%      { transform: translateX(-14px) translateY(8px); }
+}
+
+@keyframes sn-rothko-drift-3 {
+  0%, 100% { transform: translateX(0)    translateY(0); }
+  50%      { transform: translateX(16px) translateY(12px); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Loading — shimmer for skeleton states
+   ═══════════════════════════════════════════════════════════════════════ */
 
 @keyframes sn-shimmer {
   0%   { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
 
-/* ── Accessibility ──────────────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════════════
+   Accessibility — respect user motion preferences
+   ═══════════════════════════════════════════════════════════════════════ */
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
