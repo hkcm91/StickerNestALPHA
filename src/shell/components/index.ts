@@ -40,3 +40,9 @@ export type {
 
 // Auth components
 export * from './auth';
+
+// Design system components
+export { CommandPalette } from './CommandPalette';
+export type { CommandPaletteProps } from './CommandPalette';
+export { PanelSlide, PanelSlideItem } from './PanelSlide';
+export type { PanelSlideProps, PanelSlideItemProps } from './PanelSlide';

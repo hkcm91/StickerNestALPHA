@@ -659,3 +659,26 @@ export {
   ApiKeyProviderJSONSchema,
   ApiKeyStatusJSONSchema,
 } from "./api-key";
+
+// =============================================================================
+// Theme Schemas
+// =============================================================================
+export {
+  // Schemas
+  CoreThemeTokensSchema,
+  ExtendedThemeTokensSchema,
+  FullThemeTokensSchema,
+  ThemeNameSchema,
+  // Constants
+  CORE_TOKEN_KEYS,
+  // Types
+  type CoreThemeTokens,
+  type ExtendedThemeTokens,
+  type FullThemeTokens,
+  type ThemeName,
+  // JSON Schemas
+  CoreThemeTokensJSONSchema,
+  ExtendedThemeTokensJSONSchema,
+  FullThemeTokensJSONSchema,
+  ThemeNameJSONSchema,
+} from "./theme";
