@@ -16,6 +16,8 @@ import { ShellEvents } from '@sn/types';
 import { bus } from '../../kernel/bus';
 import { useUIStore } from '../../kernel/stores/ui/ui.store';
 
+import { injectAnimationKeyframes } from './animation-keyframes';
+import { applyAnimationTokens } from './animation-tokens';
 import type { ThemeName } from './theme-tokens';
 import { THEME_TOKENS, extractCoreTokens } from './theme-tokens';
 
@@ -60,6 +62,13 @@ export function useThemeActions(): { changeTheme: (theme: ThemeName) => void } {
  */
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const theme = useUIStore((s) => s.theme);
+
+  // Inject global animation keyframes and tokens once on mount.
+  // These are theme-independent constants — not re-applied on theme change.
+  useEffect(() => {
+    injectAnimationKeyframes();
+    applyAnimationTokens();
+  }, []);
 
   useEffect(() => {
     applyThemeTokens(theme);

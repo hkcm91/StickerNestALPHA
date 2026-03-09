@@ -11,6 +11,7 @@ import type { CanvasEntity } from "@sn/types";
 import { CanvasEvents } from "@sn/types";
 
 import { bus } from "../../../kernel/bus";
+import { transition } from "../../theme/animation-vars";
 
 // ---------------------------------------------------------------------------
 // Icons (Inline SVGs)
@@ -106,7 +107,7 @@ const buttonBaseStyle: React.CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  transition: "all 0.15s ease",
+  transition: transition("all", { duration: "fast" }),
 };
 
 const dividerStyle: React.CSSProperties = {
