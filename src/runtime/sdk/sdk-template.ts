@@ -47,6 +47,8 @@ export interface StickerNestSDK {
   emitCrossCanvas(channel: string, payload: unknown): void;
   /** Cross-canvas event subscription */
   subscribeCrossCanvas(channel: string, handler: (payload: unknown) => void): void;
+  /** Cross-canvas event unsubscription */
+  unsubscribeCrossCanvas(channel: string): void;
 }
 
 /**
@@ -307,6 +309,11 @@ export function generateSDKTemplate(): string {
         postToHost({ type: 'CROSS_CANVAS_SUBSCRIBE', channel: channel });
       }
       _crossCanvasHandlers[channel].push(handler);
+    },
+
+    unsubscribeCrossCanvas: function(channel) {
+      delete _crossCanvasHandlers[channel];
+      postToHost({ type: 'CROSS_CANVAS_UNSUBSCRIBE', channel: channel });
     }
   };
 })();`;

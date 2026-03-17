@@ -11,6 +11,7 @@ import type { CanvasEntity } from "@sn/types";
 import { CanvasEvents } from "@sn/types";
 
 import { bus } from "../../../kernel/bus";
+import { transition } from "../../theme/animation-vars";
 
 // ---------------------------------------------------------------------------
 // Icons (Inline SVGs)
@@ -80,38 +81,40 @@ const SettingsIcon = () => (
 // Styles
 // ---------------------------------------------------------------------------
 
+/* P3: Invisible toolbar — glass surface, spring entry */
 const toolbarStyle: React.CSSProperties = {
   position: "absolute",
   display: "flex",
-  gap: "4px",
-  background: "#1a1a1a",
-  padding: "4px",
-  borderRadius: "10px",
-  boxShadow: "0 8px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1)",
+  gap: "2px",
+  background: "color-mix(in srgb, var(--sn-surface-raised, #1A1A1F) 92%, transparent)",
+  padding: "4px 5px",
+  borderRadius: "12px",
+  boxShadow: "0 6px 24px rgba(0, 0, 0, 0.35), 0 0 0 1px var(--sn-border-hover, rgba(255,255,255,0.08))",
   pointerEvents: "auto",
   zIndex: 1000,
-  backdropFilter: "blur(8px)",
-  transform: "translateX(-50%)", // Center horizontally
+  backdropFilter: "blur(16px) saturate(1.2)",
+  transform: "translateX(-50%)",
   userSelect: "none",
+  animation: "sn-toolbar-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) both",
 };
 
 const buttonBaseStyle: React.CSSProperties = {
-  width: "32px",
-  height: "32px",
+  width: "30px",
+  height: "30px",
   borderRadius: "8px",
   border: "none",
   background: "transparent",
-  color: "#e2e8f0",
+  color: "var(--sn-text-soft, #A8A4AE)",
   cursor: "pointer",
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  transition: "all 0.15s ease",
+  transition: transition("all", { duration: "fast" }),
 };
 
 const dividerStyle: React.CSSProperties = {
   width: "1px",
-  background: "rgba(255, 255, 255, 0.15)",
+  background: "var(--sn-border, rgba(255,255,255,0.04))",
   margin: "6px 2px",
 };
 
@@ -130,11 +133,15 @@ export const EntityFloatingToolbar: React.FC<EntityFloatingToolbarProps> = ({
 }) => {
   const [hoveredBtn, setHoveredBtn] = React.useState<string | null>(null);
 
+  /* P6: Feedback through light, not motion — hover glows, doesn't bounce */
   const getButtonStyle = (id: string, active: boolean = false): React.CSSProperties => ({
     ...buttonBaseStyle,
-    background: active ? "#4f46e5" : (hoveredBtn === id ? "rgba(255, 255, 255, 0.1)" : "transparent"),
-    color: active ? "#ffffff" : "#e2e8f0",
-    transform: hoveredBtn === id ? "scale(1.05)" : "scale(1)",
+    background: active
+      ? "var(--sn-accent, #3E7D94)"
+      : hoveredBtn === id
+        ? "color-mix(in srgb, var(--sn-accent, #3E7D94) 12%, transparent)"
+        : "transparent",
+    color: active ? "#ffffff" : hoveredBtn === id ? "var(--sn-text, #EDEBE6)" : "var(--sn-text-soft, #A8A4AE)",
   });
 
   const handleRotate = () => {

@@ -18,7 +18,7 @@ import { useWidgetStore } from '../kernel/stores/widget/widget.store';
 import { createWidgetBridge } from './bridge/bridge';
 import type { WidgetBridge } from './bridge/bridge';
 import type { ThemeTokens } from './bridge/message-types';
-import { createCrossCanvasRouter } from './cross-canvas/cross-canvas-router';
+import { createCrossCanvasRouter, isValidChannelName } from './cross-canvas/cross-canvas-router';
 import type { CrossCanvasRouter } from './cross-canvas/cross-canvas-router';
 import { getIntegrationProxy } from './integrations/singleton';
 import { WidgetErrorBoundary } from './lifecycle/error-boundary';
@@ -29,6 +29,17 @@ import { SANDBOX_POLICY } from './security/sandbox-policy';
 
 /** Maximum state size per instance: 1MB */
 const MAX_STATE_SIZE = 1_048_576;
+
+/** Maximum cross-canvas payload size: 64KB (matches Supabase Realtime limit) */
+const MAX_CROSS_CANVAS_PAYLOAD_SIZE = 65_536;
+
+/**
+ * Checks whether a widget has the 'cross-canvas' permission.
+ */
+function hasCrossCanvasPermission(widgetId: string): boolean {
+  const entry = useWidgetStore.getState().registry[widgetId];
+  return entry?.manifest?.permissions?.includes('cross-canvas') ?? false;
+}
 
 /** Maximum user state size per value: 10MB */
 const MAX_USER_STATE_SIZE = 10_485_760;
@@ -272,14 +283,47 @@ const WidgetIframe: React.FC<WidgetFrameProps> = (props) => {
         }
 
         case 'CROSS_CANVAS_EMIT': {
+          if (!hasCrossCanvasPermission(widgetId)) {
+            console.warn(`[WidgetFrame][${instanceId}] cross-canvas emit blocked: widget lacks 'cross-canvas' permission`);
+            bus.emit('crossCanvas.error', { instanceId, channel: message.channel, reason: 'permission_denied' });
+            break;
+          }
+          if (!isValidChannelName(message.channel)) {
+            console.warn(`[WidgetFrame][${instanceId}] cross-canvas emit blocked: invalid channel name "${message.channel}"`);
+            bus.emit('crossCanvas.error', { instanceId, channel: message.channel, reason: 'invalid_channel' });
+            break;
+          }
+          try {
+            const payloadSize = JSON.stringify(message.payload).length;
+            if (payloadSize > MAX_CROSS_CANVAS_PAYLOAD_SIZE) {
+              console.warn(`[WidgetFrame][${instanceId}] cross-canvas emit blocked: payload exceeds 64KB limit (${payloadSize} bytes)`);
+              bus.emit('crossCanvas.error', { instanceId, channel: message.channel, reason: 'payload_too_large' });
+              break;
+            }
+          } catch {
+            console.warn(`[WidgetFrame][${instanceId}] cross-canvas emit blocked: payload is not serializable`);
+            bus.emit('crossCanvas.error', { instanceId, channel: message.channel, reason: 'payload_not_serializable' });
+            break;
+          }
           const router = crossCanvasRouterRef.current;
           if (router) {
             router.emit(message.channel, message.payload);
+            bus.emit('crossCanvas.event.emitted', { instanceId, channel: message.channel, payload: message.payload });
           }
           break;
         }
 
         case 'CROSS_CANVAS_SUBSCRIBE': {
+          if (!hasCrossCanvasPermission(widgetId)) {
+            console.warn(`[WidgetFrame][${instanceId}] cross-canvas subscribe blocked: widget lacks 'cross-canvas' permission`);
+            bus.emit('crossCanvas.error', { instanceId, channel: message.channel, reason: 'permission_denied' });
+            break;
+          }
+          if (!isValidChannelName(message.channel)) {
+            console.warn(`[WidgetFrame][${instanceId}] cross-canvas subscribe blocked: invalid channel name "${message.channel}"`);
+            bus.emit('crossCanvas.error', { instanceId, channel: message.channel, reason: 'invalid_channel' });
+            break;
+          }
           let router = crossCanvasRouterRef.current;
           if (!router) {
             router = createCrossCanvasRouter();
@@ -287,15 +331,28 @@ const WidgetIframe: React.FC<WidgetFrameProps> = (props) => {
           }
           router.subscribe(message.channel, (payload) => {
             bridge.send({ type: 'CROSS_CANVAS_EVENT', channel: message.channel, payload });
+            bus.emit('crossCanvas.event.received', { instanceId, channel: message.channel, payload });
           });
+          bus.emit('crossCanvas.channel.subscribed', { instanceId, channel: message.channel });
           break;
         }
 
         case 'CROSS_CANVAS_UNSUBSCRIBE': {
+          if (!hasCrossCanvasPermission(widgetId)) {
+            console.warn(`[WidgetFrame][${instanceId}] cross-canvas unsubscribe blocked: widget lacks 'cross-canvas' permission`);
+            bus.emit('crossCanvas.error', { instanceId, channel: message.channel, reason: 'permission_denied' });
+            break;
+          }
+          if (!isValidChannelName(message.channel)) {
+            console.warn(`[WidgetFrame][${instanceId}] cross-canvas unsubscribe blocked: invalid channel name "${message.channel}"`);
+            bus.emit('crossCanvas.error', { instanceId, channel: message.channel, reason: 'invalid_channel' });
+            break;
+          }
           const unsubRouter = crossCanvasRouterRef.current;
           if (unsubRouter) {
             unsubRouter.unsubscribe(message.channel);
           }
+          bus.emit('crossCanvas.channel.unsubscribed', { instanceId, channel: message.channel });
           break;
         }
       }

@@ -6,8 +6,11 @@
  */
 
 import React from 'react';
+
 import { useUIStore } from '../../kernel/stores/ui/ui.store';
 import type { Toast } from '../../kernel/stores/ui/ui.store';
+import { ANIMATION_EASING, ANIMATION_DURATION } from '../theme/animation-tokens';
+import { palette } from '../theme/theme-vars';
 
 export const ToastContainer: React.FC = () => {
   const toasts = useUIStore((s) => s.toasts);
@@ -43,7 +46,7 @@ export const ToastContainer: React.FC = () => {
             alignItems: 'center',
             gap: '12px',
             pointerEvents: 'auto',
-            animation: 'sn-toast-in 0.3s ease-out',
+            animation: `sn-toast-in ${ANIMATION_DURATION.normal} ${ANIMATION_EASING.spring}`,
             minWidth: '200px',
             maxWidth: '400px',
           }}
@@ -65,24 +68,16 @@ export const ToastContainer: React.FC = () => {
           </button>
         </div>
       ))}
-      <style>
-        {`
-          @keyframes sn-toast-in {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-          }
-        `}
-      </style>
     </div>
   );
 };
 
 function getToastBackground(type: Toast['type']): string {
   switch (type) {
-    case 'success': return '#10b981';
-    case 'error': return '#ef4444';
-    case 'info': return '#3b82f6';
-    case 'warning': return '#f59e0b';
-    default: return '#374151';
+    case 'success': return palette.success;
+    case 'error': return palette.error;
+    case 'info': return palette.accent;
+    case 'warning': return palette.warning;
+    default: return palette.surfaceRaised;
   }
 }

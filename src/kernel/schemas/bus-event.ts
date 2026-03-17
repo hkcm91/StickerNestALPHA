@@ -140,6 +140,23 @@ export const WidgetEvents = {
 } as const;
 
 /**
+ * Event type constants for Cross-Canvas system (Runtime layer)
+ * Observability events for cross-canvas communication.
+ */
+export const CrossCanvasEvents = {
+  /** Widget emitted a cross-canvas event */
+  EVENT_EMITTED: 'crossCanvas.event.emitted',
+  /** Widget received a cross-canvas event */
+  EVENT_RECEIVED: 'crossCanvas.event.received',
+  /** Widget subscribed to a cross-canvas channel */
+  CHANNEL_SUBSCRIBED: 'crossCanvas.channel.subscribed',
+  /** Widget unsubscribed from a cross-canvas channel */
+  CHANNEL_UNSUBSCRIBED: 'crossCanvas.channel.unsubscribed',
+  /** Cross-canvas operation error */
+  ERROR: 'crossCanvas.error',
+} as const;
+
+/**
  * Event type constants for Shell layer
  */
 export const ShellEvents = {

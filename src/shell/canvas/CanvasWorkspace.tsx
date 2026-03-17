@@ -33,7 +33,14 @@ import { CanvasEntityLayer } from "./CanvasEntityLayer";
 import { CanvasOverlayLayer } from "./CanvasOverlayLayer";
 import { CanvasToolLayer } from "./CanvasToolLayer";
 import { CanvasViewportLayer } from "./CanvasViewportLayer";
-import { PresenceCursorsLayer, SelectionOverlay } from "./components";
+import {
+  CanvasContextMenu,
+  ConstellationLines,
+  CursorGlow,
+  PresenceCursorsLayer,
+  RothkoField,
+  SelectionOverlay,
+} from "./components";
 import {
   initAlignHandler,
   initCropHandler,
@@ -444,6 +451,12 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
         </>
       ) : (
         <>
+          {/* Layer 0: P17/P19 — Rothko field (ambient color washes + grain) */}
+          <RothkoField enabled={rendererMode === "edit"} />
+
+          {/* Layer 0.5: P7 — Cursor ambient glow (follows mouse with deliberate lag) */}
+          <CursorGlow enabled={rendererMode === "edit"} />
+
           {/* Layer 1: Background + Grid (behind entities) */}
           <CanvasOverlayLayer
             viewport={viewport}
@@ -493,12 +506,24 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
             viewport={viewport}
             style={{ pointerEvents: "none", zIndex: 3 }}
           >
+            {/* P13: Constellation lines between multi-selected entities */}
+            <ConstellationLines
+              selectedIds={selectedIds}
+              sceneGraph={sceneGraph}
+              interactionMode={rendererMode}
+            />
             <SelectionOverlay
               selectedIds={selectedIds}
               sceneGraph={sceneGraph}
               interactionMode={rendererMode}
             />
           </CanvasViewportLayer>
+
+          {/* Layer 5: P10 — Context menu (fixed position, above everything) */}
+          <CanvasContextMenu
+            selectedIds={selectedIds}
+            interactionMode={rendererMode}
+          />
         </>
       )}
     </div>

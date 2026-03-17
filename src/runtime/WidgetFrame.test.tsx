@@ -43,7 +43,21 @@ vi.mock('../kernel/stores/widget/widget.store', () => ({
     vi.fn(() => ({ registry: {}, instances: {} })),
     {
       getState: vi.fn(() => ({
-        registry: {},
+        registry: {
+          'test-widget': {
+            widgetId: 'test-widget',
+            manifest: {
+              id: 'test-widget',
+              name: 'Test Widget',
+              version: '1.0.0',
+              permissions: ['cross-canvas'],
+              events: { emits: [], listens: [] },
+            },
+            htmlContent: '<div>test</div>',
+            isBuiltIn: false,
+            installedAt: new Date().toISOString(),
+          },
+        },
         instances: {},
         updateInstanceState: vi.fn(),
       })),
@@ -100,6 +114,7 @@ vi.mock('./cross-canvas/cross-canvas-router', () => ({
     emit: vi.fn(),
     destroy: vi.fn(),
   })),
+  isValidChannelName: vi.fn((channel: string) => /^[a-zA-Z0-9._-]{1,128}$/.test(channel)),
 }));
 
 // ---------------------------------------------------------------------------
@@ -1305,6 +1320,237 @@ describe('WidgetFrame', () => {
       expect(bridgeInstances[1].send).not.toHaveBeenCalledWith(
         expect.objectContaining({ type: 'CROSS_CANVAS_EVENT' }),
       );
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Cross-Canvas Permission Enforcement (Category D)
+  // -----------------------------------------------------------------------
+
+  describe('Cross-Canvas Permission Enforcement', () => {
+    function mockWidgetWithoutCrossCanvasPermission() {
+      vi.mocked(useWidgetStore.getState).mockReturnValue({
+        registry: {
+          'test-widget': {
+            widgetId: 'test-widget',
+            manifest: { id: 'test-widget', name: 'Test Widget', version: '1.0.0', permissions: [] as string[], events: { emits: [], listens: [] } },
+            htmlContent: '<div>test</div>',
+            isBuiltIn: false,
+            installedAt: new Date().toISOString(),
+          },
+        },
+        instances: {},
+        updateInstanceState: vi.fn(),
+      } as any);
+    }
+
+    it('D1: CROSS_CANVAS_EMIT blocked without cross-canvas permission', () => {
+      const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      render(<WidgetFrame {...defaultProps} />);
+      const handler = getOnMessageHandler();
+
+      mockWidgetWithoutCrossCanvasPermission();
+
+      handler({ type: 'CROSS_CANVAS_EMIT', channel: 'room-1', payload: { x: 1 } });
+
+      expect(createCrossCanvasRouter).not.toHaveBeenCalled();
+      expect(spy).toHaveBeenCalledWith(
+        expect.stringContaining('cross-canvas emit blocked'),
+      );
+      spy.mockRestore();
+    });
+
+    it('D2: CROSS_CANVAS_SUBSCRIBE blocked without cross-canvas permission', () => {
+      const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      render(<WidgetFrame {...defaultProps} />);
+      const handler = getOnMessageHandler();
+
+      mockWidgetWithoutCrossCanvasPermission();
+
+      handler({ type: 'CROSS_CANVAS_SUBSCRIBE', channel: 'room-1' });
+
+      expect(createCrossCanvasRouter).not.toHaveBeenCalled();
+      expect(spy).toHaveBeenCalledWith(
+        expect.stringContaining('cross-canvas subscribe blocked'),
+      );
+      spy.mockRestore();
+    });
+
+    it('D3: CROSS_CANVAS_UNSUBSCRIBE blocked without cross-canvas permission', () => {
+      const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      render(<WidgetFrame {...defaultProps} />);
+      const handler = getOnMessageHandler();
+
+      mockWidgetWithoutCrossCanvasPermission();
+
+      handler({ type: 'CROSS_CANVAS_UNSUBSCRIBE', channel: 'room-1' });
+
+      expect(spy).toHaveBeenCalledWith(
+        expect.stringContaining('cross-canvas unsubscribe blocked'),
+      );
+      spy.mockRestore();
+    });
+
+    it('D4: CROSS_CANVAS_SUBSCRIBE blocked with invalid channel name', () => {
+      const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      render(<WidgetFrame {...defaultProps} />);
+      const handler = getOnMessageHandler();
+
+      handler({ type: 'CROSS_CANVAS_SUBSCRIBE', channel: 'bad/channel' });
+
+      expect(createCrossCanvasRouter).not.toHaveBeenCalled();
+      expect(spy).toHaveBeenCalledWith(
+        expect.stringContaining('invalid channel name'),
+      );
+      spy.mockRestore();
+    });
+
+    it('D5: CROSS_CANVAS_EMIT blocked with empty channel name', () => {
+      const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      render(<WidgetFrame {...defaultProps} />);
+      const handler = getOnMessageHandler();
+
+      handler({ type: 'CROSS_CANVAS_EMIT', channel: '', payload: {} });
+
+      expect(spy).toHaveBeenCalledWith(
+        expect.stringContaining('invalid channel name'),
+      );
+      spy.mockRestore();
+    });
+
+    it('D6: CROSS_CANVAS_EMIT blocked when payload exceeds 64KB', () => {
+      const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      render(<WidgetFrame {...defaultProps} />);
+      const handler = getOnMessageHandler();
+
+      // First subscribe to create the router
+      handler({ type: 'CROSS_CANVAS_SUBSCRIBE', channel: 'room-1' });
+
+      // Create payload larger than 64KB
+      const largePayload = { data: 'x'.repeat(70_000) };
+      handler({ type: 'CROSS_CANVAS_EMIT', channel: 'room-1', payload: largePayload });
+
+      const mockRouter = vi.mocked(createCrossCanvasRouter).mock.results[0].value;
+      expect(mockRouter.emit).not.toHaveBeenCalled();
+      expect(spy).toHaveBeenCalledWith(
+        expect.stringContaining('payload exceeds 64KB limit'),
+      );
+      spy.mockRestore();
+    });
+
+    it('D7: CROSS_CANVAS_EMIT proceeds when payload is under 64KB', () => {
+      const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      render(<WidgetFrame {...defaultProps} />);
+      const handler = getOnMessageHandler();
+
+      handler({ type: 'CROSS_CANVAS_SUBSCRIBE', channel: 'room-1' });
+
+      const smallPayload = { data: 'hello' };
+      handler({ type: 'CROSS_CANVAS_EMIT', channel: 'room-1', payload: smallPayload });
+
+      const mockRouter = vi.mocked(createCrossCanvasRouter).mock.results[0].value;
+      expect(mockRouter.emit).toHaveBeenCalledWith('room-1', smallPayload);
+      expect(spy).not.toHaveBeenCalled();
+      spy.mockRestore();
+    });
+
+    it('D8: CROSS_CANVAS_SUBSCRIBE emits crossCanvas.channel.subscribed bus event', () => {
+      render(<WidgetFrame {...defaultProps} />);
+      const handler = getOnMessageHandler();
+
+      handler({ type: 'CROSS_CANVAS_SUBSCRIBE', channel: 'room-1' });
+
+      expect(bus.emit).toHaveBeenCalledWith('crossCanvas.channel.subscribed', {
+        instanceId: 'instance-1',
+        channel: 'room-1',
+      });
+    });
+
+    it('D9: CROSS_CANVAS_UNSUBSCRIBE emits crossCanvas.channel.unsubscribed bus event', () => {
+      render(<WidgetFrame {...defaultProps} />);
+      const handler = getOnMessageHandler();
+
+      handler({ type: 'CROSS_CANVAS_SUBSCRIBE', channel: 'room-1' });
+      handler({ type: 'CROSS_CANVAS_UNSUBSCRIBE', channel: 'room-1' });
+
+      expect(bus.emit).toHaveBeenCalledWith('crossCanvas.channel.unsubscribed', {
+        instanceId: 'instance-1',
+        channel: 'room-1',
+      });
+    });
+
+    it('D10: CROSS_CANVAS_EMIT emits crossCanvas.event.emitted bus event', () => {
+      render(<WidgetFrame {...defaultProps} />);
+      const handler = getOnMessageHandler();
+
+      handler({ type: 'CROSS_CANVAS_SUBSCRIBE', channel: 'room-1' });
+      handler({ type: 'CROSS_CANVAS_EMIT', channel: 'room-1', payload: { msg: 'hi' } });
+
+      expect(bus.emit).toHaveBeenCalledWith('crossCanvas.event.emitted', {
+        instanceId: 'instance-1',
+        channel: 'room-1',
+        payload: { msg: 'hi' },
+      });
+    });
+
+    it('D11: permission denial emits crossCanvas.error bus event', () => {
+      render(<WidgetFrame {...defaultProps} />);
+      const handler = getOnMessageHandler();
+
+      vi.spyOn(console, 'warn').mockImplementation(() => {});
+      mockWidgetWithoutCrossCanvasPermission();
+
+      handler({ type: 'CROSS_CANVAS_EMIT', channel: 'room-1', payload: {} });
+
+      expect(bus.emit).toHaveBeenCalledWith('crossCanvas.error', {
+        instanceId: 'instance-1',
+        channel: 'room-1',
+        reason: 'permission_denied',
+      });
+    });
+
+    it('D12: invalid channel emits crossCanvas.error bus event', () => {
+      render(<WidgetFrame {...defaultProps} />);
+      const handler = getOnMessageHandler();
+
+      vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      handler({ type: 'CROSS_CANVAS_SUBSCRIBE', channel: 'bad/name' });
+
+      expect(bus.emit).toHaveBeenCalledWith('crossCanvas.error', {
+        instanceId: 'instance-1',
+        channel: 'bad/name',
+        reason: 'invalid_channel',
+      });
+    });
+
+    it('D13: payload too large emits crossCanvas.error bus event', () => {
+      render(<WidgetFrame {...defaultProps} />);
+      const handler = getOnMessageHandler();
+
+      vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      handler({ type: 'CROSS_CANVAS_SUBSCRIBE', channel: 'room-1' });
+      handler({ type: 'CROSS_CANVAS_EMIT', channel: 'room-1', payload: { data: 'x'.repeat(70_000) } });
+
+      expect(bus.emit).toHaveBeenCalledWith('crossCanvas.error', {
+        instanceId: 'instance-1',
+        channel: 'room-1',
+        reason: 'payload_too_large',
+      });
+    });
+
+    it('D14: cross-canvas messages proceed with cross-canvas permission', () => {
+      const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      // Default mock already has cross-canvas permission
+      render(<WidgetFrame {...defaultProps} />);
+      const handler = getOnMessageHandler();
+
+      handler({ type: 'CROSS_CANVAS_SUBSCRIBE', channel: 'room-1' });
+
+      expect(createCrossCanvasRouter).toHaveBeenCalledOnce();
+      expect(spy).not.toHaveBeenCalled();
+      spy.mockRestore();
     });
   });
 });

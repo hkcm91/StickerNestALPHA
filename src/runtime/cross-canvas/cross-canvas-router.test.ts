@@ -35,6 +35,8 @@ function createMockChannel(): MockChannel {
     subscribe: vi.fn().mockImplementation((cb?: (status: string) => void) => {
       if (cb) {
         subscribeCallback = cb;
+        // Auto-fire SUBSCRIBED so tests don't need to manually connect
+        cb('SUBSCRIBED');
       }
       return channel;
     }),
@@ -222,5 +224,173 @@ describe('CrossCanvasRouter', () => {
     channel._simulateBroadcast({ text: 'late' });
 
     expect(handler).not.toHaveBeenCalled();
+  });
+
+  // -------------------------------------------------------------------------
+  // Channel Name Validation
+  // -------------------------------------------------------------------------
+
+  describe('channel name validation', () => {
+    it('rejects empty channel name on subscribe', () => {
+      const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const handler = vi.fn();
+      router.subscribe('', handler);
+
+      expect(mockChannelFn).not.toHaveBeenCalled();
+      expect(spy).toHaveBeenCalledWith(expect.stringContaining('Invalid channel name'));
+      spy.mockRestore();
+    });
+
+    it('rejects channel name with slashes', () => {
+      const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const handler = vi.fn();
+      router.subscribe('foo/bar', handler);
+
+      expect(mockChannelFn).not.toHaveBeenCalled();
+      expect(spy).toHaveBeenCalledWith(expect.stringContaining('Invalid channel name'));
+      spy.mockRestore();
+    });
+
+    it('rejects channel name with colons', () => {
+      const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      router.emit('foo:bar', { data: 1 });
+
+      expect(mockChannelFn).not.toHaveBeenCalled();
+      expect(spy).toHaveBeenCalledWith(expect.stringContaining('Invalid channel name'));
+      spy.mockRestore();
+    });
+
+    it('rejects channel name exceeding 128 chars', () => {
+      const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const longName = 'a'.repeat(129);
+      router.subscribe(longName, vi.fn());
+
+      expect(mockChannelFn).not.toHaveBeenCalled();
+      expect(spy).toHaveBeenCalledWith(expect.stringContaining('Invalid channel name'));
+      spy.mockRestore();
+    });
+
+    it('accepts valid channel names', () => {
+      const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      router.subscribe('my-channel.v2_test', vi.fn());
+
+      expect(mockChannelFn).toHaveBeenCalledWith('crosscanvas:my-channel.v2_test');
+      expect(spy).not.toHaveBeenCalled();
+      spy.mockRestore();
+    });
+
+    it('accepts channel name at exactly 128 chars', () => {
+      const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const maxName = 'a'.repeat(128);
+      router.subscribe(maxName, vi.fn());
+
+      expect(mockChannelFn).toHaveBeenCalledWith(`crosscanvas:${maxName}`);
+      expect(spy).not.toHaveBeenCalled();
+      spy.mockRestore();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Offline Queuing
+  // -------------------------------------------------------------------------
+
+  describe('offline queuing', () => {
+    it('queues messages when channel is not connected', () => {
+      // Override mock to NOT auto-fire SUBSCRIBED
+      mockChannelFn.mockImplementation((name: string) => {
+        const ch = createMockChannel();
+        // Patch subscribe to NOT auto-fire
+        ch.subscribe = vi.fn().mockImplementation((_cb?: (status: string) => void) => ch);
+        mockChannels.set(name, ch);
+        return ch;
+      });
+
+      const offlineRouter = createCrossCanvasRouter();
+      offlineRouter.subscribe('offline-ch', vi.fn());
+
+      // Emit while not connected — should queue
+      offlineRouter.emit('offline-ch', { queued: true });
+
+      const channel = mockChannels.get('crosscanvas:offline-ch')!;
+      expect(channel.send).not.toHaveBeenCalled();
+      expect(offlineRouter.getQueueLength()).toBe(1);
+
+      offlineRouter.destroy();
+    });
+
+    it('flushes queue when channel becomes connected', () => {
+      let connectCb: ((status: string) => void) | null = null;
+      mockChannelFn.mockImplementation((name: string) => {
+        const ch = createMockChannel();
+        ch.subscribe = vi.fn().mockImplementation((cb?: (status: string) => void) => {
+          if (cb) connectCb = cb;
+          return ch;
+        });
+        mockChannels.set(name, ch);
+        return ch;
+      });
+
+      const offlineRouter = createCrossCanvasRouter();
+      offlineRouter.subscribe('flush-ch', vi.fn());
+
+      // Emit while offline
+      offlineRouter.emit('flush-ch', { msg: 1 });
+      offlineRouter.emit('flush-ch', { msg: 2 });
+
+      const channel = mockChannels.get('crosscanvas:flush-ch')!;
+      expect(channel.send).not.toHaveBeenCalled();
+      expect(offlineRouter.getQueueLength()).toBe(2);
+
+      // Now connect
+      connectCb!('SUBSCRIBED');
+
+      // Both messages should have been flushed
+      expect(channel.send).toHaveBeenCalledTimes(2);
+      expect(channel.send).toHaveBeenCalledWith({ type: 'broadcast', event: 'message', payload: { msg: 1 } });
+      expect(channel.send).toHaveBeenCalledWith({ type: 'broadcast', event: 'message', payload: { msg: 2 } });
+      expect(offlineRouter.getQueueLength()).toBe(0);
+
+      offlineRouter.destroy();
+    });
+
+    it('drops oldest messages when queue exceeds 100', () => {
+      mockChannelFn.mockImplementation((name: string) => {
+        const ch = createMockChannel();
+        ch.subscribe = vi.fn().mockImplementation((_cb?: (status: string) => void) => ch);
+        mockChannels.set(name, ch);
+        return ch;
+      });
+
+      const offlineRouter = createCrossCanvasRouter();
+      offlineRouter.subscribe('overflow-ch', vi.fn());
+
+      // Queue 105 messages
+      for (let i = 0; i < 105; i++) {
+        offlineRouter.emit('overflow-ch', { i });
+      }
+
+      // Only 100 should remain (oldest 5 dropped)
+      expect(offlineRouter.getQueueLength()).toBe(100);
+
+      offlineRouter.destroy();
+    });
+
+    it('clears queue on destroy', () => {
+      mockChannelFn.mockImplementation((name: string) => {
+        const ch = createMockChannel();
+        ch.subscribe = vi.fn().mockImplementation((_cb?: (status: string) => void) => ch);
+        mockChannels.set(name, ch);
+        return ch;
+      });
+
+      const offlineRouter = createCrossCanvasRouter();
+      offlineRouter.subscribe('destroy-ch', vi.fn());
+
+      offlineRouter.emit('destroy-ch', { data: 'queued' });
+      expect(offlineRouter.getQueueLength()).toBe(1);
+
+      offlineRouter.destroy();
+      expect(offlineRouter.getQueueLength()).toBe(0);
+    });
   });
 });
