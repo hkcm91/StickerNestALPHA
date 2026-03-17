@@ -59,8 +59,8 @@ export function createWidgetBridge(
       return; // Silently drop malformed messages
     }
 
-    // Rate limiting for EMIT messages
-    if (message.type === 'EMIT') {
+    // Rate limiting for EMIT and CROSS_CANVAS_EMIT messages
+    if (message.type === 'EMIT' || message.type === 'CROSS_CANVAS_EMIT') {
       if (!rateLimiter.check(instanceId)) {
         return; // Silently drop — rate limited
       }

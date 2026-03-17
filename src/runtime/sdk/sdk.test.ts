@@ -525,6 +525,45 @@ describe('StickerNest SDK Template', () => {
     expect(handler2).toHaveBeenCalledWith({ text: 'both' });
   });
 
+  it('unsubscribeCrossCanvas() posts CROSS_CANVAS_UNSUBSCRIBE and stops receiving events', () => {
+    const handler = vi.fn();
+    sdk.subscribeCrossCanvas('alerts', handler);
+
+    // Verify subscription works
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        data: { type: 'CROSS_CANVAS_EVENT', channel: 'alerts', payload: { n: 1 } },
+      }),
+    );
+    expect(handler).toHaveBeenCalledTimes(1);
+
+    // Unsubscribe
+    sdk.unsubscribeCrossCanvas('alerts');
+
+    expect(parentPostMessage).toHaveBeenCalledWith(
+      { type: 'CROSS_CANVAS_UNSUBSCRIBE', channel: 'alerts' },
+      '*',
+    );
+
+    // No more events should reach the handler
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        data: { type: 'CROSS_CANVAS_EVENT', channel: 'alerts', payload: { n: 2 } },
+      }),
+    );
+    expect(handler).toHaveBeenCalledTimes(1); // Still 1, not 2
+  });
+
+  it('unsubscribeCrossCanvas() for unknown channel does not error', () => {
+    // Should not throw
+    sdk.unsubscribeCrossCanvas('nonexistent');
+
+    expect(parentPostMessage).toHaveBeenCalledWith(
+      { type: 'CROSS_CANVAS_UNSUBSCRIBE', channel: 'nonexistent' },
+      '*',
+    );
+  });
+
   it('STATE_REJECTED message logs a warning', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 

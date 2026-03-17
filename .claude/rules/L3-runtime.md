@@ -98,6 +98,26 @@ Code here must be written as if the host is untrusted (defense-in-depth).
 - `StickerNest.integration(name).mutate(params)` — proxied external data write via host.
 - `StickerNest.emitCrossCanvas(channel, payload)` — cross-canvas event emission via host.
 - `StickerNest.subscribeCrossCanvas(channel, handler)` — cross-canvas event subscription.
+- `StickerNest.unsubscribeCrossCanvas(channel)` — cross-canvas event unsubscription.
+
+### Cross-Canvas Security & Limits
+
+- **Permission enforcement**: Widget manifest must declare `'cross-canvas'` in `permissions`
+  array. All `CROSS_CANVAS_EMIT`, `CROSS_CANVAS_SUBSCRIBE`, and `CROSS_CANVAS_UNSUBSCRIBE`
+  messages are silently dropped if the widget lacks this permission.
+- **Channel name validation**: Channel names must match `^[a-zA-Z0-9._-]{1,128}$` —
+  no colons, slashes, spaces, or names exceeding 128 characters. Invalid names are rejected
+  at both the WidgetFrame and router levels.
+- **Rate limiting**: `CROSS_CANVAS_EMIT` shares the same 100 events/second per-instance
+  rate limit as regular `EMIT` messages. Excess messages are silently dropped.
+- **Payload size limit**: Cross-canvas payloads are capped at 64KB (matching Supabase
+  Realtime limits). Oversized payloads are dropped with a warning.
+- **Offline queuing**: When a channel is not connected, outbound `emit()` calls are queued
+  (max 100 messages). On reconnect, queued messages are replayed in order. If the queue
+  overflows, the oldest messages are dropped.
+- **Observability**: Cross-canvas operations emit bus events in the `crossCanvas.*` namespace:
+  `crossCanvas.event.emitted`, `crossCanvas.event.received`, `crossCanvas.channel.subscribed`,
+  `crossCanvas.channel.unsubscribed`, `crossCanvas.error`.
 
 Integration credentials are NEVER passed into the iframe. The host proxies all external
 calls. If a widget needs data from an external service, it calls the integration API;

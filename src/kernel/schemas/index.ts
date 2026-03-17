@@ -86,6 +86,7 @@ export {
   LayoutModeEvents,
   BackgroundEvents,
   DockerEvents,
+  CrossCanvasEvents,
   // JSON Schemas
   BusEventJSONSchema,
 } from "./bus-event";
