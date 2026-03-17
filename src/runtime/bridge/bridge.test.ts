@@ -458,6 +458,47 @@ describe('WidgetBridge', () => {
     expect(handler).toHaveBeenCalledTimes(100);
   });
 
+  it('rate-limits CROSS_CANVAS_EMIT messages', () => {
+    const handler = vi.fn();
+    bridge.onMessage(handler);
+
+    // Send 101 CROSS_CANVAS_EMIT messages rapidly (shares same 100/sec limit)
+    for (let i = 0; i < 101; i++) {
+      simulateWidgetMessage(contentWindow, {
+        type: 'CROSS_CANVAS_EMIT',
+        channel: 'test-channel',
+        payload: { i },
+      });
+    }
+
+    // First 100 should be delivered, 101st should be rate-limited
+    expect(handler).toHaveBeenCalledTimes(100);
+  });
+
+  it('EMIT and CROSS_CANVAS_EMIT share the same rate limit bucket', () => {
+    const handler = vi.fn();
+    bridge.onMessage(handler);
+
+    // Send 50 EMIT + 51 CROSS_CANVAS_EMIT = 101 total
+    for (let i = 0; i < 50; i++) {
+      simulateWidgetMessage(contentWindow, {
+        type: 'EMIT',
+        eventType: 'test.event',
+        payload: { i },
+      });
+    }
+    for (let i = 0; i < 51; i++) {
+      simulateWidgetMessage(contentWindow, {
+        type: 'CROSS_CANVAS_EMIT',
+        channel: 'test-channel',
+        payload: { i },
+      });
+    }
+
+    // Only 100 total should pass through
+    expect(handler).toHaveBeenCalledTimes(100);
+  });
+
   it('does not rate-limit non-EMIT messages', () => {
     const handler = vi.fn();
     bridge.onMessage(handler);
@@ -843,6 +884,74 @@ describe('MessageValidator', () => {
           width: 'wide',
           height: 'tall',
         }),
+      ).toBeNull();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Cross-Canvas Message Validation
+  // -------------------------------------------------------------------------
+
+  describe('cross-canvas message validation', () => {
+    it('validates CROSS_CANVAS_EMIT widget message', () => {
+      const msg = validateWidgetMessage({
+        type: 'CROSS_CANVAS_EMIT',
+        channel: 'room-1',
+        payload: { data: 'hello' },
+      });
+      expect(msg).not.toBeNull();
+      expect(msg!.type).toBe('CROSS_CANVAS_EMIT');
+    });
+
+    it('rejects CROSS_CANVAS_EMIT without channel', () => {
+      expect(
+        validateWidgetMessage({ type: 'CROSS_CANVAS_EMIT', payload: {} }),
+      ).toBeNull();
+    });
+
+    it('validates CROSS_CANVAS_SUBSCRIBE widget message', () => {
+      const msg = validateWidgetMessage({
+        type: 'CROSS_CANVAS_SUBSCRIBE',
+        channel: 'alerts',
+      });
+      expect(msg).not.toBeNull();
+      expect(msg!.type).toBe('CROSS_CANVAS_SUBSCRIBE');
+    });
+
+    it('rejects CROSS_CANVAS_SUBSCRIBE without channel', () => {
+      expect(
+        validateWidgetMessage({ type: 'CROSS_CANVAS_SUBSCRIBE' }),
+      ).toBeNull();
+    });
+
+    it('validates CROSS_CANVAS_UNSUBSCRIBE widget message', () => {
+      const msg = validateWidgetMessage({
+        type: 'CROSS_CANVAS_UNSUBSCRIBE',
+        channel: 'alerts',
+      });
+      expect(msg).not.toBeNull();
+      expect(msg!.type).toBe('CROSS_CANVAS_UNSUBSCRIBE');
+    });
+
+    it('rejects CROSS_CANVAS_UNSUBSCRIBE with numeric channel', () => {
+      expect(
+        validateWidgetMessage({ type: 'CROSS_CANVAS_UNSUBSCRIBE', channel: 123 }),
+      ).toBeNull();
+    });
+
+    it('validates CROSS_CANVAS_EVENT host message', () => {
+      const msg = validateHostMessage({
+        type: 'CROSS_CANVAS_EVENT',
+        channel: 'room-1',
+        payload: { text: 'hi' },
+      });
+      expect(msg).not.toBeNull();
+      expect(msg!.type).toBe('CROSS_CANVAS_EVENT');
+    });
+
+    it('rejects CROSS_CANVAS_EVENT without channel', () => {
+      expect(
+        validateHostMessage({ type: 'CROSS_CANVAS_EVENT', payload: {} }),
       ).toBeNull();
     });
   });
