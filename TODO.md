@@ -108,34 +108,23 @@ Database schema `00008_add_creator_commerce.sql` exists but is unwired.
 
 ---
 
-## 5. Canvas Interaction Polish
+## 5. Canvas Interaction Polish (MOSTLY COMPLETE ✓)
 
 Per approved design: `docs/plans/2026-02-24-canvas-interactions-design.md`
 
-- [ ] **Keyboard Shortcuts**
-  - [ ] Delete/Backspace → delete selected entities
-  - [ ] Escape → deselect all / cancel current tool
-  - [ ] Ctrl+A → select all entities
-  - [ ] Arrow keys → nudge selected entities
-  - [ ] Z-order shortcuts (Ctrl+], Ctrl+[, etc.)
-  - [ ] Tool hotkeys (V=select, M=move, P=pen, T=text, etc.)
-  - [ ] Build `src/shell/canvas/hooks/useCanvasShortcuts.ts`
-- [ ] **Resize Handles**
-  - [ ] 8-handle interactive resize on selection overlay
-  - [ ] Shift+drag for aspect ratio lock
-  - [ ] Alt+drag for resize from center
-  - [ ] Build into `src/shell/canvas/components/SelectionOverlay.tsx`
-- [ ] **Alignment & Distribution**
-  - [ ] Multi-select alignment (left, center, right, top, middle, bottom)
-  - [ ] Distribute evenly (horizontal, vertical)
-  - [ ] Build `src/shell/canvas/utils/align.ts`
-- [ ] **Group / Ungroup**
-  - [ ] Schema and events exist; build handler
-  - [ ] `src/shell/canvas/handlers/groupHandler.ts`
-  - [ ] Grouped entities move/resize as unit
-- [ ] **Crop Tool**
-  - [ ] Add `cropRect` schema field to entity
-  - [ ] Interactive crop UI with aspect presets in SelectionOverlay
+- [x] **Keyboard Shortcuts** — `useCanvasShortcuts.ts` (37 tests)
+  - [x] Delete/Backspace, Escape, Ctrl+A, arrow nudge (10px/50px)
+  - [x] Z-order: Ctrl+]/[, Ctrl+Shift+]/[
+  - [x] Tool hotkeys: V, H, M, T, R, P, E (no selection required)
+  - [x] Ctrl+D duplicate, Ctrl+G group, Ctrl+Shift+G ungroup
+  - [x] C crop toggle, Ctrl+=/- zoom, Ctrl+0 reset
+- [x] **Resize Handles** — `SelectionOverlay.tsx` (8-handle resize + crop handles)
+- [x] **Alignment & Distribution** — `align.ts` + `alignHandler.ts`
+- [x] **Group / Ungroup** — `groupHandler.ts` (bus-driven)
+- [x] **Crop Tool** — `cropHandler.ts` + crop UI in SelectionOverlay
+- [ ] **Remaining polish**
+  - [ ] Grouped entities move/resize as unit (group transform propagation)
+  - [ ] Aspect presets in crop UI
 
 ---
 
