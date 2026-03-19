@@ -27,6 +27,7 @@ import type { BenchResult } from '../../kernel/bus';
 import { bus } from '../../kernel/bus';
 
 import { CanvasCorePanel } from './panels/CanvasCorePanel';
+import { CrossCanvasPanel } from './panels/CrossCanvasPanel';
 import { EventBusPanel } from './panels/EventBusPanel';
 import { GridLayerPanel } from './panels/GridLayerPanel';
 import { ImageGenerationPanel } from './panels/ImageGenerationPanel';
@@ -276,6 +277,7 @@ export const TestHarness: React.FC = () => {
           removeWidget={removeWidget} clearWidgets={() => setActiveWidgets([])}
           updateWidgetChannel={updateWidgetChannel}
         />
+        <CrossCanvasPanel />
         <PipelinePanel
           pipelineNodes={pipelineNodes} pipelineEdges={pipelineEdges}
           addPipelineNode={addPipelineNode} connectNodes={connectNodes}

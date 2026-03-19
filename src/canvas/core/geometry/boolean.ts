@@ -12,13 +12,10 @@
  * @layer L4A-1
  */
 
-import {
-  union,
-  difference,
-  intersection,
-  xor,
-} from 'polygon-clipping';
+import polygonClipping from 'polygon-clipping';
 import type { Polygon, MultiPolygon } from 'polygon-clipping';
+
+const { union, difference, intersection, xor } = polygonClipping;
 
 import type { Point2D, AnchorPoint } from '@sn/types';
 
@@ -196,7 +193,7 @@ export function unitePaths(paths: PathInput[]): AnchorPoint[][] {
   let result: MultiPolygon = [polygons[0]];
 
   for (let i = 1; i < polygons.length; i++) {
-    result = union(result as Polygon[], polygons[i] as Polygon[]) as MultiPolygon;
+    result = union(result, [polygons[i]]);
   }
 
   return multiPolygonToAnchors(result);
@@ -210,7 +207,7 @@ export function subtractPaths(base: PathInput, subtract: PathInput[]): AnchorPoi
 
   for (const sub of subtract) {
     const subPoly = anchorsToPolygon(sub.anchors, sub.closed);
-    result = difference(result as Polygon[], subPoly as Polygon[]) as MultiPolygon;
+    result = difference(result, [subPoly]);
   }
 
   return multiPolygonToAnchors(result);
@@ -226,7 +223,7 @@ export function intersectPaths(paths: PathInput[]): AnchorPoint[][] {
   let result: MultiPolygon = [polygons[0]];
 
   for (let i = 1; i < polygons.length; i++) {
-    result = intersection(result as Polygon[], polygons[i] as Polygon[]) as MultiPolygon;
+    result = intersection(result, [polygons[i]]);
   }
 
   return multiPolygonToAnchors(result);
@@ -242,7 +239,7 @@ export function excludePaths(paths: PathInput[]): AnchorPoint[][] {
   let result: MultiPolygon = [polygons[0]];
 
   for (let i = 1; i < polygons.length; i++) {
-    result = xor(result as Polygon[], polygons[i] as Polygon[]) as MultiPolygon;
+    result = xor(result, [polygons[i]]);
   }
 
   return multiPolygonToAnchors(result);

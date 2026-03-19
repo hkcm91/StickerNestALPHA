@@ -1,4 +1,8 @@
-# StickerNest V5 — CLAUDE.md
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+# StickerNest V5
 
 ## WHAT
 StickerNest V5 is a spatial operating system: an infinite-canvas platform where
@@ -92,3 +96,57 @@ Read the relevant file before working in any layer:
 `.claude/rules/L0-kernel.md` · `L1-social.md` · `L2-lab.md` · `L3-runtime.md`
 `L4A-1-canvas-core.md` · `L4A-2-canvas-tools.md` · `L4A-3-canvas-wiring.md` · `L4A-4-canvas-panels.md`
 `L4B-spatial.md` · `L5-marketplace.md` · `L6-shell.md`
+
+## Development Commands
+
+### Build & Run
+```
+npm run dev          # Vite dev server on port 5173
+npm run build        # tsc + vite build
+npm run typecheck    # tsc --noEmit
+npm run lint         # ESLint with layer boundary enforcement
+npm run lint:fix     # ESLint autofix
+```
+
+### Testing
+```
+npm test                              # vitest run (all unit tests)
+npm run test:watch                    # vitest in watch mode
+npx vitest run src/kernel/bus         # run tests for a specific directory
+npx vitest run path/to/file.test.ts   # run a single test file
+npm run test:coverage                 # v8 coverage (80% threshold enforced)
+npm run e2e                           # Playwright E2E tests
+npm run e2e:headed                    # Playwright with browser visible
+```
+
+Test environment: `node` by default; `happy-dom` for runtime, shell, spatial, and social layer tests (configured in `vitest.config.ts` via `environmentMatchGlobs`).
+
+### Architecture Validation
+```
+npm run deps:validate    # dependency-cruiser checks layer boundary violations
+```
+ESLint `boundaries/element-types` rule also enforces the layer import map at lint time.
+
+### Database (Supabase Local)
+```
+npm run db:start     # start local Supabase
+npm run db:stop      # stop local Supabase
+npm run db:reset     # reset database
+npm run db:migrate   # create new migration
+```
+
+### Scaffolding (Plop Generators)
+```
+npm run scaffold:widget   # new widget boilerplate
+npm run scaffold:module   # new module boilerplate
+npm run scaffold:schema   # new schema boilerplate
+npm run scaffold:event    # new event boilerplate
+npm run scaffold:store    # new store boilerplate
+```
+
+## Key Technical Details
+
+- **Path alias**: `@sn/types` resolves to `src/kernel/schemas/index.ts` (configured in `tsconfig.json`, `vite.config.ts`, `vitest.config.ts`)
+- **Commitlint**: enforced via husky pre-commit hook; scope is **required** and must be one of: `kernel`, `social`, `runtime`, `lab`, `canvas-core`, `canvas-tools`, `canvas-wiring`, `canvas-panels`, `spatial`, `marketplace`, `shell`, `deps`, `config`, `ci`
+- **MCP dev server**: lives in `mcp-dev/` (separate package with its own `package.json`)
+- **Storybook**: `npm run storybook` on port 6006

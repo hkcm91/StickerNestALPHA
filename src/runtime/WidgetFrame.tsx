@@ -18,7 +18,7 @@ import { useWidgetStore } from '../kernel/stores/widget/widget.store';
 import { createWidgetBridge } from './bridge/bridge';
 import type { WidgetBridge } from './bridge/bridge';
 import type { ThemeTokens } from './bridge/message-types';
-import { createCrossCanvasRouter, isValidChannelName } from './cross-canvas/cross-canvas-router';
+import { getSharedCrossCanvasRouter, isValidChannelName } from './cross-canvas/cross-canvas-router';
 import type { CrossCanvasRouter } from './cross-canvas/cross-canvas-router';
 import { getIntegrationProxy } from './integrations/singleton';
 import { WidgetErrorBoundary } from './lifecycle/error-boundary';
@@ -72,6 +72,8 @@ export interface WidgetFrameProps {
   height: number;
   /** Optional channel namespace for event routing isolation */
   channel?: string;
+  /** Optional shared cross-canvas router (for dev testing in same tab) */
+  crossCanvasRouter?: CrossCanvasRouter;
 }
 
 /**
@@ -87,13 +89,19 @@ function toBusEventType(channel: string | undefined, eventType: string): string 
  * Inner iframe component wrapped by error boundary.
  */
 const WidgetIframe: React.FC<WidgetFrameProps> = (props) => {
-  const { widgetId, instanceId, widgetHtml, config, theme, visible, width, height, channel } = props;
+  const { widgetId, instanceId, widgetHtml, config, theme, visible, width, height, channel, crossCanvasRouter: externalRouter } = props;
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const bridgeRef = useRef<WidgetBridge | null>(null);
   const lifecycleRef = useRef<WidgetLifecycleManager | null>(null);
-  const crossCanvasRouterRef = useRef<CrossCanvasRouter | null>(null);
+  /** Returns external router if provided, otherwise the shared singleton */
+  function getOrCreateRouter(): CrossCanvasRouter {
+    if (externalRouter) return externalRouter;
+    return getSharedCrossCanvasRouter();
+  }
   // Track bus subscriptions per event type for cleanup
   const busSubscriptionsRef = useRef<Map<string, () => void>>(new Map());
+  // Track per-instance cross-canvas unsubscribe functions (channel → unsub fn)
+  const crossCanvasUnsubsRef = useRef<Map<string, () => void>>(new Map());
 
   // Memoize srcdoc — keyed on widgetId, widgetHtml, instanceId
   // Config and theme changes are delivered via postMessage, NOT srcdoc rebuild
@@ -305,11 +313,8 @@ const WidgetIframe: React.FC<WidgetFrameProps> = (props) => {
             bus.emit('crossCanvas.error', { instanceId, channel: message.channel, reason: 'payload_not_serializable' });
             break;
           }
-          const router = crossCanvasRouterRef.current;
-          if (router) {
-            router.emit(message.channel, message.payload);
-            bus.emit('crossCanvas.event.emitted', { instanceId, channel: message.channel, payload: message.payload });
-          }
+          getOrCreateRouter().emit(message.channel, message.payload, { widgetId, instanceId });
+          bus.emit('crossCanvas.event.emitted', { instanceId, channel: message.channel, payload: message.payload });
           break;
         }
 
@@ -324,16 +329,15 @@ const WidgetIframe: React.FC<WidgetFrameProps> = (props) => {
             bus.emit('crossCanvas.error', { instanceId, channel: message.channel, reason: 'invalid_channel' });
             break;
           }
-          let router = crossCanvasRouterRef.current;
-          if (!router) {
-            router = createCrossCanvasRouter();
-            crossCanvasRouterRef.current = router;
-          }
-          router.subscribe(message.channel, (payload) => {
+          const unsub = getOrCreateRouter().subscribe(message.channel, (payload) => {
             bridge.send({ type: 'CROSS_CANVAS_EVENT', channel: message.channel, payload });
             bus.emit('crossCanvas.event.received', { instanceId, channel: message.channel, payload });
           });
+          crossCanvasUnsubsRef.current.set(message.channel, unsub);
           bus.emit('crossCanvas.channel.subscribed', { instanceId, channel: message.channel });
+          bus.emit('crossCanvas.widget.status', {
+            instanceId, channels: [...crossCanvasUnsubsRef.current.keys()], active: true,
+          });
           break;
         }
 
@@ -348,11 +352,18 @@ const WidgetIframe: React.FC<WidgetFrameProps> = (props) => {
             bus.emit('crossCanvas.error', { instanceId, channel: message.channel, reason: 'invalid_channel' });
             break;
           }
-          const unsubRouter = crossCanvasRouterRef.current;
-          if (unsubRouter) {
-            unsubRouter.unsubscribe(message.channel);
+          // Remove only THIS widget's callback — other widgets on the same channel are unaffected
+          const channelUnsub = crossCanvasUnsubsRef.current.get(message.channel);
+          if (channelUnsub) {
+            channelUnsub();
+            crossCanvasUnsubsRef.current.delete(message.channel);
           }
           bus.emit('crossCanvas.channel.unsubscribed', { instanceId, channel: message.channel });
+          bus.emit('crossCanvas.widget.status', {
+            instanceId,
+            channels: [...crossCanvasUnsubsRef.current.keys()],
+            active: crossCanvasUnsubsRef.current.size > 0,
+          });
           break;
         }
       }
@@ -374,15 +385,18 @@ const WidgetIframe: React.FC<WidgetFrameProps> = (props) => {
       bridge.send({ type: 'DESTROY' });
       bridge.destroy();
       lifecycle.destroy();
-      if (crossCanvasRouterRef.current) {
-        crossCanvasRouterRef.current.destroy();
-        crossCanvasRouterRef.current = null;
-      }
+      // Shared singleton router is NOT destroyed on widget unmount.
+      // External routers are managed by the caller.
       // Clean up all bus subscriptions
       for (const unsubscribe of busSubscriptionsRef.current.values()) {
         unsubscribe();
       }
       busSubscriptionsRef.current.clear();
+      // Clean up cross-canvas subscriptions (removes only this widget's callbacks)
+      for (const unsub of crossCanvasUnsubsRef.current.values()) {
+        unsub();
+      }
+      crossCanvasUnsubsRef.current.clear();
       bridgeRef.current = null;
       lifecycleRef.current = null;
     };

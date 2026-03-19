@@ -243,6 +243,15 @@ export const WidgetManifestSchema = z.object({
   }),
   /** Entry point path (relative to manifest) */
   entry: z.string().default('index.html'),
+  /** Cross-canvas channels this widget uses (declarative — for discovery and future validation) */
+  crossCanvasChannels: z.array(z.object({
+    /** Channel name pattern */
+    channel: z.string().min(1),
+    /** Direction: emit, subscribe, or both */
+    direction: z.enum(['emit', 'subscribe', 'both']),
+    /** Optional JSON schema for the payload */
+    payloadSchema: z.record(z.string(), z.unknown()).optional(),
+  })).default([]),
   /** Whether widget supports 3D/VR mode */
   spatialSupport: z.boolean().default(false),
   /** Minimum StickerNest version required */

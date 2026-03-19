@@ -7,7 +7,6 @@ import { describe, it, expect } from 'vitest';
 
 import {
   CoreThemeTokensSchema,
-  ExtendedThemeTokensSchema,
   FullThemeTokensSchema,
   ThemeNameSchema,
   CORE_TOKEN_KEYS,
@@ -30,10 +29,14 @@ const validFullTokens: FullThemeTokens = {
   ...validCoreTokens,
   '--sn-bg-ground': '#110E14',
   '--sn-surface-raised': '#1A1A1F',
+  '--sn-surface-glass': 'rgba(20,17,24,0.75)',
+  '--sn-surface-glass-light': 'rgba(20,17,24,0.65)',
   '--sn-accent-light': '#5A92A8',
   '--sn-text-soft': '#A8A4AE',
   '--sn-text-faint': '#3A3842',
   '--sn-border-hover': 'rgba(255,255,255,0.08)',
+  '--sn-font-serif': "'Newsreader', Georgia, 'Times New Roman', serif",
+  '--sn-font-mono': "'DM Mono', 'Fira Code', 'Cascadia Code', monospace",
   '--sn-storm': '#3E7D94',
   '--sn-storm-light': '#5A92A8',
   '--sn-ember': '#E8806C',

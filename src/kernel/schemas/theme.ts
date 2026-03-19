@@ -3,7 +3,7 @@
  *
  * Two-tier architecture:
  * - **Core tokens** (8 keys) — the widget bridge contract, forwarded to iframe widgets
- * - **Extended tokens** (16 keys) — app-internal palette, applied to documentElement only
+ * - **Extended tokens** (20 keys) — app-internal palette, applied to documentElement only
  *
  * @module @sn/types/theme
  */
@@ -52,6 +52,8 @@ export const ExtendedThemeTokensSchema = z.object({
   // Surface & background variants
   '--sn-bg-ground': z.string(),
   '--sn-surface-raised': z.string(),
+  '--sn-surface-glass': z.string(),
+  '--sn-surface-glass-light': z.string(),
 
   // Text variants
   '--sn-accent-light': z.string(),
@@ -60,6 +62,10 @@ export const ExtendedThemeTokensSchema = z.object({
 
   // Border variants
   '--sn-border-hover': z.string(),
+
+  // Typography variants
+  '--sn-font-serif': z.string(),
+  '--sn-font-mono': z.string(),
 
   // Named palette colors
   '--sn-storm': z.string(),

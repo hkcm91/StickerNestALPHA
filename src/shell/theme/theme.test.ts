@@ -11,7 +11,6 @@ import { ShellEvents, CORE_TOKEN_KEYS } from '@sn/types';
 import { bus } from '../../kernel/bus';
 
 import { applyThemeTokens, emitThemeChange } from './theme-provider';
-import { THEME_TOKENS } from './theme-tokens';
 
 describe('Theme system', () => {
   beforeEach(() => {
@@ -58,7 +57,11 @@ describe('Theme system', () => {
       expect(style.getPropertyValue('--sn-moss')).toBe('#5AA878');
       expect(style.getPropertyValue('--sn-violet')).toBe('#B8A0D8');
       expect(style.getPropertyValue('--sn-surface-raised')).toBe('#1A1A1F');
+      expect(style.getPropertyValue('--sn-surface-glass')).toBe('rgba(20,17,24,0.75)');
+      expect(style.getPropertyValue('--sn-surface-glass-light')).toBe('rgba(20,17,24,0.65)');
       expect(style.getPropertyValue('--sn-bg-ground')).toBe('#110E14');
+      expect(style.getPropertyValue('--sn-font-serif')).toContain('Newsreader');
+      expect(style.getPropertyValue('--sn-font-mono')).toContain('DM Mono');
       expect(style.getPropertyValue('--sn-success')).toBe('#5AA878');
       expect(style.getPropertyValue('--sn-warning')).toBe('#D4A04C');
       expect(style.getPropertyValue('--sn-error')).toBe('#C85858');

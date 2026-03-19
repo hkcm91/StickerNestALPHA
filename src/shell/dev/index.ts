@@ -4,3 +4,4 @@
  */
 
 export { TestHarness } from './TestHarness';
+export { SplitCanvasView } from './SplitCanvasView';

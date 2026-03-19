@@ -5,5 +5,5 @@
  * @layer L3
  */
 
-export { createCrossCanvasRouter, isValidChannelName } from './cross-canvas-router';
-export type { CrossCanvasRouter } from './cross-canvas-router';
+export { createCrossCanvasRouter, getSharedCrossCanvasRouter, isValidChannelName } from './cross-canvas-router';
+export type { CrossCanvasRouter, CrossCanvasEnvelope, CrossCanvasSender } from './cross-canvas-router';

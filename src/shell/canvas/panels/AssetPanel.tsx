@@ -153,6 +153,26 @@ const DEFAULT_ASSETS: AssetItem[] = [
     widgetType: 'productivity',
     metadata: { widgetId: 'sn.builtin.todo-list' },
   },
+  {
+    id: 'sn.builtin.xc-broadcaster',
+    name: 'Broadcaster',
+    type: 'widget',
+    icon: '📡',
+    description: 'Send messages to other canvases via a named channel.',
+    tags: ['cross-canvas', 'communication', 'broadcast'],
+    widgetType: 'utility',
+    metadata: { widgetId: 'sn.builtin.xc-broadcaster' },
+  },
+  {
+    id: 'sn.builtin.xc-listener',
+    name: 'Listener',
+    type: 'widget',
+    icon: '👂',
+    description: 'Receive messages from other canvases via a named channel.',
+    tags: ['cross-canvas', 'communication', 'listen'],
+    widgetType: 'utility',
+    metadata: { widgetId: 'sn.builtin.xc-listener' },
+  },
 ];
 
 export const AssetPanel: React.FC<AssetPanelProps> = ({ assets = DEFAULT_ASSETS }) => {

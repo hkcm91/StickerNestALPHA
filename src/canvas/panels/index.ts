@@ -33,6 +33,10 @@ export type { ContextMenuController, ContextMenuItem, ContextMenuState } from '.
 export { createFloatingActionBarController } from './floating-bar';
 export type { FloatingActionBarController, FloatingAction } from './floating-bar';
 
+// Minimap
+export { createMinimapController } from './minimap';
+export type { MinimapController, MinimapState, MinimapEntity, MinimapViewport } from './minimap';
+
 // Init
 export { initCanvasPanels, teardownCanvasPanels, isCanvasPanelsInitialized, getCanvasPanelsContext } from './init';
 export type { CanvasPanelsContext } from './init';

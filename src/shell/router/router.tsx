@@ -12,13 +12,13 @@ import { ShellEvents } from '@sn/types';
 
 import { bus } from '../../kernel/bus';
 import { NotionPermissionModal } from '../components/NotionPermissionModal';
+import { ToastContainer } from '../components/ToastContainer';
 import { DataManagerPage } from '../data';
-import { TestHarness } from '../dev';
+import { TestHarness, SplitCanvasView } from '../dev';
 import { EmbedPage } from '../pages/EmbedPage';
 import { PricingPage } from '../pages/PricingPage';
 import { ProfilePage } from '../profile';
 import { themeVar } from '../theme/theme-vars';
-import { ToastContainer } from '../components/ToastContainer';
 
 import {
   DashboardPage,
@@ -92,6 +92,7 @@ const GlobalNav: React.FC = () => (
     <Link style={navLinkStyle} to="/profile/me" data-testid="nav-profile">Profile</Link>
     <Link style={navLinkStyle} to="/settings">Settings</Link>
     <Link style={navLinkStyle} to="/dev/test">Dev</Link>
+    <Link style={navLinkStyle} to="/dev/split">Split</Link>
     <Link style={navLinkStyle} to="/login">Login</Link>
   </nav>
 );
@@ -116,6 +117,7 @@ export const AppRouter: React.FC = () => {
       <Route path="/pricing" element={<PricingPage />} />
       <Route path="/invite/:token" element={<InvitePage />} />
       <Route path="/dev/test" element={<TestHarness />} />
+      <Route path="/dev/split" element={<SplitCanvasView />} />
 
       <Route
         path="/"

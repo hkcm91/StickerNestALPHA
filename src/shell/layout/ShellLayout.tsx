@@ -29,6 +29,12 @@ const TRAY_Z = 50;
 const TAB_WIDTH = 28;
 const TAB_HEIGHT = 80;
 
+/** Spring easing — Principle 4: "Spring physics, not CSS ease" */
+const SPRING = 'cubic-bezier(0.16, 1, 0.3, 1)';
+const PANEL_TRANSITION = `transform 0.35s ${SPRING}`;
+const TAB_TRANSITION_LEFT = `left 0.3s ${SPRING}`;
+const TAB_TRANSITION_RIGHT = `right 0.3s ${SPRING}`;
+
 /**
  * Shell Layout — topbar + full-width main area with overlay tray panels.
  *
@@ -122,7 +128,7 @@ export const ShellLayout: React.FC<ShellLayoutProps> = ({
                 justifyContent: 'center',
                 padding: 0,
                 boxShadow: '2px 0 8px rgba(0,0,0,0.08)',
-                transition: 'left 0.25s ease',
+                transition: TAB_TRANSITION_LEFT,
                 color: themeVar('--sn-text-muted'),
                 fontSize: '11px',
                 writingMode: 'vertical-rl',
@@ -148,7 +154,7 @@ export const ShellLayout: React.FC<ShellLayoutProps> = ({
                 borderRight: `1px solid ${themeVar('--sn-border')}`,
                 boxShadow: '2px 0 12px rgba(0,0,0,0.1)',
                 transform: leftOpen ? 'translateX(0)' : 'translateX(-100%)',
-                transition: 'transform 0.25s ease',
+                transition: PANEL_TRANSITION,
                 overflow: 'hidden auto',
               }}
             >
@@ -182,7 +188,7 @@ export const ShellLayout: React.FC<ShellLayoutProps> = ({
                 justifyContent: 'center',
                 padding: 0,
                 boxShadow: '-2px 0 8px rgba(0,0,0,0.08)',
-                transition: 'right 0.25s ease',
+                transition: TAB_TRANSITION_RIGHT,
                 color: themeVar('--sn-text-muted'),
                 fontSize: '11px',
                 writingMode: 'vertical-rl',
@@ -208,7 +214,7 @@ export const ShellLayout: React.FC<ShellLayoutProps> = ({
                 borderLeft: `1px solid ${themeVar('--sn-border')}`,
                 boxShadow: '-2px 0 12px rgba(0,0,0,0.1)',
                 transform: rightOpen ? 'translateX(0)' : 'translateX(100%)',
-                transition: 'transform 0.25s ease',
+                transition: PANEL_TRANSITION,
                 overflow: 'hidden auto',
               }}
             >

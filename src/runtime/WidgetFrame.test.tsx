@@ -107,13 +107,30 @@ vi.mock('./integrations/singleton', () => ({
   })),
 }));
 
+/** Per-channel mock unsubscribe fns — tests can inspect these */
+const mockChannelUnsubs = new Map<string, ReturnType<typeof vi.fn>>();
+
+const sharedMockRouter = {
+  subscribe: vi.fn((_channel: string, _cb: unknown) => {
+    const unsub = vi.fn();
+    mockChannelUnsubs.set(_channel as string, unsub);
+    return unsub;
+  }),
+  unsubscribe: vi.fn(),
+  emit: vi.fn(),
+  destroy: vi.fn(),
+  getQueueLength: vi.fn(() => 0),
+};
+
 vi.mock('./cross-canvas/cross-canvas-router', () => ({
   createCrossCanvasRouter: vi.fn(() => ({
-    subscribe: vi.fn(),
+    subscribe: vi.fn(() => vi.fn()),
     unsubscribe: vi.fn(),
     emit: vi.fn(),
     destroy: vi.fn(),
+    getQueueLength: vi.fn(() => 0),
   })),
+  getSharedCrossCanvasRouter: vi.fn(() => sharedMockRouter),
   isValidChannelName: vi.fn((channel: string) => /^[a-zA-Z0-9._-]{1,128}$/.test(channel)),
 }));
 
@@ -126,7 +143,7 @@ import { useWidgetStore } from '../kernel/stores/widget/widget.store';
 
 import { createWidgetBridge } from './bridge/bridge';
 import type { ThemeTokens } from './bridge/message-types';
-import { createCrossCanvasRouter } from './cross-canvas/cross-canvas-router';
+import { getSharedCrossCanvasRouter } from './cross-canvas/cross-canvas-router';
 import { createLifecycleManager } from './lifecycle/manager';
 import { buildSrcdoc } from './sdk/sdk-builder';
 import { SANDBOX_POLICY } from './security/sandbox-policy';
@@ -182,6 +199,7 @@ function getOnMessageHandler(): (message: Record<string, unknown>) => void {
 describe('WidgetFrame', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockChannelUnsubs.clear();
     // Reset lifecycle mock to default state
     mockLifecycle.getState.mockReturnValue('UNLOADED');
     mockBridge.isReady.mockReturnValue(false);
@@ -940,52 +958,46 @@ describe('WidgetFrame', () => {
       // Subscribe first to create the router
       handler({ type: 'CROSS_CANVAS_SUBSCRIBE', channel: 'room-1' });
 
-      const mockRouter = vi.mocked(createCrossCanvasRouter).mock.results[0].value;
+      const mockRouter = sharedMockRouter;
 
       // Now emit
       handler({ type: 'CROSS_CANVAS_EMIT', channel: 'room-1', payload: { x: 1 } });
 
-      expect(mockRouter.emit).toHaveBeenCalledWith('room-1', { x: 1 });
+      expect(mockRouter.emit).toHaveBeenCalledWith('room-1', { x: 1 }, { widgetId: 'test-widget', instanceId: 'instance-1' });
     });
 
-    it('A2: CROSS_CANVAS_EMIT without router is no-op', () => {
+    it('A2: CROSS_CANVAS_EMIT uses shared singleton router', () => {
       render(<WidgetFrame {...defaultProps} />);
       const handler = getOnMessageHandler();
 
-      // Emit before any subscribe — router does not exist yet
+      // Emit before any subscribe — uses shared singleton
       handler({ type: 'CROSS_CANVAS_EMIT', channel: 'room-1', payload: { x: 1 } });
 
-      expect(createCrossCanvasRouter).not.toHaveBeenCalled();
-      // No error thrown — test passes if it reaches here
+      expect(getSharedCrossCanvasRouter).toHaveBeenCalled();
+      expect(sharedMockRouter.emit).toHaveBeenCalledWith('room-1', { x: 1 }, { widgetId: 'test-widget', instanceId: 'instance-1' });
     });
 
-    it('A3: CROSS_CANVAS_SUBSCRIBE lazy-creates router', () => {
+    it('A3: CROSS_CANVAS_SUBSCRIBE uses shared router', () => {
       render(<WidgetFrame {...defaultProps} />);
       const handler = getOnMessageHandler();
 
       handler({ type: 'CROSS_CANVAS_SUBSCRIBE', channel: 'ch1' });
 
-      expect(createCrossCanvasRouter).toHaveBeenCalledOnce();
-
-      const mockRouter = vi.mocked(createCrossCanvasRouter).mock.results[0].value;
-      expect(mockRouter.subscribe).toHaveBeenCalledWith('ch1', expect.any(Function));
+      expect(getSharedCrossCanvasRouter).toHaveBeenCalled();
+      expect(sharedMockRouter.subscribe).toHaveBeenCalledWith('ch1', expect.any(Function));
     });
 
-    it('A4: CROSS_CANVAS_SUBSCRIBE reuses existing router', () => {
+    it('A4: CROSS_CANVAS_SUBSCRIBE reuses shared router', () => {
       render(<WidgetFrame {...defaultProps} />);
       const handler = getOnMessageHandler();
 
       handler({ type: 'CROSS_CANVAS_SUBSCRIBE', channel: 'ch1' });
       handler({ type: 'CROSS_CANVAS_SUBSCRIBE', channel: 'ch2' });
 
-      // Router created only once
-      expect(createCrossCanvasRouter).toHaveBeenCalledOnce();
-
-      const mockRouter = vi.mocked(createCrossCanvasRouter).mock.results[0].value;
-      // Subscribe called twice — once per channel
-      expect(mockRouter.subscribe).toHaveBeenCalledTimes(2);
-      expect(mockRouter.subscribe).toHaveBeenCalledWith('ch1', expect.any(Function));
-      expect(mockRouter.subscribe).toHaveBeenCalledWith('ch2', expect.any(Function));
+      // Subscribe called twice — once per channel, both on the shared router
+      expect(sharedMockRouter.subscribe).toHaveBeenCalledTimes(2);
+      expect(sharedMockRouter.subscribe).toHaveBeenCalledWith('ch1', expect.any(Function));
+      expect(sharedMockRouter.subscribe).toHaveBeenCalledWith('ch2', expect.any(Function));
     });
 
     it('A5: CROSS_CANVAS_SUBSCRIBE callback forwards events to widget via bridge', () => {
@@ -994,7 +1006,7 @@ describe('WidgetFrame', () => {
 
       handler({ type: 'CROSS_CANVAS_SUBSCRIBE', channel: 'ch1' });
 
-      const mockRouter = vi.mocked(createCrossCanvasRouter).mock.results[0].value;
+      const mockRouter = sharedMockRouter;
 
       // Extract the callback passed to router.subscribe
       const callback = mockRouter.subscribe.mock.calls[0][1];
@@ -1009,44 +1021,45 @@ describe('WidgetFrame', () => {
       });
     });
 
-    it('A6: CROSS_CANVAS_UNSUBSCRIBE calls router.unsubscribe', () => {
+    it('A6: CROSS_CANVAS_UNSUBSCRIBE calls the per-callback unsub function', () => {
       render(<WidgetFrame {...defaultProps} />);
       const handler = getOnMessageHandler();
 
-      // Subscribe first to create the router
+      // Subscribe first — stores unsub fn
       handler({ type: 'CROSS_CANVAS_SUBSCRIBE', channel: 'ch1' });
+      const unsub = mockChannelUnsubs.get('ch1');
+      expect(unsub).toBeDefined();
 
-      const mockRouter = vi.mocked(createCrossCanvasRouter).mock.results[0].value;
-
-      // Now unsubscribe
+      // Now unsubscribe — should call the stored unsub fn, NOT router.unsubscribe
       handler({ type: 'CROSS_CANVAS_UNSUBSCRIBE', channel: 'ch1' });
 
-      expect(mockRouter.unsubscribe).toHaveBeenCalledWith('ch1');
+      expect(unsub).toHaveBeenCalledTimes(1);
+      expect(sharedMockRouter.unsubscribe).not.toHaveBeenCalled();
     });
 
-    it('A7: CROSS_CANVAS_UNSUBSCRIBE without router is no-op', () => {
+    it('A7: CROSS_CANVAS_UNSUBSCRIBE without prior subscribe is a no-op', () => {
       render(<WidgetFrame {...defaultProps} />);
       const handler = getOnMessageHandler();
 
-      // Unsubscribe before any subscribe — router does not exist yet
+      // Unsubscribe before any subscribe — no unsub fn stored, should not throw
       handler({ type: 'CROSS_CANVAS_UNSUBSCRIBE', channel: 'ch1' });
 
-      expect(createCrossCanvasRouter).not.toHaveBeenCalled();
-      // No error thrown — test passes if it reaches here
+      expect(sharedMockRouter.unsubscribe).not.toHaveBeenCalled();
     });
 
-    it('A8: Router destroyed on unmount', () => {
+    it('A8: Unmount calls per-callback unsub functions, not router.destroy', () => {
       const { unmount } = render(<WidgetFrame {...defaultProps} />);
       const handler = getOnMessageHandler();
 
-      // Subscribe to create the router
       handler({ type: 'CROSS_CANVAS_SUBSCRIBE', channel: 'ch1' });
-
-      const mockRouter = vi.mocked(createCrossCanvasRouter).mock.results[0].value;
+      const unsub = mockChannelUnsubs.get('ch1');
 
       unmount();
 
-      expect(mockRouter.destroy).toHaveBeenCalled();
+      // Per-callback unsub should be called on unmount
+      expect(unsub).toHaveBeenCalled();
+      // Shared singleton should NOT be destroyed
+      expect(sharedMockRouter.destroy).not.toHaveBeenCalled();
     });
 
     it('A9: No destroy call if router never created', () => {
@@ -1055,8 +1068,8 @@ describe('WidgetFrame', () => {
       // Unmount without any cross-canvas messages
       unmount();
 
-      // Router was never created
-      expect(createCrossCanvasRouter).not.toHaveBeenCalled();
+      // Shared router not accessed if no cross-canvas messages sent
+      expect(getSharedCrossCanvasRouter).not.toHaveBeenCalled();
       // No crash — test passes if it reaches here
     });
   });
@@ -1251,11 +1264,12 @@ describe('WidgetFrame', () => {
         busSubs.get(type)?.forEach(fn => fn({ type, payload }));
       });
 
-      // Cross-canvas router mock — all instances share the same relay
-      vi.mocked(createCrossCanvasRouter).mockImplementation(() => ({
+      // Override shared router mock to use real relay for multi-widget tests
+      const relayRouter = {
         subscribe: vi.fn((channel: string, cb: (payload: unknown) => void) => {
           if (!crossCanvasSubs.has(channel)) crossCanvasSubs.set(channel, new Set());
           crossCanvasSubs.get(channel)!.add(cb);
+          return () => { crossCanvasSubs.get(channel)?.delete(cb); };
         }),
         unsubscribe: vi.fn((channel: string) => {
           crossCanvasSubs.get(channel)?.clear();
@@ -1264,7 +1278,9 @@ describe('WidgetFrame', () => {
           crossCanvasSubs.get(channel)?.forEach(fn => fn(payload));
         }),
         destroy: vi.fn(),
-      } as any));
+        getQueueLength: vi.fn(() => 0),
+      };
+      vi.mocked(getSharedCrossCanvasRouter).mockReturnValue(relayRouter as any);
     });
 
     function getHandlerForBridge(bridgeIndex: number) {
@@ -1353,7 +1369,7 @@ describe('WidgetFrame', () => {
 
       handler({ type: 'CROSS_CANVAS_EMIT', channel: 'room-1', payload: { x: 1 } });
 
-      expect(createCrossCanvasRouter).not.toHaveBeenCalled();
+      expect(getSharedCrossCanvasRouter).not.toHaveBeenCalled();
       expect(spy).toHaveBeenCalledWith(
         expect.stringContaining('cross-canvas emit blocked'),
       );
@@ -1369,7 +1385,7 @@ describe('WidgetFrame', () => {
 
       handler({ type: 'CROSS_CANVAS_SUBSCRIBE', channel: 'room-1' });
 
-      expect(createCrossCanvasRouter).not.toHaveBeenCalled();
+      expect(getSharedCrossCanvasRouter).not.toHaveBeenCalled();
       expect(spy).toHaveBeenCalledWith(
         expect.stringContaining('cross-canvas subscribe blocked'),
       );
@@ -1398,7 +1414,7 @@ describe('WidgetFrame', () => {
 
       handler({ type: 'CROSS_CANVAS_SUBSCRIBE', channel: 'bad/channel' });
 
-      expect(createCrossCanvasRouter).not.toHaveBeenCalled();
+      expect(getSharedCrossCanvasRouter).not.toHaveBeenCalled();
       expect(spy).toHaveBeenCalledWith(
         expect.stringContaining('invalid channel name'),
       );
@@ -1430,7 +1446,7 @@ describe('WidgetFrame', () => {
       const largePayload = { data: 'x'.repeat(70_000) };
       handler({ type: 'CROSS_CANVAS_EMIT', channel: 'room-1', payload: largePayload });
 
-      const mockRouter = vi.mocked(createCrossCanvasRouter).mock.results[0].value;
+      const mockRouter = sharedMockRouter;
       expect(mockRouter.emit).not.toHaveBeenCalled();
       expect(spy).toHaveBeenCalledWith(
         expect.stringContaining('payload exceeds 64KB limit'),
@@ -1448,8 +1464,8 @@ describe('WidgetFrame', () => {
       const smallPayload = { data: 'hello' };
       handler({ type: 'CROSS_CANVAS_EMIT', channel: 'room-1', payload: smallPayload });
 
-      const mockRouter = vi.mocked(createCrossCanvasRouter).mock.results[0].value;
-      expect(mockRouter.emit).toHaveBeenCalledWith('room-1', smallPayload);
+      const mockRouter = sharedMockRouter;
+      expect(mockRouter.emit).toHaveBeenCalledWith('room-1', smallPayload, { widgetId: 'test-widget', instanceId: 'instance-1' });
       expect(spy).not.toHaveBeenCalled();
       spy.mockRestore();
     });
@@ -1548,7 +1564,7 @@ describe('WidgetFrame', () => {
 
       handler({ type: 'CROSS_CANVAS_SUBSCRIBE', channel: 'room-1' });
 
-      expect(createCrossCanvasRouter).toHaveBeenCalledOnce();
+      expect(getSharedCrossCanvasRouter).toHaveBeenCalled();
       expect(spy).not.toHaveBeenCalled();
       spy.mockRestore();
     });

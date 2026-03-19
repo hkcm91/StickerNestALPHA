@@ -18,12 +18,6 @@
       "runtimeExecutable": "node",
       "runtimeArgs": ["node_modules/vite/bin/vite.js", "preview"],
       "port": 4173
-    },
-    {
-      "name": "mcp-dev",
-      "runtimeExecutable": "node",
-      "runtimeArgs": ["--import", "tsx", "src/index.ts"],
-      "port": 3000
     }
   ]
 }

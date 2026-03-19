@@ -85,6 +85,12 @@ vi.mock('../../kernel/supabase/client', () => ({
   },
 }));
 
+vi.mock('../../kernel/stores/auth/auth.store', () => ({
+  useAuthStore: Object.assign(vi.fn(), {
+    getState: vi.fn(() => ({ user: null })),
+  }),
+}));
+
 import { createCrossCanvasRouter } from './cross-canvas-router';
 import type { CrossCanvasRouter } from './cross-canvas-router';
 
@@ -92,15 +98,17 @@ import type { CrossCanvasRouter } from './cross-canvas-router';
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Simulates a broadcast arriving from the network for a given channel name */
+let envelopeCounter = 0;
+
+/** Simulates a broadcast arriving from the network for a given channel name (wraps in envelope) */
 function simulateRemoteBroadcast(channelName: string, payload: unknown) {
   const ch = globalChannelRegistry.get(`crosscanvas:${channelName}`);
-  if (ch) ch._simulateBroadcast(payload);
-}
-
-/** Returns the mock channel for inspection */
-function getChannel(channelName: string): MockChannel | undefined {
-  return globalChannelRegistry.get(`crosscanvas:${channelName}`);
+  if (ch) ch._simulateBroadcast({
+    id: `test-env-${++envelopeCounter}`,
+    sender: { widgetId: 'remote-widget', instanceId: 'remote-instance' },
+    payload,
+    timestamp: Date.now(),
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -119,6 +127,7 @@ describe('Cross-Canvas Event Bus — Scenarios', () => {
   beforeEach(() => {
     globalChannelRegistry.clear();
     vi.clearAllMocks();
+    envelopeCounter = 0;
 
     mockChannelFn.mockImplementation((name: string) => {
       // Reuse channel if it already exists (simulates shared Realtime channel)

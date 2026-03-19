@@ -106,7 +106,17 @@
       "Bash(openssl rand:*)",
       "Bash(supabase functions deploy:*)",
       "mcp__claude_ai_Supabase__get_logs",
-      "mcp__Command_Center__cc_my_messages"
+      "mcp__Command_Center__cc_my_messages",
+      "mcp__stickernest-dev__docker_create",
+      "mcp__stickernest-dev__docker_update",
+      "Bash(lsof -i :5173)",
+      "Bash(grep -n \"anchorsToSvgPath\\\\|dividePaths\" /c/Users/Kimber/StickerNest5.0/src/canvas/core/geometry*)",
+      "Bash(obsidian-headless:*)",
+      "Bash(npm bin:*)",
+      "Bash(ob --help:*)",
+      "Bash(winget install:*)",
+      "Bash(winget search:*)",
+      "Bash(claude --version:*)"
     ]
   }
 }

@@ -178,4 +178,158 @@ export function registerDefaultShortcuts(registry: ShortcutRegistry): void {
     busEvent: 'canvas.mode.changed',
     payload: {},
   });
+
+  // -----------------------------------------------------------------------
+  // Canvas navigation shortcuts
+  // -----------------------------------------------------------------------
+
+  registry.register({
+    id: 'zoom-in',
+    key: '=',
+    ctrl: false,
+    shift: false,
+    alt: false,
+    scope: 'canvas',
+    busEvent: 'canvas.viewport.zoomIn',
+  });
+
+  registry.register({
+    id: 'zoom-in-plus',
+    key: '+',
+    ctrl: false,
+    shift: false,
+    alt: false,
+    scope: 'canvas',
+    busEvent: 'canvas.viewport.zoomIn',
+  });
+
+  registry.register({
+    id: 'zoom-out',
+    key: '-',
+    ctrl: false,
+    shift: false,
+    alt: false,
+    scope: 'canvas',
+    busEvent: 'canvas.viewport.zoomOut',
+  });
+
+  registry.register({
+    id: 'reset-zoom',
+    key: '0',
+    ctrl: true,
+    shift: false,
+    alt: false,
+    scope: 'canvas',
+    busEvent: 'canvas.viewport.resetZoom',
+  });
+
+  registry.register({
+    id: 'zoom-to-fit',
+    key: '1',
+    ctrl: true,
+    shift: false,
+    alt: false,
+    scope: 'canvas',
+    busEvent: 'canvas.viewport.zoomToFit',
+  });
+
+  registry.register({
+    id: 'viewport-reset',
+    key: 'Home',
+    ctrl: false,
+    shift: false,
+    alt: false,
+    scope: 'canvas',
+    busEvent: 'canvas.viewport.reset',
+  });
+
+  // Arrow key panning
+  registry.register({
+    id: 'pan-up',
+    key: 'ArrowUp',
+    ctrl: false,
+    shift: false,
+    alt: false,
+    scope: 'canvas',
+    busEvent: 'canvas.viewport.panStep',
+    payload: { dx: 0, dy: 50 },
+  });
+
+  registry.register({
+    id: 'pan-down',
+    key: 'ArrowDown',
+    ctrl: false,
+    shift: false,
+    alt: false,
+    scope: 'canvas',
+    busEvent: 'canvas.viewport.panStep',
+    payload: { dx: 0, dy: -50 },
+  });
+
+  registry.register({
+    id: 'pan-left',
+    key: 'ArrowLeft',
+    ctrl: false,
+    shift: false,
+    alt: false,
+    scope: 'canvas',
+    busEvent: 'canvas.viewport.panStep',
+    payload: { dx: 50, dy: 0 },
+  });
+
+  registry.register({
+    id: 'pan-right',
+    key: 'ArrowRight',
+    ctrl: false,
+    shift: false,
+    alt: false,
+    scope: 'canvas',
+    busEvent: 'canvas.viewport.panStep',
+    payload: { dx: -50, dy: 0 },
+  });
+
+  // Shift+Arrow: fast pan
+  registry.register({
+    id: 'pan-up-fast',
+    key: 'ArrowUp',
+    ctrl: false,
+    shift: true,
+    alt: false,
+    scope: 'canvas',
+    busEvent: 'canvas.viewport.panStep',
+    payload: { dx: 0, dy: 200 },
+  });
+
+  registry.register({
+    id: 'pan-down-fast',
+    key: 'ArrowDown',
+    ctrl: false,
+    shift: true,
+    alt: false,
+    scope: 'canvas',
+    busEvent: 'canvas.viewport.panStep',
+    payload: { dx: 0, dy: -200 },
+  });
+
+  registry.register({
+    id: 'pan-left-fast',
+    key: 'ArrowLeft',
+    ctrl: false,
+    shift: true,
+    alt: false,
+    scope: 'canvas',
+    busEvent: 'canvas.viewport.panStep',
+    payload: { dx: 200, dy: 0 },
+  });
+
+  registry.register({
+    id: 'pan-right-fast',
+    key: 'ArrowRight',
+    ctrl: false,
+    shift: true,
+    alt: false,
+    scope: 'canvas',
+    busEvent: 'canvas.viewport.panStep',
+    payload: { dx: -200, dy: 0 },
+  });
 }

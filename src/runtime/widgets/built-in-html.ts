@@ -2076,4 +2076,169 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
       })();
     </script>
   `,
+
+  // =========================================================================
+  // Cross-Canvas Communication Widgets
+  // =========================================================================
+
+  'wgt-xc-broadcaster': `
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: var(--sn-font-family, system-ui); color: var(--sn-text, #e5e7eb); background: var(--sn-surface, #1f2937); }
+      .root { padding: 12px; height: 100%; display: flex; flex-direction: column; }
+      .title { font-size: 11px; font-weight: 700; color: var(--sn-accent, #6366f1); margin-bottom: 8px; letter-spacing: 0.5px; }
+      .channel-row { display: flex; gap: 4px; margin-bottom: 8px; align-items: center; }
+      .channel-label { font-size: 10px; color: var(--sn-text-muted, #9ca3af); }
+      input { flex: 1; padding: 4px 8px; border: 1px solid var(--sn-border, #374151); border-radius: 4px; background: var(--sn-bg, #111827); color: var(--sn-text, #e5e7eb); font-size: 12px; }
+      .msg-row { display: flex; gap: 4px; margin-bottom: 8px; }
+      .btn { padding: 4px 12px; border: none; border-radius: 4px; background: var(--sn-accent, #6366f1); color: #fff; cursor: pointer; font-size: 11px; font-weight: 600; }
+      .btn:active { opacity: 0.8; }
+      .log { flex: 1; overflow-y: auto; font-size: 10px; color: var(--sn-text-muted, #9ca3af); }
+      .log div { padding: 1px 0; }
+      .status { font-size: 9px; color: var(--sn-text-muted, #6b7280); margin-top: 4px; }
+    </style>
+    <div class="root">
+      <div class="title">BROADCASTER</div>
+      <div class="channel-row">
+        <span class="channel-label">Channel:</span>
+        <input id="channel" type="text" value="global" />
+      </div>
+      <div class="msg-row">
+        <input id="msg" type="text" placeholder="Message..." value="hello" />
+        <button class="btn" id="send">Send</button>
+      </div>
+      <div class="log" id="log"></div>
+      <div class="status" id="status">Sent: 0</div>
+    </div>
+    <script>
+      (function() {
+        var sent = 0;
+        var channelEl = document.getElementById('channel');
+        var msgEl = document.getElementById('msg');
+        var logEl = document.getElementById('log');
+        var statusEl = document.getElementById('status');
+
+        // Use config channel if provided
+        var cfg = StickerNest.getConfig();
+        if (cfg && cfg.channel) channelEl.value = cfg.channel;
+
+        // Restore saved channel
+        StickerNest.getState('channel').then(function(v) { if (v) channelEl.value = v; });
+
+        function addLog(text) {
+          var t = new Date().toLocaleTimeString();
+          logEl.innerHTML = '<div>[' + t + '] ' + text + '</div>' + logEl.innerHTML;
+        }
+
+        document.getElementById('send').onclick = function() {
+          var ch = channelEl.value.trim();
+          var text = msgEl.value.trim();
+          if (!ch || !text) return;
+          StickerNest.emitCrossCanvas(ch, { text: text, from: 'broadcaster', timestamp: Date.now() });
+          sent++;
+          statusEl.textContent = 'Sent: ' + sent + ' on ' + ch;
+          addLog('Sent: ' + text);
+          StickerNest.setState('channel', ch);
+        };
+
+        msgEl.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter') document.getElementById('send').click();
+        });
+
+        StickerNest.register({
+          id: 'sn.builtin.xc-broadcaster',
+          name: 'Broadcaster',
+          version: '1.0.0',
+          permissions: ['cross-canvas'],
+          events: { emits: [], subscribes: [] }
+        });
+        StickerNest.ready();
+        addLog('Ready');
+      })();
+    </script>
+  `,
+
+  'wgt-xc-listener': `
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: var(--sn-font-family, system-ui); color: var(--sn-text, #e5e7eb); background: var(--sn-surface, #1f2937); }
+      .root { padding: 12px; height: 100%; display: flex; flex-direction: column; }
+      .title { font-size: 11px; font-weight: 700; color: #22c55e; margin-bottom: 8px; letter-spacing: 0.5px; }
+      .channel-row { display: flex; gap: 4px; margin-bottom: 8px; align-items: center; }
+      .channel-label { font-size: 10px; color: var(--sn-text-muted, #9ca3af); }
+      input { flex: 1; padding: 4px 8px; border: 1px solid var(--sn-border, #374151); border-radius: 4px; background: var(--sn-bg, #111827); color: var(--sn-text, #e5e7eb); font-size: 12px; }
+      .btn { padding: 4px 12px; border: none; border-radius: 4px; background: #22c55e; color: #fff; cursor: pointer; font-size: 11px; font-weight: 600; }
+      .btn:active { opacity: 0.8; }
+      .log { flex: 1; overflow-y: auto; font-size: 10px; color: var(--sn-text-muted, #9ca3af); }
+      .log div { padding: 1px 0; }
+      .log .msg { color: #22c55e; }
+      .status { font-size: 9px; color: var(--sn-text-muted, #6b7280); margin-top: 4px; }
+    </style>
+    <div class="root">
+      <div class="title">LISTENER</div>
+      <div class="channel-row">
+        <span class="channel-label">Channel:</span>
+        <input id="channel" type="text" value="global" />
+        <button class="btn" id="listen">Listen</button>
+      </div>
+      <div class="log" id="log"></div>
+      <div class="status" id="status">Received: 0 | Not listening</div>
+    </div>
+    <script>
+      (function() {
+        var received = 0;
+        var currentChannel = null;
+        var channelEl = document.getElementById('channel');
+        var logEl = document.getElementById('log');
+        var statusEl = document.getElementById('status');
+
+        // Use config channel if provided
+        var cfg = StickerNest.getConfig();
+        if (cfg && cfg.channel) channelEl.value = cfg.channel;
+
+        // Restore saved channel
+        StickerNest.getState('channel').then(function(v) { if (v) channelEl.value = v; });
+
+        function addLog(text, cls) {
+          var t = new Date().toLocaleTimeString();
+          logEl.innerHTML = '<div class="' + (cls || '') + '">[' + t + '] ' + text + '</div>' + logEl.innerHTML;
+        }
+
+        function startListening() {
+          var ch = channelEl.value.trim();
+          if (!ch) return;
+          if (currentChannel) {
+            StickerNest.unsubscribeCrossCanvas(currentChannel);
+          }
+          currentChannel = ch;
+          StickerNest.subscribeCrossCanvas(ch, function(payload) {
+            received++;
+            var latency = payload.timestamp ? ' (' + (Date.now() - payload.timestamp) + 'ms)' : '';
+            addLog(payload.text + latency, 'msg');
+            statusEl.textContent = 'Received: ' + received + ' on ' + ch;
+          });
+          addLog('Listening on: ' + ch);
+          statusEl.textContent = 'Received: 0 | Listening on ' + ch;
+          StickerNest.setState('channel', ch);
+        }
+
+        document.getElementById('listen').onclick = startListening;
+        channelEl.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter') startListening();
+        });
+
+        StickerNest.register({
+          id: 'sn.builtin.xc-listener',
+          name: 'Listener',
+          version: '1.0.0',
+          permissions: ['cross-canvas'],
+          events: { emits: [], subscribes: [] }
+        });
+        StickerNest.ready();
+
+        // Auto-start listening on saved/default channel
+        setTimeout(startListening, 100);
+      })();
+    </script>
+  `,
 };

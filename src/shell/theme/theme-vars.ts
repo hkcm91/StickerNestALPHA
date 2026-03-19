@@ -44,6 +44,8 @@ export const palette = {
   bgGround: themeVar('--sn-bg-ground'),
   surface: themeVar('--sn-surface'),
   surfaceRaised: themeVar('--sn-surface-raised'),
+  surfaceGlass: themeVar('--sn-surface-glass'),
+  surfaceGlassLight: themeVar('--sn-surface-glass-light'),
 
   // Text
   text: themeVar('--sn-text'),
@@ -54,6 +56,10 @@ export const palette = {
   // Borders
   border: themeVar('--sn-border'),
   borderHover: themeVar('--sn-border-hover'),
+
+  // Typography
+  fontSerif: themeVar('--sn-font-serif'),
+  fontMono: themeVar('--sn-font-mono'),
 
   // Accent
   accent: themeVar('--sn-accent'),

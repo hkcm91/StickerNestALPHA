@@ -39,10 +39,12 @@ function createMockChannel(name: string): MockChannel {
       return channel;
     }),
     send: vi.fn().mockImplementation(({ payload }: { type: string; event: string; payload: unknown }) => {
-      // Simulate broadcast to ALL channel instances with the same name (like Supabase Realtime)
+      // Simulate broadcast to peer channel instances (self: false — skip sender)
       const peers = channelsByName.get(name) || [];
       for (const peer of peers) {
-        peer._simulateBroadcast(payload);
+        if (peer !== channel) {
+          peer._simulateBroadcast(payload);
+        }
       }
     }),
     _broadcastHandlers: broadcastHandlers,
@@ -57,7 +59,7 @@ function createMockChannel(name: string): MockChannel {
 
 vi.mock('../../kernel/supabase/client', () => ({
   supabase: {
-    channel: vi.fn((name: string) => {
+    channel: vi.fn((name: string, _opts?: { config?: { broadcast?: { self?: boolean } } }) => {
       const ch = createMockChannel(name);
       if (!channelsByName.has(name)) channelsByName.set(name, []);
       channelsByName.get(name)!.push(ch);
@@ -65,6 +67,12 @@ vi.mock('../../kernel/supabase/client', () => ({
     }),
     removeChannel: vi.fn(),
   },
+}));
+
+vi.mock('../../kernel/stores/auth/auth.store', () => ({
+  useAuthStore: Object.assign(vi.fn(), {
+    getState: vi.fn(() => ({ user: null })),
+  }),
 }));
 
 // ---------------------------------------------------------------------------
@@ -162,15 +170,15 @@ describe('Cross-Canvas Full-Stack Integration', () => {
     router.subscribe('events', (p) => received.push(p));
     const channel = channelsByName.get('crosscanvas:events')![0];
 
-    // First broadcast works
-    channel._simulateBroadcast({ n: 1 });
+    // First broadcast works (wrap in envelope)
+    channel._simulateBroadcast({ id: 'msg-1', sender: { widgetId: 'w', instanceId: 'i' }, payload: { n: 1 }, timestamp: Date.now() });
     expect(received).toHaveLength(1);
 
     // Unsubscribe
     router.unsubscribe('events');
 
-    // Second broadcast should not reach handler
-    channel._simulateBroadcast({ n: 2 });
+    // Second broadcast should not reach handler (channel cleaned up)
+    channel._simulateBroadcast({ id: 'msg-2', sender: { widgetId: 'w', instanceId: 'i' }, payload: { n: 2 }, timestamp: Date.now() });
     expect(received).toHaveLength(1); // Still 1
 
     router.destroy();
@@ -233,14 +241,14 @@ describe('Cross-Canvas Full-Stack Integration', () => {
     const channel = channels[0];
 
     // Verify working
-    channel._simulateBroadcast({ n: 1 });
+    channel._simulateBroadcast({ id: 'msg-1', sender: { widgetId: 'w', instanceId: 'i' }, payload: { n: 1 }, timestamp: Date.now() });
     expect(received).toHaveLength(1);
 
     // Destroy
     router.destroy();
 
     // No more callbacks (subscription entry deleted from router's internal map)
-    channel._simulateBroadcast({ n: 2 });
+    channel._simulateBroadcast({ id: 'msg-2', sender: { widgetId: 'w', instanceId: 'i' }, payload: { n: 2 }, timestamp: Date.now() });
     expect(received).toHaveLength(1);
   });
 

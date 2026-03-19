@@ -2312,6 +2312,95 @@ export const getWidgetHtml = (type: string): string => {
     case 'sticker-props': return STICKER_PROPS_WIDGET_HTML;
     case 'lottie-props': return LOTTIE_PROPS_WIDGET_HTML;
     case 'pen-path-options': return PEN_PATH_OPTIONS_WIDGET_HTML;
+    case 'xc-sender': return CROSS_CANVAS_SENDER_HTML;
+    case 'xc-receiver': return CROSS_CANVAS_RECEIVER_HTML;
     default: return COUNTER_WIDGET_HTML;
   }
 };
+
+// ===========================================================================
+// Cross-Canvas Tester Widgets
+// ===========================================================================
+
+export const CROSS_CANVAS_SENDER_HTML = `
+<!DOCTYPE html>
+<html>
+<head><title>XC Sender</title></head>
+<body style="margin:0;padding:8px;font-family:system-ui;font-size:12px;background:var(--sn-bg,#1a1a2e);color:var(--sn-text,#e5e7eb);">
+  <div style="margin-bottom:6px;font-weight:600;color:var(--sn-accent,#6366f1);font-size:11px;">CROSS-CANVAS SENDER</div>
+  <div style="display:flex;gap:4px;margin-bottom:6px;">
+    <input id="msg" type="text" placeholder="Message..." value="hello"
+      style="flex:1;padding:4px 6px;border:1px solid var(--sn-border,#374151);border-radius:4px;background:var(--sn-surface,#1f2937);color:var(--sn-text,#e5e7eb);font-size:11px;" />
+    <button id="send"
+      style="padding:4px 10px;border:none;border-radius:4px;background:var(--sn-accent,#6366f1);color:#fff;cursor:pointer;font-size:11px;font-weight:600;">Send</button>
+  </div>
+  <div id="log" style="font-size:10px;max-height:80px;overflow-y:auto;color:var(--sn-text-muted,#9ca3af);"></div>
+  <div id="count" style="font-size:9px;color:var(--sn-text-muted,#6b7280);margin-top:4px;">Sent: 0</div>
+  <script>
+    var sent = 0;
+    var channel = 'dev-test';
+    var config = window.StickerNest?.getConfig?.() || {};
+    if (config.channel) channel = config.channel;
+
+    function addLog(text) {
+      var t = new Date().toLocaleTimeString();
+      var el = document.getElementById('log');
+      el.innerHTML = '<div>[' + t + '] ' + text + '</div>' + el.innerHTML;
+    }
+
+    document.getElementById('send').onclick = function() {
+      var text = document.getElementById('msg').value;
+      if (!text) return;
+      window.StickerNest.emitCrossCanvas(channel, { text: text, timestamp: Date.now() });
+      sent++;
+      document.getElementById('count').textContent = 'Sent: ' + sent + ' | Channel: ' + channel;
+      addLog('Sent: ' + text);
+    };
+
+    document.getElementById('msg').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') document.getElementById('send').click();
+    });
+
+    window.StickerNest?.register({ id: 'cross-canvas-sender', name: 'XC Sender', version: '1.0.0', permissions: ['cross-canvas'] });
+    window.StickerNest?.ready();
+    addLog('Ready on channel: ' + channel);
+  </script>
+</body>
+</html>
+`;
+
+export const CROSS_CANVAS_RECEIVER_HTML = `
+<!DOCTYPE html>
+<html>
+<head><title>XC Receiver</title></head>
+<body style="margin:0;padding:8px;font-family:system-ui;font-size:12px;background:var(--sn-bg,#1a1a2e);color:var(--sn-text,#e5e7eb);">
+  <div style="margin-bottom:6px;font-weight:600;color:#22c55e;font-size:11px;">CROSS-CANVAS RECEIVER</div>
+  <div id="log" style="font-size:10px;max-height:100px;overflow-y:auto;color:var(--sn-text-muted,#9ca3af);"></div>
+  <div id="status" style="font-size:9px;color:var(--sn-text-muted,#6b7280);margin-top:4px;">Received: 0</div>
+  <script>
+    var received = 0;
+    var channel = 'dev-test';
+    var config = window.StickerNest?.getConfig?.() || {};
+    if (config.channel) channel = config.channel;
+
+    function addLog(text, color) {
+      var t = new Date().toLocaleTimeString();
+      var el = document.getElementById('log');
+      var style = color ? 'color:' + color : '';
+      el.innerHTML = '<div style="' + style + '">[' + t + '] ' + text + '</div>' + el.innerHTML;
+    }
+
+    window.StickerNest?.subscribeCrossCanvas(channel, function(payload) {
+      received++;
+      var latency = payload.timestamp ? (Date.now() - payload.timestamp) + 'ms' : '?';
+      addLog(payload.text + ' (latency: ' + latency + ')', '#22c55e');
+      document.getElementById('status').textContent = 'Received: ' + received + ' | Channel: ' + channel;
+    });
+
+    window.StickerNest?.register({ id: 'cross-canvas-receiver', name: 'XC Receiver', version: '1.0.0', permissions: ['cross-canvas'] });
+    window.StickerNest?.ready();
+    addLog('Listening on channel: ' + channel);
+  </script>
+</body>
+</html>
+`;

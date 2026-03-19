@@ -5,10 +5,11 @@
  * @layer L6
  */
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 import type { WidgetContainerEntity } from '@sn/types';
 
+import { bus } from '../../../kernel/bus';
 import { WidgetFrame, InlineWidgetFrame } from '../../../runtime';
 import { BUILT_IN_WIDGET_COMPONENTS } from '../../../runtime/widgets';
 
@@ -31,6 +32,18 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
 }) => {
   const style = entityTransformStyle(entity);
   const BuiltInComponent = BUILT_IN_WIDGET_COMPONENTS[entity.widgetId];
+
+  // Track cross-canvas connection status for this widget instance
+  const [xcChannels, setXcChannels] = useState<string[]>([]);
+  useEffect(() => {
+    const unsub = bus.subscribe('crossCanvas.widget.status', (event: unknown) => {
+      const e = event as { payload: { instanceId: string; channels: string[]; active: boolean } };
+      if (e.payload.instanceId === entity.widgetInstanceId) {
+        setXcChannels(e.payload.channels);
+      }
+    });
+    return unsub;
+  }, [entity.widgetInstanceId]);
 
   // In edit mode, we show a drag handle at the top.
   // The rest of the widget is interactive.
@@ -69,6 +82,23 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
             zIndex: 10,
           }}
         >
+          {/* Cross-canvas connection indicator */}
+          {xcChannels.length > 0 && (
+            <div
+              title={`Cross-canvas: ${xcChannels.join(', ')}`}
+              style={{
+                position: 'absolute',
+                left: 6,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                background: '#22c55e',
+                boxShadow: '0 0 6px rgba(34, 197, 94, 0.5)',
+              }}
+            />
+          )}
           {/* Drag indicator dots */}
           <div style={{ display: 'flex', gap: '2px' }}>
             {[1, 2, 3, 4, 5].map((i) => (

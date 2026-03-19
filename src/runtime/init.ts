@@ -488,6 +488,59 @@ StickerNest.ready();
     isBuiltIn: true,
     installedAt: new Date().toISOString(),
   },
+  // ── Cross-Canvas Communication ──────────────────────────────────────
+  {
+    widgetId: 'sn.builtin.xc-broadcaster',
+    manifest: {
+      id: 'sn.builtin.xc-broadcaster',
+      name: 'Broadcaster',
+      version: '1.0.0',
+      description: 'Send messages to other canvases via a named channel',
+      author: { name: 'StickerNest', url: 'https://stickernest.com' },
+      license: 'MIT',
+      tags: ['cross-canvas', 'communication'],
+      category: 'utilities',
+      permissions: ['cross-canvas'],
+      events: { emits: [], subscribes: [] },
+      config: {
+        fields: [
+          { name: 'channel', type: 'string', label: 'Default Channel', default: 'global', required: false },
+        ],
+      },
+      size: { minWidth: 200, minHeight: 160, maxWidth: 400, maxHeight: 400, defaultWidth: 260, defaultHeight: 220, aspectLocked: false },
+      entry: 'inline',
+      spatialSupport: false,
+    },
+    htmlContent: '',
+    isBuiltIn: true,
+    installedAt: new Date().toISOString(),
+  },
+  {
+    widgetId: 'sn.builtin.xc-listener',
+    manifest: {
+      id: 'sn.builtin.xc-listener',
+      name: 'Listener',
+      version: '1.0.0',
+      description: 'Receive messages from other canvases via a named channel',
+      author: { name: 'StickerNest', url: 'https://stickernest.com' },
+      license: 'MIT',
+      tags: ['cross-canvas', 'communication'],
+      category: 'utilities',
+      permissions: ['cross-canvas'],
+      events: { emits: [], subscribes: [] },
+      config: {
+        fields: [
+          { name: 'channel', type: 'string', label: 'Default Channel', default: 'global', required: false },
+        ],
+      },
+      size: { minWidth: 200, minHeight: 160, maxWidth: 400, maxHeight: 400, defaultWidth: 260, defaultHeight: 220, aspectLocked: false },
+      entry: 'inline',
+      spatialSupport: false,
+    },
+    htmlContent: '',
+    isBuiltIn: true,
+    installedAt: new Date().toISOString(),
+  },
 ];
 
 /** Map from registry widgetId to built-in-html key */
@@ -500,6 +553,8 @@ const WIDGET_HTML_KEY: Record<string, string> = {
   'sn.builtin.item-manager': 'wgt-item-manager',
   'sn.builtin.orders': 'wgt-orders',
   'sn.builtin.creator-dashboard': 'wgt-creator-dashboard',
+  'sn.builtin.xc-broadcaster': 'wgt-xc-broadcaster',
+  'sn.builtin.xc-listener': 'wgt-xc-listener',
 };
 
 /**
