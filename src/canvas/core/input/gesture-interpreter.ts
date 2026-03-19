@@ -88,9 +88,13 @@ export class GestureInterpreter {
   // Gesture state
   private gestureState: 'idle' | 'pan' | 'pinch' = 'idle';
   private initialPinchDistance = 0;
+  private initialPinchAngle = 0;
   private lastPinchScale = 1;
+  private lastPinchRotation = 0;
   private panStartPosition: Point2D | null = null;
   private lastPanPosition: Point2D | null = null;
+  private lastPanTimestamp = 0;
+  private panVelocity: Point2D = { x: 0, y: 0 };
 
   constructor(config: Partial<GestureConfig> = {}) {
     this.config = { ...DEFAULT_GESTURE_CONFIG, ...config };
@@ -240,6 +244,10 @@ export class GestureInterpreter {
     return Math.sqrt(dx * dx + dy * dy);
   }
 
+  private angle(p1: Point2D, p2: Point2D): number {
+    return Math.atan2(p2.y - p1.y, p2.x - p1.x);
+  }
+
   private midpoint(p1: Point2D, p2: Point2D): Point2D {
     return {
       x: (p1.x + p2.x) / 2,
@@ -332,9 +340,11 @@ export class GestureInterpreter {
     this.gestureState = 'pinch';
     const [p1, p2] = Array.from(this.activePointers.values());
     this.initialPinchDistance = this.distance(p1.currentPosition, p2.currentPosition);
+    this.initialPinchAngle = this.angle(p1.currentPosition, p2.currentPosition);
     this.lastPinchScale = 1;
+    this.lastPinchRotation = 0;
 
-    this.emitPinchEvent('start', 1, 0);
+    this.emitPinchEvent('start', 1, 0, 0);
   }
 
   private updatePinchGesture(_timestamp: number): void {
@@ -346,22 +356,26 @@ export class GestureInterpreter {
     const scaleDelta = scale - this.lastPinchScale;
     this.lastPinchScale = scale;
 
+    const currentAngle = this.angle(p1.currentPosition, p2.currentPosition);
+    const rotation = currentAngle - this.initialPinchAngle;
+    this.lastPinchRotation = rotation;
+
     if (Math.abs(scale - 1) > this.config.pinchThreshold) {
-      this.emitPinchEvent('update', scale, scaleDelta);
+      this.emitPinchEvent('update', scale, scaleDelta, rotation);
     }
   }
 
   private endPinchGesture(_timestamp: number): void {
-    this.emitPinchEvent('end', this.lastPinchScale, 0);
+    this.emitPinchEvent('end', this.lastPinchScale, 0, this.lastPinchRotation);
     this.gestureState = 'idle';
   }
 
   private cancelPinchGesture(_timestamp: number): void {
-    this.emitPinchEvent('cancel', this.lastPinchScale, 0);
+    this.emitPinchEvent('cancel', this.lastPinchScale, 0, this.lastPinchRotation);
     this.gestureState = 'idle';
   }
 
-  private emitPinchEvent(state: GestureState, scale: number, scaleDelta: number): void {
+  private emitPinchEvent(state: GestureState, scale: number, scaleDelta: number, rotation: number): void {
     if (this.activePointers.size < 2) return;
 
     const [p1, p2] = Array.from(this.activePointers.values());
@@ -381,7 +395,7 @@ export class GestureInterpreter {
       scale,
       scaleDelta,
       center,
-      rotation: 0, // TODO: Calculate rotation
+      rotation,
     };
 
     this.emit(event);
@@ -394,13 +408,31 @@ export class GestureInterpreter {
     this.gestureState = 'pan';
     this.panStartPosition = { ...pointer.startPosition };
     this.lastPanPosition = { ...pointer.startPosition };
+    this.lastPanTimestamp = event.timestamp;
+    this.panVelocity = { x: 0, y: 0 };
 
     this.emitPanEvent('start', event);
   }
 
   private updatePanGesture(event: PointerMoveEvent): void {
+    // Calculate instantaneous velocity (pixels per second) with EMA smoothing
+    if (this.lastPanPosition && this.lastPanTimestamp > 0) {
+      const dt = (event.timestamp - this.lastPanTimestamp) / 1000; // seconds
+      if (dt > 0) {
+        const vx = (event.screenPosition.x - this.lastPanPosition.x) / dt;
+        const vy = (event.screenPosition.y - this.lastPanPosition.y) / dt;
+        // Exponential moving average (alpha = 0.4) for smooth velocity
+        const alpha = 0.4;
+        this.panVelocity = {
+          x: alpha * vx + (1 - alpha) * this.panVelocity.x,
+          y: alpha * vy + (1 - alpha) * this.panVelocity.y,
+        };
+      }
+    }
+
     this.emitPanEvent('update', event);
     this.lastPanPosition = { ...event.screenPosition };
+    this.lastPanTimestamp = event.timestamp;
   }
 
   private endPanGesture(event: PointerUpEvent): void {
@@ -456,7 +488,7 @@ export class GestureInterpreter {
       state,
       translation,
       translationDelta,
-      velocity: { x: 0, y: 0 }, // TODO: Calculate velocity
+      velocity: { ...this.panVelocity },
     };
 
     this.emit(panEvent);
@@ -483,7 +515,7 @@ export class GestureInterpreter {
       state,
       translation,
       translationDelta: { x: 0, y: 0 },
-      velocity: { x: 0, y: 0 },
+      velocity: { ...this.panVelocity },
     };
 
     this.emit(panEvent);
