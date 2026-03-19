@@ -136,6 +136,25 @@ export async function createCheckoutSession(
  * Creates a Stripe Customer Portal session.
  * Returns the Portal URL to redirect the user to.
  */
+/**
+ * Fetches current resource usage counts for the authenticated user.
+ * Returns counts for canvases and storage (MB).
+ */
+export async function getUsageCounts(userId: string): Promise<{
+  canvasCount: number;
+  storageMb: number;
+}> {
+  const { count: canvasCount } = await supabase
+    .from('canvases')
+    .select('id', { count: 'exact', head: true })
+    .eq('owner_id', userId);
+
+  return {
+    canvasCount: canvasCount ?? 0,
+    storageMb: 0, // Storage tracking not yet implemented
+  };
+}
+
 export async function createPortalSession(): Promise<string> {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) throw new Error('Not authenticated');

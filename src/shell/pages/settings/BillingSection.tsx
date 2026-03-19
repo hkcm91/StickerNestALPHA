@@ -11,6 +11,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   getSubscription,
   getTierQuota,
+  getUsageCounts,
   createPortalSession,
   type Subscription,
   type TierQuota,
@@ -62,22 +63,26 @@ export const BillingSection: React.FC = () => {
   const user = useAuthStore((s) => s.user);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [quota, setQuota] = useState<TierQuota | null>(null);
+  const [usage, setUsage] = useState<{ canvasCount: number; storageMb: number }>({ canvasCount: 0, storageMb: 0 });
   const [loading, setLoading] = useState(true);
   const [portalLoading, setPortalLoading] = useState(false);
 
   useEffect(() => {
     async function load() {
       setLoading(true);
-      const [sub, q] = await Promise.all([
+      const userId = user?.id;
+      const [sub, q, counts] = await Promise.all([
         getSubscription(),
         getTierQuota(user?.tier ?? 'free'),
+        userId ? getUsageCounts(userId) : Promise.resolve({ canvasCount: 0, storageMb: 0 }),
       ]);
       setSubscription(sub);
       setQuota(q);
+      setUsage(counts);
       setLoading(false);
     }
     load();
-  }, [user?.tier]);
+  }, [user?.id, user?.tier]);
 
   const handleManage = useCallback(async () => {
     setPortalLoading(true);
@@ -174,8 +179,8 @@ export const BillingSection: React.FC = () => {
           }}
         >
           <h3 style={{ margin: '0 0 16px', fontSize: 15 }}>Usage</h3>
-          <UsageBar label="Canvases" current={0} limit={quota.maxCanvases} />
-          <UsageBar label="Storage (MB)" current={0} limit={quota.maxStorageMb} />
+          <UsageBar label="Canvases" current={usage.canvasCount} limit={quota.maxCanvases} />
+          <UsageBar label="Storage (MB)" current={usage.storageMb} limit={quota.maxStorageMb} />
         </div>
       )}
     </div>

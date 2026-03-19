@@ -4,28 +4,29 @@
 
 ---
 
-## 1. SaaS Billing & Subscriptions (Phase 1 — CRITICAL PATH)
+## 1. SaaS Billing & Subscriptions (Phase 1 — MOSTLY COMPLETE ✓)
 
-Blocks all revenue. Database schema `00007_add_billing.sql` exists but nothing consumes it.
+Backend fully wired. Frontend built and tested. Quota hook ready for integration.
 
-- [ ] **Stripe Direct Integration**
-  - [ ] Initialize Stripe SDK client in kernel
-  - [ ] Create `checkout-session` edge function (Free → Creator/Pro/Enterprise)
-  - [ ] Create `customer-portal` edge function (manage subscription)
-  - [ ] Create `stripe-webhook` edge function (subscription lifecycle events)
-  - [ ] Idempotency log for webhook events (`stripe_events` table)
-- [ ] **Pricing Page**
-  - [ ] Build `src/shell/pages/PricingPage.tsx` with tier comparison
-  - [ ] Wire checkout button to Stripe checkout session
-- [ ] **Billing Settings UI**
-  - [ ] Build `src/shell/pages/settings/BillingSection.tsx`
-  - [ ] Show current tier, usage, next billing date
-  - [ ] Link to Stripe Customer Portal for plan changes
-- [ ] **Quota Enforcement**
-  - [ ] Implement `src/kernel/quota/quota.ts` module
-  - [ ] Define per-tier limits (canvas count, storage, widgets, collaborators)
-  - [ ] Enforce at: create canvas, upload asset, place widget, add collaborator
-  - [ ] Build `src/shell/components/UpgradePrompt.tsx` for limit-hit UX
+- [x] **Stripe Direct Integration**
+  - [x] Edge function: `stripe-checkout` (checkout session creation, free tier fast-path)
+  - [x] Edge function: `stripe-webhook` (checkout.session.completed, subscription.updated/deleted, invoice.paid/failed)
+  - [x] Edge function: `stripe-portal` (Stripe Customer Portal session)
+  - [x] Edge function: `cancel-subscription` (Stripe Connect subscription cancellation)
+  - [x] Idempotency log (`stripe_events` table, dedup in webhook)
+  - [x] DB migration: `00007_add_billing.sql` (subscriptions, stripe_events, tier_quotas + RLS)
+- [x] **Pricing Page** — `PricingPage.tsx` with 4-tier comparison, Stripe checkout wiring (6 tests)
+- [x] **Billing Settings UI** — `BillingSection.tsx` with live usage meters, portal link (8 tests)
+- [x] **Quota Enforcement**
+  - [x] `src/kernel/quota/quota.ts` — checkQuota + checkFeature (18 tests)
+  - [x] `src/kernel/quota/useQuotaCheck.ts` — React hook for gating actions
+  - [x] `src/shell/components/UpgradePrompt.tsx` — limit-hit modal with upgrade CTA
+  - [x] `src/kernel/billing/billing-api.ts` — getSubscription, getTierQuota, getUsageCounts (16 tests)
+- [ ] **Remaining: Quota enforcement call sites**
+  - [ ] Call `useQuotaCheck().gateResource('canvas_count')` before canvas creation
+  - [ ] Call `useQuotaCheck().gateResource('widgets_per_canvas', canvasId)` before widget placement
+  - [ ] Call `useQuotaCheck().gateResource('collaborators_per_canvas', canvasId)` before adding collaborators
+  - [ ] Storage usage tracking (currently returns 0 — needs backend aggregate)
 
 ---
 

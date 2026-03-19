@@ -1,6 +1,7 @@
 export {
   getSubscription,
   getTierQuota,
+  getUsageCounts,
   createCheckoutSession,
   createPortalSession,
   type Subscription,
