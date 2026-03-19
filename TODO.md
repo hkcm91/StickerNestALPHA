@@ -29,46 +29,19 @@ Blocks all revenue. Database schema `00007_add_billing.sql` exists but nothing c
 
 ---
 
-## 2. Layer 1 — Social + Sync (NOT STARTED)
+## 2. Layer 1 — Social + Sync (COMPLETE ✓)
 
-Real-time collaboration infrastructure. Files exist in `src/social/` but are minimal scaffolds.
+Real-time collaboration infrastructure. 9 modules, 123 passing tests.
 
-- [ ] **Channel Management** (`src/social/channel/`)
-  - [ ] Supabase Realtime channel lifecycle (one per canvas: `canvas:{canvasId}`)
-  - [ ] Join/leave handling tied to canvas route mount/unmount
-  - [ ] Channel cleanup on disconnect
-- [ ] **Presence Tracking** (`src/social/presence/`)
-  - [ ] Track join/leave for all users including Guests
-  - [ ] Maintain presence map in `socialStore` via bus events
-  - [ ] Guest users get label `"Guest"` + random color
-  - [ ] Remove user from presence on disconnect/leave
-- [ ] **Cursor Broadcast** (`src/social/cursor/`)
-  - [ ] Broadcast cursor positions at 30fps max (33ms throttle)
-  - [ ] Include `userId`, `position` (canvas-space), `color`
-  - [ ] Update `socialStore` via `social.cursor.moved` bus events
-  - [ ] Remove stale cursors on user leave/disconnect
-- [ ] **Entity Transform Sync** (`src/social/entity-sync/`)
-  - [ ] Optimistic broadcast during drag (no server wait)
-  - [ ] LWW reconciliation on drop (server timestamp wins)
-  - [ ] Emit `social.entity.transformed` bus event after reconcile
-- [ ] **Conflict Resolution** (`src/social/conflict/`)
-  - [ ] Canvas entities + Notes: LWW silent (no UI)
-  - [ ] Doc DataSources: Yjs CRDT (`Y.Doc` per DataSource, `y-protocols` over Realtime)
-  - [ ] Table/Custom DataSources: revision-based (409 → re-fetch → retry → toast)
-- [ ] **Edit Locks** (`src/social/edit-lock/`)
-  - [ ] Advisory per-entity locks with 30s inactivity timeout
-  - [ ] Visual indicator (colored border + avatar) for locked entities
-  - [ ] Release on drop, leave, or timeout
-- [ ] **Offline Degradation** (`src/social/offline/`)
-  - [ ] Hide remote cursors on disconnect
-  - [ ] Queue local edits during offline
-  - [ ] Suppress error states for interruptions < 5s
-  - [ ] Reconcile queued edits on reconnect
-- [ ] **Gate Tests (mandatory)**
-  - [ ] Two-session cursor visibility
-  - [ ] Simultaneous entity move convergence (LWW)
-  - [ ] Doc co-edit via Yjs (no keystroke loss)
-  - [ ] Table row revision conflict (409 → refresh → retry)
+- [x] **Channel Management** (`src/social/channel/`) — Supabase Realtime, one channel per canvas
+- [x] **Presence Tracking** (`src/social/presence/`) — join/leave, Guest support, socialStore via bus
+- [x] **Cursor Broadcast** (`src/social/cursor/`) — 30fps throttle, canvas-space positions
+- [x] **Entity Transform Sync** (`src/social/entity-sync/`) — optimistic drag, LWW on drop
+- [x] **Conflict Resolution** (`src/social/conflict/`) — LWW, Yjs CRDT, revision-based strategies
+- [x] **Edit Locks** (`src/social/edit-lock/`) — advisory, 30s timeout, broadcast
+- [x] **Offline Degradation** (`src/social/offline/`) — 5s grace, queue + replay
+- [x] **Init/Teardown** (`src/social/init.ts`) — orchestrates all managers
+- [x] **Gate Tests** — all 123 tests passing
 
 ---
 
