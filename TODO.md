@@ -240,8 +240,8 @@ Per `docs/UI_COMPONENTS_NEEDED.md` — 64 components across all layers.
 
 ## 11. Minor Code TODOs
 
-- [ ] `src/canvas/core/input/gesture-interpreter.ts:384` — Implement pinch rotation calculation (currently `0`)
-- [ ] `src/canvas/core/input/gesture-interpreter.ts:459` — Implement pan velocity calculation (currently `{x:0, y:0}`)
+- [x] `gesture-interpreter.ts` — Pinch rotation via atan2 angle delta between touch points
+- [x] `gesture-interpreter.ts` — Pan velocity via EMA-smoothed instantaneous velocity (px/s)
 - [ ] `src/canvas/tools/direct-select/direct-select-tool.ts:142` — Path segment subdivision on double-click
 
 ---
