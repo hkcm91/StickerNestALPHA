@@ -145,14 +145,13 @@ Per approved design: `docs/plans/2026-02-24-canvas-interactions-design.md`
 
 ---
 
-## 7. Widget Uninstall UI
+## 7. Widget Uninstall UI (COMPLETE ✓)
 
-Backend complete. Only missing UI. Per `docs/plans/2026-03-02-widget-uninstall-design.md`.
-
-- [ ] Add uninstall button to `src/shell/pages/MarketplacePageFull.tsx`
-- [ ] Confirmation dialog: "This will delete all saved state for this widget"
-- [ ] Emit `marketplace.widget.uninstalled` bus event on confirm
-- [ ] Success/error feedback
+- [x] Uninstall button on marketplace detail page (`data-testid="marketplace-uninstall-btn"`)
+- [x] Confirmation dialog: "This will remove the widget and delete all saved state"
+- [x] `marketplace.widget.uninstalled` bus event emitted via install-flow service
+- [x] Success/error feedback with status tracking
+- [x] Built-in widgets show "Built-in" label (no uninstall)
 
 ---
 
