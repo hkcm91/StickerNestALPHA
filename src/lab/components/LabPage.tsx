@@ -22,8 +22,10 @@ import { buildAIGraphContext, serializeContextForPrompt } from '../ai/ai-context
 import type { SceneNode, SceneEdge } from '../graph/scene-types';
 import { checkLabAccess } from '../guards/access-guard';
 import { checkDesktopViewport } from '../guards/mobile-guard';
+import { useCreatorMode } from '../hooks/useCreatorMode';
 import { useLabState } from '../hooks/useLabState';
 
+import { CreatorLayout } from './CreatorLayout';
 import { AICompanion } from './LabAI';
 import { LabEditorComponent } from './LabEditor';
 import { LabGraph } from './LabGraph';
@@ -34,6 +36,8 @@ import { LabManifestComponent } from './LabManifest';
 import { LabPreviewComponent } from './LabPreview';
 import { LabPublishComponent } from './LabPublish';
 import { LabVersionsComponent } from './LabVersions';
+import { OnboardingOverlay } from './OnboardingOverlay';
+import type { OnboardingPath } from './OnboardingOverlay';
 import { GlassPanel, GlowButton } from './shared';
 import { ensureLabKeyframes } from './shared/keyframes';
 
@@ -216,6 +220,10 @@ const LabContent: React.FC = () => {
   const [graphEdges, setGraphEdges] = useState<SceneEdge[]>([]);
   const [pendingAIPrompt, setPendingAIPrompt] = useState<string | null>(null);
 
+  // Creator mode state
+  const hasActiveWidget = editorContent.length > 0;
+  const creatorMode = useCreatorMode(hasActiveWidget);
+
   // Track editor content for AI companion + publish
   useEffect(() => {
     if (!lab.instances?.editor) return;
@@ -266,6 +274,23 @@ const LabContent: React.FC = () => {
     setGraphEdges(edges);
   }, []);
 
+  // Handle onboarding path selection
+  const handleOnboardingPath = useCallback((path: OnboardingPath) => {
+    creatorMode.dismissOnboarding();
+    switch (path) {
+      case 'template':
+        // Future: open template picker. For now, dismiss onboarding.
+        break;
+      case 'describe':
+        // Future: focus AI prompt bar. For now, open AI companion.
+        lab.setActiveView('graph');
+        break;
+      case 'visual':
+        lab.setActiveView('graph');
+        break;
+    }
+  }, [creatorMode, lab]);
+
   // Describe widget — triggered from library picker "Ask AI" button
   const handleDescribeWidget = useCallback((manifest: WidgetManifest) => {
     const eventsInfo = [
@@ -295,57 +320,117 @@ const LabContent: React.FC = () => {
       <CursorLight mousePos={mousePos} />
       <GrainOverlay />
 
-      {/* Lab layout */}
+      {/* Lab layout — Creator Mode or classic IDE layout */}
       <div style={{ position: 'relative', zIndex: 1, height: '100%' }}>
-        <LabLayout
-          activeView={lab.activeView}
-          onViewChange={lab.setActiveView}
-          activeBottomTab={lab.activeBottomTab}
-          onBottomTabChange={lab.setActiveBottomTab}
-          editorSlot={
-            <LabEditorComponent editor={instances.editor} />
-          }
-          graphSlot={
-            <LabGraph
-              graphSync={instances.graphSync}
-              onCompile={(html) => {
-                instances.editor.setContent(html);
-              }}
-              onGraphStateChange={handleGraphStateChange}
-              onDescribeWidget={handleDescribeWidget}
-            />
-          }
-          previewSlot={
-            <LabPreviewComponent preview={instances.preview} />
-          }
-          inspectorSlot={
-            <LabInspectorComponent inspector={instances.inspector} />
-          }
-          manifestSlot={
-            <LabManifestComponent manifest={instances.manifest} />
-          }
-          versionsSlot={
-            <LabVersionsComponent
-              versions={instances.versions}
-              currentHtml={editorContent}
-              currentManifest={instances.manifest.getManifest()}
-              onRestore={(snapshot) => {
-                instances.editor.setContent(snapshot.html);
-                if (snapshot.manifest) {
-                  instances.manifest.setManifest(snapshot.manifest);
-                }
-              }}
-            />
-          }
-          publishSlot={
-            <LabPublishComponent
-              pipeline={instances.publishPipeline}
-              currentHtml={editorContent}
-              currentManifest={instances.manifest.getManifest()}
-            />
-          }
-        />
+        {creatorMode.isCreatorMode ? (
+          <CreatorLayout
+            activeView={lab.activeView}
+            onViewChange={lab.setActiveView}
+            activeBottomTab={lab.activeBottomTab}
+            onBottomTabChange={lab.setActiveBottomTab}
+            graphCollapsed={creatorMode.graphCollapsed}
+            onToggleGraphCollapsed={creatorMode.toggleGraphCollapsed}
+            editorSlot={
+              <LabEditorComponent editor={instances.editor} />
+            }
+            graphSlot={
+              <LabGraph
+                graphSync={instances.graphSync}
+                onCompile={(html) => {
+                  instances.editor.setContent(html);
+                }}
+                onGraphStateChange={handleGraphStateChange}
+                onDescribeWidget={handleDescribeWidget}
+              />
+            }
+            previewSlot={
+              <LabPreviewComponent preview={instances.preview} />
+            }
+            inspectorSlot={
+              <LabInspectorComponent inspector={instances.inspector} />
+            }
+            manifestSlot={
+              <LabManifestComponent manifest={instances.manifest} />
+            }
+            versionsSlot={
+              <LabVersionsComponent
+                versions={instances.versions}
+                currentHtml={editorContent}
+                currentManifest={instances.manifest.getManifest()}
+                onRestore={(snapshot) => {
+                  instances.editor.setContent(snapshot.html);
+                  if (snapshot.manifest) {
+                    instances.manifest.setManifest(snapshot.manifest);
+                  }
+                }}
+              />
+            }
+            publishSlot={
+              <LabPublishComponent
+                pipeline={instances.publishPipeline}
+                currentHtml={editorContent}
+                currentManifest={instances.manifest.getManifest()}
+              />
+            }
+          />
+        ) : (
+          <LabLayout
+            activeView={lab.activeView}
+            onViewChange={lab.setActiveView}
+            activeBottomTab={lab.activeBottomTab}
+            onBottomTabChange={lab.setActiveBottomTab}
+            editorSlot={
+              <LabEditorComponent editor={instances.editor} />
+            }
+            graphSlot={
+              <LabGraph
+                graphSync={instances.graphSync}
+                onCompile={(html) => {
+                  instances.editor.setContent(html);
+                }}
+                onGraphStateChange={handleGraphStateChange}
+                onDescribeWidget={handleDescribeWidget}
+              />
+            }
+            previewSlot={
+              <LabPreviewComponent preview={instances.preview} />
+            }
+            inspectorSlot={
+              <LabInspectorComponent inspector={instances.inspector} />
+            }
+            manifestSlot={
+              <LabManifestComponent manifest={instances.manifest} />
+            }
+            versionsSlot={
+              <LabVersionsComponent
+                versions={instances.versions}
+                currentHtml={editorContent}
+                currentManifest={instances.manifest.getManifest()}
+                onRestore={(snapshot) => {
+                  instances.editor.setContent(snapshot.html);
+                  if (snapshot.manifest) {
+                    instances.manifest.setManifest(snapshot.manifest);
+                  }
+                }}
+              />
+            }
+            publishSlot={
+              <LabPublishComponent
+                pipeline={instances.publishPipeline}
+                currentHtml={editorContent}
+                currentManifest={instances.manifest.getManifest()}
+              />
+            }
+          />
+        )}
       </div>
+
+      {/* Onboarding overlay (Creator Mode, first-time, no active widget) */}
+      <OnboardingOverlay
+        visible={creatorMode.showOnboarding}
+        onSelectPath={handleOnboardingPath}
+        onDismiss={creatorMode.dismissOnboarding}
+      />
 
       {/* AI Companion (floating bottom-right) */}
       <AICompanion
