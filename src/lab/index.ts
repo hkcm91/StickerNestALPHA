@@ -40,6 +40,19 @@ export type { PreviewManager, PreviewMode } from './preview';
 // AI
 export { createAIGenerator, validateWidgetHtml } from './ai';
 export type { AIGenerator, AIGenerationResult } from './ai';
+export { serializeFullContextForPrompt } from './ai';
+export type { AIFullContext } from './ai';
+export { createVoiceInput, parseVoiceCommand } from './ai';
+export type { VoiceInput, VoiceCommand, VoiceIntent } from './ai';
+
+// Design Spec
+export { createDesignSpecEditor, serializeDesignSpec, parseDesignSpec } from './design-spec';
+export { flattenDesignSpec, generateDesignSpecStyleBlock, injectDesignSpecIntoHtml, extractDesignSpec, generateDesignSpec } from './design-spec';
+export type { DesignSpecEditor, ExtractionResult } from './design-spec';
+
+// Prototype Mode
+export { createPrototypeSession, getPrototypeClickScript } from './preview';
+export type { PrototypeSession, PrototypeFrame } from './preview';
 
 // Publish
 export { validateWidget, testWidget, generateThumbnail, submitWidget, createPublishPipeline } from './publish';

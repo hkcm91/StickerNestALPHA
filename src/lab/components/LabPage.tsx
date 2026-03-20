@@ -13,7 +13,7 @@
  * @layer L2
  */
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import type { WidgetManifest } from '@sn/types';
 
@@ -22,9 +22,13 @@ import { buildAIGraphContext, serializeContextForPrompt } from '../ai/ai-context
 import type { SceneNode, SceneEdge } from '../graph/scene-types';
 import { checkLabAccess } from '../guards/access-guard';
 import { checkDesktopViewport } from '../guards/mobile-guard';
+import { useCreatorMode } from '../hooks/useCreatorMode';
+import { useDeviceFrame } from '../hooks/useDeviceFrame';
 import { useLabState } from '../hooks/useLabState';
 
-import { AICompanion } from './LabAI';
+import { CreatorLayout } from './CreatorLayout';
+import { DeviceFrame } from './DeviceFrame';
+import { AICompanion, AISlidePanel } from './LabAI';
 import { LabEditorComponent } from './LabEditor';
 import { LabGraph } from './LabGraph';
 import { LabImportComponent } from './LabImport';
@@ -34,6 +38,10 @@ import { LabManifestComponent } from './LabManifest';
 import { LabPreviewComponent } from './LabPreview';
 import { LabPublishComponent } from './LabPublish';
 import { LabVersionsComponent } from './LabVersions';
+import { OnboardingOverlay } from './OnboardingOverlay';
+import type { OnboardingPath } from './OnboardingOverlay';
+import { PreviewChrome } from './PreviewChrome';
+import { PromptBar } from './PromptBar';
 import { GlassPanel, GlowButton } from './shared';
 import { ensureLabKeyframes } from './shared/keyframes';
 
@@ -216,6 +224,43 @@ const LabContent: React.FC = () => {
   const [graphEdges, setGraphEdges] = useState<SceneEdge[]>([]);
   const [pendingAIPrompt, setPendingAIPrompt] = useState<string | null>(null);
 
+  // Creator mode state
+  const hasActiveWidget = useMemo(() => editorContent.trim().length > 0, [editorContent]);
+  const creatorMode = useCreatorMode(hasActiveWidget);
+
+  // Device frame state for preview-as-primary
+  const deviceFrame = useDeviceFrame('phone');
+
+  // Preview chrome state
+  const [consoleOpen, setConsoleOpen] = useState(false);
+  const [previewExpanded, setPreviewExpanded] = useState(false);
+
+  // AI slide panel state (Creator Mode only)
+  const [aiPanelOpen, setAiPanelOpen] = useState(false);
+  const handleToggleAiPanel = useCallback(() => {
+    setAiPanelOpen((v) => !v);
+  }, []);
+
+  // Preview container dimensions for DeviceFrame scaling
+  const previewContainerRef = useRef<HTMLDivElement>(null);
+  const [previewSize, setPreviewSize] = useState({ width: 800, height: 600 });
+
+  useLayoutEffect(() => {
+    const el = previewContainerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (entry) {
+        setPreviewSize({
+          width: entry.contentRect.width,
+          height: entry.contentRect.height,
+        });
+      }
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   // Track editor content for AI companion + publish
   useEffect(() => {
     if (!lab.instances?.editor) return;
@@ -224,6 +269,13 @@ const LabContent: React.FC = () => {
     });
     return unsub;
   }, [lab.instances]);
+
+  // Auto-open AI slide panel when a pending prompt arrives in Creator Mode
+  useEffect(() => {
+    if (creatorMode.isCreatorMode && pendingAIPrompt) {
+      setAiPanelOpen(true);
+    }
+  }, [creatorMode.isCreatorMode, pendingAIPrompt]);
 
   // Cursor-following ambient light — throttled to ~30fps
   const lastUpdate = useRef(0);
@@ -266,6 +318,29 @@ const LabContent: React.FC = () => {
     setGraphEdges(edges);
   }, []);
 
+  // Handle onboarding path selection
+  const handleOnboardingPath = useCallback((path: OnboardingPath) => {
+    creatorMode.dismissOnboarding();
+    switch (path) {
+      case 'template':
+        // Future: open template picker. For now, dismiss onboarding.
+        break;
+      case 'describe':
+        // Future: focus AI prompt bar. For now, open AI companion.
+        lab.setActiveView('graph');
+        break;
+      case 'visual':
+        lab.setActiveView('graph');
+        break;
+    }
+  }, [creatorMode, lab]);
+
+  // Reload the preview widget by bumping a key to force remount
+  const [previewReloadKey, setPreviewReloadKey] = useState(0);
+  const handlePreviewReload = useCallback(() => {
+    setPreviewReloadKey((k) => k + 1);
+  }, []);
+
   // Describe widget — triggered from library picker "Ask AI" button
   const handleDescribeWidget = useCallback((manifest: WidgetManifest) => {
     const eventsInfo = [
@@ -295,67 +370,170 @@ const LabContent: React.FC = () => {
       <CursorLight mousePos={mousePos} />
       <GrainOverlay />
 
-      {/* Lab layout */}
+      {/* Lab layout — Creator Mode or classic IDE layout */}
       <div style={{ position: 'relative', zIndex: 1, height: '100%' }}>
-        <LabLayout
-          activeView={lab.activeView}
-          onViewChange={lab.setActiveView}
-          activeBottomTab={lab.activeBottomTab}
-          onBottomTabChange={lab.setActiveBottomTab}
-          editorSlot={
-            <LabEditorComponent editor={instances.editor} />
-          }
-          graphSlot={
-            <LabGraph
-              graphSync={instances.graphSync}
-              onCompile={(html) => {
-                instances.editor.setContent(html);
-              }}
-              onGraphStateChange={handleGraphStateChange}
-              onDescribeWidget={handleDescribeWidget}
-            />
-          }
-          previewSlot={
-            <LabPreviewComponent preview={instances.preview} />
-          }
-          inspectorSlot={
-            <LabInspectorComponent inspector={instances.inspector} />
-          }
-          manifestSlot={
-            <LabManifestComponent manifest={instances.manifest} />
-          }
-          versionsSlot={
-            <LabVersionsComponent
-              versions={instances.versions}
-              currentHtml={editorContent}
-              currentManifest={instances.manifest.getManifest()}
-              onRestore={(snapshot) => {
-                instances.editor.setContent(snapshot.html);
-                if (snapshot.manifest) {
-                  instances.manifest.setManifest(snapshot.manifest);
-                }
-              }}
-            />
-          }
-          publishSlot={
-            <LabPublishComponent
-              pipeline={instances.publishPipeline}
-              currentHtml={editorContent}
-              currentManifest={instances.manifest.getManifest()}
-            />
-          }
-        />
+        {creatorMode.isCreatorMode ? (
+          <CreatorLayout
+            activeView={lab.activeView}
+            onViewChange={lab.setActiveView}
+            activeBottomTab={lab.activeBottomTab}
+            onBottomTabChange={lab.setActiveBottomTab}
+            graphCollapsed={creatorMode.graphCollapsed}
+            onToggleGraphCollapsed={creatorMode.toggleGraphCollapsed}
+            toolbarExtras={
+              <PromptBar
+                generator={instances.aiGenerator}
+                onApplyCode={handleApplyCode}
+                currentEditorContent={editorContent}
+                graphContext={graphContext}
+                onExpandThread={handleToggleAiPanel}
+                threadOpen={aiPanelOpen}
+              />
+            }
+            editorSlot={
+              <LabEditorComponent editor={instances.editor} />
+            }
+            graphSlot={
+              <LabGraph
+                graphSync={instances.graphSync}
+                onCompile={(html) => {
+                  instances.editor.setContent(html);
+                }}
+                onGraphStateChange={handleGraphStateChange}
+                onDescribeWidget={handleDescribeWidget}
+              />
+            }
+            previewSlot={
+              <div ref={previewContainerRef} style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                <PreviewChrome
+                  widgetName={instances.manifest.getManifest()?.name ?? 'Untitled Widget'}
+                  isRunning={hasActiveWidget}
+                  onReload={handlePreviewReload}
+                  consoleOpen={consoleOpen}
+                  onConsoleToggle={() => setConsoleOpen((v) => !v)}
+                  expanded={previewExpanded}
+                  onExpandToggle={() => setPreviewExpanded((v) => !v)}
+                />
+                <div style={{ flex: 1, minHeight: 0 }}>
+                  <DeviceFrame
+                    device={deviceFrame.device}
+                    onDeviceChange={deviceFrame.setDevice}
+                    containerWidth={previewSize.width}
+                    containerHeight={previewSize.height}
+                  >
+                    <LabPreviewComponent key={previewReloadKey} preview={instances.preview} />
+                  </DeviceFrame>
+                </div>
+              </div>
+            }
+            inspectorSlot={
+              <LabInspectorComponent inspector={instances.inspector} />
+            }
+            manifestSlot={
+              <LabManifestComponent manifest={instances.manifest} />
+            }
+            versionsSlot={
+              <LabVersionsComponent
+                versions={instances.versions}
+                currentHtml={editorContent}
+                currentManifest={instances.manifest.getManifest()}
+                onRestore={(snapshot) => {
+                  instances.editor.setContent(snapshot.html);
+                  if (snapshot.manifest) {
+                    instances.manifest.setManifest(snapshot.manifest);
+                  }
+                }}
+              />
+            }
+            publishSlot={
+              <LabPublishComponent
+                pipeline={instances.publishPipeline}
+                currentHtml={editorContent}
+                currentManifest={instances.manifest.getManifest()}
+              />
+            }
+          />
+        ) : (
+          <LabLayout
+            activeView={lab.activeView}
+            onViewChange={lab.setActiveView}
+            activeBottomTab={lab.activeBottomTab}
+            onBottomTabChange={lab.setActiveBottomTab}
+            editorSlot={
+              <LabEditorComponent editor={instances.editor} />
+            }
+            graphSlot={
+              <LabGraph
+                graphSync={instances.graphSync}
+                onCompile={(html) => {
+                  instances.editor.setContent(html);
+                }}
+                onGraphStateChange={handleGraphStateChange}
+                onDescribeWidget={handleDescribeWidget}
+              />
+            }
+            previewSlot={
+              <LabPreviewComponent preview={instances.preview} />
+            }
+            inspectorSlot={
+              <LabInspectorComponent inspector={instances.inspector} />
+            }
+            manifestSlot={
+              <LabManifestComponent manifest={instances.manifest} />
+            }
+            versionsSlot={
+              <LabVersionsComponent
+                versions={instances.versions}
+                currentHtml={editorContent}
+                currentManifest={instances.manifest.getManifest()}
+                onRestore={(snapshot) => {
+                  instances.editor.setContent(snapshot.html);
+                  if (snapshot.manifest) {
+                    instances.manifest.setManifest(snapshot.manifest);
+                  }
+                }}
+              />
+            }
+            publishSlot={
+              <LabPublishComponent
+                pipeline={instances.publishPipeline}
+                currentHtml={editorContent}
+                currentManifest={instances.manifest.getManifest()}
+              />
+            }
+          />
+        )}
       </div>
 
-      {/* AI Companion (floating bottom-right) */}
-      <AICompanion
-        generator={instances.aiGenerator}
-        onApplyCode={handleApplyCode}
-        currentEditorContent={editorContent}
-        graphContext={graphContext}
-        pendingPrompt={pendingAIPrompt}
-        onPendingPromptConsumed={() => setPendingAIPrompt(null)}
+      {/* Onboarding overlay (Creator Mode, first-time, no active widget) */}
+      <OnboardingOverlay
+        visible={creatorMode.showOnboarding}
+        onSelectPath={handleOnboardingPath}
+        onDismiss={creatorMode.dismissOnboarding}
       />
+
+      {/* AI surface — slide panel in Creator Mode, floating orb in classic */}
+      {creatorMode.isCreatorMode ? (
+        <AISlidePanel
+          open={aiPanelOpen}
+          onClose={() => setAiPanelOpen(false)}
+          generator={instances.aiGenerator}
+          onApplyCode={handleApplyCode}
+          currentEditorContent={editorContent}
+          graphContext={graphContext}
+          pendingPrompt={pendingAIPrompt}
+          onPendingPromptConsumed={() => setPendingAIPrompt(null)}
+        />
+      ) : (
+        <AICompanion
+          generator={instances.aiGenerator}
+          onApplyCode={handleApplyCode}
+          currentEditorContent={editorContent}
+          graphContext={graphContext}
+          pendingPrompt={pendingAIPrompt}
+          onPendingPromptConsumed={() => setPendingAIPrompt(null)}
+        />
+      )}
 
       {/* Import dialog */}
       {showImport && (
