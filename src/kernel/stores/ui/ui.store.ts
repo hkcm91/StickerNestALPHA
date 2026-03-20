@@ -45,6 +45,8 @@ export interface UIState {
   spatialMode: SpatialMode;
   canvasPlatform: CanvasPlatform;
   artboardPreviewMode: boolean;
+  /** Fullscreen preview — hides all chrome and shows canvas in preview mode */
+  fullscreenPreview: boolean;
   /** Platform-specific viewport configurations (size) */
   platformConfigs: Record<CanvasPlatform, Partial<ViewportConfig>>;
 }
@@ -65,6 +67,7 @@ export interface UIActions {
   setCanvasPlatform: (platform: CanvasPlatform) => void;
   setPlatformConfig: (platform: CanvasPlatform, config: Partial<ViewportConfig>) => void;
   setArtboardPreviewMode: (preview: boolean) => void;
+  setFullscreenPreview: (fullscreen: boolean) => void;
   reset: () => void;
 }
 
@@ -84,6 +87,7 @@ const initialState: UIState = {
   spatialMode: '2d',
   canvasPlatform: 'web',
   artboardPreviewMode: false,
+  fullscreenPreview: false,
   platformConfigs: {
     web: { width: 1440, height: 900, sizeMode: 'bounded' },
     mobile: { width: 375, height: 812, sizeMode: 'bounded' },
@@ -144,6 +148,7 @@ export const useUIStore = create<UIStore>()(
                 },
               })),
             setArtboardPreviewMode: (artboardPreviewMode) => set({ artboardPreviewMode }),
+            setFullscreenPreview: (fullscreenPreview) => set({ fullscreenPreview }),
 
       reset: () => set(initialState),
     })),

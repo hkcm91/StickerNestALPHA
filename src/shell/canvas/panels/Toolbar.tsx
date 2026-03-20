@@ -222,6 +222,15 @@ const LibraryIcon = () => (
   </svg>
 );
 
+const FullscreenIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="15 3 21 3 21 9" />
+    <polyline points="9 21 3 21 3 15" />
+    <line x1="21" y1="3" x2="14" y2="10" />
+    <line x1="3" y1="21" x2="10" y2="14" />
+  </svg>
+);
+
 /** XR icon — reserved for future spatial toolbar button */
 export const XRIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -314,6 +323,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   const platformConfigs = useUIStore((s) => s.platformConfigs);
   const artboardPreviewMode = useUIStore((s) => s.artboardPreviewMode);
   const setArtboardPreviewMode = useUIStore((s) => s.setArtboardPreviewMode);
+  const setFullscreenPreview = useUIStore((s) => s.setFullscreenPreview);
 
   const canUndo = useHistoryStore(selectCanUndo);
   const canRedo = useHistoryStore(selectCanRedo);
@@ -477,6 +487,10 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   const handleEnterXR = useCallback(() => {
     enterXR('immersive-vr');
   }, []);
+
+  const handleFullscreenPreview = useCallback(() => {
+    setFullscreenPreview(true);
+  }, [setFullscreenPreview]);
 
   // ── Alignment / Grouping ───────────────────────────────────────
 
@@ -1220,27 +1234,40 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         }}
       />
 
-      {/* Mode toggle */}
-      <button
-        data-testid="mode-toggle"
-        onClick={handleModeToggle}
-        title={isEditMode ? 'Switch to Preview (P)' : 'Switch to Edit (P)'}
-        style={{
-          height: '32px',
-          padding: '0 16px',
-          border: '1px solid var(--sn-border, #e0e0e0)',
-          borderRadius: 'var(--sn-radius, 6px)',
-          background: isEditMode ? 'transparent' : 'var(--sn-accent, #6366f1)',
-          color: isEditMode ? 'var(--sn-text, #1a1a2e)' : '#fff',
-          cursor: 'pointer',
-          fontSize: '12px',
-          fontFamily: 'inherit',
-          fontWeight: 600,
-          transition: 'all 0.1s ease',
-        }}
-      >
-        {isEditMode ? 'Run' : 'Edit'}
-      </button>
+      {/* Mode toggle + Fullscreen Preview */}
+      <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+        <button
+          data-testid="mode-toggle"
+          onClick={handleModeToggle}
+          title={isEditMode ? 'Switch to Preview (P)' : 'Switch to Edit (P)'}
+          style={{
+            height: '32px',
+            padding: '0 16px',
+            border: '1px solid var(--sn-border, #e0e0e0)',
+            borderRadius: 'var(--sn-radius, 6px)',
+            background: isEditMode ? 'transparent' : 'var(--sn-accent, #6366f1)',
+            color: isEditMode ? 'var(--sn-text, #1a1a2e)' : '#fff',
+            cursor: 'pointer',
+            fontSize: '12px',
+            fontFamily: 'inherit',
+            fontWeight: 600,
+            transition: 'all 0.1s ease',
+          }}
+        >
+          {isEditMode ? 'Run' : 'Edit'}
+        </button>
+        <button
+          data-testid="fullscreen-preview-btn"
+          onClick={handleFullscreenPreview}
+          title="Fullscreen Preview (Shift+F)"
+          style={{
+            ...smallBtnBase,
+            height: '32px',
+          }}
+        >
+          <FullscreenIcon />
+        </button>
+      </div>
     </div>
   );
 };
