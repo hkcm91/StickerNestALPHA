@@ -664,6 +664,30 @@ export {
 } from "./api-key";
 
 // =============================================================================
+// Widget Design Spec Schemas
+// =============================================================================
+export {
+  // Schemas
+  DesignSpecColorsSchema,
+  DesignSpecTypographySchema,
+  DesignSpecSpacingSchema,
+  DesignSpecBordersSchema,
+  DesignSpecShadowsSchema,
+  DesignSpecComponentSchema,
+  WidgetDesignSpecSchema,
+  // Types
+  type DesignSpecColors,
+  type DesignSpecTypography,
+  type DesignSpecSpacing,
+  type DesignSpecBorders,
+  type DesignSpecShadows,
+  type DesignSpecComponent,
+  type WidgetDesignSpec,
+  // JSON Schemas
+  WidgetDesignSpecJSONSchema,
+} from "./widget-design-spec";
+
+// =============================================================================
 // Theme Schemas
 // =============================================================================
 export {
