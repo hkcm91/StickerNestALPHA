@@ -6,3 +6,5 @@ export { AIThread } from './AIThread';
 export type { AIThreadProps } from './AIThread';
 export { AIMessage } from './AIMessage';
 export type { AIMessageData, AIMessageProps } from './AIMessage';
+export { AISlidePanel } from './AISlidePanel';
+export type { AISlidePanelProps } from './AISlidePanel';

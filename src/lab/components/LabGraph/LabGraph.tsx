@@ -47,6 +47,10 @@ import type {
 import { portsFromManifest } from '../../graph/scene-types';
 import { labPalette, SPRING } from '../shared/palette';
 
+import { AuroraEdge } from './AuroraEdge';
+import { CardNode } from './CardNode';
+import type { CardNodeData } from './CardNode';
+import { ConnectionFeedbackProvider, useConnectionFeedback } from './ConnectionFeedback';
 import { GhostEdge } from './GhostEdge';
 import { GlowEdge } from './GlowEdge';
 import { GraphBreadcrumb } from './GraphBreadcrumb';
@@ -179,11 +183,13 @@ function getWidgetNodePorts(type: NodeType): {
 const nodeTypes: NodeTypes = {
   widgetNode: WidgetNodeComponent,
   sceneNode: SceneNodeComponent,
+  cardNode: CardNode,
 };
 
 const edgeTypes: EdgeTypes = {
   glow: GlowEdge,
   ghost: GhostEdge,
+  aurora: AuroraEdge,
 };
 
 // ═══════════════════════════════════════════════════════════════════
@@ -572,6 +578,7 @@ export const LabGraph: React.FC<LabGraphProps> = ({
     : `Add nodes to build ${currentWidgetLabel ?? 'widget'} logic`;
 
   return (
+    <ConnectionFeedbackProvider>
     <div style={{
       width: '100%', height: '100%',
       position: 'relative',
@@ -676,6 +683,7 @@ export const LabGraph: React.FC<LabGraphProps> = ({
         </div>
       )}
     </div>
+    </ConnectionFeedbackProvider>
   );
 };
 
