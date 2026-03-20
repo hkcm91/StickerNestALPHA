@@ -439,8 +439,10 @@ export const CanvasPage: React.FC = () => {
   useEffect(() => {
     const config = platformConfigs[canvasPlatform];
     if (config) {
+      // Default to 'bounded' when platform has dimensions — this is the expected
+      // behavior for platform switching (e.g., mobile should show a bounded viewport)
+      const nextSizeMode = config.sizeMode ?? (config.width && config.height ? 'bounded' : 'infinite');
       setViewportConfig((prev) => {
-        const nextSizeMode = config.sizeMode ?? prev.sizeMode;
         // Bail out (return same reference) if nothing changed — prevents re-render cycle
         if (prev.width === config.width && prev.height === config.height && prev.sizeMode === nextSizeMode) {
           return prev;
@@ -448,8 +450,7 @@ export const CanvasPage: React.FC = () => {
         return { ...prev, width: config.width, height: config.height, sizeMode: nextSizeMode };
       });
       // Auto-fit viewport to bounded canvas on platform switch
-      const sizeMode = config.sizeMode ?? 'infinite';
-      if (sizeMode === 'bounded' && config.width && config.height) {
+      if (nextSizeMode === 'bounded' && config.width && config.height) {
         viewportStore.fitToCanvas(config.width, config.height);
       }
     }
@@ -461,13 +462,18 @@ export const CanvasPage: React.FC = () => {
       // Read current store value imperatively to avoid writing identical data
       // (which would create a new object reference and re-trigger the platform sync effect above)
       const current = useUIStore.getState().platformConfigs[canvasPlatform];
-      if (current?.width === viewportConfig.width && current?.height === viewportConfig.height) return;
+      if (
+        current?.width === viewportConfig.width
+        && current?.height === viewportConfig.height
+        && current?.sizeMode === viewportConfig.sizeMode
+      ) return;
       setPlatformConfig(canvasPlatform, {
         width: viewportConfig.width,
         height: viewportConfig.height,
+        sizeMode: viewportConfig.sizeMode,
       });
     }
-  }, [viewportConfig.width, viewportConfig.height, canvasPlatform, setPlatformConfig]);
+  }, [viewportConfig.width, viewportConfig.height, viewportConfig.sizeMode, canvasPlatform, setPlatformConfig]);
 
   const [borderRadius, setBorderRadius] = useState(0);
   const [canvasPosition, setCanvasPosition] = useState<CanvasPositionConfig>({

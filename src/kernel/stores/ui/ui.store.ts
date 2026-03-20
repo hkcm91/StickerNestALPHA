@@ -85,9 +85,9 @@ const initialState: UIState = {
   canvasPlatform: 'web',
   artboardPreviewMode: false,
   platformConfigs: {
-    web: { width: 1440, height: 900 },
-    mobile: { width: 375, height: 812 },
-    desktop: { width: 1920, height: 1080 },
+    web: { width: 1440, height: 900, sizeMode: 'bounded' },
+    mobile: { width: 375, height: 812, sizeMode: 'bounded' },
+    desktop: { width: 1920, height: 1080, sizeMode: 'bounded' },
   },
 };
 
