@@ -415,6 +415,8 @@ export const CanvasPage: React.FC = () => {
   const canvasPlatform = useUIStore((s) => s.canvasPlatform);
   const platformConfigs = useUIStore((s) => s.platformConfigs);
   const setPlatformConfig = useUIStore((s) => s.setPlatformConfig);
+  const fullscreenPreview = useUIStore((s) => s.fullscreenPreview);
+  const setFullscreenPreview = useUIStore((s) => s.setFullscreenPreview);
   const normalizedSlug = canvasSlug.trim().toLowerCase();
   const isDemo = normalizedSlug === 'demo';
   const isCommerceDemo = normalizedSlug === 'alice-art-shop';
@@ -439,8 +441,10 @@ export const CanvasPage: React.FC = () => {
   useEffect(() => {
     const config = platformConfigs[canvasPlatform];
     if (config) {
+      // Default to 'bounded' when platform has dimensions — this is the expected
+      // behavior for platform switching (e.g., mobile should show a bounded viewport)
+      const nextSizeMode = config.sizeMode ?? (config.width && config.height ? 'bounded' : 'infinite');
       setViewportConfig((prev) => {
-        const nextSizeMode = config.sizeMode ?? prev.sizeMode;
         // Bail out (return same reference) if nothing changed — prevents re-render cycle
         if (prev.width === config.width && prev.height === config.height && prev.sizeMode === nextSizeMode) {
           return prev;
@@ -448,8 +452,7 @@ export const CanvasPage: React.FC = () => {
         return { ...prev, width: config.width, height: config.height, sizeMode: nextSizeMode };
       });
       // Auto-fit viewport to bounded canvas on platform switch
-      const sizeMode = config.sizeMode ?? 'infinite';
-      if (sizeMode === 'bounded' && config.width && config.height) {
+      if (nextSizeMode === 'bounded' && config.width && config.height) {
         viewportStore.fitToCanvas(config.width, config.height);
       }
     }
@@ -461,13 +464,18 @@ export const CanvasPage: React.FC = () => {
       // Read current store value imperatively to avoid writing identical data
       // (which would create a new object reference and re-trigger the platform sync effect above)
       const current = useUIStore.getState().platformConfigs[canvasPlatform];
-      if (current?.width === viewportConfig.width && current?.height === viewportConfig.height) return;
+      if (
+        current?.width === viewportConfig.width
+        && current?.height === viewportConfig.height
+        && current?.sizeMode === viewportConfig.sizeMode
+      ) return;
       setPlatformConfig(canvasPlatform, {
         width: viewportConfig.width,
         height: viewportConfig.height,
+        sizeMode: viewportConfig.sizeMode,
       });
     }
-  }, [viewportConfig.width, viewportConfig.height, canvasPlatform, setPlatformConfig]);
+  }, [viewportConfig.width, viewportConfig.height, viewportConfig.sizeMode, canvasPlatform, setPlatformConfig]);
 
   const [borderRadius, setBorderRadius] = useState(0);
   const [canvasPosition, setCanvasPosition] = useState<CanvasPositionConfig>({
@@ -483,6 +491,13 @@ export const CanvasPage: React.FC = () => {
   useEffect(() => {
     setMode('edit');
   }, [setMode]);
+
+  // Entering fullscreen preview forces preview mode
+  useEffect(() => {
+    if (fullscreenPreview) {
+      setMode('preview');
+    }
+  }, [fullscreenPreview, setMode]);
 
   useEffect(() => {
     const ensured = ensureLocalCanvas({
@@ -681,8 +696,20 @@ export const CanvasPage: React.FC = () => {
     setMode(mode === 'edit' ? 'preview' : 'edit');
   }, [mode, setMode]);
 
+  const exitFullscreenPreview = useCallback(() => {
+    setFullscreenPreview(false);
+    setMode('edit');
+  }, [setFullscreenPreview, setMode]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Escape always exits fullscreen preview, even in input fields
+      if (e.key === 'Escape' && fullscreenPreview) {
+        e.preventDefault();
+        exitFullscreenPreview();
+        return;
+      }
+
       // Skip if user is typing in an input/textarea
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
@@ -691,11 +718,18 @@ export const CanvasPage: React.FC = () => {
         e.preventDefault();
         toggleMode();
       }
+
+      // Shift+F enters fullscreen preview
+      if ((e.key === 'f' || e.key === 'F') && e.shiftKey && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        setFullscreenPreview(true);
+        setMode('preview');
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [toggleMode]);
+  }, [toggleMode, fullscreenPreview, exitFullscreenPreview, setFullscreenPreview, setMode]);
 
   useEffect(() => {
     const dockerStore = useDockerStore.getState();
@@ -1086,6 +1120,61 @@ export const CanvasPage: React.FC = () => {
               : undefined
         }
       />
+
+      {/* Fullscreen preview overlay — strips all chrome, shows canvas only */}
+      {fullscreenPreview && (
+        <div
+          data-testid="fullscreen-preview"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            background: themeVar('--sn-bg'),
+            overflow: 'hidden',
+          }}
+        >
+          <CanvasWorkspace
+            sceneGraph={sceneGraph}
+            dashboardSlug={canvasKey}
+            maxArtboardsPerDashboard={DEFAULT_ARTBOARD_LIMIT_PER_DASHBOARD}
+            widgetHtmlMap={widgetHtmlMap}
+            background={viewportConfig.background}
+            theme={widgetTheme}
+          />
+
+          {/* Exit fullscreen button */}
+          <button
+            data-testid="fullscreen-exit-btn"
+            onClick={exitFullscreenPreview}
+            title="Exit fullscreen (Escape)"
+            style={{
+              position: 'absolute',
+              top: 16,
+              right: 16,
+              zIndex: 10000,
+              width: 36,
+              height: 36,
+              border: '1px solid rgba(255,255,255,0.2)',
+              borderRadius: '8px',
+              background: 'rgba(0,0,0,0.5)',
+              color: '#fff',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '18px',
+              lineHeight: 1,
+              backdropFilter: 'blur(8px)',
+              transition: 'opacity 0.2s',
+              opacity: 0.6,
+            }}
+            onMouseEnter={(e) => { (e.target as HTMLElement).style.opacity = '1'; }}
+            onMouseLeave={(e) => { (e.target as HTMLElement).style.opacity = '0.6'; }}
+          >
+            {'\u2715'}
+          </button>
+        </div>
+      )}
     </div>
   );
 };

@@ -8,8 +8,8 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import type { GridConfig, GridLineStyle, GridProjectionMode, ViewportConfig } from '@sn/types';
-import { GridEvents } from '@sn/types';
+import type { CanvasPlatform, GridConfig, GridLineStyle, GridProjectionMode, ViewportConfig } from '@sn/types';
+import { CanvasDocumentEvents, GridEvents } from '@sn/types';
 
 import { DEFAULT_GRID_CONFIG } from '../../../canvas/core';
 import { bus } from '../../../kernel/bus';
@@ -22,6 +22,43 @@ import type { ViewportStore } from '../hooks/useViewport';
 
 import { CanvasSettingsDropdown } from './CanvasSettingsDropdown';
 import type { CanvasPositionConfig } from './CanvasSettingsDropdown';
+
+// ── Canvas Size Presets (by platform) ──────────────────────────────
+interface CanvasSizePreset {
+  label: string;
+  width: number;
+  height: number;
+}
+
+const PLATFORM_PRESETS: Record<CanvasPlatform, CanvasSizePreset[]> = {
+  web: [
+    { label: 'Desktop HD (1920×1080)', width: 1920, height: 1080 },
+    { label: 'Desktop (1440×900)', width: 1440, height: 900 },
+    { label: 'MacBook Pro 14" (1512×982)', width: 1512, height: 982 },
+    { label: 'MacBook Air 13" (1280×800)', width: 1280, height: 800 },
+    { label: 'HD (1280×720)', width: 1280, height: 720 },
+    { label: '4K (3840×2160)', width: 3840, height: 2160 },
+  ],
+  mobile: [
+    { label: 'iPhone 15 Pro (393×852)', width: 393, height: 852 },
+    { label: 'iPhone 15 Pro Max (430×932)', width: 430, height: 932 },
+    { label: 'iPhone SE (375×667)', width: 375, height: 667 },
+    { label: 'Pixel 8 (412×915)', width: 412, height: 915 },
+    { label: 'Samsung Galaxy S24 (360×780)', width: 360, height: 780 },
+    { label: 'iPad (820×1180)', width: 820, height: 1180 },
+    { label: 'iPad Mini (744×1133)', width: 744, height: 1133 },
+    { label: 'iPad Pro 12.9" (1024×1366)', width: 1024, height: 1366 },
+    { label: 'Android Tablet (800×1280)', width: 800, height: 1280 },
+  ],
+  desktop: [
+    { label: 'Full HD (1920×1080)', width: 1920, height: 1080 },
+    { label: 'QHD (2560×1440)', width: 2560, height: 1440 },
+    { label: '4K UHD (3840×2160)', width: 3840, height: 2160 },
+    { label: 'Ultrawide (2560×1080)', width: 2560, height: 1080 },
+    { label: 'MacBook Pro 16" (1728×1117)', width: 1728, height: 1117 },
+    { label: 'iMac 24" (4480×2520)', width: 4480, height: 2520 },
+  ],
+};
 
 export interface ToolbarProps {
   viewportStore: ViewportStore;
@@ -185,6 +222,15 @@ const LibraryIcon = () => (
   </svg>
 );
 
+const FullscreenIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="15 3 21 3 21 9" />
+    <polyline points="9 21 3 21 3 15" />
+    <line x1="21" y1="3" x2="14" y2="10" />
+    <line x1="3" y1="21" x2="10" y2="14" />
+  </svg>
+);
+
 /** XR icon — reserved for future spatial toolbar button */
 export const XRIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -273,8 +319,11 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   const setSpatialMode = useUIStore((s) => s.setSpatialMode);
   const canvasPlatform = useUIStore((s) => s.canvasPlatform);
   const setCanvasPlatform = useUIStore((s) => s.setCanvasPlatform);
+  const setPlatformConfig = useUIStore((s) => s.setPlatformConfig);
+  const platformConfigs = useUIStore((s) => s.platformConfigs);
   const artboardPreviewMode = useUIStore((s) => s.artboardPreviewMode);
   const setArtboardPreviewMode = useUIStore((s) => s.setArtboardPreviewMode);
+  const setFullscreenPreview = useUIStore((s) => s.setFullscreenPreview);
 
   const canUndo = useHistoryStore(selectCanUndo);
   const canRedo = useHistoryStore(selectCanRedo);
@@ -409,8 +458,27 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   }, [setSpatialMode]);
 
   const handlePlatformChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-    setCanvasPlatform(e.target.value as any);
+    const platform = e.target.value as CanvasPlatform;
+    setCanvasPlatform(platform);
   }, [setCanvasPlatform]);
+
+  const handlePresetChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    const presetLabel = e.target.value;
+    if (presetLabel === '__current__') return;
+    const presets = PLATFORM_PRESETS[canvasPlatform];
+    const preset = presets.find((p) => p.label === presetLabel);
+    if (preset) {
+      setPlatformConfig(canvasPlatform, {
+        width: preset.width,
+        height: preset.height,
+        sizeMode: 'bounded',
+      });
+      bus.emit(CanvasDocumentEvents.VIEWPORT_CHANGED, {
+        canvasId: '',
+        viewport: { width: preset.width, height: preset.height, sizeMode: 'bounded' },
+      });
+    }
+  }, [canvasPlatform, setPlatformConfig]);
 
   const handleArtboardPreviewToggle = useCallback(() => {
     setArtboardPreviewMode(!artboardPreviewMode);
@@ -419,6 +487,10 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   const handleEnterXR = useCallback(() => {
     enterXR('immersive-vr');
   }, []);
+
+  const handleFullscreenPreview = useCallback(() => {
+    setFullscreenPreview(true);
+  }, [setFullscreenPreview]);
 
   // ── Alignment / Grouping ───────────────────────────────────────
 
@@ -1030,7 +1102,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         }}
       />
 
-      {/* Platform and Spatial Mode */}
+      {/* Platform, Size Presets, and Spatial Mode */}
       <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
         <select
           data-testid="platform-select"
@@ -1052,6 +1124,47 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           <option value="web">Web</option>
           <option value="mobile">Mobile</option>
           <option value="desktop">Desktop</option>
+        </select>
+        <select
+          data-testid="canvas-size-preset"
+          value={
+            PLATFORM_PRESETS[canvasPlatform].find(
+              (p) =>
+                p.width === (platformConfigs[canvasPlatform]?.width ?? viewportConfig?.width)
+                && p.height === (platformConfigs[canvasPlatform]?.height ?? viewportConfig?.height),
+            )?.label ?? '__current__'
+          }
+          onChange={handlePresetChange}
+          title="Canvas size preset"
+          style={{
+            height: '28px',
+            padding: '0 4px',
+            border: '1px solid var(--sn-border, #e0e0e0)',
+            borderRadius: 'var(--sn-radius, 6px)',
+            background: 'var(--sn-surface, #fff)',
+            color: 'var(--sn-text, #1a1a2e)',
+            cursor: 'pointer',
+            fontSize: '11px',
+            fontFamily: 'inherit',
+            maxWidth: '180px',
+          }}
+        >
+          {!PLATFORM_PRESETS[canvasPlatform].find(
+            (p) =>
+              p.width === (platformConfigs[canvasPlatform]?.width ?? viewportConfig?.width)
+              && p.height === (platformConfigs[canvasPlatform]?.height ?? viewportConfig?.height),
+          ) && (
+            <option value="__current__">
+              {viewportConfig?.width && viewportConfig?.height
+                ? `Custom (${viewportConfig.width}×${viewportConfig.height})`
+                : 'Custom'}
+            </option>
+          )}
+          {PLATFORM_PRESETS[canvasPlatform].map((preset) => (
+            <option key={preset.label} value={preset.label}>
+              {preset.label}
+            </option>
+          ))}
         </select>
         {viewportConfig?.width && viewportConfig?.height && (
           <span
@@ -1121,27 +1234,40 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         }}
       />
 
-      {/* Mode toggle */}
-      <button
-        data-testid="mode-toggle"
-        onClick={handleModeToggle}
-        title={isEditMode ? 'Switch to Preview (P)' : 'Switch to Edit (P)'}
-        style={{
-          height: '32px',
-          padding: '0 16px',
-          border: '1px solid var(--sn-border, #e0e0e0)',
-          borderRadius: 'var(--sn-radius, 6px)',
-          background: isEditMode ? 'transparent' : 'var(--sn-accent, #6366f1)',
-          color: isEditMode ? 'var(--sn-text, #1a1a2e)' : '#fff',
-          cursor: 'pointer',
-          fontSize: '12px',
-          fontFamily: 'inherit',
-          fontWeight: 600,
-          transition: 'all 0.1s ease',
-        }}
-      >
-        {isEditMode ? 'Run' : 'Edit'}
-      </button>
+      {/* Mode toggle + Fullscreen Preview */}
+      <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+        <button
+          data-testid="mode-toggle"
+          onClick={handleModeToggle}
+          title={isEditMode ? 'Switch to Preview (P)' : 'Switch to Edit (P)'}
+          style={{
+            height: '32px',
+            padding: '0 16px',
+            border: '1px solid var(--sn-border, #e0e0e0)',
+            borderRadius: 'var(--sn-radius, 6px)',
+            background: isEditMode ? 'transparent' : 'var(--sn-accent, #6366f1)',
+            color: isEditMode ? 'var(--sn-text, #1a1a2e)' : '#fff',
+            cursor: 'pointer',
+            fontSize: '12px',
+            fontFamily: 'inherit',
+            fontWeight: 600,
+            transition: 'all 0.1s ease',
+          }}
+        >
+          {isEditMode ? 'Run' : 'Edit'}
+        </button>
+        <button
+          data-testid="fullscreen-preview-btn"
+          onClick={handleFullscreenPreview}
+          title="Fullscreen Preview (Shift+F)"
+          style={{
+            ...smallBtnBase,
+            height: '32px',
+          }}
+        >
+          <FullscreenIcon />
+        </button>
+      </div>
     </div>
   );
 };
