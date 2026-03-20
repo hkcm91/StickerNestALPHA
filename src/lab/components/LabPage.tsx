@@ -28,7 +28,7 @@ import { useLabState } from '../hooks/useLabState';
 
 import { CreatorLayout } from './CreatorLayout';
 import { DeviceFrame } from './DeviceFrame';
-import { AICompanion } from './LabAI';
+import { AICompanion, AISlidePanel } from './LabAI';
 import { LabEditorComponent } from './LabEditor';
 import { LabGraph } from './LabGraph';
 import { LabImportComponent } from './LabImport';
@@ -235,6 +235,12 @@ const LabContent: React.FC = () => {
   const [consoleOpen, setConsoleOpen] = useState(false);
   const [previewExpanded, setPreviewExpanded] = useState(false);
 
+  // AI slide panel state (Creator Mode only)
+  const [aiPanelOpen, setAiPanelOpen] = useState(false);
+  const handleToggleAiPanel = useCallback(() => {
+    setAiPanelOpen((v) => !v);
+  }, []);
+
   // Preview container dimensions for DeviceFrame scaling
   const previewContainerRef = useRef<HTMLDivElement>(null);
   const [previewSize, setPreviewSize] = useState({ width: 800, height: 600 });
@@ -263,6 +269,13 @@ const LabContent: React.FC = () => {
     });
     return unsub;
   }, [lab.instances]);
+
+  // Auto-open AI slide panel when a pending prompt arrives in Creator Mode
+  useEffect(() => {
+    if (creatorMode.isCreatorMode && pendingAIPrompt) {
+      setAiPanelOpen(true);
+    }
+  }, [creatorMode.isCreatorMode, pendingAIPrompt]);
 
   // Cursor-following ambient light — throttled to ~30fps
   const lastUpdate = useRef(0);
@@ -373,6 +386,8 @@ const LabContent: React.FC = () => {
                 onApplyCode={handleApplyCode}
                 currentEditorContent={editorContent}
                 graphContext={graphContext}
+                onExpandThread={handleToggleAiPanel}
+                threadOpen={aiPanelOpen}
               />
             }
             editorSlot={
@@ -497,15 +512,28 @@ const LabContent: React.FC = () => {
         onDismiss={creatorMode.dismissOnboarding}
       />
 
-      {/* AI Companion (floating bottom-right) */}
-      <AICompanion
-        generator={instances.aiGenerator}
-        onApplyCode={handleApplyCode}
-        currentEditorContent={editorContent}
-        graphContext={graphContext}
-        pendingPrompt={pendingAIPrompt}
-        onPendingPromptConsumed={() => setPendingAIPrompt(null)}
-      />
+      {/* AI surface — slide panel in Creator Mode, floating orb in classic */}
+      {creatorMode.isCreatorMode ? (
+        <AISlidePanel
+          open={aiPanelOpen}
+          onClose={() => setAiPanelOpen(false)}
+          generator={instances.aiGenerator}
+          onApplyCode={handleApplyCode}
+          currentEditorContent={editorContent}
+          graphContext={graphContext}
+          pendingPrompt={pendingAIPrompt}
+          onPendingPromptConsumed={() => setPendingAIPrompt(null)}
+        />
+      ) : (
+        <AICompanion
+          generator={instances.aiGenerator}
+          onApplyCode={handleApplyCode}
+          currentEditorContent={editorContent}
+          graphContext={graphContext}
+          pendingPrompt={pendingAIPrompt}
+          onPendingPromptConsumed={() => setPendingAIPrompt(null)}
+        />
+      )}
 
       {/* Import dialog */}
       {showImport && (
