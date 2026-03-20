@@ -13,7 +13,7 @@
  */
 
 import { motion, AnimatePresence } from 'framer-motion';
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { Group, Panel, Separator } from 'react-resizable-panels';
 
 import type { LabView, LabBottomTab } from '../hooks/useLabState';
@@ -100,22 +100,22 @@ export const CreatorLayout: React.FC<CreatorLayoutProps> = ({
   publishSlot,
   toolbarExtras,
 }) => {
-  const handleBottomTabChange = (tabId: string) => {
+  const handleBottomTabChange = useCallback((tabId: string) => {
     if (tabId === activeBottomTab) {
       onBottomTabChange(null);
     } else {
       onBottomTabChange(tabId as LabBottomTab);
     }
-  };
+  }, [activeBottomTab, onBottomTabChange]);
 
-  // Map the 'inspector' bottom tab to the inspector slot
+  // Map the active bottom tab to the corresponding slot content
   const bottomContent = useMemo(() => {
     if (activeBottomTab === 'inspector') return inspectorSlot;
     if (activeBottomTab === 'manifest') return manifestSlot;
     if (activeBottomTab === 'versions') return versionsSlot;
     if (activeBottomTab === 'publish') return publishSlot;
     return null;
-  }, [activeBottomTab, inspectorSlot, manifestSlot, publishSlot]);
+  }, [activeBottomTab, inspectorSlot, manifestSlot, versionsSlot, publishSlot]);
 
   return (
     <div

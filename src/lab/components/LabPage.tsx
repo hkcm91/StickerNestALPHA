@@ -13,7 +13,7 @@
  * @layer L2
  */
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import type { WidgetManifest } from '@sn/types';
 
@@ -23,9 +23,11 @@ import type { SceneNode, SceneEdge } from '../graph/scene-types';
 import { checkLabAccess } from '../guards/access-guard';
 import { checkDesktopViewport } from '../guards/mobile-guard';
 import { useCreatorMode } from '../hooks/useCreatorMode';
+import { useDeviceFrame } from '../hooks/useDeviceFrame';
 import { useLabState } from '../hooks/useLabState';
 
 import { CreatorLayout } from './CreatorLayout';
+import { DeviceFrame } from './DeviceFrame';
 import { AICompanion } from './LabAI';
 import { LabEditorComponent } from './LabEditor';
 import { LabGraph } from './LabGraph';
@@ -38,6 +40,8 @@ import { LabPublishComponent } from './LabPublish';
 import { LabVersionsComponent } from './LabVersions';
 import { OnboardingOverlay } from './OnboardingOverlay';
 import type { OnboardingPath } from './OnboardingOverlay';
+import { PreviewChrome } from './PreviewChrome';
+import { PromptBar } from './PromptBar';
 import { GlassPanel, GlowButton } from './shared';
 import { ensureLabKeyframes } from './shared/keyframes';
 
@@ -221,8 +225,35 @@ const LabContent: React.FC = () => {
   const [pendingAIPrompt, setPendingAIPrompt] = useState<string | null>(null);
 
   // Creator mode state
-  const hasActiveWidget = editorContent.length > 0;
+  const hasActiveWidget = useMemo(() => editorContent.trim().length > 0, [editorContent]);
   const creatorMode = useCreatorMode(hasActiveWidget);
+
+  // Device frame state for preview-as-primary
+  const deviceFrame = useDeviceFrame('phone');
+
+  // Preview chrome state
+  const [consoleOpen, setConsoleOpen] = useState(false);
+  const [previewExpanded, setPreviewExpanded] = useState(false);
+
+  // Preview container dimensions for DeviceFrame scaling
+  const previewContainerRef = useRef<HTMLDivElement>(null);
+  const [previewSize, setPreviewSize] = useState({ width: 800, height: 600 });
+
+  useLayoutEffect(() => {
+    const el = previewContainerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (entry) {
+        setPreviewSize({
+          width: entry.contentRect.width,
+          height: entry.contentRect.height,
+        });
+      }
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   // Track editor content for AI companion + publish
   useEffect(() => {
@@ -291,6 +322,12 @@ const LabContent: React.FC = () => {
     }
   }, [creatorMode, lab]);
 
+  // Reload the preview widget by bumping a key to force remount
+  const [previewReloadKey, setPreviewReloadKey] = useState(0);
+  const handlePreviewReload = useCallback(() => {
+    setPreviewReloadKey((k) => k + 1);
+  }, []);
+
   // Describe widget — triggered from library picker "Ask AI" button
   const handleDescribeWidget = useCallback((manifest: WidgetManifest) => {
     const eventsInfo = [
@@ -330,6 +367,14 @@ const LabContent: React.FC = () => {
             onBottomTabChange={lab.setActiveBottomTab}
             graphCollapsed={creatorMode.graphCollapsed}
             onToggleGraphCollapsed={creatorMode.toggleGraphCollapsed}
+            toolbarExtras={
+              <PromptBar
+                generator={instances.aiGenerator}
+                onApplyCode={handleApplyCode}
+                currentEditorContent={editorContent}
+                graphContext={graphContext}
+              />
+            }
             editorSlot={
               <LabEditorComponent editor={instances.editor} />
             }
@@ -344,7 +389,27 @@ const LabContent: React.FC = () => {
               />
             }
             previewSlot={
-              <LabPreviewComponent preview={instances.preview} />
+              <div ref={previewContainerRef} style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                <PreviewChrome
+                  widgetName={instances.manifest.getManifest()?.name ?? 'Untitled Widget'}
+                  isRunning={hasActiveWidget}
+                  onReload={handlePreviewReload}
+                  consoleOpen={consoleOpen}
+                  onConsoleToggle={() => setConsoleOpen((v) => !v)}
+                  expanded={previewExpanded}
+                  onExpandToggle={() => setPreviewExpanded((v) => !v)}
+                />
+                <div style={{ flex: 1, minHeight: 0 }}>
+                  <DeviceFrame
+                    device={deviceFrame.device}
+                    onDeviceChange={deviceFrame.setDevice}
+                    containerWidth={previewSize.width}
+                    containerHeight={previewSize.height}
+                  >
+                    <LabPreviewComponent key={previewReloadKey} preview={instances.preview} />
+                  </DeviceFrame>
+                </div>
+              </div>
             }
             inspectorSlot={
               <LabInspectorComponent inspector={instances.inspector} />
