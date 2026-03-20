@@ -426,6 +426,7 @@ export {
   // Config Schemas
   GridSnapModeSchema,
   GridProjectionModeSchema,
+  GridLineStyleSchema,
   GridConfigSchema,
   // State Schema
   GridStateSchema,
@@ -440,6 +441,7 @@ export {
   type GridCell,
   type GridSnapMode,
   type GridProjectionMode,
+  type GridLineStyle,
   type GridConfig,
   type GridState,
   type GridCellPaintedPayload,

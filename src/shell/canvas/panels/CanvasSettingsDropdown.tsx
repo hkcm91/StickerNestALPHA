@@ -20,6 +20,7 @@ import type { BackgroundSpec, GradientStop, GradientType, ViewportConfig } from 
 import { CanvasDocumentEvents, DEFAULT_BACKGROUND } from '@sn/types';
 
 import { bus } from '../../../kernel/bus';
+import { useUIStore } from '../../../kernel/stores/ui/ui.store';
 
 // =============================================================================
 // Types
@@ -61,10 +62,18 @@ interface CanvasSizePreset {
 // =============================================================================
 
 const CANVAS_SIZE_PRESETS: CanvasSizePreset[] = [
-  { label: 'Infinite', width: undefined, height: undefined },
-  { label: 'Desktop (1920×1080)', width: 1920, height: 1080 },
+  // Desktop
+  { label: 'Desktop HD (1920×1080)', width: 1920, height: 1080 },
+  { label: 'Desktop (1440×900)', width: 1440, height: 900 },
+  { label: 'MacBook Pro 14" (1512×982)', width: 1512, height: 982 },
+  // Tablet
+  { label: 'iPad (820×1180)', width: 820, height: 1180 },
   { label: 'Tablet (1024×768)', width: 1024, height: 768 },
-  { label: 'Mobile (390×844)', width: 390, height: 844 },
+  // Mobile
+  { label: 'iPhone 15 Pro (393×852)', width: 393, height: 852 },
+  { label: 'iPhone SE (375×667)', width: 375, height: 667 },
+  { label: 'Pixel 8 (412×915)', width: 412, height: 915 },
+  // Standard
   { label: 'Square (1080×1080)', width: 1080, height: 1080 },
   { label: 'HD (1280×720)', width: 1280, height: 720 },
   { label: '4K (3840×2160)', width: 3840, height: 2160 },
@@ -247,6 +256,9 @@ export const CanvasSettingsDropdown: React.FC<CanvasSettingsDropdownProps> = ({
 }) => {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // Guard: suppress emission when syncing state from parent viewportConfig
+  const isSyncingFromParentRef = useRef(false);
+
   // ─── Background State ───────────────────────────────────────────────────────
   const background = viewportConfig?.background ?? DEFAULT_BACKGROUND;
   const [bgType, setBgType] = useState<BackgroundType>(background.type);
@@ -285,6 +297,8 @@ export const CanvasSettingsDropdown: React.FC<CanvasSettingsDropdownProps> = ({
   // ─── Sync state when viewportConfig changes ─────────────────────────────────
   useEffect(() => {
     if (!viewportConfig) return;
+    // Suppress emission back to parent while we're syncing FROM parent
+    isSyncingFromParentRef.current = true;
     const bg = viewportConfig.background ?? DEFAULT_BACKGROUND;
     setBgType(bg.type);
     setOpacity(bg.opacity);
@@ -302,6 +316,11 @@ export const CanvasSettingsDropdown: React.FC<CanvasSettingsDropdownProps> = ({
 
     setCanvasWidth(viewportConfig.width);
     setCanvasHeight(viewportConfig.height);
+
+    // Clear the flag after React processes the state updates
+    requestAnimationFrame(() => {
+      isSyncingFromParentRef.current = false;
+    });
   }, [viewportConfig]);
 
   // Keep border radius input in sync when parent state changes externally
@@ -368,18 +387,19 @@ export const CanvasSettingsDropdown: React.FC<CanvasSettingsDropdownProps> = ({
     }
   }, [bgType, solidColor, gradientType, gradientAngle, gradientStops, imageUrl, imageMode, opacity]);
 
-  // Emit on background state changes
+  // Emit on background state changes (skip when syncing from parent to avoid loops)
   useEffect(() => {
     if (!isOpen) return;
+    if (isSyncingFromParentRef.current) return;
     emitBackgroundChange(buildCurrentBackground());
   }, [isOpen, buildCurrentBackground, emitBackgroundChange]);
 
   // ─── Emit viewport size changes ─────────────────────────────────────────────
   const emitViewportChange = useCallback(
-    (width: number | undefined, height: number | undefined) => {
+    (width: number | undefined, height: number | undefined, sizeMode?: 'infinite' | 'bounded') => {
       bus.emit(CanvasDocumentEvents.VIEWPORT_CHANGED, {
         canvasId: '',
-        viewport: { width, height },
+        viewport: { width, height, ...(sizeMode !== undefined ? { sizeMode } : {}) },
       });
     },
     []
@@ -775,59 +795,101 @@ export const CanvasSettingsDropdown: React.FC<CanvasSettingsDropdownProps> = ({
           CANVAS SIZE SECTION
           ═══════════════════════════════════════════════════════════════════════ */}
       <div style={sectionStyle}>
-        <div style={sectionTitleStyle}>Canvas Size</div>
+        <div style={sectionTitleStyle}>
+          Canvas Size
+          <span style={{ textTransform: 'none', fontWeight: 400, marginLeft: '4px', opacity: 0.7 }}>
+            ({useUIStore.getState().canvasPlatform})
+          </span>
+        </div>
 
-        {/* Presets */}
+        {/* Infinite / Bounded toggle */}
         <div style={{ marginBottom: '12px' }}>
-          <label style={labelStyle}>Preset</label>
-          <select
-            style={selectStyle}
-            value={
-              CANVAS_SIZE_PRESETS.find(
-                (p) => p.width === canvasWidth && p.height === canvasHeight
-              )?.label ?? 'Custom'
-            }
-            onChange={(e) => {
-              const preset = CANVAS_SIZE_PRESETS.find((p) => p.label === e.target.value);
-              if (preset) handlePresetSelect(preset);
-            }}
-          >
-            {CANVAS_SIZE_PRESETS.map((preset) => (
-              <option key={preset.label} value={preset.label}>
-                {preset.label}
-              </option>
-            ))}
-            {!CANVAS_SIZE_PRESETS.find(
-              (p) => p.width === canvasWidth && p.height === canvasHeight
-            ) && <option value="Custom">Custom</option>}
-          </select>
+          <label style={labelStyle}>Canvas Mode</label>
+          <div style={buttonGroupStyle}>
+            <button
+              type="button"
+              style={toggleBtnStyle(viewportConfig?.sizeMode !== 'bounded')}
+              onClick={() => {
+                setCanvasWidth(undefined);
+                setCanvasHeight(undefined);
+                emitViewportChange(undefined, undefined, 'infinite');
+              }}
+            >
+              Infinite
+            </button>
+            <button
+              type="button"
+              style={toggleBtnStyle(viewportConfig?.sizeMode === 'bounded')}
+              onClick={() => {
+                const w = canvasWidth ?? 1920;
+                const h = canvasHeight ?? 1080;
+                setCanvasWidth(w);
+                setCanvasHeight(h);
+                emitViewportChange(w, h, 'bounded');
+              }}
+            >
+              Bounded
+            </button>
+          </div>
         </div>
 
-        {/* Custom Dimensions */}
-        <div style={rowStyle}>
-          <div style={fieldStyle}>
-            <label style={labelStyle}>Width</label>
-            <input
-              type="number"
-              min="1"
-              value={canvasWidth ?? ''}
-              onChange={(e) => handleCanvasWidthChange(e.target.value)}
-              placeholder="Infinite"
-              style={inputStyle}
-            />
-          </div>
-          <div style={fieldStyle}>
-            <label style={labelStyle}>Height</label>
-            <input
-              type="number"
-              min="1"
-              value={canvasHeight ?? ''}
-              onChange={(e) => handleCanvasHeightChange(e.target.value)}
-              placeholder="Infinite"
-              style={inputStyle}
-            />
-          </div>
-        </div>
+        {/* Presets — only shown in bounded mode */}
+        {viewportConfig?.sizeMode === 'bounded' && (
+          <>
+            <div style={{ marginBottom: '12px' }}>
+              <label style={labelStyle}>Preset</label>
+              <select
+                style={selectStyle}
+                value={
+                  CANVAS_SIZE_PRESETS.find(
+                    (p) => p.width === canvasWidth && p.height === canvasHeight
+                  )?.label ?? 'Custom'
+                }
+                onChange={(e) => {
+                  const preset = CANVAS_SIZE_PRESETS.find((p) => p.label === e.target.value);
+                  if (preset) {
+                    handlePresetSelect(preset);
+                  }
+                }}
+              >
+                {CANVAS_SIZE_PRESETS.map((preset) => (
+                  <option key={preset.label} value={preset.label}>
+                    {preset.label}
+                  </option>
+                ))}
+                {!CANVAS_SIZE_PRESETS.find(
+                  (p) => p.width === canvasWidth && p.height === canvasHeight
+                ) && <option value="Custom">Custom</option>}
+              </select>
+            </div>
+
+            {/* Custom Dimensions */}
+            <div style={rowStyle}>
+              <div style={fieldStyle}>
+                <label style={labelStyle}>Width</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={canvasWidth ?? ''}
+                  onChange={(e) => handleCanvasWidthChange(e.target.value)}
+                  placeholder="1920"
+                  style={inputStyle}
+                />
+              </div>
+              <div style={fieldStyle}>
+                <label style={labelStyle}>Height</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={canvasHeight ?? ''}
+                  onChange={(e) => handleCanvasHeightChange(e.target.value)}
+                  placeholder="1080"
+                  style={inputStyle}
+                />
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Canvas Position Section */}

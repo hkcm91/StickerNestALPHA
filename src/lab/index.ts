@@ -51,3 +51,6 @@ export type { GraphNode, GraphEdge, NodeType, CompileResult, GraphSync } from '.
 
 // Init
 export { initLab, teardownLab, isLabInitialized } from './init';
+
+// UI Components
+export { LabPage } from './components/LabPage';

@@ -25,7 +25,9 @@ import type {
 import { CanvasEvents } from "@sn/types";
 
 import type { SceneGraph } from "../../../canvas/core";
+import { resolveEntityTransform } from "../../../canvas/core";
 import { bus } from "../../../kernel/bus";
+import { useUIStore } from "../../../kernel/stores/ui/ui.store";
 import { CropEvents } from "../handlers";
 import { useCropMode } from "../hooks";
 import { getEntityBoundingBox } from "../renderers/entity-style";
@@ -177,6 +179,9 @@ export const SelectionOverlay: React.FC<SelectionOverlayProps> = ({
   } | null>(null);
   const dragRef = useRef<DragState | null>(null);
 
+  // Platform for transform resolution
+  const platform = useUIStore((s) => s.canvasPlatform);
+
   // Crop mode state
   const cropModeIds = useCropMode();
   const [_cropDragState, setCropDragState] = useState<CropDragState | null>(
@@ -217,7 +222,8 @@ export const SelectionOverlay: React.FC<SelectionOverlayProps> = ({
   let maxY = -Infinity;
 
   for (const entity of selectedEntities) {
-    const bounds = getEntityBoundingBox(entity);
+    const resolvedTransform = resolveEntityTransform(entity, platform);
+    const bounds = getEntityBoundingBox(entity, resolvedTransform);
     minX = Math.min(minX, bounds.minX);
     minY = Math.min(minY, bounds.minY);
     maxX = Math.max(maxX, bounds.maxX);
@@ -240,8 +246,9 @@ export const SelectionOverlay: React.FC<SelectionOverlayProps> = ({
     e.stopPropagation();
 
     const entity = selectedEntities[0];
-    // Use center-based bounds calculation
-    const bounds = getEntityBoundingBox(entity);
+    // Use center-based bounds calculation with platform-resolved transform
+    const resolvedTransform = resolveEntityTransform(entity, platform);
+    const bounds = getEntityBoundingBox(entity, resolvedTransform);
 
     const state: DragState = {
       handle,
@@ -439,11 +446,11 @@ export const SelectionOverlay: React.FC<SelectionOverlayProps> = ({
           height: displaySize.height + 2,
           border: isCropMode
             ? "1px solid var(--sn-ember, #E8806C)"
-            : "1px solid color-mix(in srgb, var(--sn-accent, #3E7D94) 35%, transparent)",
+            : "1px solid color-mix(in srgb, var(--sn-accent, #4E7B8E) 35%, transparent)",
           borderRadius: SELECTION_BORDER_RADIUS,
           boxShadow: isCropMode
             ? "none"
-            : "0 0 24px color-mix(in srgb, var(--sn-accent, #3E7D94) 12%, transparent), inset 0 0 16px color-mix(in srgb, var(--sn-accent, #3E7D94) 4%, transparent)",
+            : "0 0 24px color-mix(in srgb, var(--sn-accent, #4E7B8E) 12%, transparent), inset 0 0 16px color-mix(in srgb, var(--sn-accent, #4E7B8E) 4%, transparent)",
           pointerEvents: "none",
           boxSizing: "border-box",
           transition: "box-shadow 0.5s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.5s cubic-bezier(0.16, 1, 0.3, 1)",
@@ -644,13 +651,13 @@ export const SelectionOverlay: React.FC<SelectionOverlayProps> = ({
                 top: displayPosition.y + offset.y,
                 width: HANDLE_SIZE,
                 height: HANDLE_SIZE,
-                background: "var(--sn-accent, #3E7D94)",
+                background: "var(--sn-accent, #4E7B8E)",
                 border: "none",
                 borderRadius: HALF_HANDLE,
                 cursor: h.cursor,
                 pointerEvents: "auto",
                 boxSizing: "border-box",
-                boxShadow: "0 0 8px color-mix(in srgb, var(--sn-accent, #3E7D94) 50%, transparent)",
+                boxShadow: "0 0 8px color-mix(in srgb, var(--sn-accent, #4E7B8E) 50%, transparent)",
                 animation: "sn-handle-pulse 3s ease-in-out infinite",
                 animationDelay: `${handles.indexOf(h) * 200}ms`,
                 zIndex: 1,

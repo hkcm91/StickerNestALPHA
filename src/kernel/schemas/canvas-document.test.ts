@@ -268,6 +268,7 @@ describe('CanvasDocumentSchema', () => {
         height: 1080,
         background: { type: 'solid', color: '#f0f0f0', opacity: 1 },
         isPreviewMode: false,
+        sizeMode: 'infinite',
       },
       entities: [],
       layoutMode: 'bento',
@@ -333,6 +334,7 @@ describe('CreateCanvasDocumentInputSchema', () => {
         width: 800,
         height: 600,
         background: { type: 'solid' as const, color: '#fff', opacity: 1 },
+        sizeMode: 'infinite' as const,
       },
       layoutMode: 'desktop' as const,
     };

@@ -117,6 +117,9 @@ export const CanvasEvents = {
   PATH_CLOSED: 'canvas.path.closed',
   PATH_POINT_CONVERTED: 'canvas.path.point.converted',
 
+  /** Entity platform-specific transform was updated */
+  ENTITY_PLATFORM_TRANSFORM_UPDATED: 'canvas.entity.platformTransform.updated',
+
   // Tool input bridge — shell forwards pointer/key events to L4A-2 tools via bus
   TOOL_INPUT_DOWN: 'canvas.tool.input.down',
   TOOL_INPUT_MOVE: 'canvas.tool.input.move',
@@ -270,6 +273,8 @@ export const CanvasDocumentEvents = {
   BORDER_RADIUS_CHANGED: 'canvas.document.borderRadius.changed',
   /** Canvas position changed */
   CANVAS_POSITION_CHANGED: 'canvas.document.position.changed',
+  /** Canvas platform changed (web/mobile/desktop) */
+  PLATFORM_CHANGED: 'canvas.document.platform.changed',
 } as const;
 
 /**

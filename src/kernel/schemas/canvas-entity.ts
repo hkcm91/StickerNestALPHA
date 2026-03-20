@@ -5,6 +5,7 @@
 
 import { z } from "zod";
 
+
 import { AnchorPointSchema, PathFillRuleSchema } from "./path";
 import {
   Point2DSchema,
@@ -121,6 +122,17 @@ export const CanvasEntityBaseSchema = z.object({
    * When present, entity can be placed in 3D space.
    */
   spatialTransform: Transform3DSchema.optional(),
+  /**
+   * Per-platform 2D transforms for responsive positioning.
+   * Web uses the `transform` field directly. Mobile/desktop overrides live here.
+   * Falls back to `transform` when a platform key is not present.
+   */
+  platformTransforms: z.record(z.string(), Transform2DSchema).optional(),
+  /**
+   * When true, 2D position changes project to spatialTransform and vice versa.
+   * When false, 2D and 3D positions are independent.
+   */
+  syncTransform2d3d: z.boolean().default(true),
   /** Z-order index (higher = in front) */
   zIndex: z.number().int(),
   /** Whether entity is visible */

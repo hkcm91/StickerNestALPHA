@@ -84,6 +84,7 @@ function createWidgetEntity(
     flipV: false,
     opacity: 1,
     borderRadius: 0,
+    syncTransform2d3d: true,
     createdAt: '2025-01-01T00:00:00Z',
     updatedAt: '2025-01-01T00:00:00Z',
     createdBy: '00000000-0000-4000-8000-000000000030',

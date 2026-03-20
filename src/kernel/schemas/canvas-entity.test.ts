@@ -202,6 +202,55 @@ describe('Canvas Entity Schemas', () => {
       expect(result.success).toBe(false);
     });
 
+    it('should accept optional platformTransforms', () => {
+      const input = {
+        ...baseEntityData,
+        type: 'sticker',
+        platformTransforms: {
+          mobile: {
+            position: { x: 10, y: 20 },
+            size: { width: 200, height: 100 },
+            rotation: 0,
+            scale: 1,
+          },
+        },
+      };
+      const result = CanvasEntityBaseSchema.safeParse(input);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.platformTransforms?.mobile).toBeDefined();
+        expect(result.data.platformTransforms?.mobile?.position).toEqual({ x: 10, y: 20 });
+      }
+    });
+
+    it('should default syncTransform2d3d to true', () => {
+      const input = {
+        ...baseEntityData,
+        type: 'sticker',
+      };
+      const result = CanvasEntityBaseSchema.safeParse(input);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.syncTransform2d3d).toBe(true);
+      }
+    });
+
+    it('should accept syncTransform2d3d as false', () => {
+      const input = {
+        ...baseEntityData,
+        type: 'sticker',
+        syncTransform2d3d: false,
+      };
+      const result = CanvasEntityBaseSchema.safeParse(input);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.syncTransform2d3d).toBe(false);
+      }
+    });
+
     it('should reject invalid UUID', () => {
       const input = {
         ...baseEntityData,

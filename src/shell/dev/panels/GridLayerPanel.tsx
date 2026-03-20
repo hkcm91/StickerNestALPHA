@@ -7,7 +7,7 @@
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 
-import type { GridSnapMode, GridProjectionMode } from '@sn/types';
+import type { GridSnapMode, GridProjectionMode, GridLineStyle } from '@sn/types';
 
 import {
   createGridLayer,
@@ -85,6 +85,10 @@ export const GridLayerPanel: React.FC = () => {
   const [snapMode, setSnapMode] = useState<GridSnapMode>('none');
   const [projection, setProjection] = useState<GridProjectionMode>('orthogonal');
   const [isometricRatio, setIsometricRatio] = useState(2);
+  const [gridLineStyle, setGridLineStyle] = useState<GridLineStyle>('line');
+  const [gridLineColor, setGridLineColor] = useState('#ffffff');
+  const [gridLineOpacity, setGridLineOpacity] = useState(0.1);
+  const [gridLineWidth, setGridLineWidth] = useState(1);
 
   // Painting state
   const [isPainting, setIsPainting] = useState(false);
@@ -108,8 +112,12 @@ export const GridLayerPanel: React.FC = () => {
       snapMode,
       projection,
       isometricRatio,
+      gridLineStyle,
+      gridLineColor,
+      gridLineOpacity,
+      gridLineWidth,
     });
-  }, [gridLayer, gridEnabled, showGridLines, cellSize, snapMode, projection, isometricRatio]);
+  }, [gridLayer, gridEnabled, showGridLines, cellSize, snapMode, projection, isometricRatio, gridLineStyle, gridLineColor, gridLineOpacity, gridLineWidth]);
 
   // Render loop
   useEffect(() => {
@@ -200,82 +208,143 @@ export const GridLayerPanel: React.FC = () => {
         }
       }
 
-      // Render grid lines
+      // Render grid marks (lines, dots, or crosses)
       if (showGridLines && cellSize * viewport.zoom >= 4) {
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
-        ctx.lineWidth = 1;
+        const prevAlpha = ctx.globalAlpha;
+        ctx.globalAlpha = gridLineOpacity;
+        ctx.strokeStyle = gridLineColor;
+        ctx.fillStyle = gridLineColor;
+        ctx.lineWidth = gridLineWidth;
 
-        switch (projection) {
-          case 'isometric': {
-            ctx.beginPath();
-            for (let col = minCol; col <= maxCol + 1; col++) {
-              const startCorners = getIsometricCellCorners(col, minRow, currentConfig);
-              const endCorners = getIsometricCellCorners(col, maxRow + 1, currentConfig);
-              const start = canvasToScreen(startCorners.top, viewport);
-              const end = canvasToScreen(endCorners.top, viewport);
-              ctx.moveTo(start.x, start.y);
-              ctx.lineTo(end.x, end.y);
-            }
-            for (let row = minRow; row <= maxRow + 1; row++) {
-              const startCorners = getIsometricCellCorners(minCol, row, currentConfig);
-              const endCorners = getIsometricCellCorners(maxCol + 1, row, currentConfig);
-              const start = canvasToScreen(startCorners.top, viewport);
-              const end = canvasToScreen(endCorners.top, viewport);
-              ctx.moveTo(start.x, start.y);
-              ctx.lineTo(end.x, end.y);
-            }
-            ctx.stroke();
-            break;
-          }
-          case 'triangular': {
-            ctx.beginPath();
-            for (let row = minRow; row <= maxRow; row++) {
-              for (let col = minCol; col <= maxCol; col++) {
-                const triCorners = getTriangularCellCorners(col, row, currentConfig);
-                const [a, b, c] = triCorners.map(p => canvasToScreen(p, viewport));
-                ctx.moveTo(a.x, a.y);
-                ctx.lineTo(b.x, b.y);
-                ctx.lineTo(c.x, c.y);
-                ctx.closePath();
-              }
-            }
-            ctx.stroke();
-            break;
-          }
-          case 'hexagonal': {
-            ctx.beginPath();
-            for (let row = minRow; row <= maxRow; row++) {
-              for (let col = minCol; col <= maxCol; col++) {
-                const hexCorners = getHexagonalCellCorners(col, row, currentConfig);
-                const screenHex = hexCorners.map(p => canvasToScreen(p, viewport));
-                ctx.moveTo(screenHex[0].x, screenHex[0].y);
-                for (let i = 1; i < 6; i++) {
-                  ctx.lineTo(screenHex[i].x, screenHex[i].y);
+        // Collect intersection points for dot/cross styles
+        const collectPoints = (): Array<{ x: number; y: number }> => {
+          const pts: Array<{ x: number; y: number }> = [];
+          switch (projection) {
+            case 'isometric':
+              for (let col = minCol; col <= maxCol + 1; col++)
+                for (let row = minRow; row <= maxRow + 1; row++)
+                  pts.push(canvasToScreen(getIsometricCellCorners(col, row, currentConfig).top, viewport));
+              break;
+            case 'triangular':
+              for (let col = minCol; col <= maxCol + 1; col++)
+                for (let row = minRow; row <= maxRow + 1; row++)
+                  for (const c of getTriangularCellCorners(col, row, currentConfig))
+                    pts.push(canvasToScreen(c, viewport));
+              break;
+            case 'hexagonal':
+              for (let row = minRow; row <= maxRow; row++)
+                for (let col = minCol; col <= maxCol; col++)
+                  for (const c of getHexagonalCellCorners(col, row, currentConfig))
+                    pts.push(canvasToScreen(c, viewport));
+              break;
+            default:
+              for (let col = minCol; col <= maxCol + 1; col++)
+                for (let row = minRow; row <= maxRow + 1; row++) {
+                  const cx = col * cellSize;
+                  const cy = row * cellSize;
+                  pts.push(canvasToScreen({ x: cx, y: cy }, viewport));
                 }
-                ctx.closePath();
-              }
-            }
-            ctx.stroke();
-            break;
+              break;
           }
-          default: {
-            ctx.beginPath();
-            for (let col = minCol; col <= maxCol + 1; col++) {
-              const canvasX = col * cellSize;
-              const screenX = canvasToScreen({ x: canvasX, y: 0 }, viewport).x;
-              ctx.moveTo(screenX, 0);
-              ctx.lineTo(screenX, canvas.height);
+          return pts;
+        };
+
+        if (gridLineStyle === 'dot') {
+          const pts = collectPoints();
+          const r = gridLineWidth;
+          ctx.beginPath();
+          for (const p of pts) {
+            ctx.moveTo(p.x + r, p.y);
+            ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+          }
+          ctx.fill();
+        } else if (gridLineStyle === 'cross') {
+          const pts = collectPoints();
+          const arm = Math.max(3, gridLineWidth * 3);
+          ctx.beginPath();
+          for (const p of pts) {
+            ctx.moveTo(p.x - arm, p.y);
+            ctx.lineTo(p.x + arm, p.y);
+            ctx.moveTo(p.x, p.y - arm);
+            ctx.lineTo(p.x, p.y + arm);
+          }
+          ctx.stroke();
+        } else {
+          // 'line' — original behavior
+          switch (projection) {
+            case 'isometric': {
+              ctx.beginPath();
+              for (let col = minCol; col <= maxCol + 1; col++) {
+                const startCorners = getIsometricCellCorners(col, minRow, currentConfig);
+                const endCorners = getIsometricCellCorners(col, maxRow + 1, currentConfig);
+                const start = canvasToScreen(startCorners.top, viewport);
+                const end = canvasToScreen(endCorners.top, viewport);
+                ctx.moveTo(start.x, start.y);
+                ctx.lineTo(end.x, end.y);
+              }
+              for (let row = minRow; row <= maxRow + 1; row++) {
+                const startCorners = getIsometricCellCorners(minCol, row, currentConfig);
+                const endCorners = getIsometricCellCorners(maxCol + 1, row, currentConfig);
+                const start = canvasToScreen(startCorners.top, viewport);
+                const end = canvasToScreen(endCorners.top, viewport);
+                ctx.moveTo(start.x, start.y);
+                ctx.lineTo(end.x, end.y);
+              }
+              ctx.stroke();
+              break;
             }
-            for (let row = minRow; row <= maxRow + 1; row++) {
-              const canvasY = row * cellSize;
-              const screenY = canvasToScreen({ x: 0, y: canvasY }, viewport).y;
-              ctx.moveTo(0, screenY);
-              ctx.lineTo(canvas.width, screenY);
+            case 'triangular': {
+              ctx.beginPath();
+              for (let row = minRow; row <= maxRow; row++) {
+                for (let col = minCol; col <= maxCol; col++) {
+                  const triCorners = getTriangularCellCorners(col, row, currentConfig);
+                  const [a, b, c] = triCorners.map(p => canvasToScreen(p, viewport));
+                  ctx.moveTo(a.x, a.y);
+                  ctx.lineTo(b.x, b.y);
+                  ctx.lineTo(c.x, c.y);
+                  ctx.closePath();
+                }
+              }
+              ctx.stroke();
+              break;
             }
-            ctx.stroke();
-            break;
+            case 'hexagonal': {
+              ctx.beginPath();
+              for (let row = minRow; row <= maxRow; row++) {
+                for (let col = minCol; col <= maxCol; col++) {
+                  const hexCorners = getHexagonalCellCorners(col, row, currentConfig);
+                  const screenHex = hexCorners.map(p => canvasToScreen(p, viewport));
+                  ctx.moveTo(screenHex[0].x, screenHex[0].y);
+                  for (let i = 1; i < 6; i++) {
+                    ctx.lineTo(screenHex[i].x, screenHex[i].y);
+                  }
+                  ctx.closePath();
+                }
+              }
+              ctx.stroke();
+              break;
+            }
+            default: {
+              ctx.beginPath();
+              for (let col = minCol; col <= maxCol + 1; col++) {
+                const canvasX = col * cellSize;
+                const screenX = canvasToScreen({ x: canvasX, y: 0 }, viewport).x;
+                ctx.moveTo(screenX, 0);
+                ctx.lineTo(screenX, canvas.height);
+              }
+              for (let row = minRow; row <= maxRow + 1; row++) {
+                const canvasY = row * cellSize;
+                const screenY = canvasToScreen({ x: 0, y: canvasY }, viewport).y;
+                ctx.moveTo(0, screenY);
+                ctx.lineTo(canvas.width, screenY);
+              }
+              ctx.stroke();
+              break;
+            }
           }
         }
+
+        ctx.globalAlpha = prevAlpha;
       }
 
       rafId = requestAnimationFrame(render);
@@ -286,7 +355,7 @@ export const GridLayerPanel: React.FC = () => {
     return () => {
       cancelAnimationFrame(rafId);
     };
-  }, [gridLayer, viewport, gridEnabled, showGridLines, cellSize, projection, isometricRatio]);
+  }, [gridLayer, viewport, gridEnabled, showGridLines, cellSize, projection, isometricRatio, gridLineStyle, gridLineColor, gridLineOpacity, gridLineWidth]);
 
   // Paint cell helper
   const paintCellAt = useCallback((screenX: number, screenY: number) => {
@@ -496,6 +565,35 @@ export const GridLayerPanel: React.FC = () => {
             </select>
           </label>
         )}
+      </div>
+
+      {/* Grid Appearance Row */}
+      <div style={{ marginBottom: 10, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          Style:
+          <select value={gridLineStyle} onChange={(e) => setGridLineStyle(e.target.value as GridLineStyle)}>
+            <option value="line">Line</option>
+            <option value="dot">Dot</option>
+            <option value="cross">Cross</option>
+          </select>
+        </label>
+
+        <label style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          Color:
+          <input type="color" value={gridLineColor} onChange={(e) => setGridLineColor(e.target.value)} style={{ width: 24, height: 20 }} />
+        </label>
+
+        <label style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          Opacity:
+          <input type="range" min="0" max="1" step="0.05" value={gridLineOpacity} onChange={(e) => setGridLineOpacity(Number(e.target.value))} style={{ width: 60 }} />
+          <span style={{ fontSize: 10 }}>{(gridLineOpacity * 100).toFixed(0)}%</span>
+        </label>
+
+        <label style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          Weight:
+          <input type="range" min="0.5" max="4" step="0.5" value={gridLineWidth} onChange={(e) => setGridLineWidth(Number(e.target.value))} style={{ width: 60 }} />
+          <span style={{ fontSize: 10 }}>{gridLineWidth}px</span>
+        </label>
       </div>
 
       {/* Paint Controls Row */}

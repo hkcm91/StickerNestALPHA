@@ -5,9 +5,12 @@
  * @layer L6
  */
 
-import React from "react";
+import React, { useMemo } from "react";
 
 import type { CanvasEntity } from "@sn/types";
+
+import { resolveEntityTransform } from "../../../canvas/core";
+import { useUIStore } from "../../../kernel/stores/ui/ui.store";
 
 import { AudioRenderer } from "./AudioRenderer";
 import { DockerRenderer } from "./DockerRenderer";
@@ -52,6 +55,15 @@ export const EntityRenderer: React.FC<EntityRendererProps> = ({
   theme,
   interactionMode = "edit",
 }) => {
+  // Resolve platform-specific transform so sub-renderers transparently
+  // receive the correct position/size for the active platform.
+  const platform = useUIStore((s) => s.canvasPlatform);
+  const resolvedEntity = useMemo(() => {
+    const transform = resolveEntityTransform(entity, platform);
+    if (transform === entity.transform) return entity;
+    return { ...entity, transform } as CanvasEntity;
+  }, [entity, platform]);
+
   const renderWithAutoPointer = (children: React.ReactNode) => (
     <div style={{ pointerEvents: 'auto', display: 'contents' }}>
       {children}
@@ -60,11 +72,13 @@ export const EntityRenderer: React.FC<EntityRendererProps> = ({
 
   let rendered: React.ReactNode = null;
 
+  // Use resolvedEntity (with platform-specific transform) for rendering.
+  // Switch on original entity.type for discriminated union narrowing.
   switch (entity.type) {
     case "sticker":
       rendered = (
         <StickerRenderer
-          entity={entity}
+          entity={resolvedEntity as typeof entity}
           isSelected={isSelected}
           interactionMode={interactionMode}
         />
@@ -72,17 +86,17 @@ export const EntityRenderer: React.FC<EntityRendererProps> = ({
       break;
 
     case "lottie":
-      rendered = <LottieRenderer entity={entity} isSelected={isSelected} />;
+      rendered = <LottieRenderer entity={resolvedEntity as typeof entity} isSelected={isSelected} />;
       break;
 
     case "text":
-      rendered = <TextRenderer entity={entity} isSelected={isSelected} />;
+      rendered = <TextRenderer entity={resolvedEntity as typeof entity} isSelected={isSelected} />;
       break;
 
     case "widget":
       rendered = (
         <WidgetRenderer
-          entity={entity}
+          entity={resolvedEntity as typeof entity}
           isSelected={isSelected}
           widgetHtml={widgetHtml ?? ""}
           theme={theme ?? {}}
@@ -92,21 +106,21 @@ export const EntityRenderer: React.FC<EntityRendererProps> = ({
       break;
 
     case "shape":
-      rendered = <ShapeRenderer entity={entity} isSelected={isSelected} />;
+      rendered = <ShapeRenderer entity={resolvedEntity as typeof entity} isSelected={isSelected} />;
       break;
 
     case "drawing":
-      rendered = <DrawingRenderer entity={entity} isSelected={isSelected} />;
+      rendered = <DrawingRenderer entity={resolvedEntity as typeof entity} isSelected={isSelected} />;
       break;
 
     case "group":
-      rendered = <GroupRenderer entity={entity} isSelected={isSelected} />;
+      rendered = <GroupRenderer entity={resolvedEntity as typeof entity} isSelected={isSelected} />;
       break;
 
     case "docker":
       rendered = (
         <DockerRenderer
-          entity={entity}
+          entity={resolvedEntity as typeof entity}
           isSelected={isSelected}
           isOpen={folderOpen}
           childrenEntities={childrenEntities}
@@ -116,19 +130,19 @@ export const EntityRenderer: React.FC<EntityRendererProps> = ({
       break;
 
     case "audio":
-      rendered = <AudioRenderer entity={entity} isSelected={isSelected} />;
+      rendered = <AudioRenderer entity={resolvedEntity as typeof entity} isSelected={isSelected} />;
       break;
 
     case "svg":
-      rendered = <SvgRenderer entity={entity} isSelected={isSelected} />;
+      rendered = <SvgRenderer entity={resolvedEntity as typeof entity} isSelected={isSelected} />;
       break;
 
     case "path":
-      rendered = <PathRenderer entity={entity} isSelected={isSelected} />;
+      rendered = <PathRenderer entity={resolvedEntity as typeof entity} isSelected={isSelected} />;
       break;
 
     case "object3d":
-      rendered = <Object3DRenderer entity={entity} />;
+      rendered = <Object3DRenderer entity={resolvedEntity as typeof entity} />;
       break;
 
     default: {

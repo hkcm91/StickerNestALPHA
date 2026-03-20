@@ -59,6 +59,14 @@ function createViewportStore(initialWidth: number, initialHeight: number) {
       state = next;
       notify();
     },
+    fitToCanvas: (canvasW: number, canvasH: number) => {
+      const { viewportWidth, viewportHeight } = state;
+      const zoom = Math.min(viewportWidth / canvasW, viewportHeight / canvasH) * 0.9;
+      const offsetX = (viewportWidth - canvasW * zoom) / (2 * zoom);
+      const offsetY = (viewportHeight - canvasH * zoom) / (2 * zoom);
+      state = { ...state, zoom, offset: { x: offsetX, y: offsetY } };
+      notify();
+    },
   };
 }
 

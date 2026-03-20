@@ -323,7 +323,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                       borderRadius: 9,
                       cursor: "pointer",
                       background: isActive
-                        ? "color-mix(in srgb, var(--sn-accent, #3E7D94) 10%, transparent)"
+                        ? "color-mix(in srgb, var(--sn-accent, #4E7B8E) 10%, transparent)"
                         : "transparent",
                       transition: "background 0.12s",
                     }}
@@ -338,11 +338,11 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                           alignItems: "center",
                           justifyContent: "center",
                           background: isActive
-                            ? "color-mix(in srgb, var(--sn-accent, #3E7D94) 12%, transparent)"
+                            ? "color-mix(in srgb, var(--sn-accent, #4E7B8E) 12%, transparent)"
                             : "color-mix(in srgb, var(--sn-text-faint, #3A3842) 15%, transparent)",
                           fontSize: 13,
                           color: isActive
-                            ? "var(--sn-accent, #3E7D94)"
+                            ? "var(--sn-accent, #4E7B8E)"
                             : "var(--sn-text-muted, #6B6878)",
                           transition: "all 0.12s",
                         }}

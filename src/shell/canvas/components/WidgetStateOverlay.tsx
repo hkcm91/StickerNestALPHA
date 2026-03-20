@@ -88,7 +88,7 @@ const LoadingState: React.FC = () => (
             width: 8,
             height: 8,
             borderRadius: "50%",
-            background: "var(--sn-accent, #3E7D94)",
+            background: "var(--sn-accent, #4E7B8E)",
             animation: `sn-loading-dot 1.2s ease-in-out ${i * 0.2}s infinite`,
           }}
         />
@@ -254,7 +254,7 @@ const SyncingState: React.FC<{ widgetName: string }> = ({ widgetName }) => (
         style={{
           width: "30%",
           height: "100%",
-          background: "var(--sn-accent, #3E7D94)",
+          background: "var(--sn-accent, #4E7B8E)",
           borderRadius: 1,
           animation: "sn-sync-bar 2s ease-in-out infinite",
         }}

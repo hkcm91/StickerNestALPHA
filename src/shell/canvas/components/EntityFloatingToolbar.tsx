@@ -10,7 +10,9 @@ import React from "react";
 import type { CanvasEntity } from "@sn/types";
 import { CanvasEvents } from "@sn/types";
 
+import { resolveEntityTransform, setEntityPlatformTransform } from "../../../canvas/core";
 import { bus } from "../../../kernel/bus";
+import { useUIStore } from "../../../kernel/stores/ui/ui.store";
 import { transition } from "../../theme/animation-vars";
 
 // ---------------------------------------------------------------------------
@@ -132,23 +134,30 @@ export const EntityFloatingToolbar: React.FC<EntityFloatingToolbarProps> = ({
   position,
 }) => {
   const [hoveredBtn, setHoveredBtn] = React.useState<string | null>(null);
+  const platform = useUIStore((s) => s.canvasPlatform);
 
   /* P6: Feedback through light, not motion — hover glows, doesn't bounce */
   const getButtonStyle = (id: string, active: boolean = false): React.CSSProperties => ({
     ...buttonBaseStyle,
     background: active
-      ? "var(--sn-accent, #3E7D94)"
+      ? "var(--sn-accent, #4E7B8E)"
       : hoveredBtn === id
-        ? "color-mix(in srgb, var(--sn-accent, #3E7D94) 12%, transparent)"
+        ? "color-mix(in srgb, var(--sn-accent, #4E7B8E) 12%, transparent)"
         : "transparent",
     color: active ? "#ffffff" : hoveredBtn === id ? "var(--sn-text, #EDEBE6)" : "var(--sn-text-soft, #A8A4AE)",
   });
 
   const handleRotate = () => {
-    const rotation = (entity.transform.rotation + 90) % 360;
+    const resolved = resolveEntityTransform(entity, platform);
+    const rotation = (resolved.rotation + 90) % 360;
+    const newTransform = { ...resolved, rotation };
+    const updated = setEntityPlatformTransform(entity, platform, newTransform);
     bus.emit(CanvasEvents.ENTITY_UPDATED, {
       id: entity.id,
-      updates: { transform: { ...entity.transform, rotation } },
+      updates: {
+        transform: updated.transform,
+        ...(updated.platformTransforms ? { platformTransforms: updated.platformTransforms } : {}),
+      },
     });
   };
 

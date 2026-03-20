@@ -8,7 +8,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import type { GridConfig, GridProjectionMode, ViewportConfig } from '@sn/types';
+import type { GridConfig, GridLineStyle, GridProjectionMode, ViewportConfig } from '@sn/types';
 import { GridEvents } from '@sn/types';
 
 import { DEFAULT_GRID_CONFIG } from '../../../canvas/core';
@@ -29,6 +29,10 @@ export interface ToolbarProps {
   saveStatus?: SaveStatus;
   /** Callback for manual save */
   onSave?: () => void;
+  /** Current canvas name */
+  canvasName?: string;
+  /** Callback for renaming the canvas */
+  onRename?: (newName: string) => void;
   /** Current viewport configuration */
   viewportConfig?: ViewportConfig;
   /** Current canvas border radius */
@@ -254,6 +258,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   viewportStore,
   saveStatus,
   onSave,
+  canvasName,
+  onRename,
   viewportConfig,
   borderRadius,
   canvasPosition,
@@ -282,6 +288,11 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
   // Grid config state — kept in sync via bus events
   const [gridConfig, setGridConfig] = useState<GridConfig>({ ...DEFAULT_GRID_CONFIG });
+
+  // Canvas rename state
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [renameDraft, setRenameDraft] = useState('');
+  const renameInputRef = useRef<HTMLInputElement>(null);
 
   // Canvas settings dropdown state
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -455,6 +466,37 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     [],
   );
 
+  // ── Grid customizer popover ─────────────────────────────────────
+  const [gridCustomizerOpen, setGridCustomizerOpen] = useState(false);
+  const gridCustomizerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!gridCustomizerOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (gridCustomizerRef.current && !gridCustomizerRef.current.contains(e.target as Node)) {
+        setGridCustomizerOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [gridCustomizerOpen]);
+
+  const handleGridStyleChange = useCallback((style: GridLineStyle) => {
+    bus.emit(GridEvents.CONFIG_CHANGED, { canvasId: '', config: { gridLineStyle: style } });
+  }, []);
+
+  const handleGridColorChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    bus.emit(GridEvents.CONFIG_CHANGED, { canvasId: '', config: { gridLineColor: e.target.value } });
+  }, []);
+
+  const handleGridOpacityChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    bus.emit(GridEvents.CONFIG_CHANGED, { canvasId: '', config: { gridLineOpacity: Number(e.target.value) } });
+  }, []);
+
+  const handleGridWeightChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    bus.emit(GridEvents.CONFIG_CHANGED, { canvasId: '', config: { gridLineWidth: Number(e.target.value) } });
+  }, []);
+
   const isEditMode = mode === 'edit';
 
   return (
@@ -471,8 +513,122 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         fontFamily: 'var(--sn-font-family, system-ui)',
         fontSize: '13px',
         userSelect: 'none',
+        overflowX: 'auto',
+        overflowY: 'hidden',
       }}
     >
+      {/* Canvas name + Save button + status — always visible at the start */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+        {/* Editable canvas name */}
+        {canvasName !== undefined && (
+          isRenaming ? (
+            <input
+              ref={renameInputRef}
+              data-testid="canvas-name-input"
+              value={renameDraft}
+              onChange={(e) => setRenameDraft(e.target.value)}
+              onBlur={() => {
+                if (renameDraft.trim() && onRename) onRename(renameDraft.trim());
+                setIsRenaming(false);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  if (renameDraft.trim() && onRename) onRename(renameDraft.trim());
+                  setIsRenaming(false);
+                } else if (e.key === 'Escape') {
+                  setIsRenaming(false);
+                }
+              }}
+              style={{
+                fontWeight: 600,
+                fontSize: '13px',
+                fontFamily: 'inherit',
+                border: '1px solid var(--sn-accent, #6366f1)',
+                borderRadius: '4px',
+                padding: '2px 6px',
+                background: 'var(--sn-bg, #fff)',
+                color: 'var(--sn-text, #1a1a2e)',
+                outline: 'none',
+                width: '160px',
+                height: '26px',
+              }}
+            />
+          ) : (
+            <div
+              data-testid="canvas-name"
+              onDoubleClick={() => {
+                setRenameDraft(canvasName);
+                setIsRenaming(true);
+                setTimeout(() => renameInputRef.current?.select(), 0);
+              }}
+              title="Double-click to rename"
+              style={{
+                fontWeight: 600,
+                fontSize: '13px',
+                cursor: 'pointer',
+                maxWidth: '180px',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {canvasName}
+            </div>
+          )
+        )}
+
+        {/* Save button + status */}
+        {saveStatus && (
+          <>
+            <button
+              data-testid="save-btn"
+              onClick={onSave}
+              title="Save (Ctrl+S)"
+              style={{
+                ...smallBtnBase,
+                padding: '0 10px',
+                width: 'auto',
+                fontSize: '12px',
+                fontWeight: 600,
+              }}
+            >
+              Save
+            </button>
+            <div
+              data-testid="save-status"
+              title={SAVE_STATUS_LABELS[saveStatus]}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontSize: '11px',
+                color: 'var(--sn-text-muted, #6b7280)',
+              }}
+            >
+              <span
+                style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  background: SAVE_STATUS_COLORS[saveStatus],
+                  display: 'inline-block',
+                }}
+              />
+              {SAVE_STATUS_LABELS[saveStatus]}
+            </div>
+          </>
+        )}
+
+        <div
+          style={{
+            width: '1px',
+            height: '24px',
+            background: 'var(--sn-border, #e0e0e0)',
+            margin: '0 4px',
+          }}
+        />
+      </div>
+
       {/* Tool buttons — only shown in edit mode */}
       {isEditMode && (
         <div
@@ -672,6 +828,114 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                 <option value="hexagonal">Hexagonal</option>
               </select>
             )}
+
+            {/* Grid Customizer Popover */}
+            {gridConfig.enabled && (
+              <div ref={gridCustomizerRef} style={{ position: 'relative' }}>
+                <button
+                  data-testid="grid-customizer-toggle"
+                  onClick={() => setGridCustomizerOpen(!gridCustomizerOpen)}
+                  title="Grid appearance settings"
+                  style={{ ... (gridCustomizerOpen ? smallBtnActive : smallBtnBase), padding: '0 5px', width: 'auto', fontSize: '11px' }}
+                >
+                  {'\u2699'}
+                </button>
+                {gridCustomizerOpen && (
+                  <div
+                    data-testid="grid-customizer-popover"
+                    style={{
+                      position: 'absolute',
+                      top: '100%',
+                      right: 0,
+                      marginTop: 4,
+                      padding: '10px 12px',
+                      background: 'var(--sn-surface, #fff)',
+                      border: '1px solid var(--sn-border, #e0e0e0)',
+                      borderRadius: 'var(--sn-radius, 6px)',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                      zIndex: 100,
+                      minWidth: 180,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 8,
+                      fontSize: '11px',
+                      fontFamily: 'inherit',
+                      color: 'var(--sn-text, #1a1a2e)',
+                    }}
+                  >
+                    {/* Style selector */}
+                    <div>
+                      <div style={{ marginBottom: 4, fontWeight: 600 }}>Style</div>
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        {(['line', 'dot', 'cross'] as GridLineStyle[]).map((style) => (
+                          <button
+                            key={style}
+                            data-testid={`grid-style-${style}`}
+                            onClick={() => handleGridStyleChange(style)}
+                            style={{
+                              ...(gridConfig.gridLineStyle === style || (!gridConfig.gridLineStyle && style === 'line') ? smallBtnActive : smallBtnBase),
+                              padding: '2px 8px',
+                              fontSize: '11px',
+                              textTransform: 'capitalize',
+                            }}
+                          >
+                            {style}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Color */}
+                    <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span>Color</span>
+                      <input
+                        data-testid="grid-color-picker"
+                        type="color"
+                        value={gridConfig.gridLineColor?.startsWith('#') ? gridConfig.gridLineColor : '#ffffff'}
+                        onChange={handleGridColorChange}
+                        style={{ width: 28, height: 22, padding: 0, border: '1px solid var(--sn-border, #e0e0e0)', borderRadius: 3, cursor: 'pointer' }}
+                      />
+                    </label>
+
+                    {/* Opacity */}
+                    <label style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Opacity</span>
+                        <span style={{ color: 'var(--sn-text-muted, #888)' }}>{((gridConfig.gridLineOpacity ?? 0.1) * 100).toFixed(0)}%</span>
+                      </div>
+                      <input
+                        data-testid="grid-opacity-slider"
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.05"
+                        value={gridConfig.gridLineOpacity ?? 0.1}
+                        onChange={handleGridOpacityChange}
+                        style={{ width: '100%', cursor: 'pointer' }}
+                      />
+                    </label>
+
+                    {/* Weight */}
+                    <label style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Weight</span>
+                        <span style={{ color: 'var(--sn-text-muted, #888)' }}>{gridConfig.gridLineWidth ?? 1}px</span>
+                      </div>
+                      <input
+                        data-testid="grid-weight-slider"
+                        type="range"
+                        min="0.5"
+                        max="4"
+                        step="0.5"
+                        value={gridConfig.gridLineWidth ?? 1}
+                        onChange={handleGridWeightChange}
+                        style={{ width: '100%', cursor: 'pointer' }}
+                      />
+                    </label>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </>
       )}
@@ -714,35 +978,6 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             />
           </div>
         </>
-      )}
-
-      {/* Save status indicator */}
-      {saveStatus && (
-        <div
-          data-testid="save-status"
-          onClick={onSave}
-          title={`${SAVE_STATUS_LABELS[saveStatus]} (Ctrl+S to save)`}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-            marginLeft: '8px',
-            cursor: onSave ? 'pointer' : 'default',
-            fontSize: '11px',
-            color: 'var(--sn-text-muted, #6b7280)',
-          }}
-        >
-          <span
-            style={{
-              width: '8px',
-              height: '8px',
-              borderRadius: '50%',
-              background: SAVE_STATUS_COLORS[saveStatus],
-              display: 'inline-block',
-            }}
-          />
-          {SAVE_STATUS_LABELS[saveStatus]}
-        </div>
       )}
 
       {/* Spacer */}
@@ -818,6 +1053,20 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           <option value="mobile">Mobile</option>
           <option value="desktop">Desktop</option>
         </select>
+        {viewportConfig?.width && viewportConfig?.height && (
+          <span
+            data-testid="platform-dimensions"
+            title={`${canvasPlatform} canvas size`}
+            style={{
+              fontSize: '10px',
+              color: 'var(--sn-text-muted, #999)',
+              fontFamily: 'inherit',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {viewportConfig.width}&times;{viewportConfig.height}
+          </span>
+        )}
         <select
           data-testid="spatial-mode-select"
           value={spatialMode}

@@ -1,10 +1,14 @@
 /**
- * Dev Test Harness — comprehensive testing of event bus, canvas core, widgets, and pipelines
- * No styling commitments — pure functional testing
+ * Dev Test Harness — tabbed dev environment for testing, UI swatches, and split canvas.
+ *
+ * Three tabs:
+ *   Systems  — event bus, canvas core, widgets, pipelines (original panels)
+ *   Swatches — visual specimen sheet for the design system
+ *   Split    — side-by-side dual canvas view
  *
  * @module shell/dev
  * @layer L6
- * @version 2026-02-21-v4
+ * @version 2026-03-19-v5
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -25,6 +29,7 @@ import {
 } from '../../canvas/core';
 import type { BenchResult } from '../../kernel/bus';
 import { bus } from '../../kernel/bus';
+import { palette } from '../theme/theme-vars';
 
 import { CanvasCorePanel } from './panels/CanvasCorePanel';
 import { CrossCanvasPanel } from './panels/CrossCanvasPanel';
@@ -34,17 +39,48 @@ import { ImageGenerationPanel } from './panels/ImageGenerationPanel';
 import { MultiEntityCanvas } from './panels/MultiEntityCanvas';
 import { PipelinePanel } from './panels/PipelinePanel';
 import { SpatialCanvasPanel } from './panels/SpatialCanvasPanel';
+import { UISwatchesPanel } from './panels/UISwatchesPanel';
 import { VideoEditingPanel } from './panels/VideoEditingPanel';
 import { WidgetRuntimePanel } from './panels/WidgetRuntimePanel';
+import { SplitCanvasView } from './SplitCanvasView';
 import { type EntityType, createTestEntity } from './test-entity-factory';
 import { ThemeToggle } from './ThemeToggle';
+
+// ============================================================================
+// Tab Types & Config
+// ============================================================================
+
+type DevTab = 'systems' | 'swatches' | 'split';
+
+interface TabDef {
+  id: DevTab;
+  label: string;
+}
+
+const DEV_TABS: TabDef[] = [
+  { id: 'systems', label: 'Systems' },
+  { id: 'swatches', label: 'UI Swatches' },
+  { id: 'split', label: 'Split Canvas' },
+];
 
 
 // ============================================================================
 // Main Component
 // ============================================================================
 
-export const TestHarness: React.FC = () => {
+export const TestHarness: React.FC<{ initialTab?: DevTab }> = ({ initialTab }) => {
+  // ---- Tab State ----
+  const [activeTab, setActiveTab] = useState<DevTab>(() => {
+    // Support ?tab=swatches or ?tab=split in URL
+    if (initialTab) return initialTab;
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get('tab');
+      if (tab === 'swatches' || tab === 'split') return tab;
+    }
+    return 'systems';
+  });
+
   // ---- Event Bus State ----
   const [busHistory, setBusHistory] = useState<BusEvent[]>([]);
   const [benchResult, setBenchResult] = useState<BenchResult | null>(null);
@@ -236,58 +272,129 @@ export const TestHarness: React.FC = () => {
   const selectedEntity = selectedId ? sceneGraph.getEntity(selectedId) ?? null : null;
 
   return (
-    <div style={{ padding: 20, fontFamily: 'monospace', fontSize: 11, maxWidth: 1200, background: 'var(--sn-bg, #111827)', color: 'var(--sn-text, #e5e7eb)', minHeight: '100vh' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <h1 style={{ margin: 0 }}>StickerNest V5 Test Harness</h1>
-        <ThemeToggle />
-      </div>
-      <div style={{ background: 'var(--sn-surface, #1f2937)', padding: 10, marginBottom: 20, border: '1px solid var(--sn-border, #374151)' }}>
-        <strong>Stats:</strong> Total Events: {stats.totalEvents} | Events/sec: {stats.eventsPerSec} |
-        Entities: {entities.length} | Widgets: {activeWidgets.length} | Pipeline Nodes: {pipelineNodes.length}
+    <div style={{ background: 'var(--sn-bg, #111827)', color: 'var(--sn-text, #e5e7eb)', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      {/* ── Header + Tabs ───────────────────────────────────────── */}
+      <div style={{
+        padding: '12px 20px 0',
+        background: palette.surface,
+        borderBottom: `1px solid ${palette.border}`,
+        flexShrink: 0,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <h1 style={{ margin: 0, fontSize: 16, fontFamily: 'var(--sn-font-family)', fontWeight: 700 }}>StickerNest V5 Dev</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            {activeTab === 'systems' && (
+              <span style={{ fontSize: 11, fontFamily: 'monospace', color: palette.textMuted }}>
+                Events: {stats.totalEvents} | /sec: {stats.eventsPerSec} | Entities: {entities.length}
+              </span>
+            )}
+            <ThemeToggle />
+          </div>
+        </div>
+
+        {/* Tab bar */}
+        <div
+          role="tablist"
+          style={{
+            display: 'flex',
+            gap: 0,
+          }}
+        >
+          {DEV_TABS.map((tab) => {
+            const isActive = tab.id === activeTab;
+            return (
+              <button
+                key={tab.id}
+                role="tab"
+                aria-selected={isActive}
+                aria-controls={`devpanel-${tab.id}`}
+                onClick={() => setActiveTab(tab.id)}
+                style={{
+                  padding: '8px 20px',
+                  fontSize: 12,
+                  fontFamily: 'var(--sn-font-family)',
+                  fontWeight: isActive ? 600 : 400,
+                  color: isActive ? palette.text : palette.textMuted,
+                  background: 'transparent',
+                  border: 'none',
+                  borderBottom: isActive ? '2px solid var(--sn-storm)' : '2px solid transparent',
+                  cursor: 'pointer',
+                  transition: 'all 200ms cubic-bezier(0.16, 1, 0.3, 1)',
+                  outline: 'none',
+                }}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
-        <EventBusPanel
-          customEventType={customEventType} setCustomEventType={setCustomEventType}
-          customPayload={customPayload} setCustomPayload={setCustomPayload}
-          emitCustomEvent={emitCustomEvent} emitBurstEvents={emitBurstEvents}
-          runBenchmark={runBenchmark}
-          wildcardSub={wildcardSub} setWildcardSub={setWildcardSub}
-          addWildcardSubscription={addWildcardSubscription} activeWildcards={activeWildcards}
-          benchResult={benchResult} eventFilter={eventFilter} setEventFilter={setEventFilter}
-          busHistory={busHistory} clearHistory={() => setBusHistory([])}
-        />
-        <CanvasCorePanel
-          viewport={viewport} onPan={handlePan} onZoom={handleZoom}
-          onResetViewport={() => setViewport(createViewport(800, 600))}
-          testPoint={testPoint} screenPoint={screenPoint} backToCanvas={backToCanvas}
-          entityType={entityType} setEntityType={setEntityType}
-          addEntity={addEntity} addMultipleEntities={addMultipleEntities}
-          clearAllEntities={clearAllEntities}
-          selectedEntity={selectedEntity} selectedId={selectedId}
-          moveSelectedEntity={moveSelectedEntity} bringToFront={bringToFront}
-          sendToBack={sendToBack} bringForward={bringForward}
-          sendBackward={sendBackward} removeEntity={removeEntity}
-          entities={entities} selectEntity={selectEntity}
-          hitTestCoords={hitTestCoords} setHitTestCoords={setHitTestCoords}
-          runHitTest={runHitTest} hitTestResult={hitTestResult}
-        />
-        <WidgetRuntimePanel
-          activeWidgets={activeWidgets} addWidget={addWidget}
-          removeWidget={removeWidget} clearWidgets={() => setActiveWidgets([])}
-          updateWidgetChannel={updateWidgetChannel}
-        />
-        <CrossCanvasPanel />
-        <PipelinePanel
-          pipelineNodes={pipelineNodes} pipelineEdges={pipelineEdges}
-          addPipelineNode={addPipelineNode} connectNodes={connectNodes}
-          clearPipeline={() => { setPipelineNodes([]); setPipelineEdges([]); }}
-        />
-        <VideoEditingPanel />
-        <ImageGenerationPanel />
-        <MultiEntityCanvas />
-        <SpatialCanvasPanel />
-        <GridLayerPanel />
+      {/* ── Tab Content ─────────────────────────────────────────── */}
+      <div style={{ flex: 1, overflow: 'auto' }}>
+        {activeTab === 'systems' && (
+          <div
+            id="devpanel-systems"
+            role="tabpanel"
+            style={{ padding: 20, fontFamily: 'monospace', fontSize: 11, maxWidth: 1200 }}
+          >
+            <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+              <EventBusPanel
+                customEventType={customEventType} setCustomEventType={setCustomEventType}
+                customPayload={customPayload} setCustomPayload={setCustomPayload}
+                emitCustomEvent={emitCustomEvent} emitBurstEvents={emitBurstEvents}
+                runBenchmark={runBenchmark}
+                wildcardSub={wildcardSub} setWildcardSub={setWildcardSub}
+                addWildcardSubscription={addWildcardSubscription} activeWildcards={activeWildcards}
+                benchResult={benchResult} eventFilter={eventFilter} setEventFilter={setEventFilter}
+                busHistory={busHistory} clearHistory={() => setBusHistory([])}
+              />
+              <CanvasCorePanel
+                viewport={viewport} onPan={handlePan} onZoom={handleZoom}
+                onResetViewport={() => setViewport(createViewport(800, 600))}
+                testPoint={testPoint} screenPoint={screenPoint} backToCanvas={backToCanvas}
+                entityType={entityType} setEntityType={setEntityType}
+                addEntity={addEntity} addMultipleEntities={addMultipleEntities}
+                clearAllEntities={clearAllEntities}
+                selectedEntity={selectedEntity} selectedId={selectedId}
+                moveSelectedEntity={moveSelectedEntity} bringToFront={bringToFront}
+                sendToBack={sendToBack} bringForward={bringForward}
+                sendBackward={sendBackward} removeEntity={removeEntity}
+                entities={entities} selectEntity={selectEntity}
+                hitTestCoords={hitTestCoords} setHitTestCoords={setHitTestCoords}
+                runHitTest={runHitTest} hitTestResult={hitTestResult}
+              />
+              <WidgetRuntimePanel
+                activeWidgets={activeWidgets} addWidget={addWidget}
+                removeWidget={removeWidget} clearWidgets={() => setActiveWidgets([])}
+                updateWidgetChannel={updateWidgetChannel}
+              />
+              <CrossCanvasPanel />
+              <PipelinePanel
+                pipelineNodes={pipelineNodes} pipelineEdges={pipelineEdges}
+                addPipelineNode={addPipelineNode} connectNodes={connectNodes}
+                clearPipeline={() => { setPipelineNodes([]); setPipelineEdges([]); }}
+              />
+              <VideoEditingPanel />
+              <ImageGenerationPanel />
+              <MultiEntityCanvas />
+              <SpatialCanvasPanel />
+              <GridLayerPanel />
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'swatches' && (
+          <div id="devpanel-swatches" role="tabpanel">
+            <UISwatchesPanel />
+          </div>
+        )}
+
+        {activeTab === 'split' && (
+          <div id="devpanel-split" role="tabpanel" style={{ height: 'calc(100vh - 90px)' }}>
+            <SplitCanvasView />
+          </div>
+        )}
       </div>
     </div>
   );

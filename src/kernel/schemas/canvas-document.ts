@@ -119,6 +119,8 @@ export const ViewportConfigSchema = z.object({
   background: BackgroundSpecSchema.default(DEFAULT_BACKGROUND),
   /** Whether the viewport is in preview mode (showing one artboard) */
   isPreviewMode: z.boolean().optional(),
+  /** Canvas size mode: 'infinite' fills workspace, 'bounded' renders as artboard */
+  sizeMode: z.enum(['infinite', 'bounded']).default('infinite'),
 });
 
 export type ViewportConfig = z.infer<typeof ViewportConfigSchema>;
@@ -202,10 +204,11 @@ export const CanvasDocumentSchema = z.object({
   /** Viewport configuration (dimensions and background) */
   viewport: ViewportConfigSchema.default({
     background: DEFAULT_BACKGROUND,
+    sizeMode: 'infinite' as const,
     isPreviewMode: false,
   }),
   /** Configurations per platform (width/height) */
-  platformConfigs: z.record(CanvasPlatformSchema, ViewportConfigSchema).optional(),
+  platformConfigs: z.record(z.string(), ViewportConfigSchema).optional(),
   /** All entities on the canvas */
   entities: z.array(CanvasEntitySchema).default([]),
   /** Layout mode for entity positioning */

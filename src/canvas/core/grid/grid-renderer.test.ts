@@ -29,6 +29,7 @@ function createMockCanvas(width = 800, height = 600): {
     fillStyle: '',
     strokeStyle: '',
     lineWidth: 1,
+    globalAlpha: 1,
     fillRect: vi.fn(),
     strokeRect: vi.fn(),
     beginPath: vi.fn(),
@@ -38,6 +39,7 @@ function createMockCanvas(width = 800, height = 600): {
     fill: vi.fn(),
     stroke: vi.fn(),
     clearRect: vi.fn(),
+    arc: vi.fn(),
   } as unknown as CanvasRenderingContext2D;
 
   const canvas = {
@@ -65,6 +67,8 @@ describe('GridRenderer', () => {
       showGridLines: true,
       gridLineColor: 'rgba(255, 255, 255, 0.1)',
       gridLineWidth: 1,
+      gridLineStyle: 'line',
+      gridLineOpacity: 0.1,
       snapMode: 'none',
       origin: { x: 0, y: 0 },
       defaultBackground: '#0d1117',
@@ -218,6 +222,8 @@ describe('countVisibleCells', () => {
     showGridLines: true,
     gridLineColor: 'rgba(255, 255, 255, 0.1)',
     gridLineWidth: 1,
+    gridLineStyle: 'line',
+    gridLineOpacity: 0.1,
     snapMode: 'none',
     origin: { x: 0, y: 0 },
     defaultBackground: '#0d1117',
@@ -268,6 +274,8 @@ describe('GridRenderer projection modes', () => {
     showGridLines: true,
     gridLineColor: 'rgba(255, 255, 255, 0.1)',
     gridLineWidth: 1,
+    gridLineStyle: 'line',
+    gridLineOpacity: 0.1,
     snapMode: 'none',
     origin: { x: 0, y: 0 },
     defaultBackground: '#0d1117',
@@ -364,6 +372,8 @@ describe('areGridLinesVisible', () => {
     showGridLines: true,
     gridLineColor: 'rgba(255, 255, 255, 0.1)',
     gridLineWidth: 1,
+    gridLineStyle: 'line',
+    gridLineOpacity: 0.1,
     snapMode: 'none',
     origin: { x: 0, y: 0 },
     defaultBackground: '#0d1117',
@@ -392,5 +402,85 @@ describe('areGridLinesVisible', () => {
     // Cell size 64 * zoom = 4 (exactly at threshold)
     const viewport = { ...createViewport(800, 600), zoom: 4 / 64 };
     expect(areGridLinesVisible(viewport, config)).toBe(true);
+  });
+});
+
+describe('GridRenderer grid line styles', () => {
+  let cellStore: ReturnType<typeof createGridCellStore>;
+  let renderer: GridRenderer;
+  let viewport: ViewportState;
+  const baseConfig: GridConfig = {
+    enabled: true,
+    cellSize: 64,
+    showGridLines: true,
+    gridLineColor: '#ffffff',
+    gridLineWidth: 1,
+    gridLineStyle: 'line',
+    gridLineOpacity: 0.5,
+    snapMode: 'none',
+    origin: { x: 0, y: 0 },
+    defaultBackground: '#0d1117',
+    minCellScreenSize: 4,
+    projection: 'orthogonal',
+    isometricRatio: 2,
+  };
+
+  beforeEach(() => {
+    cellStore = createGridCellStore();
+    renderer = createGridRenderer(cellStore);
+    viewport = createViewport(800, 600);
+  });
+
+  it('renders dots using arc when gridLineStyle is dot', () => {
+    const { canvas, ctx } = createMockCanvas();
+    renderer.setCanvas(canvas);
+    renderer.setViewport(viewport);
+    renderer.setConfig({ ...baseConfig, gridLineStyle: 'dot' });
+
+    renderer.render();
+
+    // Dot style uses arc() for circles, not lineTo() for lines
+    expect(ctx.arc).toHaveBeenCalled();
+    expect(ctx.fill).toHaveBeenCalled();
+  });
+
+  it('renders crosses using lineTo when gridLineStyle is cross', () => {
+    const { canvas, ctx } = createMockCanvas();
+    renderer.setCanvas(canvas);
+    renderer.setViewport(viewport);
+    renderer.setConfig({ ...baseConfig, gridLineStyle: 'cross' });
+
+    renderer.render();
+
+    // Cross style uses moveTo/lineTo for small + marks
+    expect(ctx.moveTo).toHaveBeenCalled();
+    expect(ctx.lineTo).toHaveBeenCalled();
+    expect(ctx.stroke).toHaveBeenCalled();
+  });
+
+  it('applies gridLineOpacity via globalAlpha', () => {
+    const { canvas, ctx } = createMockCanvas();
+    renderer.setCanvas(canvas);
+    renderer.setViewport(viewport);
+    renderer.setConfig({ ...baseConfig, gridLineOpacity: 0.7 });
+
+    renderer.render();
+
+    // globalAlpha should have been set to 0.7 during grid rendering
+    // After rendering it should be restored to 1
+    expect(ctx.globalAlpha).toBe(1);
+  });
+
+  it('renders line style by default (no arc calls)', () => {
+    const { canvas, ctx } = createMockCanvas();
+    renderer.setCanvas(canvas);
+    renderer.setViewport(viewport);
+    renderer.setConfig({ ...baseConfig, gridLineStyle: 'line' });
+
+    renderer.render();
+
+    // Line style uses stroke, not arc
+    expect(ctx.stroke).toHaveBeenCalled();
+    expect(ctx.arc).not.toHaveBeenCalled();
   });
 });

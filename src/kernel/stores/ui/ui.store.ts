@@ -7,7 +7,7 @@ import { create } from 'zustand';
 import { devtools, subscribeWithSelector } from 'zustand/middleware';
 
 import type { BusEvent, CanvasPlatform, SpatialMode, ViewportConfig } from '@sn/types';
-import { CanvasEvents, ShellEvents, InteractionModeEvents } from '@sn/types';
+import { CanvasEvents, CanvasDocumentEvents, ShellEvents, InteractionModeEvents } from '@sn/types';
 
 import { bus } from '../../bus';
 
@@ -132,7 +132,10 @@ export const useUIStore = create<UIStore>()(
         })),
 
             setSpatialMode: (spatialMode) => set({ spatialMode }),
-            setCanvasPlatform: (canvasPlatform) => set({ canvasPlatform }),
+            setCanvasPlatform: (canvasPlatform) => {
+              set({ canvasPlatform });
+              bus.emit(CanvasDocumentEvents.PLATFORM_CHANGED, { platform: canvasPlatform });
+            },
             setPlatformConfig: (platform, config) =>
               set((state) => ({
                 platformConfigs: {

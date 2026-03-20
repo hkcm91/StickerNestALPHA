@@ -302,6 +302,7 @@ describe('CanvasSettingsDropdown', () => {
           onClose={vi.fn()}
           anchorRef={anchorRef}
           viewportConfig={{
+            sizeMode: 'infinite',
             background: {
               type: 'image',
               url: 'https://example.com/bg.jpg',
@@ -408,6 +409,7 @@ describe('CanvasSettingsDropdown', () => {
           viewportConfig={{
             width: 1920,
             height: 1080,
+            sizeMode: 'bounded',
             background: { type: 'solid', color: '#ffffff', opacity: 1 },
           }}
         />,
@@ -635,6 +637,7 @@ describe('CanvasSettingsDropdown', () => {
           onClose={vi.fn()}
           anchorRef={anchorRef}
           viewportConfig={{
+            sizeMode: 'infinite',
             background: {
               type: 'solid',
               color: '#ff0000',
@@ -658,6 +661,7 @@ describe('CanvasSettingsDropdown', () => {
           onClose={vi.fn()}
           anchorRef={anchorRef}
           viewportConfig={{
+            sizeMode: 'infinite',
             background: {
               type: 'gradient',
               gradientType: 'radial',

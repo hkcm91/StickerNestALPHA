@@ -14,7 +14,7 @@ import { bus } from '../../kernel/bus';
 import { NotionPermissionModal } from '../components/NotionPermissionModal';
 import { ToastContainer } from '../components/ToastContainer';
 import { DataManagerPage } from '../data';
-import { TestHarness, SplitCanvasView } from '../dev';
+import { TestHarness } from '../dev';
 import { EmbedPage } from '../pages/EmbedPage';
 import { PricingPage } from '../pages/PricingPage';
 import { ProfilePage } from '../profile';
@@ -39,10 +39,8 @@ import { AuthGuard, TierGuard } from './route-guards';
  * (allowed by the L6-forbidden-imports rule).
  */
 const LazyLabPage = React.lazy(() =>
-  import('../../lab').then(() => ({
-    default: () => React.createElement('div', { 'data-testid': 'page-lab' },
-      React.createElement('h1', null, 'Widget Lab'),
-    ),
+  import('../../lab').then((mod) => ({
+    default: mod.LabPage,
   })),
 );
 
@@ -117,7 +115,7 @@ export const AppRouter: React.FC = () => {
       <Route path="/pricing" element={<PricingPage />} />
       <Route path="/invite/:token" element={<InvitePage />} />
       <Route path="/dev/test" element={<TestHarness />} />
-      <Route path="/dev/split" element={<SplitCanvasView />} />
+      <Route path="/dev/split" element={<TestHarness initialTab="split" />} />
 
       <Route
         path="/"

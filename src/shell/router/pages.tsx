@@ -11,7 +11,7 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import type { BackgroundSpec, CanvasEntity, StickerEntity, ViewportConfig } from '@sn/types';
 import { CanvasDocumentEvents, CanvasEvents, DEFAULT_BACKGROUND, DockerEvents } from '@sn/types';
 
-import { initCanvasCore, teardownCanvasCore } from '../../canvas/core';
+import { initCanvasCore, teardownCanvasCore, project2Dto3D } from '../../canvas/core';
 import type { SceneGraph } from '../../canvas/core';
 // Canvas sub-layer init/teardown loaded via dynamic import (L6 boundary rule allows dynamic imports only)
 import { bus } from '../../kernel/bus';
@@ -32,6 +32,9 @@ import {
   useSceneGraph,
   usePersistence,
   createLocalCanvas,
+  deleteLocalCanvas,
+  duplicateLocalCanvas,
+  renameLocalCanvas,
   ensureLocalCanvas,
   listLocalCanvases,
 } from '../canvas';
@@ -150,18 +153,74 @@ export const LoginPage: React.FC = () => {
   );
 };
 
+const galleryActionBtnStyle: React.CSSProperties = {
+  border: `1px solid var(--sn-border, #ddd)`,
+  background: 'transparent',
+  color: 'var(--sn-text, #111)',
+  borderRadius: '4px',
+  padding: '4px 10px',
+  cursor: 'pointer',
+  fontFamily: 'inherit',
+  fontSize: '12px',
+};
+
 export const CanvasGalleryPage: React.FC = () => {
   const navigate = useNavigate();
   const [items, setItems] = useState<LocalCanvasSummary[]>([]);
+  const [editingSlug, setEditingSlug] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState('');
+  const renameInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
+  const refreshList = useCallback(() => {
     setItems(listLocalCanvases());
   }, []);
+
+  useEffect(() => {
+    refreshList();
+  }, [refreshList]);
 
   const handleCreate = useCallback(() => {
     const created = createLocalCanvas();
     navigate(`/canvas/${created.slug}`);
   }, [navigate]);
+
+  const handleDuplicate = useCallback((slug: string) => {
+    const copy = duplicateLocalCanvas(slug);
+    if (copy) {
+      refreshList();
+      navigate(`/canvas/${copy.slug}`);
+    }
+  }, [navigate, refreshList]);
+
+  const handleDelete = useCallback((slug: string, name: string) => {
+    if (!window.confirm(`Delete "${name}"? This will permanently remove the canvas and all its data.`)) {
+      return;
+    }
+    deleteLocalCanvas(slug);
+    refreshList();
+  }, [refreshList]);
+
+  const startRename = useCallback((slug: string, name: string) => {
+    setEditingSlug(slug);
+    setEditingName(name);
+    setTimeout(() => renameInputRef.current?.select(), 0);
+  }, []);
+
+  const commitRename = useCallback(() => {
+    if (editingSlug && editingName.trim()) {
+      renameLocalCanvas(editingSlug, editingName);
+      refreshList();
+    }
+    setEditingSlug(null);
+  }, [editingSlug, editingName, refreshList]);
+
+  const handleRenameKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      commitRename();
+    } else if (e.key === 'Escape') {
+      setEditingSlug(null);
+    }
+  }, [commitRename]);
 
   return (
     <div data-testid="page-canvas-gallery" style={appPageStyle}>
@@ -199,12 +258,75 @@ export const CanvasGalleryPage: React.FC = () => {
                 background: themeVar('--sn-surface'),
               }}
             >
-              <div style={{ fontWeight: 600 }}>{item.name}</div>
-              <div style={{ fontSize: '12px', opacity: 0.75, marginTop: '4px' }}>
-                /canvas/{item.slug}
-              </div>
-              <div style={{ marginTop: '8px' }}>
-                <Link to={`/canvas/${item.slug}`}>Open</Link>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  {editingSlug === item.slug ? (
+                    <input
+                      ref={renameInputRef}
+                      data-testid={`canvas-rename-input-${item.slug}`}
+                      value={editingName}
+                      onChange={(e) => setEditingName(e.target.value)}
+                      onBlur={commitRename}
+                      onKeyDown={handleRenameKeyDown}
+                      style={{
+                        fontWeight: 600,
+                        fontSize: 'inherit',
+                        fontFamily: 'inherit',
+                        border: `1px solid var(--sn-accent, #6366f1)`,
+                        borderRadius: '4px',
+                        padding: '2px 6px',
+                        background: themeVar('--sn-bg'),
+                        color: themeVar('--sn-text'),
+                        outline: 'none',
+                        width: '200px',
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{ fontWeight: 600, cursor: 'pointer' }}
+                      onDoubleClick={() => startRename(item.slug, item.name)}
+                      title="Double-click to rename"
+                    >
+                      {item.name}
+                    </div>
+                  )}
+                  <div style={{ fontSize: '12px', opacity: 0.75, marginTop: '4px' }}>
+                    /canvas/{item.slug}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                  <Link
+                    to={`/canvas/${item.slug}`}
+                    style={{ ...galleryActionBtnStyle, textDecoration: 'none' }}
+                    data-testid={`canvas-open-${item.slug}`}
+                  >
+                    Open
+                  </Link>
+                  <button
+                    type="button"
+                    style={galleryActionBtnStyle}
+                    onClick={() => startRename(item.slug, item.name)}
+                    data-testid={`canvas-rename-${item.slug}`}
+                  >
+                    Rename
+                  </button>
+                  <button
+                    type="button"
+                    style={galleryActionBtnStyle}
+                    onClick={() => handleDuplicate(item.slug)}
+                    data-testid={`canvas-duplicate-${item.slug}`}
+                  >
+                    Duplicate
+                  </button>
+                  <button
+                    type="button"
+                    style={{ ...galleryActionBtnStyle, color: '#dc2626' }}
+                    onClick={() => handleDelete(item.slug, item.name)}
+                    data-testid={`canvas-delete-${item.slug}`}
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
             </li>
           ))}
@@ -306,24 +428,40 @@ export const CanvasPage: React.FC = () => {
   // Canvas settings state — wired to CanvasSettingsDropdown events
   const [viewportConfig, setViewportConfig] = useState<ViewportConfig>({
     background: DEFAULT_BACKGROUND,
+    sizeMode: 'infinite',
     isPreviewMode: false,
   });
 
-  // Sync viewport size when platform changes
+  // Get viewport store for toolbar zoom controls (must be before effects that reference it)
+  const { store: viewportStore } = useViewport();
+
+  // Sync viewport size and sizeMode when platform changes; fit bounded canvases
   useEffect(() => {
     const config = platformConfigs[canvasPlatform];
     if (config) {
-      setViewportConfig((prev) => ({
-        ...prev,
-        width: config.width,
-        height: config.height,
-      }));
+      setViewportConfig((prev) => {
+        const nextSizeMode = config.sizeMode ?? prev.sizeMode;
+        // Bail out (return same reference) if nothing changed — prevents re-render cycle
+        if (prev.width === config.width && prev.height === config.height && prev.sizeMode === nextSizeMode) {
+          return prev;
+        }
+        return { ...prev, width: config.width, height: config.height, sizeMode: nextSizeMode };
+      });
+      // Auto-fit viewport to bounded canvas on platform switch
+      const sizeMode = config.sizeMode ?? 'infinite';
+      if (sizeMode === 'bounded' && config.width && config.height) {
+        viewportStore.fitToCanvas(config.width, config.height);
+      }
     }
-  }, [canvasPlatform, platformConfigs]);
+  }, [canvasPlatform, platformConfigs, viewportStore]);
 
   // Update platformConfigs in store when viewportConfig changes (if linked)
   useEffect(() => {
     if (viewportConfig.width && viewportConfig.height) {
+      // Read current store value imperatively to avoid writing identical data
+      // (which would create a new object reference and re-trigger the platform sync effect above)
+      const current = useUIStore.getState().platformConfigs[canvasPlatform];
+      if (current?.width === viewportConfig.width && current?.height === viewportConfig.height) return;
       setPlatformConfig(canvasPlatform, {
         width: viewportConfig.width,
         height: viewportConfig.height,
@@ -449,9 +587,6 @@ export const CanvasPage: React.FC = () => {
       seededRef.current = false;
     };
   }, [canvasKey, isCommerceDemo, isDemo]);
-
-  // Get viewport store for toolbar zoom controls
-  const { store: viewportStore } = useViewport();
 
   // Subscribe to scene graph changes for sidebar panels
   const entities = useSceneGraph(sceneGraph);
@@ -678,11 +813,12 @@ export const CanvasPage: React.FC = () => {
 
     const unsubVp = bus.subscribe(
       CanvasDocumentEvents.VIEWPORT_CHANGED,
-      (event: { payload: { viewport: { width?: number; height?: number } } }) => {
+      (event: { payload: { viewport: { width?: number; height?: number; sizeMode?: 'infinite' | 'bounded' } } }) => {
         setViewportConfig((prev) => ({
           ...prev,
           width: event.payload.viewport.width,
           height: event.payload.viewport.height,
+          ...(event.payload.viewport.sizeMode ? { sizeMode: event.payload.viewport.sizeMode } : {}),
         }));
       },
     );
@@ -706,11 +842,26 @@ export const CanvasPage: React.FC = () => {
       },
     );
 
+    // 2D↔3D sync: project entity transforms when syncTransform2d3d is enabled
+    const unsubSync = bus.subscribe(
+      CanvasEvents.ENTITY_MOVED,
+      (event: { payload: { id: string; transform: any } }) => {
+        const entity = sceneGraph?.getEntity(event.payload.id);
+        if (!entity || entity.syncTransform2d3d === false) return;
+        const spatialTransform = project2Dto3D(event.payload.transform ?? entity.transform);
+        bus.emit(CanvasEvents.ENTITY_UPDATED, {
+          id: entity.id,
+          updates: { spatialTransform },
+        });
+      },
+    );
+
     return () => {
       unsubBg();
       unsubVp();
       unsubBr();
       unsubPos();
+      unsubSync();
     };
   }, []);
 
@@ -780,6 +931,15 @@ export const CanvasPage: React.FC = () => {
     setEntityToEditAsSticker(null);
   }, []);
 
+  // Handle canvas rename from toolbar
+  const handleCanvasRename = useCallback((newName: string) => {
+    if (!canvasSummary) return;
+    const updated = renameLocalCanvas(canvasSummary.slug, newName);
+    if (updated) {
+      setCanvasSummary(updated);
+    }
+  }, [canvasSummary]);
+
   return (
     <div
       data-testid="page-canvas"
@@ -798,6 +958,8 @@ export const CanvasPage: React.FC = () => {
             viewportStore={viewportStore}
             saveStatus={persistence.status}
             onSave={persistence.save}
+            canvasName={canvasSummary?.name}
+            onRename={handleCanvasRename}
             viewportConfig={viewportConfig}
             borderRadius={borderRadius}
             canvasPosition={canvasPosition}
@@ -840,11 +1002,22 @@ export const CanvasPage: React.FC = () => {
         >
           <div
             style={{
-              width: viewportConfig.width ? `${viewportConfig.width}px` : 'min(1600px, 100%)',
-              height: viewportConfig.height ? `${viewportConfig.height}px` : 'min(960px, 100%)',
+              width:
+                viewportConfig.sizeMode === 'bounded' && viewportConfig.width
+                  ? `${viewportConfig.width}px`
+                  : '100%',
+              height:
+                viewportConfig.sizeMode === 'bounded' && viewportConfig.height
+                  ? `${viewportConfig.height}px`
+                  : '100%',
               borderRadius: `${borderRadius}px`,
               overflow: 'hidden',
               flexShrink: 0,
+              transition: 'width 200ms ease, height 200ms ease',
+              boxShadow:
+                viewportConfig.sizeMode === 'bounded'
+                  ? '0 0 0 1px var(--sn-border), 0 4px 24px rgba(0,0,0,0.12)'
+                  : 'none',
             }}
           >
             <CanvasWorkspace

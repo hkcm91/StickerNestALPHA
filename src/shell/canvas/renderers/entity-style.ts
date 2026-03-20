@@ -5,7 +5,7 @@
  * @layer L6
  */
 
-import type { CanvasEntityBase } from "@sn/types";
+import type { CanvasEntityBase, Transform2D } from "@sn/types";
 
 /** 
  * Multiplier for rendering assets at higher resolution than their canvas size.
@@ -37,8 +37,9 @@ function cropToClipPath(
  */
 export function entityTransformStyle(
   entity: CanvasEntityBase,
+  transformOverride?: Transform2D,
 ): React.CSSProperties {
-  const { position, size, rotation, scale } = entity.transform;
+  const { position, size, rotation, scale } = transformOverride ?? entity.transform;
 
   // Center-based positioning: offset by half the size so the entity's
   // center aligns with the position coordinate
@@ -75,11 +76,11 @@ export function entityTransformStyle(
  * Get the top-left corner position from a center-based entity transform.
  * Useful for bounding box calculations.
  */
-export function getEntityTopLeft(entity: CanvasEntityBase): {
+export function getEntityTopLeft(entity: CanvasEntityBase, transformOverride?: Transform2D): {
   x: number;
   y: number;
 } {
-  const { position, size } = entity.transform;
+  const { position, size } = transformOverride ?? entity.transform;
   return {
     x: position.x - size.width / 2,
     y: position.y - size.height / 2,
@@ -89,13 +90,13 @@ export function getEntityTopLeft(entity: CanvasEntityBase): {
 /**
  * Get the bounding box for an entity (min/max corners).
  */
-export function getEntityBoundingBox(entity: CanvasEntityBase): {
+export function getEntityBoundingBox(entity: CanvasEntityBase, transformOverride?: Transform2D): {
   minX: number;
   minY: number;
   maxX: number;
   maxY: number;
 } {
-  const { position, size } = entity.transform;
+  const { position, size } = transformOverride ?? entity.transform;
   const halfW = size.width / 2;
   const halfH = size.height / 2;
   return {

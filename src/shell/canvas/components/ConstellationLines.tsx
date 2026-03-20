@@ -11,6 +11,8 @@
 import React from "react";
 
 import type { SceneGraph } from "../../../canvas/core";
+import { resolveEntityTransform } from "../../../canvas/core";
+import { useUIStore } from "../../../kernel/stores/ui/ui.store";
 import { getEntityBoundingBox } from "../renderers/entity-style";
 
 export interface ConstellationLinesProps {
@@ -28,6 +30,8 @@ export const ConstellationLines: React.FC<ConstellationLinesProps> = ({
   sceneGraph,
   interactionMode,
 }) => {
+  const platform = useUIStore((s) => s.canvasPlatform);
+
   if (interactionMode !== "edit") return null;
   if (selectedIds.size < 2) return null;
   if (!sceneGraph) return null;
@@ -37,7 +41,8 @@ export const ConstellationLines: React.FC<ConstellationLinesProps> = ({
   for (const id of selectedIds) {
     const entity = sceneGraph.getEntity(id);
     if (!entity) continue;
-    const bounds = getEntityBoundingBox(entity);
+    const resolvedTransform = resolveEntityTransform(entity, platform);
+    const bounds = getEntityBoundingBox(entity, resolvedTransform);
     centers.push({
       id,
       x: (bounds.minX + bounds.maxX) / 2,
@@ -79,7 +84,7 @@ export const ConstellationLines: React.FC<ConstellationLinesProps> = ({
           y1={line.y1}
           x2={line.x2}
           y2={line.y2}
-          stroke="var(--sn-accent, #3E7D94)"
+          stroke="var(--sn-accent, #4E7B8E)"
           strokeWidth="1"
           strokeDasharray="4 6"
           opacity="0.25"

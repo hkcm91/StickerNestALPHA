@@ -144,6 +144,80 @@ export function createLocalCanvas(input?: { name?: string; slug?: string }): Loc
   return upsertLocalCanvas(summary);
 }
 
+export function renameLocalCanvas(slug: string, newName: string): LocalCanvasSummary | null {
+  const index = readCanvasIndex();
+  const entry = index.items.find((item) => item.slug === slug);
+  if (!entry) return null;
+
+  const now = new Date().toISOString();
+  const updated: LocalCanvasSummary = { ...entry, name: newName.trim(), updatedAt: now };
+  upsertLocalCanvas(updated);
+
+  // Update name inside stored document if it exists
+  const raw = localStorage.getItem(getStorageKey(slug));
+  if (raw) {
+    try {
+      const doc = JSON.parse(raw);
+      if (doc.meta) {
+        doc.meta.name = updated.name;
+        doc.meta.updatedAt = now;
+      }
+      localStorage.setItem(getStorageKey(slug), JSON.stringify(doc));
+    } catch {
+      // ignore parse errors
+    }
+  }
+
+  return updated;
+}
+
+export function deleteLocalCanvas(slug: string): void {
+  const index = readCanvasIndex();
+  const nextItems = index.items.filter((item) => item.slug !== slug);
+  writeCanvasIndex({ items: nextItems });
+  localStorage.removeItem(getStorageKey(slug));
+}
+
+export function duplicateLocalCanvas(slug: string): LocalCanvasSummary | null {
+  const index = readCanvasIndex();
+  const source = index.items.find((item) => item.slug === slug);
+  if (!source) return null;
+
+  const raw = localStorage.getItem(getStorageKey(slug));
+  const now = new Date().toISOString();
+  const existingSlugs = new Set(index.items.map((item) => item.slug));
+  const newSlug = pickUniqueSlug(`${slug}-copy`, existingSlugs);
+  const newId = createUuid();
+  const newName = `${source.name} (copy)`;
+
+  const summary: LocalCanvasSummary = {
+    id: newId,
+    slug: newSlug,
+    name: newName,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  upsertLocalCanvas(summary);
+
+  if (raw) {
+    try {
+      const doc = JSON.parse(raw);
+      if (doc.meta) {
+        doc.meta.id = newId;
+        doc.meta.name = newName;
+        doc.meta.createdAt = now;
+        doc.meta.updatedAt = now;
+      }
+      localStorage.setItem(getStorageKey(newSlug), JSON.stringify(doc));
+    } catch {
+      // If parsing fails, duplicate without data
+    }
+  }
+
+  return summary;
+}
+
 export function ensureLocalCanvas(input: { slug: string; fallbackName?: string }): LocalCanvasSummary {
   const normalizedSlug = slugifyCanvasName(input.slug);
   const existing = getLocalCanvasBySlug(normalizedSlug);

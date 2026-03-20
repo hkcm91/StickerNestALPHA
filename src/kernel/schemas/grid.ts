@@ -62,6 +62,15 @@ export const GridProjectionModeSchema = z.enum(['orthogonal', 'isometric', 'tria
 export type GridProjectionMode = z.infer<typeof GridProjectionModeSchema>;
 
 /**
+ * Grid line style — how grid markers are rendered
+ * - line: traditional continuous grid lines
+ * - dot: dots at cell corner intersections
+ * - cross: small crosshair marks at intersections
+ */
+export const GridLineStyleSchema = z.enum(['line', 'dot', 'cross']);
+export type GridLineStyle = z.infer<typeof GridLineStyleSchema>;
+
+/**
  * Grid configuration options
  */
 export const GridConfigSchema = z.object({
@@ -75,6 +84,10 @@ export const GridConfigSchema = z.object({
   gridLineColor: z.string().default('rgba(255, 255, 255, 0.1)'),
   /** Width of grid lines in pixels */
   gridLineWidth: z.number().positive().default(1),
+  /** Grid line rendering style */
+  gridLineStyle: GridLineStyleSchema.default('line'),
+  /** Grid line opacity (0–1), applied independently of gridLineColor */
+  gridLineOpacity: z.number().min(0).max(1).default(0.1),
   /** Snap mode for widget placement */
   snapMode: GridSnapModeSchema.default('none'),
   /** Grid origin offset (for aligning grid to specific coordinates) */

@@ -21,6 +21,9 @@ export type { SelectionStore } from './useSelection';
 export {
   usePersistence,
   createLocalCanvas,
+  deleteLocalCanvas,
+  duplicateLocalCanvas,
+  renameLocalCanvas,
   ensureLocalCanvas,
   getLocalCanvasBySlug,
   listLocalCanvases,

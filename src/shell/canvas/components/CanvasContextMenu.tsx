@@ -255,7 +255,7 @@ const ContextMenuItem: React.FC<{
         padding: "8px 12px",
         borderRadius: 8,
         background: hovered && !item.disabled
-          ? "color-mix(in srgb, var(--sn-accent, #3E7D94) 10%, transparent)"
+          ? "color-mix(in srgb, var(--sn-accent, #4E7B8E) 10%, transparent)"
           : "transparent",
         cursor: item.disabled ? "default" : "pointer",
         opacity: item.disabled ? 0.4 : 1,

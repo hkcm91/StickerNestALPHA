@@ -163,6 +163,7 @@ function handleGroup(
     flipV: false,
     opacity: 1,
     borderRadius: 0,
+    syncTransform2d3d: true,
     name: `Group (${entities.length})`,
     createdAt: now,
     updatedAt: now,

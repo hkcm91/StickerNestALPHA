@@ -15,8 +15,14 @@ export interface AIGenerationResult {
   errors: string[];
 }
 
+export interface AIExplainResult {
+  text: string;
+  error: string | null;
+}
+
 export interface AIGenerator {
-  generate(prompt: string): Promise<AIGenerationResult>;
+  generate(prompt: string, context?: string): Promise<AIGenerationResult>;
+  explain(context: string, question: string): Promise<AIExplainResult>;
   isGenerating(): boolean;
   cancel(): void;
   getLastResult(): AIGenerationResult | null;
@@ -73,6 +79,9 @@ export function createDefaultAIGenerator(): AIGenerator {
       async generate(): Promise<AIGenerationResult> {
         return { html: '', isValid: false, errors: ['AI generation is not configured'] };
       },
+      async explain(): Promise<AIExplainResult> {
+        return { text: '', error: 'AI generation is not configured' };
+      },
       isGenerating() { return false; },
       cancel() { /* no-op */ },
       getLastResult() { return null; },
@@ -93,7 +102,7 @@ export function createAIGenerator(proxyUrl: string): AIGenerator {
   let abortController: AbortController | null = null;
 
   return {
-    async generate(prompt: string): Promise<AIGenerationResult> {
+    async generate(prompt: string, context?: string): Promise<AIGenerationResult> {
       if (generating) {
         return { html: '', isValid: false, errors: ['Generation already in progress'] };
       }
@@ -101,12 +110,17 @@ export function createAIGenerator(proxyUrl: string): AIGenerator {
       generating = true;
       abortController = new AbortController();
 
+      // Prepend graph context to prompt if available
+      const fullPrompt = context
+        ? `${context}\n\n---\n\nUser request: ${prompt}`
+        : prompt;
+
       try {
         const response = await fetch(proxyUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            prompt,
+            prompt: fullPrompt,
             type: 'widget-generation',
           }),
           signal: abortController.signal,
@@ -151,6 +165,45 @@ export function createAIGenerator(proxyUrl: string): AIGenerator {
         };
         lastResult = result;
         return result;
+      } finally {
+        generating = false;
+        abortController = null;
+      }
+    },
+
+    async explain(context: string, question: string): Promise<AIExplainResult> {
+      if (generating) {
+        return { text: '', error: 'Generation already in progress' };
+      }
+
+      generating = true;
+      abortController = new AbortController();
+
+      const fullPrompt = `${context}\n\n---\n\nQuestion: ${question}\n\nProvide a clear, concise answer. Do not generate code unless specifically asked.`;
+
+      try {
+        const response = await fetch(proxyUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt: fullPrompt,
+            type: 'explain',
+          }),
+          signal: abortController.signal,
+        });
+
+        if (!response.ok) {
+          return { text: '', error: `Proxy returned status ${response.status}` };
+        }
+
+        const data = (await response.json()) as { text?: string; html?: string };
+        return { text: data.text ?? data.html ?? '', error: null };
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name === 'AbortError') {
+          return { text: '', error: 'Request was cancelled' };
+        }
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        return { text: '', error: `Request failed: ${message}` };
       } finally {
         generating = false;
         abortController = null;

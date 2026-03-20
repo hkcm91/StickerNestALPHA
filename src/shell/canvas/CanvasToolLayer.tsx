@@ -19,7 +19,7 @@ import { createPortal } from 'react-dom';
 import type { Point2D, CanvasEntity, DockerEntity } from '@sn/types';
 import { CanvasEvents } from '@sn/types';
 
-import { screenToCanvas, anchorsToSvgPath } from '../../canvas/core';
+import { screenToCanvas, anchorsToSvgPath, resolveEntityTransform, setEntityPlatformTransform } from '../../canvas/core';
 import type { ViewportState, SceneGraph } from '../../canvas/core';
 import { bus } from '../../kernel/bus';
 import { useUIStore } from '../../kernel/stores/ui/ui.store';
@@ -208,6 +208,7 @@ export const CanvasToolLayer: React.FC<CanvasToolLayerProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const normalizedTool: CanvasToolId =
     (activeTool as string) === 'move' ? 'select' : activeTool;
+  const canvasPlatform = useUIStore((s) => s.canvasPlatform);
 
 
   // ── Space key tracking for pan mode ──────────────────────────
@@ -964,13 +965,16 @@ export const CanvasToolLayer: React.FC<CanvasToolLayerProps> = ({
           }
 
           // Must send the FULL transform (deep merge) — scene graph does shallow merge
+          // Platform-aware: write to correct transform slot for active platform
+          const currentPlatform = useUIStore.getState().canvasPlatform;
+          const resolvedTransform = resolveEntityTransform(entity, currentPlatform);
+          const newTransform = { ...resolvedTransform, position: newPos };
+          const updated = setEntityPlatformTransform(entity, currentPlatform, newTransform);
           bus.emit(CanvasEvents.ENTITY_UPDATED, {
             id,
             updates: {
-              transform: {
-                ...entity.transform,
-                position: newPos,
-              },
+              transform: updated.transform,
+              ...(updated.platformTransforms ? { platformTransforms: updated.platformTransforms } : {}),
             },
           });
         }
@@ -1144,6 +1148,7 @@ export const CanvasToolLayer: React.FC<CanvasToolLayerProps> = ({
             flipV: false,
             opacity: 1,
             borderRadius: 0,
+            syncTransform2d3d: true,
             name: artboardName,
             createdAt: now,
             updatedAt: now,
@@ -1405,8 +1410,9 @@ export const CanvasToolLayer: React.FC<CanvasToolLayerProps> = ({
             const isWidget = entity.type === 'widget';
             // Widgets only have a hit-box for their top drag handle (28px)
             const handleHeight = 28;
-            const hitHeight = isWidget ? handleHeight : entity.transform.size.height;
-            const hitWidth = entity.transform.size.width;
+            const resolvedT = resolveEntityTransform(entity, canvasPlatform);
+            const hitHeight = isWidget ? handleHeight : resolvedT.size.height;
+            const hitWidth = resolvedT.size.width;
 
             return (
               <div
@@ -1416,8 +1422,8 @@ export const CanvasToolLayer: React.FC<CanvasToolLayerProps> = ({
                 onDoubleClick={handleDoubleClick}
                 style={{
                   position: 'absolute',
-                  left: entity.transform.position.x - entity.transform.size.width / 2,
-                  top: entity.transform.position.y - entity.transform.size.height / 2,
+                  left: resolvedT.position.x - resolvedT.size.width / 2,
+                  top: resolvedT.position.y - resolvedT.size.height / 2,
                   width: hitWidth,
                   height: hitHeight,
                   pointerEvents: 'auto',

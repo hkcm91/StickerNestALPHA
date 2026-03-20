@@ -88,6 +88,7 @@ function buildViewportConfig(config?: Partial<ViewportConfig>): ViewportConfig {
     width: config?.width,
     height: config?.height,
     background: config?.background ?? DEFAULT_BACKGROUND,
+    sizeMode: config?.sizeMode ?? 'infinite',
     isPreviewMode: config?.isPreviewMode ?? false,
   };
 }

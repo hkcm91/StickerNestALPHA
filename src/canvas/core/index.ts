@@ -59,6 +59,10 @@ export type {
   GridLayer,
 } from './grid';
 
+// Platform transforms
+export { resolveEntityTransform, setEntityPlatformTransform } from './transforms/platformTransform';
+export { project2Dto3D, project3Dto2D } from './transforms/syncTransform';
+
 // Interaction Mode
 export {
   useInteractionStore,

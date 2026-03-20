@@ -66,7 +66,7 @@ export const CursorGlow: React.FC<CursorGlowProps> = ({ enabled = true }) => {
           height: 280,
           borderRadius: "50%",
           background:
-            "radial-gradient(circle, color-mix(in srgb, var(--sn-accent, #3E7D94) 5%, transparent), transparent)",
+            "radial-gradient(circle, color-mix(in srgb, var(--sn-accent, #4E7B8E) 5%, transparent), transparent)",
           left: `${pos.x}%`,
           top: `${pos.y}%`,
           transform: "translate(-50%, -50%)",

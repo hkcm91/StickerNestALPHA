@@ -394,6 +394,101 @@ export function createGridRenderer(cellStore: GridCellStore): GridRenderer {
     context.stroke();
   }
 
+  /**
+   * Collect all grid intersection points for the visible bounds.
+   * Returns screen-space coordinates.
+   */
+  function collectIntersectionPoints(
+    visibleCellBounds: CellBounds,
+    _viewport: ViewportState,
+    _config: GridConfig
+  ): Array<{ x: number; y: number }> {
+    const points: Array<{ x: number; y: number }> = [];
+
+    switch (_config.projection) {
+      case 'isometric':
+        for (let col = visibleCellBounds.minCol; col <= visibleCellBounds.maxCol + 1; col++) {
+          for (let row = visibleCellBounds.minRow; row <= visibleCellBounds.maxRow + 1; row++) {
+            const corners = getIsometricCellCorners(col, row, _config);
+            points.push(canvasToScreen(corners.top, _viewport));
+          }
+        }
+        break;
+      case 'triangular':
+        for (let col = visibleCellBounds.minCol; col <= visibleCellBounds.maxCol + 1; col++) {
+          for (let row = visibleCellBounds.minRow; row <= visibleCellBounds.maxRow + 1; row++) {
+            const corners = getTriangularCellCorners(col, row, _config);
+            for (const corner of corners) {
+              points.push(canvasToScreen(corner, _viewport));
+            }
+          }
+        }
+        break;
+      case 'hexagonal':
+        for (let col = visibleCellBounds.minCol; col <= visibleCellBounds.maxCol; col++) {
+          for (let row = visibleCellBounds.minRow; row <= visibleCellBounds.maxRow; row++) {
+            const corners = getHexagonalCellCorners(col, row, _config);
+            for (const corner of corners) {
+              points.push(canvasToScreen(corner, _viewport));
+            }
+          }
+        }
+        break;
+      default: // orthogonal
+        for (let col = visibleCellBounds.minCol; col <= visibleCellBounds.maxCol + 1; col++) {
+          for (let row = visibleCellBounds.minRow; row <= visibleCellBounds.maxRow + 1; row++) {
+            const canvasPos = cellToPosition(col, row, _config);
+            points.push(canvasToScreen(canvasPos, _viewport));
+          }
+        }
+        break;
+    }
+
+    return points;
+  }
+
+  /**
+   * Render dots at grid intersection points
+   */
+  function renderDots(
+    context: CanvasRenderingContext2D,
+    visibleCellBounds: CellBounds,
+    _viewport: ViewportState,
+    _config: GridConfig
+  ): void {
+    const points = collectIntersectionPoints(visibleCellBounds, _viewport, _config);
+    const radius = _config.gridLineWidth;
+
+    context.beginPath();
+    for (const p of points) {
+      context.moveTo(p.x + radius, p.y);
+      context.arc(p.x, p.y, radius, 0, Math.PI * 2);
+    }
+    context.fill();
+  }
+
+  /**
+   * Render cross marks at grid intersection points
+   */
+  function renderCrosses(
+    context: CanvasRenderingContext2D,
+    visibleCellBounds: CellBounds,
+    _viewport: ViewportState,
+    _config: GridConfig
+  ): void {
+    const points = collectIntersectionPoints(visibleCellBounds, _viewport, _config);
+    const arm = Math.max(3, _config.gridLineWidth * 3);
+
+    context.beginPath();
+    for (const p of points) {
+      context.moveTo(p.x - arm, p.y);
+      context.lineTo(p.x + arm, p.y);
+      context.moveTo(p.x, p.y - arm);
+      context.lineTo(p.x, p.y + arm);
+    }
+    context.stroke();
+  }
+
   function renderGridLines(visibleCellBounds: CellBounds): void {
     const context = ensureContext();
     if (!context || !viewport || !config || !canvas) return;
@@ -402,23 +497,41 @@ export function createGridRenderer(cellStore: GridCellStore): GridRenderer {
     const screenCellSize = config.cellSize * viewport.zoom;
     if (screenCellSize < config.minCellScreenSize) return;
 
-    context.strokeStyle = config.gridLineColor;
-    context.lineWidth = config.gridLineWidth;
+    const style = config.gridLineStyle ?? 'line';
 
-    switch (config.projection) {
-      case 'isometric':
-        renderIsometricGridLines(context, visibleCellBounds, viewport, config, canvas);
-        break;
-      case 'triangular':
-        renderTriangularGridLines(context, visibleCellBounds, viewport, config, canvas);
-        break;
-      case 'hexagonal':
-        renderHexagonalGridLines(context, visibleCellBounds, viewport, config, canvas);
-        break;
-      default:
-        renderOrthogonalGridLines(context, visibleCellBounds, viewport, config, canvas);
-        break;
+    // Apply opacity
+    const prevAlpha = context.globalAlpha;
+    context.globalAlpha = config.gridLineOpacity ?? 0.1;
+
+    if (style === 'dot') {
+      context.fillStyle = config.gridLineColor;
+      renderDots(context, visibleCellBounds, viewport, config);
+    } else if (style === 'cross') {
+      context.strokeStyle = config.gridLineColor;
+      context.lineWidth = config.gridLineWidth;
+      renderCrosses(context, visibleCellBounds, viewport, config);
+    } else {
+      // 'line' — existing behavior
+      context.strokeStyle = config.gridLineColor;
+      context.lineWidth = config.gridLineWidth;
+
+      switch (config.projection) {
+        case 'isometric':
+          renderIsometricGridLines(context, visibleCellBounds, viewport, config, canvas);
+          break;
+        case 'triangular':
+          renderTriangularGridLines(context, visibleCellBounds, viewport, config, canvas);
+          break;
+        case 'hexagonal':
+          renderHexagonalGridLines(context, visibleCellBounds, viewport, config, canvas);
+          break;
+        default:
+          renderOrthogonalGridLines(context, visibleCellBounds, viewport, config, canvas);
+          break;
+      }
     }
+
+    context.globalAlpha = prevAlpha;
   }
 
   return {

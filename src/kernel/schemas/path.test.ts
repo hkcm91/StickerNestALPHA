@@ -35,6 +35,7 @@ const BASE_ENTITY = {
   flipV: false,
   opacity: 1,
   borderRadius: 0,
+  syncTransform2d3d: true,
   createdAt: '2024-01-01T00:00:00Z',
   updatedAt: '2024-01-01T00:00:00Z',
   createdBy: '550e8400-e29b-41d4-a716-446655440002',

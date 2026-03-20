@@ -30,6 +30,8 @@ function createMockGridLayer(): GridLayer & {
     showGridLines: true,
     gridLineColor: 'rgba(255, 255, 255, 0.1)',
     gridLineWidth: 1,
+    gridLineStyle: 'line' as const,
+    gridLineOpacity: 0.1,
     snapMode: 'none',
     origin: { x: 0, y: 0 },
     defaultBackground: '#0d1117',
