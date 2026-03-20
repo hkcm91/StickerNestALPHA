@@ -138,7 +138,7 @@ describe('CardNode', () => {
       const { unmount } = renderCardNode({
         id: `scene-${sceneType}`,
         data: {
-          sceneType: sceneType as any,
+          sceneType: sceneType as CardNodeData['sceneType'],
           inputPorts: [],
           outputPorts: [],
         },

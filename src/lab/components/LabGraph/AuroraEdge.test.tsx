@@ -8,7 +8,7 @@
 
 import { render } from '@testing-library/react';
 import { Position, ReactFlowProvider } from '@xyflow/react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 
 import type { AuroraEdgeData } from './AuroraEdge';
 import { AuroraEdge, EVENT_TYPE_COLORS, DEFAULT_COLOR } from './AuroraEdge';
@@ -40,7 +40,7 @@ function renderEdge(props: ReturnType<typeof createEdgeProps>) {
   return render(
     <ReactFlowProvider>
       <svg>
-        <AuroraEdge {...(props as any)} />
+        <AuroraEdge {...(props as Parameters<typeof AuroraEdge>[0])} />
       </svg>
     </ReactFlowProvider>,
   );
