@@ -581,7 +581,7 @@ export const LabGraph: React.FC<LabGraphProps> = ({
     <div style={{
       width: '100%', height: '100%',
       position: 'relative',
-      background: labPalette.bg,
+      background: 'var(--sn-bg)',
     }}>
       {/* Cycle error banner */}
       {cycleError && (

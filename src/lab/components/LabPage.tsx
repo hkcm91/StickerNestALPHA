@@ -40,6 +40,27 @@ import { ensureLabKeyframes } from './shared/keyframes';
 import { CanvasView } from './views';
 
 // ═══════════════════════════════════════════════════════════════════
+// Theme Detection
+// ═══════════════════════════════════════════════════════════════════
+
+/** Detect dark/light mode from prefers-color-scheme */
+function useColorScheme(): 'dark' | 'light' {
+  const [scheme, setScheme] = useState<'dark' | 'light'>(() => {
+    if (typeof window === 'undefined') return 'dark';
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  });
+
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const handler = (e: MediaQueryListEvent) => setScheme(e.matches ? 'dark' : 'light');
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+
+  return scheme;
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // Atmospheric Layers
 // ═══════════════════════════════════════════════════════════════════
 
@@ -47,7 +68,10 @@ import { CanvasView } from './views';
  * Dual-layer grain overlay with breathing animation.
  * Matches swatches/primitives.tsx GrainOverlay exactly.
  */
-const GrainOverlay: React.FC = () => (
+const GrainOverlay: React.FC<{ mode: 'dark' | 'light' }> = ({ mode }) => {
+  const primaryOpacity = mode === 'dark' ? 0.045 : 0.022;
+  const secondaryOpacity = mode === 'dark' ? 0.02 : 0.01;
+  return (
   <div aria-hidden="true" style={{
     position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0,
     animation: 'sn-grain-breathe 5s ease-in-out infinite',
@@ -55,61 +79,71 @@ const GrainOverlay: React.FC = () => (
     {/* Primary grain layer */}
     <div style={{
       position: 'absolute', inset: 0,
-      opacity: 0.045,
+      opacity: primaryOpacity,
       backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
       backgroundSize: '128px 128px',
     }} />
     {/* Secondary grain — offset, slightly different frequency for organic depth */}
     <div style={{
       position: 'absolute', inset: 0,
-      opacity: 0.02,
+      opacity: secondaryOpacity,
       backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n2'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n2)'/%3E%3C/svg%3E")`,
       backgroundSize: '192px 192px',
       transform: 'translate(2px, 2px)',
     }} />
   </div>
-);
+  );
+};
 
 /**
  * Aurora layers — each gradient drifts independently on prime-number cycles.
  * Matches swatches/UISwatchesPanel exactly.
  */
-const AuroraBackground: React.FC = () => (
-  <>
-    <div aria-hidden="true" style={{
-      position: 'fixed', inset: '-20%', pointerEvents: 'none',
-      background: 'radial-gradient(ellipse at 20% 50%, rgba(78,123,142,0.06) 0%, transparent 55%)',
-      animation: 'sn-aurora-1 23s ease-in-out infinite',
-    }} />
-    <div aria-hidden="true" style={{
-      position: 'fixed', inset: '-20%', pointerEvents: 'none',
-      background: 'radial-gradient(ellipse at 80% 30%, rgba(232,128,108,0.04) 0%, transparent 50%)',
-      animation: 'sn-aurora-2 31s ease-in-out infinite',
-    }} />
-    <div aria-hidden="true" style={{
-      position: 'fixed', inset: '-20%', pointerEvents: 'none',
-      background: 'radial-gradient(ellipse at 50% 80%, rgba(184,160,216,0.04) 0%, transparent 55%)',
-      animation: 'sn-aurora-3 17s ease-in-out infinite',
-    }} />
-    {/* Warm ember undercurrent — very subtle, grounds the cool gradients */}
-    <div aria-hidden="true" style={{
-      position: 'fixed', inset: '-10%', pointerEvents: 'none',
-      background: 'radial-gradient(ellipse at 60% 60%, rgba(200,140,110,0.025) 0%, transparent 60%)',
-      animation: 'sn-aurora-2 37s ease-in-out infinite reverse',
-    }} />
-  </>
-);
+const AuroraBackground: React.FC<{ mode: 'dark' | 'light' }> = ({ mode }) => {
+  const opacity = mode === 'dark' ? 1 : 0.4;
+  return (
+    <>
+      <div aria-hidden="true" style={{
+        position: 'fixed', inset: '-20%', pointerEvents: 'none',
+        background: 'radial-gradient(ellipse at 20% 50%, rgba(78,123,142,0.06) 0%, transparent 55%)',
+        animation: 'sn-aurora-1 23s ease-in-out infinite',
+        opacity,
+      }} />
+      <div aria-hidden="true" style={{
+        position: 'fixed', inset: '-20%', pointerEvents: 'none',
+        background: 'radial-gradient(ellipse at 80% 30%, rgba(232,128,108,0.04) 0%, transparent 50%)',
+        animation: 'sn-aurora-2 31s ease-in-out infinite',
+        opacity,
+      }} />
+      <div aria-hidden="true" style={{
+        position: 'fixed', inset: '-20%', pointerEvents: 'none',
+        background: 'radial-gradient(ellipse at 50% 80%, rgba(184,160,216,0.04) 0%, transparent 55%)',
+        animation: 'sn-aurora-3 17s ease-in-out infinite',
+        opacity,
+      }} />
+      <div aria-hidden="true" style={{
+        position: 'fixed', inset: '-10%', pointerEvents: 'none',
+        background: 'radial-gradient(ellipse at 60% 60%, rgba(200,140,110,0.025) 0%, transparent 60%)',
+        animation: 'sn-aurora-2 37s ease-in-out infinite reverse',
+        opacity,
+      }} />
+    </>
+  );
+};
 
 /**
  * Cursor-following ambient light — throttled to ~30fps.
  */
-const CursorLight: React.FC<{ mousePos: { x: number; y: number } }> = ({ mousePos }) => (
-  <div aria-hidden="true" style={{
-    position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0,
-    background: `radial-gradient(600px circle at ${mousePos.x}% ${mousePos.y}%, rgba(232,128,108,0.03) 0%, transparent 60%)`,
-    transition: 'background 300ms ease-out',
-  }} />
-);
+const CursorLight: React.FC<{ mousePos: { x: number; y: number }; mode: 'dark' | 'light' }> = ({ mousePos, mode }) => {
+  const tint = mode === 'dark' ? 'rgba(232,128,108,0.03)' : 'rgba(200,160,130,0.025)';
+  return (
+    <div aria-hidden="true" style={{
+      position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0,
+      background: `radial-gradient(600px circle at ${mousePos.x}% ${mousePos.y}%, ${tint} 0%, transparent 60%)`,
+      transition: 'background 300ms ease-out',
+    }} />
+  );
+};
 
 // ═══════════════════════════════════════════════════════════════════
 // Guard Screens
@@ -212,6 +246,7 @@ const LabContent: React.FC = () => {
   const lab = useLabState();
   const containerRef = useRef<HTMLDivElement>(null);
   const [mousePos, setMousePos] = useState({ x: 50, y: 50 });
+  const colorScheme = useColorScheme();
   const [editorContent, setEditorContent] = useState('');
   const [showImport, setShowImport] = useState(false);
   const [graphNodes, setGraphNodes] = useState<SceneNode[]>([]);
@@ -331,9 +366,9 @@ const LabContent: React.FC = () => {
         fontFamily: 'var(--sn-font-family)',
       }}
     >
-      <AuroraBackground />
-      <CursorLight mousePos={mousePos} />
-      <GrainOverlay />
+      <AuroraBackground mode={colorScheme} />
+      <CursorLight mousePos={mousePos} mode={colorScheme} />
+      <GrainOverlay mode={colorScheme} />
 
       {/* Lab layout — Icon Rail + Sidebar Panel + Full-bleed Canvas + Status Bar */}
       <div style={{ position: 'relative', zIndex: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
