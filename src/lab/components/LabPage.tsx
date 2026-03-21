@@ -350,6 +350,8 @@ const LabContent: React.FC = () => {
             activePanel={lab.activeSidebarPanel}
             projectName={instances.manifest.getManifest()?.name ?? 'Untitled Widget'}
             projectVersion="v0.1.0"
+            previewSlot={<LabPreviewComponent key={previewReloadKey} preview={instances.preview} />}
+            isRunning={hasActiveWidget}
           />
 
           {/* Full-bleed canvas */}

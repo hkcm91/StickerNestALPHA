@@ -638,70 +638,44 @@ export const LabGraph: React.FC<LabGraphProps> = ({
         />
       </ReactFlow>
 
-      {/* Ambient empty state — breathing invitation */}
+      {/* Ghost pipeline wireframe — fades on first entity */}
       {nodes.length === 0 && (
         <div style={{
           position: 'absolute', inset: 0,
           display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'center',
           pointerEvents: 'none',
+          opacity: 0.15,
           animation: `sn-drift-up 600ms ${SPRING}`,
+          transition: 'opacity 600ms ease',
         }}>
-          {/* Subtle glow orb behind text */}
-          <div aria-hidden="true" style={{
-            position: 'absolute',
-            width: 200, height: 200,
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(78,123,142,0.04) 0%, transparent 70%)',
-            filter: 'blur(40px)',
-          }} />
+          {/* Ghost: two nodes connected by a dashed edge */}
+          <svg width="320" height="120" viewBox="0 0 320 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+            {/* Node A */}
+            <rect x="10" y="30" width="100" height="60" rx="12" stroke="currentColor" strokeWidth="1.5" strokeDasharray="4 3" />
+            <circle cx="35" cy="60" r="4" stroke="currentColor" strokeWidth="1" />
+            <line x1="50" y1="52" x2="85" y2="52" stroke="currentColor" strokeWidth="1" opacity="0.5" />
+            <line x1="50" y1="60" x2="75" y2="60" stroke="currentColor" strokeWidth="1" opacity="0.3" />
+            {/* Edge */}
+            <path d="M110 60 L210 60" stroke="currentColor" strokeWidth="1.5" strokeDasharray="6 4" />
+            <circle cx="210" cy="60" r="3" fill="currentColor" opacity="0.4" />
+            {/* Node B */}
+            <rect x="210" y="30" width="100" height="60" rx="12" stroke="currentColor" strokeWidth="1.5" strokeDasharray="4 3" />
+            <circle cx="235" cy="60" r="4" stroke="currentColor" strokeWidth="1" />
+            <line x1="250" y1="52" x2="285" y2="52" stroke="currentColor" strokeWidth="1" opacity="0.5" />
+            <line x1="250" y1="60" x2="275" y2="60" stroke="currentColor" strokeWidth="1" opacity="0.3" />
+          </svg>
 
           <div style={{
-            fontSize: 15,
+            marginTop: 16,
+            fontSize: 13,
             color: labPalette.textMuted,
-            fontFamily: 'var(--sn-font-serif, Newsreader, Georgia, serif)',
-            fontStyle: 'italic',
-            textAlign: 'center',
-            lineHeight: 1.6,
-            maxWidth: 280,
-            position: 'relative',
+            fontFamily: 'var(--sn-font-family)',
+            fontWeight: 400,
+            letterSpacing: '0.01em',
           }}>
-            {level === 'scene'
-              ? 'Describe a widget above, or drag to start building'
-              : `Add nodes to build ${currentWidgetLabel ?? 'widget'} logic`
-            }
+            Add entities to start building your pipeline
           </div>
-
-          {level === 'scene' && (
-            <div style={{
-              display: 'flex', gap: 12, marginTop: 20,
-              pointerEvents: 'auto',
-              animation: `sn-drift-up 600ms ${SPRING} 150ms both`,
-            }}>
-              <button
-                onClick={() => handleAddNode('widget')}
-                style={{
-                  padding: '7px 16px', fontSize: 11, fontWeight: 500,
-                  fontFamily: 'var(--sn-font-family)',
-                  color: labPalette.textSoft,
-                  background: 'transparent',
-                  border: '1px solid rgba(78,123,142,0.15)',
-                  borderRadius: 8, cursor: 'pointer',
-                  transition: `all 300ms ${SPRING}`,
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = 'rgba(78,123,142,0.35)';
-                  e.currentTarget.style.boxShadow = '0 0 12px rgba(78,123,142,0.1)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = 'rgba(78,123,142,0.15)';
-                  e.currentTarget.style.boxShadow = 'none';
-                }}
-              >
-                + Add widget
-              </button>
-            </div>
-          )}
         </div>
       )}
     </div>
