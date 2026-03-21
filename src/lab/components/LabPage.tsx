@@ -13,7 +13,7 @@
  * @layer L2
  */
 
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { WidgetManifest } from '@sn/types';
 
@@ -23,27 +23,21 @@ import type { SceneNode, SceneEdge } from '../graph/scene-types';
 import { checkLabAccess } from '../guards/access-guard';
 import { checkDesktopViewport } from '../guards/mobile-guard';
 import { useCreatorMode } from '../hooks/useCreatorMode';
-import { useDeviceFrame } from '../hooks/useDeviceFrame';
 import { useLabState } from '../hooks/useLabState';
 
-import { CreatorLayout } from './CreatorLayout';
-import { DeviceFrame } from './DeviceFrame';
 import { AICompanion, AISlidePanel } from './LabAI';
-import { LabEditorComponent } from './LabEditor';
+import { LabContextSidebar } from './LabContextSidebar';
 import { LabGraph } from './LabGraph';
 import { LabImportComponent } from './LabImport';
-import { LabInspectorComponent } from './LabInspector';
-import { LabLayout } from './LabLayout';
-import { LabManifestComponent } from './LabManifest';
 import { LabPreviewComponent } from './LabPreview';
-import { LabPublishComponent } from './LabPublish';
-import { LabVersionsComponent } from './LabVersions';
+import { LabSidebar } from './LabSidebar';
+import { LabStatusBar } from './LabStatusBar';
 import { OnboardingOverlay } from './OnboardingOverlay';
 import type { OnboardingPath } from './OnboardingOverlay';
-import { PreviewChrome } from './PreviewChrome';
 import { PromptBar } from './PromptBar';
 import { GlassPanel, GlowButton } from './shared';
 import { ensureLabKeyframes } from './shared/keyframes';
+import { CanvasView } from './views';
 
 // ═══════════════════════════════════════════════════════════════════
 // Atmospheric Layers
@@ -124,7 +118,7 @@ const CursorLight: React.FC<{ mousePos: { x: number; y: number } }> = ({ mousePo
 const UpgradePrompt: React.FC = () => (
   <div style={{
     display: 'flex', alignItems: 'center', justifyContent: 'center',
-    height: '100vh', background: 'var(--sn-bg)', fontFamily: 'var(--sn-font-family)',
+    height: '100%', background: 'var(--sn-bg)', fontFamily: 'var(--sn-font-family)',
   }}>
     <GlassPanel style={{
       padding: '48px', maxWidth: '480px', textAlign: 'center',
@@ -148,7 +142,7 @@ const UpgradePrompt: React.FC = () => (
 const MobileRedirect: React.FC = () => (
   <div style={{
     display: 'flex', alignItems: 'center', justifyContent: 'center',
-    height: '100vh', padding: '24px', background: 'var(--sn-bg)', fontFamily: 'var(--sn-font-family)',
+    height: '100%', padding: '24px', background: 'var(--sn-bg)', fontFamily: 'var(--sn-font-family)',
   }}>
     <GlassPanel style={{
       padding: '36px', maxWidth: '400px', textAlign: 'center',
@@ -176,7 +170,7 @@ const MobileRedirect: React.FC = () => (
 const LabLoading: React.FC = () => (
   <div style={{
     display: 'flex', alignItems: 'center', justifyContent: 'center',
-    height: '100vh', background: 'var(--sn-bg)', fontFamily: 'var(--sn-font-family)',
+    height: '100%', background: 'var(--sn-bg)', fontFamily: 'var(--sn-font-family)',
     color: 'var(--sn-text-muted)', fontSize: '14px',
   }}>
     Initializing Widget Lab...
@@ -228,37 +222,10 @@ const LabContent: React.FC = () => {
   const hasActiveWidget = useMemo(() => editorContent.trim().length > 0, [editorContent]);
   const creatorMode = useCreatorMode(hasActiveWidget);
 
-  // Device frame state for preview-as-primary
-  const deviceFrame = useDeviceFrame('phone');
-
-  // Preview chrome state
-  const [consoleOpen, setConsoleOpen] = useState(false);
-  const [previewExpanded, setPreviewExpanded] = useState(false);
-
-  // AI slide panel state (Creator Mode only)
+  // AI slide panel state
   const [aiPanelOpen, setAiPanelOpen] = useState(false);
   const handleToggleAiPanel = useCallback(() => {
     setAiPanelOpen((v) => !v);
-  }, []);
-
-  // Preview container dimensions for DeviceFrame scaling
-  const previewContainerRef = useRef<HTMLDivElement>(null);
-  const [previewSize, setPreviewSize] = useState({ width: 800, height: 600 });
-
-  useLayoutEffect(() => {
-    const el = previewContainerRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver((entries) => {
-      const entry = entries[0];
-      if (entry) {
-        setPreviewSize({
-          width: entry.contentRect.width,
-          height: entry.contentRect.height,
-        });
-      }
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
   }, []);
 
   // Track editor content for AI companion + publish
@@ -326,20 +293,18 @@ const LabContent: React.FC = () => {
         // Future: open template picker. For now, dismiss onboarding.
         break;
       case 'describe':
-        // Future: focus AI prompt bar. For now, open AI companion.
-        lab.setActiveView('graph');
+        // Focus AI prompt bar — canvas is always visible now.
+        lab.setActiveSidebarPanel('widgets');
         break;
       case 'visual':
-        lab.setActiveView('graph');
+        // Show entities panel for visual building.
+        lab.setActiveSidebarPanel('entities');
         break;
     }
   }, [creatorMode, lab]);
 
   // Reload the preview widget by bumping a key to force remount
-  const [previewReloadKey, setPreviewReloadKey] = useState(0);
-  const handlePreviewReload = useCallback(() => {
-    setPreviewReloadKey((k) => k + 1);
-  }, []);
+  const [previewReloadKey] = useState(0);
 
   // Describe widget — triggered from library picker "Ask AI" button
   const handleDescribeWidget = useCallback((manifest: WidgetManifest) => {
@@ -360,7 +325,7 @@ const LabContent: React.FC = () => {
       ref={containerRef}
       onMouseMove={handleMouseMove}
       style={{
-        height: '100vh', width: '100vw',
+        height: '100%', width: '100%',
         background: 'var(--sn-bg, #0A0A0E)',
         position: 'relative', overflow: 'hidden',
         fontFamily: 'var(--sn-font-family)',
@@ -370,139 +335,61 @@ const LabContent: React.FC = () => {
       <CursorLight mousePos={mousePos} />
       <GrainOverlay />
 
-      {/* Lab layout — Creator Mode or classic IDE layout */}
-      <div style={{ position: 'relative', zIndex: 1, height: '100%' }}>
-        {creatorMode.isCreatorMode ? (
-          <CreatorLayout
-            activeView={lab.activeView}
-            onViewChange={lab.setActiveView}
-            activeBottomTab={lab.activeBottomTab}
-            onBottomTabChange={lab.setActiveBottomTab}
-            graphCollapsed={creatorMode.graphCollapsed}
-            onToggleGraphCollapsed={creatorMode.toggleGraphCollapsed}
-            toolbarExtras={
-              <PromptBar
-                generator={instances.aiGenerator}
-                onApplyCode={handleApplyCode}
-                currentEditorContent={editorContent}
-                graphContext={graphContext}
-                onExpandThread={handleToggleAiPanel}
-                threadOpen={aiPanelOpen}
-              />
-            }
-            editorSlot={
-              <LabEditorComponent editor={instances.editor} />
-            }
-            graphSlot={
-              <LabGraph
-                graphSync={instances.graphSync}
-                onCompile={(html) => {
-                  instances.editor.setContent(html);
-                }}
-                onGraphStateChange={handleGraphStateChange}
-                onDescribeWidget={handleDescribeWidget}
-              />
-            }
-            previewSlot={
-              <div ref={previewContainerRef} style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                <PreviewChrome
-                  widgetName={instances.manifest.getManifest()?.name ?? 'Untitled Widget'}
-                  isRunning={hasActiveWidget}
-                  onReload={handlePreviewReload}
-                  consoleOpen={consoleOpen}
-                  onConsoleToggle={() => setConsoleOpen((v) => !v)}
-                  expanded={previewExpanded}
-                  onExpandToggle={() => setPreviewExpanded((v) => !v)}
+      {/* Lab layout — Icon Rail + Sidebar Panel + Full-bleed Canvas + Status Bar */}
+      <div style={{ position: 'relative', zIndex: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
+        {/* Main area: icon rail + sidebar + canvas */}
+        <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
+          {/* Icon rail — far left */}
+          <LabSidebar
+            activePanel={lab.activeSidebarPanel}
+            onPanelChange={lab.setActiveSidebarPanel}
+          />
+
+          {/* Context sidebar — panel content */}
+          <LabContextSidebar
+            activePanel={lab.activeSidebarPanel}
+            projectName={instances.manifest.getManifest()?.name ?? 'Untitled Widget'}
+            projectVersion="v0.1.0"
+          />
+
+          {/* Full-bleed canvas */}
+          <div style={{ flex: 1, minWidth: 0, minHeight: 0 }}>
+            <CanvasView
+              debugMode={lab.debugMode}
+              onToggleDebug={lab.toggleDebugMode}
+              graphSlot={
+                <LabGraph
+                  graphSync={instances.graphSync}
+                  onCompile={(html) => {
+                    instances.editor.setContent(html);
+                  }}
+                  onGraphStateChange={handleGraphStateChange}
+                  onDescribeWidget={handleDescribeWidget}
                 />
-                <div style={{ flex: 1, minHeight: 0 }}>
-                  <DeviceFrame
-                    device={deviceFrame.device}
-                    onDeviceChange={deviceFrame.setDevice}
-                    containerWidth={previewSize.width}
-                    containerHeight={previewSize.height}
-                  >
-                    <LabPreviewComponent key={previewReloadKey} preview={instances.preview} />
-                  </DeviceFrame>
-                </div>
-              </div>
-            }
-            inspectorSlot={
-              <LabInspectorComponent inspector={instances.inspector} />
-            }
-            manifestSlot={
-              <LabManifestComponent manifest={instances.manifest} />
-            }
-            versionsSlot={
-              <LabVersionsComponent
-                versions={instances.versions}
-                currentHtml={editorContent}
-                currentManifest={instances.manifest.getManifest()}
-                onRestore={(snapshot) => {
-                  instances.editor.setContent(snapshot.html);
-                  if (snapshot.manifest) {
-                    instances.manifest.setManifest(snapshot.manifest);
-                  }
-                }}
-              />
-            }
-            publishSlot={
-              <LabPublishComponent
-                pipeline={instances.publishPipeline}
-                currentHtml={editorContent}
-                currentManifest={instances.manifest.getManifest()}
-              />
-            }
-          />
-        ) : (
-          <LabLayout
-            activeView={lab.activeView}
-            onViewChange={lab.setActiveView}
-            activeBottomTab={lab.activeBottomTab}
-            onBottomTabChange={lab.setActiveBottomTab}
-            editorSlot={
-              <LabEditorComponent editor={instances.editor} />
-            }
-            graphSlot={
-              <LabGraph
-                graphSync={instances.graphSync}
-                onCompile={(html) => {
-                  instances.editor.setContent(html);
-                }}
-                onGraphStateChange={handleGraphStateChange}
-                onDescribeWidget={handleDescribeWidget}
-              />
-            }
-            previewSlot={
-              <LabPreviewComponent preview={instances.preview} />
-            }
-            inspectorSlot={
-              <LabInspectorComponent inspector={instances.inspector} />
-            }
-            manifestSlot={
-              <LabManifestComponent manifest={instances.manifest} />
-            }
-            versionsSlot={
-              <LabVersionsComponent
-                versions={instances.versions}
-                currentHtml={editorContent}
-                currentManifest={instances.manifest.getManifest()}
-                onRestore={(snapshot) => {
-                  instances.editor.setContent(snapshot.html);
-                  if (snapshot.manifest) {
-                    instances.manifest.setManifest(snapshot.manifest);
-                  }
-                }}
-              />
-            }
-            publishSlot={
-              <LabPublishComponent
-                pipeline={instances.publishPipeline}
-                currentHtml={editorContent}
-                currentManifest={instances.manifest.getManifest()}
-              />
-            }
-          />
-        )}
+              }
+              promptBar={
+                <PromptBar
+                  generator={instances.aiGenerator}
+                  onApplyCode={handleApplyCode}
+                  currentEditorContent={editorContent}
+                  graphContext={graphContext}
+                  onExpandThread={handleToggleAiPanel}
+                  threadOpen={aiPanelOpen}
+                />
+              }
+            />
+          </div>
+        </div>
+
+        {/* Bottom status bar */}
+        <LabStatusBar
+          projectName={instances.manifest.getManifest()?.name ?? 'Untitled Widget'}
+          hasUnsavedChanges={hasActiveWidget}
+          connected={true}
+          streaming={true}
+          branch="main"
+          latencyMs={12}
+        />
       </div>
 
       {/* Onboarding overlay (Creator Mode, first-time, no active widget) */}

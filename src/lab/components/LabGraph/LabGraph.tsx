@@ -54,7 +54,6 @@ import { ConnectionFeedbackProvider, useConnectionFeedback } from './ConnectionF
 import { GhostEdge } from './GhostEdge';
 import { GlowEdge } from './GlowEdge';
 import { GraphBreadcrumb } from './GraphBreadcrumb';
-import { GraphToolbar } from './GraphToolbar';
 import { NodeShell } from './NodeShell';
 import { PortDot } from './PortDot';
 import type { SceneNodeData } from './SceneNode';
@@ -584,26 +583,6 @@ export const LabGraph: React.FC<LabGraphProps> = ({
       position: 'relative',
       background: labPalette.bg,
     }}>
-      {/* Toolbar + Breadcrumb row */}
-      <div style={{
-        position: 'absolute', top: 12, left: 12, zIndex: 10,
-        display: 'flex', alignItems: 'center', gap: 8,
-      }}>
-        <GraphToolbar
-          onAddNode={handleAddNode}
-          onAddWidgetFromLibrary={handleAddWidgetFromLibrary}
-          onDescribeWidget={onDescribeWidget}
-          onCompile={handleCompile}
-          syncMode={syncMode}
-          onSyncToggle={handleSyncToggle}
-          level={level}
-        />
-        <GraphBreadcrumb
-          breadcrumbs={breadcrumbs}
-          onNavigate={handleBreadcrumbNavigate}
-        />
-      </div>
-
       {/* Cycle error banner */}
       {cycleError && (
         <div style={{
@@ -659,27 +638,70 @@ export const LabGraph: React.FC<LabGraphProps> = ({
         />
       </ReactFlow>
 
-      {/* Empty state */}
+      {/* Ambient empty state — breathing invitation */}
       {nodes.length === 0 && (
         <div style={{
           position: 'absolute', inset: 0,
           display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'center',
           pointerEvents: 'none',
+          animation: `sn-drift-up 600ms ${SPRING}`,
         }}>
+          {/* Subtle glow orb behind text */}
+          <div aria-hidden="true" style={{
+            position: 'absolute',
+            width: 200, height: 200,
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(78,123,142,0.04) 0%, transparent 70%)',
+            filter: 'blur(40px)',
+          }} />
+
           <div style={{
-            fontSize: 36, opacity: 0.15,
+            fontSize: 15,
+            color: labPalette.textMuted,
             fontFamily: 'var(--sn-font-serif, Newsreader, Georgia, serif)',
+            fontStyle: 'italic',
+            textAlign: 'center',
+            lineHeight: 1.6,
+            maxWidth: 280,
+            position: 'relative',
           }}>
-            {'\u25C7'}
+            {level === 'scene'
+              ? 'Describe a widget above, or drag to start building'
+              : `Add nodes to build ${currentWidgetLabel ?? 'widget'} logic`
+            }
           </div>
-          <div style={{
-            fontSize: 13, color: labPalette.textFaint,
-            fontFamily: 'var(--sn-font-family)',
-            marginTop: 8,
-          }}>
-            {emptyMessage}
-          </div>
+
+          {level === 'scene' && (
+            <div style={{
+              display: 'flex', gap: 12, marginTop: 20,
+              pointerEvents: 'auto',
+              animation: `sn-drift-up 600ms ${SPRING} 150ms both`,
+            }}>
+              <button
+                onClick={() => handleAddNode('widget')}
+                style={{
+                  padding: '7px 16px', fontSize: 11, fontWeight: 500,
+                  fontFamily: 'var(--sn-font-family)',
+                  color: labPalette.textSoft,
+                  background: 'transparent',
+                  border: '1px solid rgba(78,123,142,0.15)',
+                  borderRadius: 8, cursor: 'pointer',
+                  transition: `all 300ms ${SPRING}`,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = 'rgba(78,123,142,0.35)';
+                  e.currentTarget.style.boxShadow = '0 0 12px rgba(78,123,142,0.1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = 'rgba(78,123,142,0.15)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+              >
+                + Add widget
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
