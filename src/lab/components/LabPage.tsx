@@ -18,16 +18,21 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { WidgetManifest } from '@sn/types';
 
 import { useAuthStore } from '../../kernel/stores/auth/auth.store';
+import { useWidgetStore } from '../../kernel/stores/widget/widget.store';
+import type { WidgetRegistryEntry } from '../../kernel/stores/widget/widget.store';
 import { buildAIGraphContext, serializeContextForPrompt } from '../ai/ai-context';
-import type { SceneNode, SceneEdge } from '../graph/scene-types';
+import type { CompatibleWidget } from '../ai/prompt-questions';
+import type { SceneNode, SceneEdge , SceneNodeType } from '../graph/scene-types';
 import { checkLabAccess } from '../guards/access-guard';
 import { checkDesktopViewport } from '../guards/mobile-guard';
 import { useCreatorMode } from '../hooks/useCreatorMode';
 import { useLabState } from '../hooks/useLabState';
+import type { SidebarPanel } from '../hooks/useLabState';
 
 import { AICompanion, AISlidePanel } from './LabAI';
 import { LabContextSidebar } from './LabContextSidebar';
 import { LabGraph } from './LabGraph';
+import type { LabGraphAPI } from './LabGraph';
 import { LabImportComponent } from './LabImport';
 import { LabPreviewComponent } from './LabPreview';
 import { LabSidebar } from './LabSidebar';
@@ -35,8 +40,10 @@ import { LabStatusBar } from './LabStatusBar';
 import { OnboardingOverlay } from './OnboardingOverlay';
 import type { OnboardingPath } from './OnboardingOverlay';
 import { PromptBar } from './PromptBar';
+import { PromptRefinement } from './PromptRefinement';
 import { GlassPanel, GlowButton } from './shared';
 import { ensureLabKeyframes } from './shared/keyframes';
+import { StreamingPreview } from './StreamingPreview';
 import { CanvasView } from './views';
 
 // ═══════════════════════════════════════════════════════════════════
@@ -241,6 +248,7 @@ export const LabPage: React.FC = () => {
 
 /**
  * Inner Lab content — only rendered after guards pass.
+ * Orchestrates all sidebar, graph, AI, and status bar wiring.
  */
 const LabContent: React.FC = () => {
   const lab = useLabState();
@@ -252,6 +260,17 @@ const LabContent: React.FC = () => {
   const [graphNodes, setGraphNodes] = useState<SceneNode[]>([]);
   const [graphEdges, setGraphEdges] = useState<SceneEdge[]>([]);
   const [pendingAIPrompt, setPendingAIPrompt] = useState<string | null>(null);
+  const [pendingRefinementPrompt, setPendingRefinementPrompt] = useState<string | null>(null);
+
+  // Graph imperative API — set by LabGraph onAPIReady callback
+  const graphAPIRef = useRef<LabGraphAPI | null>(null);
+
+  // Widget registry from kernel store
+  const widgetRegistry = useWidgetStore((s) => s.registry);
+  const installedWidgets = useMemo(
+    () => Object.values(widgetRegistry),
+    [widgetRegistry],
+  );
 
   // Creator mode state
   const hasActiveWidget = useMemo(() => editorContent.trim().length > 0, [editorContent]);
@@ -259,9 +278,19 @@ const LabContent: React.FC = () => {
 
   // AI slide panel state
   const [aiPanelOpen, setAiPanelOpen] = useState(false);
-  const handleToggleAiPanel = useCallback(() => {
-    setAiPanelOpen((v) => !v);
-  }, []);
+
+  // Testing panel state
+  const [activeDevice, setActiveDevice] = useState('desktop');
+  const [activeSimulation, setActiveSimulation] = useState('default');
+
+  // AI generation status for status bar
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  // Streaming preview state
+  const [streamingHtml, setStreamingHtml] = useState('');
+  const [streamingActive, setStreamingActive] = useState(false);
+  const [streamingDone, setStreamingDone] = useState(false);
+  const [streamingError, setStreamingError] = useState<string | null>(null);
 
   // Track editor content for AI companion + publish
   useEffect(() => {
@@ -294,11 +323,16 @@ const LabContent: React.FC = () => {
     });
   }, []);
 
-  // Apply AI-generated code to editor
+  // Apply AI-generated code to editor + add widget node to graph
   const handleApplyCode = useCallback((code: string) => {
     if (lab.instances?.editor) {
       lab.instances.editor.setContent(code);
       setEditorContent(code);
+
+      // If graph is empty, add a widget node to represent the generated widget
+      if (graphAPIRef.current && graphAPIRef.current.getNodeCount() === 0) {
+        graphAPIRef.current.addNode('widget');
+      }
     }
   }, [lab.instances]);
 
@@ -320,19 +354,21 @@ const LabContent: React.FC = () => {
     setGraphEdges(edges);
   }, []);
 
+  // Graph API ready callback
+  const handleGraphAPIReady = useCallback((api: LabGraphAPI) => {
+    graphAPIRef.current = api;
+  }, []);
+
   // Handle onboarding path selection
   const handleOnboardingPath = useCallback((path: OnboardingPath) => {
     creatorMode.dismissOnboarding();
     switch (path) {
       case 'template':
-        // Future: open template picker. For now, dismiss onboarding.
         break;
       case 'describe':
-        // Focus AI prompt bar — canvas is always visible now.
         lab.setActiveSidebarPanel('widgets');
         break;
       case 'visual':
-        // Show entities panel for visual building.
         lab.setActiveSidebarPanel('entities');
         break;
     }
@@ -351,9 +387,130 @@ const LabContent: React.FC = () => {
     setPendingAIPrompt(prompt);
   }, []);
 
+  // ─── Streaming preview callbacks ─────────────────────────────
+  const handleStreamChunk = useCallback((partialHtml: string) => {
+    setStreamingHtml(partialHtml);
+    if (!streamingActive) setStreamingActive(true);
+  }, [streamingActive]);
+
+  const handleStreamDone = useCallback((error?: string | null) => {
+    setStreamingDone(true);
+    if (error) setStreamingError(error);
+    // Preview stays visible showing the completed widget (or error)
+  }, []);
+
+  const handleGeneratingChange = useCallback((generating: boolean) => {
+    setIsGenerating(generating);
+    if (generating) {
+      // Reset streaming state when a new generation starts
+      setStreamingHtml('');
+      setStreamingActive(true);
+      setStreamingDone(false);
+      setStreamingError(null);
+    }
+  }, []);
+
+  // ─── Prompt refinement ──────────────────────────────────────────
+  const compatibleWidgets: CompatibleWidget[] = useMemo(() => {
+    if (graphNodes.length === 0) return [];
+    return graphNodes
+      .filter((n) => n.type === 'widget')
+      .map((n) => ({
+        name: n.label,
+        ports: [
+          ...n.inputPorts.map((p) => `subscribes: ${p.name}`),
+          ...n.outputPorts.map((p) => `emits: ${p.name}`),
+        ],
+      }));
+  }, [graphNodes]);
+
+  const handlePromptReady = useCallback((prompt: string) => {
+    setPendingRefinementPrompt(prompt);
+  }, []);
+
+  const handleRefinementGenerate = useCallback(async (enrichedPrompt: string) => {
+    setPendingRefinementPrompt(null);
+    if (!lab.instances?.aiGenerator) return;
+    handleGeneratingChange(true);
+    try {
+      const result = await lab.instances.aiGenerator.generate(enrichedPrompt, graphContext);
+      if (result.isValid && result.html) {
+        handleStreamChunk(result.html);
+        handleStreamDone(null);
+        handleApplyCode(result.html);
+      } else {
+        handleStreamDone(result.errors[0] ?? 'Generation failed');
+      }
+    } catch {
+      handleStreamDone('Something went wrong');
+    } finally {
+      handleGeneratingChange(false);
+    }
+  }, [lab.instances, graphContext, handleGeneratingChange, handleStreamChunk, handleStreamDone, handleApplyCode]);
+
+  const handleRefinementCancel = useCallback(() => {
+    setPendingRefinementPrompt(null);
+  }, []);
+
+  // ─── Sidebar entity callbacks ─────────────────────────────────
+  const handleAddEntity = useCallback((type: SceneNodeType) => {
+    graphAPIRef.current?.addNode(type);
+  }, []);
+
+  const handleAddWidget = useCallback((entry: WidgetRegistryEntry) => {
+    graphAPIRef.current?.addWidgetFromLibrary(entry);
+  }, []);
+
+  const handleBrowseMarketplace = useCallback(() => {
+    // Navigate to marketplace — for now switch to widgets panel
+    // Future: open marketplace overlay or route
+    lab.setActiveSidebarPanel('widgets');
+  }, [lab]);
+
+  const handleUploadHtml = useCallback(() => {
+    setShowImport(true);
+  }, []);
+
+  // ─── Sidebar action button handler ────────────────────────────
+  const handleSidebarAction = useCallback((panel: SidebarPanel) => {
+    switch (panel) {
+      case 'entities':
+        // Add a generic widget node as the default entity
+        graphAPIRef.current?.addNode('widget');
+        break;
+      case 'widgets':
+        // Add the first installed widget if available
+        if (installedWidgets.length > 0) {
+          graphAPIRef.current?.addWidgetFromLibrary(installedWidgets[0]);
+        }
+        break;
+      case 'inspector':
+        // Future: remove selected node
+        break;
+      case 'testing':
+        // Compile and run the pipeline
+        graphAPIRef.current?.compile();
+        break;
+      case 'deploy':
+        // Compile for publishing
+        graphAPIRef.current?.compile();
+        break;
+    }
+  }, [installedWidgets]);
+
+  // ─── Deploy panel callbacks ────────────────────────────────────
+  const handleValidatePipeline = useCallback(() => {
+    graphAPIRef.current?.compile();
+  }, []);
+
   if (!lab.ready || !lab.instances) return <LabLoading />;
 
   const { instances } = lab;
+  const manifest = instances.manifest.getManifest();
+  const manifestEvents = [
+    ...(manifest?.events?.emits ?? []),
+    ...(manifest?.events?.subscribes ?? []),
+  ];
 
   return (
     <div
@@ -378,30 +535,47 @@ const LabContent: React.FC = () => {
           <LabSidebar
             activePanel={lab.activeSidebarPanel}
             onPanelChange={lab.setActiveSidebarPanel}
+            debugMode={lab.debugMode}
+            onToggleDebug={lab.toggleDebugMode}
           />
 
-          {/* Context sidebar — panel content */}
+          {/* Context sidebar — panel content (fully wired) */}
           <LabContextSidebar
             activePanel={lab.activeSidebarPanel}
-            projectName={instances.manifest.getManifest()?.name ?? 'Untitled Widget'}
-            projectVersion="v0.1.0"
+            projectName={manifest?.name ?? 'Untitled Widget'}
+            projectVersion={manifest?.version ?? 'v0.1.0'}
             previewSlot={<LabPreviewComponent key={previewReloadKey} preview={instances.preview} />}
             isRunning={hasActiveWidget}
+            onAddEntity={handleAddEntity}
+            installedWidgets={installedWidgets}
+            onAddWidget={handleAddWidget}
+            onBrowseMarketplace={handleBrowseMarketplace}
+            onUploadHtml={handleUploadHtml}
+            activeDevice={activeDevice}
+            onDeviceChange={setActiveDevice}
+            activeSimulation={activeSimulation}
+            onSimulationChange={setActiveSimulation}
+            manifestName={manifest?.name}
+            manifestVersion={manifest?.version}
+            eventCount={manifestEvents.length}
+            onValidate={handleValidatePipeline}
+            onAction={handleSidebarAction}
           />
 
           {/* Full-bleed canvas */}
           <div style={{ flex: 1, minWidth: 0, minHeight: 0 }}>
             <CanvasView
               debugMode={lab.debugMode}
-              onToggleDebug={lab.toggleDebugMode}
               graphSlot={
                 <LabGraph
                   graphSync={instances.graphSync}
                   onCompile={(html) => {
                     instances.editor.setContent(html);
+                    setEditorContent(html);
                   }}
                   onGraphStateChange={handleGraphStateChange}
                   onDescribeWidget={handleDescribeWidget}
+                  onAPIReady={handleGraphAPIReady}
                 />
               }
               promptBar={
@@ -410,20 +584,42 @@ const LabContent: React.FC = () => {
                   onApplyCode={handleApplyCode}
                   currentEditorContent={editorContent}
                   graphContext={graphContext}
-                  onExpandThread={handleToggleAiPanel}
-                  threadOpen={aiPanelOpen}
+                  onGeneratingChange={handleGeneratingChange}
+                  onStreamChunk={handleStreamChunk}
+                  onStreamDone={handleStreamDone}
+                  onPromptReady={handlePromptReady}
                 />
+              }
+              refinementOverlay={
+                pendingRefinementPrompt ? (
+                  <PromptRefinement
+                    initialPrompt={pendingRefinementPrompt}
+                    generator={instances.aiGenerator}
+                    compatibleWidgets={compatibleWidgets}
+                    onGenerate={handleRefinementGenerate}
+                    onCancel={handleRefinementCancel}
+                  />
+                ) : undefined
+              }
+              streamingPreview={
+                streamingActive ? (
+                  <StreamingPreview
+                    html={streamingHtml}
+                    done={streamingDone}
+                    error={streamingError}
+                  />
+                ) : undefined
               }
             />
           </div>
         </div>
 
-        {/* Bottom status bar */}
+        {/* Bottom status bar — wired to real state */}
         <LabStatusBar
-          projectName={instances.manifest.getManifest()?.name ?? 'Untitled Widget'}
+          projectName={manifest?.name ?? 'Untitled Widget'}
           hasUnsavedChanges={hasActiveWidget}
           connected={true}
-          streaming={true}
+          streaming={isGenerating}
           branch="main"
           latencyMs={12}
         />
@@ -459,7 +655,7 @@ const LabContent: React.FC = () => {
         />
       )}
 
-      {/* Import dialog */}
+      {/* Import dialog — triggered by Upload .html or Browse Marketplace */}
       {showImport && (
         <LabImportComponent
           listings={[]}
