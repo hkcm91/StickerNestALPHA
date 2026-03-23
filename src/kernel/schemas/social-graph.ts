@@ -358,6 +358,9 @@ export const NotificationTypeSchema = z.enum([
   'canvas_invite',    // Someone invited you to a canvas
   'canvas_comment',   // Someone commented on your canvas
   'widget_share',     // Someone shared a widget with you
+  'mutual_follow',            // A mutual follow connection was established
+  'widget_connection_invite', // 1:1 widget connection invite (mutual follows)
+  'widget_broadcast',         // 1:many widget broadcast (creator to followers)
 ]);
 
 export type NotificationType = z.infer<typeof NotificationTypeSchema>;
@@ -756,6 +759,89 @@ export const SocialGraphMutationSchema = z.discriminatedUnion('type', [
 export type SocialGraphMutation = z.infer<typeof SocialGraphMutationSchema>;
 
 // =============================================================================
+// Widget Invites
+// =============================================================================
+
+/**
+ * Widget invite mode — share a widget instance or propose a pipeline connection
+ */
+export const WidgetInviteModeSchema = z.enum([
+  'share',     // Share a widget instance to another user's canvas
+  'pipeline',  // Propose a pipeline connection (bundles widget if needed)
+]);
+
+export type WidgetInviteMode = z.infer<typeof WidgetInviteModeSchema>;
+
+/**
+ * Widget invite lifecycle status
+ */
+export const WidgetInviteStatusSchema = z.enum([
+  'pending',   // Awaiting recipient response
+  'accepted',  // Recipient accepted, placement in progress or complete
+  'declined',  // Recipient declined
+  'expired',   // Invite expired without response
+]);
+
+export type WidgetInviteStatus = z.infer<typeof WidgetInviteStatusSchema>;
+
+/**
+ * Widget invite schema — stateful record for widget sharing / pipeline invites
+ *
+ * @remarks
+ * Invites are delivered via the notification system (targetType: 'widget_invite',
+ * targetId: inviteId) but tracked separately for lifecycle state management.
+ */
+export const WidgetInviteSchema = z.object({
+  /** Unique invite ID */
+  id: z.string().uuid(),
+  /** Sender user ID */
+  senderId: z.string().uuid(),
+  /** Recipient user ID */
+  recipientId: z.string().uuid(),
+  /** Invite mode */
+  mode: WidgetInviteModeSchema,
+  /** Lifecycle status */
+  status: WidgetInviteStatusSchema.default('pending'),
+  /** Whether this was part of a 1:many broadcast */
+  isBroadcast: z.boolean().default(false),
+  /** Groups all invites from the same broadcast action */
+  broadcastId: z.string().uuid().optional(),
+
+  // Widget payload
+  /** Marketplace widget ID */
+  widgetId: z.string(),
+  /** Snapshot of the widget manifest at time of invite */
+  widgetManifestSnapshot: z.record(z.string(), z.unknown()).optional(),
+  /** Widget HTML source (for non-marketplace / private widgets) */
+  widgetHtml: z.string().optional(),
+
+  // Pipeline fields (only when mode === 'pipeline')
+  /** Output port on sender's widget */
+  sourcePortId: z.string().optional(),
+  /** Suggested input port on recipient's widget */
+  targetPortId: z.string().optional(),
+  /** Sender's canvas ID (for cross-canvas pipeline) */
+  sourceCanvasId: z.string().uuid().optional(),
+  /** Sender's widget instance ID */
+  sourceWidgetInstanceId: z.string().optional(),
+
+  // Filled on accept
+  /** Recipient's chosen canvas */
+  targetCanvasId: z.string().uuid().optional(),
+  /** Recipient's widget instance ID (filled after placement) */
+  targetWidgetInstanceId: z.string().optional(),
+
+  /** Creation timestamp */
+  createdAt: z.string().datetime(),
+  /** Last update timestamp */
+  updatedAt: z.string().datetime(),
+  /** Expiration timestamp */
+  expiresAt: z.string().datetime().optional(),
+});
+
+export type WidgetInvite = z.infer<typeof WidgetInviteSchema>;
+
+// =============================================================================
 // JSON Schema Exports
 // =============================================================================
 
@@ -765,3 +851,4 @@ export const CommentJSONSchema = CommentSchema.toJSONSchema();
 export const ReactionJSONSchema = ReactionSchema.toJSONSchema();
 export const NotificationJSONSchema = NotificationSchema.toJSONSchema();
 export const FeedResponseJSONSchema = FeedResponseSchema.toJSONSchema();
+export const WidgetInviteJSONSchema = WidgetInviteSchema.toJSONSchema();

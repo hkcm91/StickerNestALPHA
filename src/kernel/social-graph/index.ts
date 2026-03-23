@@ -104,3 +104,14 @@ export {
   canMessage,
 } from './messages';
 export type { DirectMessage } from './messages';
+
+// Widget Invite API
+export {
+  sendWidgetInvite,
+  broadcastWidget,
+  acceptWidgetInvite,
+  declineWidgetInvite,
+  getPendingWidgetInvites,
+  getWidgetInvite,
+} from './widget-invites';
+export type { WidgetInvitePayload } from './widget-invites';

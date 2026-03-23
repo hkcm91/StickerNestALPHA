@@ -70,8 +70,8 @@ export const ShellLayout: React.FC<ShellLayoutProps> = ({
         display: 'grid',
         gridTemplateRows: topbar ? 'auto 1fr' : '1fr',
         gridTemplateColumns: '1fr',
-        width: '100vw',
-        height: '100vh',
+        width: '100%',
+        height: '100%',
         overflow: 'hidden',
         background: themeVar('--sn-bg'),
         color: themeVar('--sn-text'),
@@ -80,7 +80,7 @@ export const ShellLayout: React.FC<ShellLayoutProps> = ({
     >
       {/* Top bar */}
       {topbar && (
-        <div data-testid="shell-topbar" style={{ minHeight: 0 }}>
+        <div data-testid="shell-topbar" style={{ minHeight: 0, minWidth: 0, overflow: 'hidden' }}>
           {topbar}
         </div>
       )}

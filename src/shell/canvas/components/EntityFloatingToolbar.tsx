@@ -345,10 +345,27 @@ export const EntityFloatingToolbar: React.FC<EntityFloatingToolbarProps> = ({
         <PinIcon locked={entity.locked} />
       </button>
 
+      {/* Dock to panel — for widget entities */}
+      {entity.type === 'widget' && (
+        <button
+          style={getButtonStyle('dockToPanel')}
+          onClick={() => bus.emit("docker.widget.dockRequested", { entityIds: [entity.id] })}
+          onMouseEnter={() => setHoveredBtn('dockToPanel')}
+          onMouseLeave={() => setHoveredBtn(null)}
+          title="Dock to panel"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+            <line x1="9" y1="3" x2="9" y2="21" />
+            <polyline points="14 9 17 12 14 15" />
+          </svg>
+        </button>
+      )}
+
       <div style={dividerStyle} />
 
-      <button 
-        style={getButtonStyle('settings')} 
+      <button
+        style={getButtonStyle('settings')}
         onClick={handleSettings}
         onMouseEnter={() => setHoveredBtn('settings')}
         onMouseLeave={() => setHoveredBtn(null)}

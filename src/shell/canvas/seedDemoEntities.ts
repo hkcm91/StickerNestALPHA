@@ -323,7 +323,7 @@ export function seedCommerceCanvas(): void {
   // Shop entities
   const entities: CanvasEntity[] = [
     {
-      id: 'shop-header-001',
+      id: 'aaa00000-0000-4000-a000-000000000001',
       type: 'text',
       canvasId,
       transform: { position: { x: 100, y: 50 }, size: { width: 500, height: 80 }, rotation: 0, scale: 1 },
@@ -348,7 +348,7 @@ export function seedCommerceCanvas(): void {
       textAlign: 'left',
     } as CanvasEntity,
     {
-      id: 'shop-desc-001',
+      id: 'aaa00000-0000-4000-a000-000000000002',
       type: 'text',
       canvasId,
       transform: { position: { x: 100, y: 140 }, size: { width: 600, height: 50 }, rotation: 0, scale: 1 },
@@ -373,7 +373,7 @@ export function seedCommerceCanvas(): void {
       textAlign: 'left',
     } as CanvasEntity,
     {
-      id: 'shop-divider-001',
+      id: 'aaa00000-0000-4000-a000-000000000003',
       type: 'shape',
       canvasId,
       transform: { position: { x: 100, y: 210 }, size: { width: 600, height: 4 }, rotation: 0, scale: 1 },
@@ -396,7 +396,7 @@ export function seedCommerceCanvas(): void {
       strokeWidth: 0,
     } as CanvasEntity,
     {
-      id: 'shop-featured-001',
+      id: 'aaa00000-0000-4000-a000-000000000004',
       type: 'text',
       canvasId,
       transform: { position: { x: 100, y: 250 }, size: { width: 300, height: 40 }, rotation: 0, scale: 1 },
@@ -421,7 +421,7 @@ export function seedCommerceCanvas(): void {
       textAlign: 'left',
     } as CanvasEntity,
     {
-      id: 'shop-widget-001',
+      id: 'aaa00000-0000-4000-a000-000000000005',
       type: 'widget',
       canvasId,
       transform: { position: { x: 100, y: 300 }, size: { width: 580, height: 220 }, rotation: 0, scale: 1 },
@@ -444,7 +444,7 @@ export function seedCommerceCanvas(): void {
     } as CanvasEntity,
     // Item cards
     {
-      id: 'shop-item-1',
+      id: 'aaa00000-0000-4000-a000-000000000006',
       type: 'shape',
       canvasId,
       transform: { position: { x: 100, y: 310 }, size: { width: 180, height: 200 }, rotation: 0, scale: 1 },
@@ -467,7 +467,7 @@ export function seedCommerceCanvas(): void {
       strokeWidth: 2,
     } as CanvasEntity,
     {
-      id: 'shop-item-1-label',
+      id: 'aaa00000-0000-4000-a000-000000000007',
       type: 'text',
       canvasId,
       transform: { position: { x: 110, y: 420 }, size: { width: 160, height: 80 }, rotation: 0, scale: 1 },
@@ -492,7 +492,7 @@ export function seedCommerceCanvas(): void {
       textAlign: 'center',
     } as CanvasEntity,
     {
-      id: 'shop-item-2',
+      id: 'aaa00000-0000-4000-a000-000000000008',
       type: 'shape',
       canvasId,
       transform: { position: { x: 300, y: 310 }, size: { width: 180, height: 200 }, rotation: 0, scale: 1 },
@@ -515,7 +515,7 @@ export function seedCommerceCanvas(): void {
       strokeWidth: 2,
     } as CanvasEntity,
     {
-      id: 'shop-item-2-label',
+      id: 'aaa00000-0000-4000-a000-000000000009',
       type: 'text',
       canvasId,
       transform: { position: { x: 310, y: 420 }, size: { width: 160, height: 80 }, rotation: 0, scale: 1 },
@@ -540,7 +540,7 @@ export function seedCommerceCanvas(): void {
       textAlign: 'center',
     } as CanvasEntity,
     {
-      id: 'shop-item-3',
+      id: 'aaa00000-0000-4000-a000-00000000000a',
       type: 'shape',
       canvasId,
       transform: { position: { x: 500, y: 310 }, size: { width: 180, height: 200 }, rotation: 0, scale: 1 },
@@ -563,7 +563,7 @@ export function seedCommerceCanvas(): void {
       strokeWidth: 2,
     } as CanvasEntity,
     {
-      id: 'shop-item-3-label',
+      id: 'aaa00000-0000-4000-a000-00000000000b',
       type: 'text',
       canvasId,
       transform: { position: { x: 510, y: 420 }, size: { width: 160, height: 80 }, rotation: 0, scale: 1 },
@@ -589,7 +589,7 @@ export function seedCommerceCanvas(): void {
     } as CanvasEntity,
     // Subscription section
     {
-      id: 'shop-subs-header',
+      id: 'aaa00000-0000-4000-a000-00000000000c',
       type: 'text',
       canvasId,
       transform: { position: { x: 100, y: 550 }, size: { width: 300, height: 40 }, rotation: 0, scale: 1 },
@@ -614,7 +614,7 @@ export function seedCommerceCanvas(): void {
       textAlign: 'left',
     } as CanvasEntity,
     {
-      id: 'shop-widget-002',
+      id: 'aaa00000-0000-4000-a000-00000000000d',
       type: 'widget',
       canvasId,
       transform: { position: { x: 100, y: 610 }, size: { width: 580, height: 220 }, rotation: 0, scale: 1 },
@@ -637,7 +637,7 @@ export function seedCommerceCanvas(): void {
     } as CanvasEntity,
     // Tier cards
     {
-      id: 'shop-tier-1',
+      id: 'aaa00000-0000-4000-a000-00000000000e',
       type: 'shape',
       canvasId,
       transform: { position: { x: 100, y: 610 }, size: { width: 180, height: 140 }, rotation: 0, scale: 1 },
@@ -660,7 +660,7 @@ export function seedCommerceCanvas(): void {
       strokeWidth: 2,
     } as CanvasEntity,
     {
-      id: 'shop-tier-1-label',
+      id: 'aaa00000-0000-4000-a000-00000000000f',
       type: 'text',
       canvasId,
       transform: { position: { x: 110, y: 640 }, size: { width: 160, height: 80 }, rotation: 0, scale: 1 },
@@ -685,7 +685,7 @@ export function seedCommerceCanvas(): void {
       textAlign: 'center',
     } as CanvasEntity,
     {
-      id: 'shop-tier-2',
+      id: 'aaa00000-0000-4000-a000-000000000010',
       type: 'shape',
       canvasId,
       transform: { position: { x: 300, y: 610 }, size: { width: 180, height: 140 }, rotation: 0, scale: 1 },
@@ -708,7 +708,7 @@ export function seedCommerceCanvas(): void {
       strokeWidth: 2,
     } as CanvasEntity,
     {
-      id: 'shop-tier-2-label',
+      id: 'aaa00000-0000-4000-a000-000000000011',
       type: 'text',
       canvasId,
       transform: { position: { x: 310, y: 640 }, size: { width: 160, height: 80 }, rotation: 0, scale: 1 },
@@ -733,7 +733,7 @@ export function seedCommerceCanvas(): void {
       textAlign: 'center',
     } as CanvasEntity,
     {
-      id: 'shop-tier-3',
+      id: 'aaa00000-0000-4000-a000-000000000012',
       type: 'shape',
       canvasId,
       transform: { position: { x: 500, y: 610 }, size: { width: 180, height: 140 }, rotation: 0, scale: 1 },
@@ -756,7 +756,7 @@ export function seedCommerceCanvas(): void {
       strokeWidth: 2,
     } as CanvasEntity,
     {
-      id: 'shop-tier-3-label',
+      id: 'aaa00000-0000-4000-a000-000000000013',
       type: 'text',
       canvasId,
       transform: { position: { x: 510, y: 640 }, size: { width: 160, height: 80 }, rotation: 0, scale: 1 },
@@ -860,15 +860,32 @@ if (typeof window !== 'undefined') {
 }
 
 const DEMO_CANVAS_ID = '00000000-0000-4000-8000-000000000001';
-const DEMO_DOCKER_ID = 'demo-docker-001';
+const DEMO_DOCKER_ID = 'ddd00000-0000-4000-a000-000000000001';
+const DEMO_TEXT_ID = 'ddd00000-0000-4000-a000-000000000002';
+const DEMO_STICKER_ID = 'ddd00000-0000-4000-a000-000000000003';
+const DEMO_SHAPE_ID = 'ddd00000-0000-4000-a000-000000000004';
+const DEMO_DRAWING_ID = 'ddd00000-0000-4000-a000-000000000005';
+const DEMO_SVG_ID = 'ddd00000-0000-4000-a000-000000000006';
+const DEMO_LIVE_CHAT_ID = 'ddd00000-0000-4000-a000-000000000007';
+const DEMO_AI_AGENT_ID = 'ddd00000-0000-4000-a000-000000000008';
+const DEMO_LIVE_CHAT_INST = 'ddd00000-0000-4000-a000-100000000001';
+const DEMO_AI_AGENT_INST = 'ddd00000-0000-4000-a000-100000000002';
+const DEMO_TTT_ID = 'ddd00000-0000-4000-a000-000000000009';
+const DEMO_TTT_INST = 'ddd00000-0000-4000-a000-100000000003';
+const DEMO_C4_ID = 'ddd00000-0000-4000-a000-00000000000a';
+const DEMO_C4_INST = 'ddd00000-0000-4000-a000-100000000004';
+const DEMO_PONG_ID = 'ddd00000-0000-4000-a000-00000000000c';
+const DEMO_PONG_INST = 'ddd00000-0000-4000-a000-100000000006';
+const DEMO_BS_ID = 'ddd00000-0000-4000-a000-00000000000b';
+const DEMO_BS_INST = 'ddd00000-0000-4000-a000-100000000005';
 const DEMO_CHILD_ENTITY_IDS = [
-  'demo-text-001',
-  'demo-sticker-001',
-  'demo-shape-001',
-  'demo-drawing-001',
-  'demo-svg-001',
+  DEMO_TEXT_ID,
+  DEMO_STICKER_ID,
+  DEMO_SHAPE_ID,
+  DEMO_DRAWING_ID,
+  DEMO_SVG_ID,
 ];
-const DEMO_USER_ID = 'demo-user-001';
+const DEMO_USER_ID = 'ddd00000-0000-4000-a000-000000000099';
 
 /**
  * Creates and emits demo entities onto the canvas via the event bus.
@@ -907,7 +924,7 @@ export function seedDemoEntities(): void {
 
     // --- Text entity ---
     {
-      id: 'demo-text-001',
+      id: DEMO_TEXT_ID,
       type: 'text',
       canvasId: DEMO_CANVAS_ID,
       transform: {
@@ -940,7 +957,7 @@ export function seedDemoEntities(): void {
 
     // --- Sticker entity ---
     {
-      id: 'demo-sticker-001',
+      id: DEMO_STICKER_ID,
       type: 'sticker',
       canvasId: DEMO_CANVAS_ID,
       transform: {
@@ -969,7 +986,7 @@ export function seedDemoEntities(): void {
 
     // --- Shape entity (rectangle) ---
     {
-      id: 'demo-shape-001',
+      id: DEMO_SHAPE_ID,
       type: 'shape',
       canvasId: DEMO_CANVAS_ID,
       transform: {
@@ -1000,7 +1017,7 @@ export function seedDemoEntities(): void {
 
     // --- Drawing entity (pen stroke) ---
     {
-      id: 'demo-drawing-001',
+      id: DEMO_DRAWING_ID,
       type: 'drawing',
       canvasId: DEMO_CANVAS_ID,
       transform: {
@@ -1041,7 +1058,7 @@ export function seedDemoEntities(): void {
 
     // --- SVG entity ---
     {
-      id: 'demo-svg-001',
+      id: DEMO_SVG_ID,
       type: 'svg',
       canvasId: DEMO_CANVAS_ID,
       transform: {
@@ -1069,9 +1086,387 @@ export function seedDemoEntities(): void {
       fill: '#e84393',
       stroke: '',
     } as CanvasEntity,
+
+    // --- Live Chat widget ---
+    {
+      id: DEMO_LIVE_CHAT_ID,
+      type: 'widget',
+      canvasId: DEMO_CANVAS_ID,
+      transform: {
+        position: { x: 500, y: 80 },
+        size: { width: 350, height: 450 },
+        rotation: 0,
+        scale: 1,
+      },
+      zIndex: 20,
+      visible: true,
+      canvasVisibility: 'both' as const,
+      locked: false,
+      flipH: false,
+      flipV: false,
+      opacity: 1,
+      createdAt: now,
+      updatedAt: now,
+      createdBy: DEMO_USER_ID,
+      borderRadius: 8,
+      syncTransform2d3d: true,
+      name: 'Live Chat',
+      widgetId: 'wgt-live-chat',
+      widgetInstanceId: DEMO_LIVE_CHAT_INST,
+      config: {},
+    } as CanvasEntity,
+
+    // --- AI Agent widget ---
+    {
+      id: DEMO_AI_AGENT_ID,
+      type: 'widget',
+      canvasId: DEMO_CANVAS_ID,
+      transform: {
+        position: { x: 880, y: 80 },
+        size: { width: 350, height: 450 },
+        rotation: 0,
+        scale: 1,
+      },
+      zIndex: 21,
+      visible: true,
+      canvasVisibility: 'both' as const,
+      locked: false,
+      flipH: false,
+      flipV: false,
+      opacity: 1,
+      createdAt: now,
+      updatedAt: now,
+      createdBy: DEMO_USER_ID,
+      borderRadius: 8,
+      syncTransform2d3d: true,
+      name: 'AI Agent',
+      widgetId: 'wgt-ai-agent',
+      widgetInstanceId: DEMO_AI_AGENT_INST,
+      config: {},
+    } as CanvasEntity,
+
+    // --- Tic-Tac-Toe widget ---
+    {
+      id: DEMO_TTT_ID,
+      type: 'widget',
+      canvasId: DEMO_CANVAS_ID,
+      transform: {
+        position: { x: 900, y: 80 },
+        size: { width: 320, height: 400 },
+        rotation: 0,
+        scale: 1,
+      },
+      zIndex: 22,
+      visible: true,
+      canvasVisibility: 'both' as const,
+      locked: false,
+      flipH: false,
+      flipV: false,
+      opacity: 1,
+      createdAt: now,
+      updatedAt: now,
+      createdBy: DEMO_USER_ID,
+      borderRadius: 8,
+      syncTransform2d3d: true,
+      name: 'Tic-Tac-Toe',
+      widgetId: 'wgt-tictactoe',
+      widgetInstanceId: DEMO_TTT_INST,
+      config: {},
+    } as CanvasEntity,
+
+    // --- Connect Four widget ---
+    {
+      id: DEMO_C4_ID,
+      type: 'widget',
+      canvasId: DEMO_CANVAS_ID,
+      transform: {
+        position: { x: 1260, y: 80 },
+        size: { width: 350, height: 420 },
+        rotation: 0,
+        scale: 1,
+      },
+      zIndex: 23,
+      visible: true,
+      canvasVisibility: 'both' as const,
+      locked: false,
+      flipH: false,
+      flipV: false,
+      opacity: 1,
+      createdAt: now,
+      updatedAt: now,
+      createdBy: DEMO_USER_ID,
+      borderRadius: 8,
+      syncTransform2d3d: true,
+      name: 'Connect Four',
+      widgetId: 'wgt-connect4',
+      widgetInstanceId: DEMO_C4_INST,
+      config: {},
+    } as CanvasEntity,
+
+    // --- Pong widget ---
+    {
+      id: DEMO_PONG_ID,
+      type: 'widget',
+      canvasId: DEMO_CANVAS_ID,
+      transform: {
+        position: { x: 1040, y: 540 },
+        size: { width: 420, height: 340 },
+        rotation: 0,
+        scale: 1,
+      },
+      zIndex: 25,
+      visible: true,
+      canvasVisibility: 'both' as const,
+      locked: false,
+      flipH: false,
+      flipV: false,
+      opacity: 1,
+      createdAt: now,
+      updatedAt: now,
+      createdBy: DEMO_USER_ID,
+      borderRadius: 8,
+      syncTransform2d3d: true,
+      name: 'Pong',
+      widgetId: 'wgt-pong',
+      widgetInstanceId: DEMO_PONG_INST,
+      config: {},
+    } as CanvasEntity,
+
+    // --- Battleship widget ---
+    {
+      id: DEMO_BS_ID,
+      type: 'widget',
+      canvasId: DEMO_CANVAS_ID,
+      transform: {
+        position: { x: 500, y: 540 },
+        size: { width: 500, height: 500 },
+        rotation: 0,
+        scale: 1,
+      },
+      zIndex: 24,
+      visible: true,
+      canvasVisibility: 'both' as const,
+      locked: false,
+      flipH: false,
+      flipV: false,
+      opacity: 1,
+      createdAt: now,
+      updatedAt: now,
+      createdBy: DEMO_USER_ID,
+      borderRadius: 8,
+      syncTransform2d3d: true,
+      name: 'Battleship',
+      widgetId: 'wgt-battleship',
+      widgetInstanceId: DEMO_BS_INST,
+      config: {},
+    } as CanvasEntity,
   ];
 
   // Emit each entity as a ENTITY_CREATED bus event
+  for (const entity of entities) {
+    bus.emit(CanvasEvents.ENTITY_CREATED, entity);
+  }
+}
+
+// ── Claude's Lab Canvas Seed ────────────────────────────────────────────────
+
+const CLAUDE_CANVAS_ID = 'ccc00000-0000-4000-a000-000000000001';
+const CLAUDE_USER_ID = 'a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d';
+const CLAUDE_CHAT_ID = 'ccc00000-0000-4000-a000-000000000002';
+const CLAUDE_AGENT_ID = 'ccc00000-0000-4000-a000-000000000003';
+const CLAUDE_CHAT_INST = 'ccc00000-0000-4000-a000-100000000001';
+const CLAUDE_AGENT_INST = 'ccc00000-0000-4000-a000-100000000002';
+const CLAUDE_TTT_ID = 'ccc00000-0000-4000-a000-000000000004';
+const CLAUDE_TTT_INST = 'ccc00000-0000-4000-a000-100000000003';
+const CLAUDE_C4_ID = 'ccc00000-0000-4000-a000-000000000005';
+const CLAUDE_C4_INST = 'ccc00000-0000-4000-a000-100000000004';
+const CLAUDE_PONG_ID = 'ccc00000-0000-4000-a000-000000000007';
+const CLAUDE_PONG_INST = 'ccc00000-0000-4000-a000-100000000006';
+const CLAUDE_BS_ID = 'ccc00000-0000-4000-a000-000000000006';
+const CLAUDE_BS_INST = 'ccc00000-0000-4000-a000-100000000005';
+
+/**
+ * Seeds Claude's Lab canvas with Live Chat + AI Agent widgets.
+ * Used for cross-canvas communication testing.
+ */
+export function seedClaudeLabCanvas(): void {
+  const now = new Date().toISOString();
+  const entities: CanvasEntity[] = [
+    // --- Live Chat widget (Claude's side) ---
+    {
+      id: CLAUDE_CHAT_ID,
+      type: 'widget',
+      canvasId: CLAUDE_CANVAS_ID,
+      transform: {
+        position: { x: 80, y: 80 },
+        size: { width: 350, height: 450 },
+        rotation: 0,
+        scale: 1,
+      },
+      zIndex: 10,
+      visible: true,
+      canvasVisibility: 'both' as const,
+      locked: false,
+      flipH: false,
+      flipV: false,
+      opacity: 1,
+      createdAt: now,
+      updatedAt: now,
+      createdBy: CLAUDE_USER_ID,
+      borderRadius: 8,
+      syncTransform2d3d: true,
+      name: 'Live Chat (Claude)',
+      widgetId: 'wgt-live-chat',
+      widgetInstanceId: CLAUDE_CHAT_INST,
+      config: {},
+    } as CanvasEntity,
+
+    // --- AI Agent widget (Claude's side) ---
+    {
+      id: CLAUDE_AGENT_ID,
+      type: 'widget',
+      canvasId: CLAUDE_CANVAS_ID,
+      transform: {
+        position: { x: 460, y: 80 },
+        size: { width: 350, height: 450 },
+        rotation: 0,
+        scale: 1,
+      },
+      zIndex: 11,
+      visible: true,
+      canvasVisibility: 'both' as const,
+      locked: false,
+      flipH: false,
+      flipV: false,
+      opacity: 1,
+      createdAt: now,
+      updatedAt: now,
+      createdBy: CLAUDE_USER_ID,
+      borderRadius: 8,
+      syncTransform2d3d: true,
+      name: 'AI Agent (Claude)',
+      widgetId: 'wgt-ai-agent',
+      widgetInstanceId: CLAUDE_AGENT_INST,
+      config: {},
+    } as CanvasEntity,
+
+    // --- Tic-Tac-Toe widget (Claude's side) ---
+    {
+      id: CLAUDE_TTT_ID,
+      type: 'widget',
+      canvasId: CLAUDE_CANVAS_ID,
+      transform: {
+        position: { x: 840, y: 80 },
+        size: { width: 320, height: 400 },
+        rotation: 0,
+        scale: 1,
+      },
+      zIndex: 12,
+      visible: true,
+      canvasVisibility: 'both' as const,
+      locked: false,
+      flipH: false,
+      flipV: false,
+      opacity: 1,
+      createdAt: now,
+      updatedAt: now,
+      createdBy: CLAUDE_USER_ID,
+      borderRadius: 8,
+      syncTransform2d3d: true,
+      name: 'Tic-Tac-Toe (Claude)',
+      widgetId: 'wgt-tictactoe',
+      widgetInstanceId: CLAUDE_TTT_INST,
+      config: {},
+    } as CanvasEntity,
+
+    // --- Connect Four widget (Claude's side) ---
+    {
+      id: CLAUDE_C4_ID,
+      type: 'widget',
+      canvasId: CLAUDE_CANVAS_ID,
+      transform: {
+        position: { x: 840, y: 540 },
+        size: { width: 350, height: 420 },
+        rotation: 0,
+        scale: 1,
+      },
+      zIndex: 13,
+      visible: true,
+      canvasVisibility: 'both' as const,
+      locked: false,
+      flipH: false,
+      flipV: false,
+      opacity: 1,
+      createdAt: now,
+      updatedAt: now,
+      createdBy: CLAUDE_USER_ID,
+      borderRadius: 8,
+      syncTransform2d3d: true,
+      name: 'Connect Four (Claude)',
+      widgetId: 'wgt-connect4',
+      widgetInstanceId: CLAUDE_C4_INST,
+      config: {},
+    } as CanvasEntity,
+
+    // --- Pong widget (Claude's side) ---
+    {
+      id: CLAUDE_PONG_ID,
+      type: 'widget',
+      canvasId: CLAUDE_CANVAS_ID,
+      transform: {
+        position: { x: 80, y: 1060 },
+        size: { width: 420, height: 340 },
+        rotation: 0,
+        scale: 1,
+      },
+      zIndex: 15,
+      visible: true,
+      canvasVisibility: 'both' as const,
+      locked: false,
+      flipH: false,
+      flipV: false,
+      opacity: 1,
+      createdAt: now,
+      updatedAt: now,
+      createdBy: CLAUDE_USER_ID,
+      borderRadius: 8,
+      syncTransform2d3d: true,
+      name: 'Pong (Claude)',
+      widgetId: 'wgt-pong',
+      widgetInstanceId: CLAUDE_PONG_INST,
+      config: {},
+    } as CanvasEntity,
+
+    // --- Battleship widget (Claude's side) ---
+    {
+      id: CLAUDE_BS_ID,
+      type: 'widget',
+      canvasId: CLAUDE_CANVAS_ID,
+      transform: {
+        position: { x: 80, y: 540 },
+        size: { width: 500, height: 500 },
+        rotation: 0,
+        scale: 1,
+      },
+      zIndex: 14,
+      visible: true,
+      canvasVisibility: 'both' as const,
+      locked: false,
+      flipH: false,
+      flipV: false,
+      opacity: 1,
+      createdAt: now,
+      updatedAt: now,
+      createdBy: CLAUDE_USER_ID,
+      borderRadius: 8,
+      syncTransform2d3d: true,
+      name: 'Battleship',
+      widgetId: 'wgt-battleship',
+      widgetInstanceId: CLAUDE_BS_INST,
+      config: {},
+    } as CanvasEntity,
+  ];
+
   for (const entity of entities) {
     bus.emit(CanvasEvents.ENTITY_CREATED, entity);
   }

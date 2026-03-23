@@ -248,15 +248,26 @@ interface ToolDef {
   shortcut?: string;
 }
 
-const TOOLS: ToolDef[] = [
+/** Primary tools — always visible in the main toolbar */
+const PRIMARY_TOOLS: ToolDef[] = [
   { id: 'select', label: 'Select', icon: <SelectIcon />, shortcut: 'V' },
   { id: 'pan', label: 'Pan', icon: <PanIcon />, shortcut: 'H' },
-  { id: 'artboard', label: 'Artboard', icon: <ArtboardIcon />, shortcut: 'A' },
   { id: 'pen', label: 'Pen', icon: <PenIcon />, shortcut: 'D' },
   { id: 'text', label: 'Text', icon: <TextIcon />, shortcut: 'T' },
   { id: 'rect', label: 'Shape', icon: <RectIcon />, shortcut: 'R' },
+];
+
+/** Extra tools — shown in the pull-down tray */
+const TRAY_TOOLS: ToolDef[] = [
+  { id: 'artboard', label: 'Artboard', icon: <ArtboardIcon />, shortcut: 'A' },
   { id: 'pathfinder', label: 'Shape Builder', icon: <PathfinderIcon />, shortcut: 'Shift+M' },
 ];
+
+/** All tools combined — exported for keyboard shortcut handling in canvas shortcuts */
+export const TOOLS: ToolDef[] = [...PRIMARY_TOOLS, ...TRAY_TOOLS];
+
+/** Spring easing — Principle 4 */
+const TOOLBAR_SPRING = 'cubic-bezier(0.16, 1, 0.3, 1)';
 
 /** Shared button style for small toggle/icon buttons */
 const smallBtnBase: React.CSSProperties = {
@@ -264,8 +275,8 @@ const smallBtnBase: React.CSSProperties = {
   alignItems: 'center',
   justifyContent: 'center',
   padding: '4px',
-  minWidth: '28px',
-  height: '28px',
+  minWidth: '32px',
+  height: '32px',
   border: '1px solid var(--sn-border, #e0e0e0)',
   borderRadius: 'var(--sn-radius, 6px)',
   background: 'transparent',
@@ -274,7 +285,7 @@ const smallBtnBase: React.CSSProperties = {
   fontSize: '12px',
   fontFamily: 'inherit',
   lineHeight: 1,
-  transition: 'all 0.1s ease',
+  transition: `all 0.15s ${TOOLBAR_SPRING}`,
 };
 
 const smallBtnActive: React.CSSProperties = {
@@ -283,6 +294,71 @@ const smallBtnActive: React.CSSProperties = {
   background: 'var(--sn-accent, #6366f1)',
   color: '#fff',
 };
+
+/** Labeled tool button — icon + text label side by side */
+const LabeledToolBtn: React.FC<{
+  icon: React.ReactNode;
+  label: string;
+  active: boolean;
+  onClick: () => void;
+  title: string;
+  testId: string;
+}> = ({ icon, label, active, onClick, title, testId }) => (
+  <button
+    data-testid={testId}
+    onClick={onClick}
+    title={title}
+    style={{
+      ...smallBtnBase,
+      gap: '4px',
+      padding: '0 8px',
+      minWidth: 'auto',
+      borderColor: active ? 'var(--sn-accent, #6366f1)' : 'var(--sn-border, #e0e0e0)',
+      background: active ? 'var(--sn-accent, #6366f1)' : 'transparent',
+      color: active ? '#fff' : 'var(--sn-text, #1a1a2e)',
+    }}
+  >
+    {icon}
+    <span style={{ fontSize: '11px', fontWeight: 500 }}>{label}</span>
+  </button>
+);
+
+/** Tray section label */
+const TrayLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <span style={{
+    fontSize: '10px',
+    fontWeight: 600,
+    textTransform: 'uppercase',
+    letterSpacing: '0.08em',
+    color: 'var(--sn-text-muted, #888)',
+    marginRight: '6px',
+    whiteSpace: 'nowrap',
+  }}>
+    {children}
+  </span>
+);
+
+/** Vertical divider line */
+const Divider: React.FC = () => (
+  <div style={{ width: '1px', height: '24px', background: 'var(--sn-border, #e0e0e0)', margin: '0 6px' }} />
+);
+
+/** Chevron icon for More Tools toggle */
+const ChevronDownIcon: React.FC<{ open: boolean }> = ({ open }) => (
+  <svg
+    width="12"
+    height="12"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    style={{ transition: `transform 0.25s ${TOOLBAR_SPRING}`, transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}
+  >
+    <polyline points="6 9 12 15 18 9" />
+  </svg>
+);
 
 /**
  * Toolbar component — renders tool buttons, zoom controls, grid controls, and edit/preview toggle.
@@ -538,6 +614,22 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     [],
   );
 
+  // ── More Tools tray ────────────────────────────────────────────
+  const [trayOpen, setTrayOpen] = useState(false);
+  const trayRef = useRef<HTMLDivElement>(null);
+
+  // Dismiss tray on outside click
+  useEffect(() => {
+    if (!trayOpen) return;
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (trayRef.current && !trayRef.current.contains(e.target as Node)) {
+        setTrayOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [trayOpen]);
+
   // ── Grid customizer popover ─────────────────────────────────────
   const [gridCustomizerOpen, setGridCustomizerOpen] = useState(false);
   const gridCustomizerRef = useRef<HTMLDivElement>(null);
@@ -571,703 +663,370 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
   const isEditMode = mode === 'edit';
 
+  // Select style for tray dropdowns
+  const traySelectStyle: React.CSSProperties = {
+    height: '32px',
+    padding: '0 6px',
+    border: '1px solid var(--sn-border, #e0e0e0)',
+    borderRadius: 'var(--sn-radius, 6px)',
+    background: 'var(--sn-surface, #fff)',
+    color: 'var(--sn-text, #1a1a2e)',
+    cursor: 'pointer',
+    fontSize: '11px',
+    fontFamily: 'inherit',
+  };
+
   return (
-    <div
-      data-testid="canvas-toolbar"
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '4px',
-        padding: '0 12px',
-        background: 'var(--sn-surface, #fff)',
-        borderBottom: '1px solid var(--sn-border, #e0e0e0)',
-        height: '44px',
-        fontFamily: 'var(--sn-font-family, system-ui)',
-        fontSize: '13px',
-        userSelect: 'none',
-        overflowX: 'auto',
-        overflowY: 'hidden',
-      }}
-    >
-      {/* Canvas name + Save button + status — always visible at the start */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-        {/* Editable canvas name */}
-        {canvasName !== undefined && (
-          isRenaming ? (
-            <input
-              ref={renameInputRef}
-              data-testid="canvas-name-input"
-              value={renameDraft}
-              onChange={(e) => setRenameDraft(e.target.value)}
-              onBlur={() => {
-                if (renameDraft.trim() && onRename) onRename(renameDraft.trim());
-                setIsRenaming(false);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
+    <div ref={trayRef} data-testid="canvas-toolbar" style={{ position: 'relative' }}>
+      {/* ═══ PRIMARY TOOLBAR ═══ */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px',
+          padding: '0 12px',
+          background: 'var(--sn-surface, #fff)',
+          borderBottom: '1px solid var(--sn-border, #e0e0e0)',
+          height: '48px',
+          fontFamily: 'var(--sn-font-family, system-ui)',
+          fontSize: '13px',
+          userSelect: 'none',
+        }}
+      >
+        {/* Canvas name + Save */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+          {canvasName !== undefined && (
+            isRenaming ? (
+              <input
+                ref={renameInputRef}
+                data-testid="canvas-name-input"
+                value={renameDraft}
+                onChange={(e) => setRenameDraft(e.target.value)}
+                onBlur={() => {
                   if (renameDraft.trim() && onRename) onRename(renameDraft.trim());
                   setIsRenaming(false);
-                } else if (e.key === 'Escape') {
-                  setIsRenaming(false);
-                }
-              }}
-              style={{
-                fontWeight: 600,
-                fontSize: '13px',
-                fontFamily: 'inherit',
-                border: '1px solid var(--sn-accent, #6366f1)',
-                borderRadius: '4px',
-                padding: '2px 6px',
-                background: 'var(--sn-bg, #fff)',
-                color: 'var(--sn-text, #1a1a2e)',
-                outline: 'none',
-                width: '160px',
-                height: '26px',
-              }}
-            />
-          ) : (
-            <div
-              data-testid="canvas-name"
-              onDoubleClick={() => {
-                setRenameDraft(canvasName);
-                setIsRenaming(true);
-                setTimeout(() => renameInputRef.current?.select(), 0);
-              }}
-              title="Double-click to rename"
-              style={{
-                fontWeight: 600,
-                fontSize: '13px',
-                cursor: 'pointer',
-                maxWidth: '180px',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {canvasName}
-            </div>
-          )
-        )}
-
-        {/* Save button + status */}
-        {saveStatus && (
-          <>
-            <button
-              data-testid="save-btn"
-              onClick={onSave}
-              title="Save (Ctrl+S)"
-              style={{
-                ...smallBtnBase,
-                padding: '0 10px',
-                width: 'auto',
-                fontSize: '12px',
-                fontWeight: 600,
-              }}
-            >
-              Save
-            </button>
-            <div
-              data-testid="save-status"
-              title={SAVE_STATUS_LABELS[saveStatus]}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                fontSize: '11px',
-                color: 'var(--sn-text-muted, #6b7280)',
-              }}
-            >
-              <span
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    if (renameDraft.trim() && onRename) onRename(renameDraft.trim());
+                    setIsRenaming(false);
+                  } else if (e.key === 'Escape') {
+                    setIsRenaming(false);
+                  }
+                }}
                 style={{
-                  width: '8px',
-                  height: '8px',
-                  borderRadius: '50%',
-                  background: SAVE_STATUS_COLORS[saveStatus],
-                  display: 'inline-block',
+                  fontWeight: 600,
+                  fontSize: '13px',
+                  fontFamily: 'inherit',
+                  border: '1px solid var(--sn-accent, #6366f1)',
+                  borderRadius: '4px',
+                  padding: '2px 6px',
+                  background: 'var(--sn-bg, #fff)',
+                  color: 'var(--sn-text, #1a1a2e)',
+                  outline: 'none',
+                  width: '160px',
+                  height: '28px',
                 }}
               />
-              {SAVE_STATUS_LABELS[saveStatus]}
-            </div>
-          </>
-        )}
-
-        <div
-          style={{
-            width: '1px',
-            height: '24px',
-            background: 'var(--sn-border, #e0e0e0)',
-            margin: '0 4px',
-          }}
-        />
-      </div>
-
-      {/* Tool buttons — only shown in edit mode */}
-      {isEditMode && (
-        <div
-          style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-          data-testid="toolbar-tools"
-        >
-          <div style={{ display: 'flex', gap: '2px' }}>
-            {TOOLS.map((tool) => (
-              <button
-                key={tool.id}
-                data-testid={`tool-${tool.id}`}
-                onClick={() => handleToolClick(tool.id)}
-                title={`${tool.label}${tool.shortcut ? ` (${tool.shortcut})` : ''}`}
+            ) : (
+              <div
+                data-testid="canvas-name"
+                onDoubleClick={() => {
+                  setRenameDraft(canvasName);
+                  setIsRenaming(true);
+                  setTimeout(() => renameInputRef.current?.select(), 0);
+                }}
+                title="Double-click to rename"
                 style={{
-                  ...smallBtnBase,
-                  minWidth: '32px',
-                  borderColor: activeTool === tool.id ? 'var(--sn-accent, #6366f1)' : 'var(--sn-border, #e0e0e0)',
-                  background: activeTool === tool.id ? 'var(--sn-accent, #6366f1)' : 'transparent',
-                  color: activeTool === tool.id ? '#fff' : 'var(--sn-text, #1a1a2e)',
+                  fontWeight: 600,
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  maxWidth: '180px',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
                 }}
               >
-                {tool.icon}
+                {canvasName}
+              </div>
+            )
+          )}
+
+          {saveStatus && (
+            <>
+              <button
+                data-testid="save-btn"
+                onClick={onSave}
+                title="Save (Ctrl+S)"
+                style={{ ...smallBtnBase, padding: '0 10px', width: 'auto', fontSize: '12px', fontWeight: 600 }}
+              >
+                Save
               </button>
-            ))}
+              <div
+                data-testid="save-status"
+                title={SAVE_STATUS_LABELS[saveStatus]}
+                style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--sn-text-muted, #6b7280)' }}
+              >
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: SAVE_STATUS_COLORS[saveStatus], display: 'inline-block' }} />
+                {SAVE_STATUS_LABELS[saveStatus]}
+              </div>
+            </>
+          )}
+          <Divider />
+        </div>
+
+        {/* Primary tool buttons — labeled, edit mode only */}
+        {isEditMode && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }} data-testid="toolbar-tools">
+            <div style={{ display: 'flex', gap: '2px' }}>
+              {PRIMARY_TOOLS.map((tool) => (
+                <LabeledToolBtn
+                  key={tool.id}
+                  testId={`tool-${tool.id}`}
+                  icon={tool.icon}
+                  label={tool.label}
+                  active={activeTool === tool.id}
+                  onClick={() => handleToolClick(tool.id)}
+                  title={`${tool.label}${tool.shortcut ? ` (${tool.shortcut})` : ''}`}
+                />
+              ))}
+            </div>
+
+            <Divider />
+
+            <div style={{ display: 'flex', gap: '2px' }}>
+              <button onClick={handleUndo} disabled={!canUndo} title="Undo (Ctrl+Z)" style={{ ...smallBtnBase, opacity: canUndo ? 1 : 0.4 }}>
+                <UndoIcon />
+              </button>
+              <button onClick={handleRedo} disabled={!canRedo} title="Redo (Ctrl+Shift+Z)" style={{ ...smallBtnBase, opacity: canRedo ? 1 : 0.4 }}>
+                <RedoIcon />
+              </button>
+            </div>
           </div>
+        )}
 
-          <div
-            style={{
-              width: '1px',
-              height: '24px',
-              background: 'var(--sn-border, #e0e0e0)',
-              margin: '0 4px',
-            }}
-          />
+        {/* Spacer */}
+        <div style={{ flex: 1 }} />
 
-          <div style={{ display: 'flex', gap: '2px' }}>
-            <button
-              onClick={handleUndo}
-              disabled={!canUndo}
-              title="Undo (Ctrl+Z)"
-              style={{ ...smallBtnBase, opacity: canUndo ? 1 : 0.4 }}
-            >
-              <UndoIcon />
-            </button>
-            <button
-              onClick={handleRedo}
-              disabled={!canRedo}
-              title="Redo (Ctrl+Shift+Z)"
-              style={{ ...smallBtnBase, opacity: canRedo ? 1 : 0.4 }}
-            >
-              <RedoIcon />
-            </button>
-            <button
-              onClick={handleHistoryClick}
-              title="History"
-              style={smallBtnBase}
-            >
-              <HistoryIcon />
-            </button>
-          </div>
-
-          <div
-            style={{
-              width: '1px',
-              height: '24px',
-              background: 'var(--sn-border, #e0e0e0)',
-              margin: '0 4px',
-            }}
-          />
-
+        {/* Zoom controls */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }} data-testid="toolbar-zoom">
+          <button data-testid="zoom-out" onClick={handleZoomOut} title="Zoom out" style={smallBtnBase}>-</button>
           <button
-            onClick={handleDockerClick}
-            title="Docker Library"
-            style={smallBtnBase}
+            data-testid="zoom-reset"
+            onClick={handleZoomReset}
+            title="Reset zoom"
+            style={{ ...smallBtnBase, border: 'none', minWidth: '44px', color: 'var(--sn-text-muted, #6b7280)' }}
           >
-            <LibraryIcon />
+            {zoomPercent}%
+          </button>
+          <button data-testid="zoom-in" onClick={handleZoomIn} title="Zoom in" style={smallBtnBase}>+</button>
+        </div>
+
+        <Divider />
+
+        {/* Mode toggle + Fullscreen */}
+        <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+          <button
+            data-testid="mode-toggle"
+            onClick={handleModeToggle}
+            title={isEditMode ? 'Switch to Preview (P)' : 'Switch to Edit (P)'}
+            style={{
+              height: '32px',
+              padding: '0 16px',
+              border: '1px solid var(--sn-border, #e0e0e0)',
+              borderRadius: 'var(--sn-radius, 6px)',
+              background: isEditMode ? 'transparent' : 'var(--sn-accent, #6366f1)',
+              color: isEditMode ? 'var(--sn-text, #1a1a2e)' : '#fff',
+              cursor: 'pointer',
+              fontSize: '12px',
+              fontFamily: 'inherit',
+              fontWeight: 600,
+              transition: `all 0.15s ${TOOLBAR_SPRING}`,
+            }}
+          >
+            {isEditMode ? 'Run' : 'Edit'}
+          </button>
+          <button
+            data-testid="fullscreen-preview-btn"
+            onClick={handleFullscreenPreview}
+            title="Fullscreen Preview (Shift+F)"
+            style={{ ...smallBtnBase, height: '32px' }}
+          >
+            <FullscreenIcon />
           </button>
         </div>
-      )}
 
-      {/* Grouping and Alignment — shown in edit mode when something is selected */}
-      {isEditMode && (
-        <>
-          <div
-            style={{
-              width: '1px',
-              height: '24px',
-              background: 'var(--sn-border, #e0e0e0)',
-              margin: '0 4px',
-            }}
-          />
-          <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
+        {/* More Tools toggle */}
+        {isEditMode && (
+          <>
+            <Divider />
             <button
-              onClick={handleGroup}
-              disabled={selectedIds.size < 2}
-              title="Group (Ctrl+G)"
-              style={{ ...smallBtnBase, padding: '0 8px', width: 'auto', opacity: selectedIds.size < 2 ? 0.4 : 1 }}
-            >
-              Group
-            </button>
-            <button
-              onClick={handleUngroup}
-              disabled={selectedIds.size === 0}
-              title="Ungroup (Ctrl+Shift+G)"
-              style={{ ...smallBtnBase, padding: '0 8px', width: 'auto', opacity: selectedIds.size === 0 ? 0.4 : 1 }}
-            >
-              Ungroup
-            </button>
-          </div>
-
-          <div
-            style={{
-              width: '1px',
-              height: '24px',
-              background: 'var(--sn-border, #e0e0e0)',
-              margin: '0 4px',
-            }}
-          />
-          <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
-            <button onClick={() => handleAlign('left')} disabled={selectedIds.size < 2} title="Align Left" style={{ ...smallBtnBase, opacity: selectedIds.size < 2 ? 0.4 : 1 }}><AlignLeftIcon /></button>
-            <button onClick={() => handleAlign('centerH')} disabled={selectedIds.size < 2} title="Align Horizontal Center" style={{ ...smallBtnBase, opacity: selectedIds.size < 2 ? 0.4 : 1 }}><AlignCenterHIcon /></button>
-            <button onClick={() => handleAlign('right')} disabled={selectedIds.size < 2} title="Align Right" style={{ ...smallBtnBase, opacity: selectedIds.size < 2 ? 0.4 : 1 }}><AlignRightIcon /></button>
-            <div style={{ width: '2px' }} />
-            <button onClick={() => handleAlign('top')} disabled={selectedIds.size < 2} title="Align Top" style={{ ...smallBtnBase, opacity: selectedIds.size < 2 ? 0.4 : 1 }}><AlignTopIcon /></button>
-            <button onClick={() => handleAlign('centerV')} disabled={selectedIds.size < 2} title="Align Vertical Center" style={{ ...smallBtnBase, opacity: selectedIds.size < 2 ? 0.4 : 1 }}><AlignCenterVIcon /></button>
-            <button onClick={() => handleAlign('bottom')} disabled={selectedIds.size < 2} title="Align Bottom" style={{ ...smallBtnBase, opacity: selectedIds.size < 2 ? 0.4 : 1 }}><AlignBottomIcon /></button>
-          </div>
-        </>
-      )}
-
-      {/* Grid controls — shown in edit mode */}
-      {isEditMode && (
-        <>
-          <div
-            style={{
-              width: '1px',
-              height: '24px',
-              background: 'var(--sn-border, #e0e0e0)',
-              margin: '0 4px',
-            }}
-          />
-
-          <div
-            style={{ display: 'flex', alignItems: 'center', gap: '2px' }}
-            data-testid="toolbar-grid"
-          >
-            <button
-              data-testid="grid-toggle"
-              onClick={handleGridToggle}
-              title={gridConfig.enabled ? 'Hide grid (G)' : 'Show grid (G)'}
-              style={{ ... (gridConfig.enabled ? smallBtnActive : smallBtnBase), padding: '0 6px', width: 'auto' }}
-            >
-              Grid
-            </button>
-
-            {gridConfig.enabled && (
-              <button
-                data-testid="grid-lines-toggle"
-                onClick={handleGridLinesToggle}
-                title={gridConfig.showGridLines ? 'Hide grid lines' : 'Show grid lines'}
-                style={{ ... (gridConfig.showGridLines ? smallBtnActive : smallBtnBase), padding: '0 6px', width: 'auto' }}
-              >
-                Lines
-              </button>
-            )}
-
-            <button
-              data-testid="snap-toggle"
-              onClick={handleSnapToggle}
-              title={gridConfig.snapMode !== 'none' ? 'Disable snap (Shift+G)' : 'Enable snap (Shift+G)'}
-              style={{ ... (gridConfig.snapMode !== 'none' ? smallBtnActive : smallBtnBase), padding: '0 6px', width: 'auto' }}
-            >
-              Snap
-            </button>
-
-            {gridConfig.enabled && (
-              <select
-                data-testid="grid-projection"
-                value={gridConfig.projection}
-                onChange={handleProjectionChange}
-                title="Grid projection type"
-                style={{
-                  height: '28px',
-                  padding: '0 4px',
-                  border: '1px solid var(--sn-border, #e0e0e0)',
-                  borderRadius: 'var(--sn-radius, 6px)',
-                  background: 'var(--sn-surface, #fff)',
-                  color: 'var(--sn-text, #1a1a2e)',
-                  cursor: 'pointer',
-                  fontSize: '11px',
-                  fontFamily: 'inherit',
-                }}
-              >
-                <option value="orthogonal">Square</option>
-                <option value="isometric">Isometric</option>
-                <option value="triangular">Triangular</option>
-                <option value="hexagonal">Hexagonal</option>
-              </select>
-            )}
-
-            {/* Grid Customizer Popover */}
-            {gridConfig.enabled && (
-              <div ref={gridCustomizerRef} style={{ position: 'relative' }}>
-                <button
-                  data-testid="grid-customizer-toggle"
-                  onClick={() => setGridCustomizerOpen(!gridCustomizerOpen)}
-                  title="Grid appearance settings"
-                  style={{ ... (gridCustomizerOpen ? smallBtnActive : smallBtnBase), padding: '0 5px', width: 'auto', fontSize: '11px' }}
-                >
-                  {'\u2699'}
-                </button>
-                {gridCustomizerOpen && (
-                  <div
-                    data-testid="grid-customizer-popover"
-                    style={{
-                      position: 'absolute',
-                      top: '100%',
-                      right: 0,
-                      marginTop: 4,
-                      padding: '10px 12px',
-                      background: 'var(--sn-surface, #fff)',
-                      border: '1px solid var(--sn-border, #e0e0e0)',
-                      borderRadius: 'var(--sn-radius, 6px)',
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                      zIndex: 100,
-                      minWidth: 180,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 8,
-                      fontSize: '11px',
-                      fontFamily: 'inherit',
-                      color: 'var(--sn-text, #1a1a2e)',
-                    }}
-                  >
-                    {/* Style selector */}
-                    <div>
-                      <div style={{ marginBottom: 4, fontWeight: 600 }}>Style</div>
-                      <div style={{ display: 'flex', gap: 4 }}>
-                        {(['line', 'dot', 'cross'] as GridLineStyle[]).map((style) => (
-                          <button
-                            key={style}
-                            data-testid={`grid-style-${style}`}
-                            onClick={() => handleGridStyleChange(style)}
-                            style={{
-                              ...(gridConfig.gridLineStyle === style || (!gridConfig.gridLineStyle && style === 'line') ? smallBtnActive : smallBtnBase),
-                              padding: '2px 8px',
-                              fontSize: '11px',
-                              textTransform: 'capitalize',
-                            }}
-                          >
-                            {style}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Color */}
-                    <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span>Color</span>
-                      <input
-                        data-testid="grid-color-picker"
-                        type="color"
-                        value={gridConfig.gridLineColor?.startsWith('#') ? gridConfig.gridLineColor : '#ffffff'}
-                        onChange={handleGridColorChange}
-                        style={{ width: 28, height: 22, padding: 0, border: '1px solid var(--sn-border, #e0e0e0)', borderRadius: 3, cursor: 'pointer' }}
-                      />
-                    </label>
-
-                    {/* Opacity */}
-                    <label style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span>Opacity</span>
-                        <span style={{ color: 'var(--sn-text-muted, #888)' }}>{((gridConfig.gridLineOpacity ?? 0.1) * 100).toFixed(0)}%</span>
-                      </div>
-                      <input
-                        data-testid="grid-opacity-slider"
-                        type="range"
-                        min="0"
-                        max="1"
-                        step="0.05"
-                        value={gridConfig.gridLineOpacity ?? 0.1}
-                        onChange={handleGridOpacityChange}
-                        style={{ width: '100%', cursor: 'pointer' }}
-                      />
-                    </label>
-
-                    {/* Weight */}
-                    <label style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span>Weight</span>
-                        <span style={{ color: 'var(--sn-text-muted, #888)' }}>{gridConfig.gridLineWidth ?? 1}px</span>
-                      </div>
-                      <input
-                        data-testid="grid-weight-slider"
-                        type="range"
-                        min="0.5"
-                        max="4"
-                        step="0.5"
-                        value={gridConfig.gridLineWidth ?? 1}
-                        onChange={handleGridWeightChange}
-                        style={{ width: '100%', cursor: 'pointer' }}
-                      />
-                    </label>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </>
-      )}
-
-      {/* Canvas Settings (edit mode only) */}
-      {isEditMode && (
-        <>
-          <div
-            style={{
-              width: '1px',
-              height: '24px',
-              background: 'var(--sn-border, #e0e0e0)',
-              margin: '0 4px',
-            }}
-          />
-          <div style={{ position: 'relative' }}>
-            <button
-              ref={settingsButtonRef}
-              data-testid="canvas-settings-btn"
-              onClick={() => setSettingsOpen(!settingsOpen)}
-              title="Canvas Settings"
+              data-testid="more-tools-toggle"
+              onClick={() => setTrayOpen((p) => !p)}
+              title={trayOpen ? 'Hide tools' : 'More tools'}
               style={{
                 ...smallBtnBase,
-                padding: '0 8px',
-                width: 'auto',
-                borderColor: settingsOpen ? 'var(--sn-accent, #6366f1)' : undefined,
-                background: settingsOpen ? 'var(--sn-accent, #6366f1)' : undefined,
-                color: settingsOpen ? '#fff' : undefined,
+                gap: '4px',
+                padding: '0 10px',
+                minWidth: 'auto',
+                background: trayOpen ? 'var(--sn-surface-raised, #1E1E24)' : 'transparent',
+                fontSize: '11px',
+                fontWeight: 500,
               }}
             >
-              Settings
+              MORE TOOLS
+              <ChevronDownIcon open={trayOpen} />
             </button>
-            <CanvasSettingsDropdown
-              isOpen={settingsOpen}
-              onClose={() => setSettingsOpen(false)}
-              anchorRef={settingsButtonRef}
-              viewportConfig={viewportConfig}
-              borderRadius={borderRadius}
-              canvasPosition={canvasPosition}
-            />
-          </div>
-        </>
-      )}
-
-      {/* Spacer */}
-      <div style={{ flex: 1 }} />
-
-      {/* Zoom controls */}
-      <div
-        style={{ display: 'flex', alignItems: 'center', gap: '2px' }}
-        data-testid="toolbar-zoom"
-      >
-        <button
-          data-testid="zoom-out"
-          onClick={handleZoomOut}
-          title="Zoom out"
-          style={smallBtnBase}
-        >
-          -
-        </button>
-
-        <button
-          data-testid="zoom-reset"
-          onClick={handleZoomReset}
-          title="Reset zoom"
-          style={{
-            ...smallBtnBase,
-            border: 'none',
-            minWidth: '44px',
-            color: 'var(--sn-text-muted, #6b7280)',
-          }}
-        >
-          {zoomPercent}%
-        </button>
-
-        <button
-          data-testid="zoom-in"
-          onClick={handleZoomIn}
-          title="Zoom in"
-          style={smallBtnBase}
-        >
-          +
-        </button>
+          </>
+        )}
       </div>
 
-      <div
-        style={{
-          width: '1px',
-          height: '24px',
-          background: 'var(--sn-border, #e0e0e0)',
-          margin: '0 8px',
-        }}
-      />
-
-      {/* Platform, Size Presets, and Spatial Mode */}
-      <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-        <select
-          data-testid="platform-select"
-          value={canvasPlatform}
-          onChange={handlePlatformChange}
-          title="Target Platform"
-          style={{
-            height: '28px',
-            padding: '0 4px',
-            border: '1px solid var(--sn-border, #e0e0e0)',
-            borderRadius: 'var(--sn-radius, 6px)',
-            background: 'var(--sn-surface, #fff)',
-            color: 'var(--sn-text, #1a1a2e)',
-            cursor: 'pointer',
-            fontSize: '11px',
-            fontFamily: 'inherit',
-          }}
-        >
-          <option value="web">Web</option>
-          <option value="mobile">Mobile</option>
-          <option value="desktop">Desktop</option>
-        </select>
-        <select
-          data-testid="canvas-size-preset"
-          value={
-            PLATFORM_PRESETS[canvasPlatform].find(
-              (p) =>
-                p.width === (platformConfigs[canvasPlatform]?.width ?? viewportConfig?.width)
-                && p.height === (platformConfigs[canvasPlatform]?.height ?? viewportConfig?.height),
-            )?.label ?? '__current__'
-          }
-          onChange={handlePresetChange}
-          title="Canvas size preset"
-          style={{
-            height: '28px',
-            padding: '0 4px',
-            border: '1px solid var(--sn-border, #e0e0e0)',
-            borderRadius: 'var(--sn-radius, 6px)',
-            background: 'var(--sn-surface, #fff)',
-            color: 'var(--sn-text, #1a1a2e)',
-            cursor: 'pointer',
-            fontSize: '11px',
-            fontFamily: 'inherit',
-            maxWidth: '180px',
-          }}
-        >
-          {!PLATFORM_PRESETS[canvasPlatform].find(
-            (p) =>
-              p.width === (platformConfigs[canvasPlatform]?.width ?? viewportConfig?.width)
-              && p.height === (platformConfigs[canvasPlatform]?.height ?? viewportConfig?.height),
-          ) && (
-            <option value="__current__">
-              {viewportConfig?.width && viewportConfig?.height
-                ? `Custom (${viewportConfig.width}×${viewportConfig.height})`
-                : 'Custom'}
-            </option>
-          )}
-          {PLATFORM_PRESETS[canvasPlatform].map((preset) => (
-            <option key={preset.label} value={preset.label}>
-              {preset.label}
-            </option>
-          ))}
-        </select>
-        {viewportConfig?.width && viewportConfig?.height && (
-          <span
-            data-testid="platform-dimensions"
-            title={`${canvasPlatform} canvas size`}
+      {/* ═══ PULL-DOWN TRAY ═══ */}
+      {isEditMode && (
+        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 40, overflow: 'hidden', pointerEvents: trayOpen ? 'auto' : 'none' }}>
+          <div
+            data-testid="toolbar-tray"
             style={{
-              fontSize: '10px',
-              color: 'var(--sn-text-muted, #999)',
-              fontFamily: 'inherit',
-              whiteSpace: 'nowrap',
+              display: 'flex',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '8px 16px',
+              background: 'var(--sn-surface, #fff)',
+              borderBottom: '1px solid var(--sn-border, #e0e0e0)',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
+              fontFamily: 'var(--sn-font-family, system-ui)',
+              fontSize: '12px',
+              userSelect: 'none',
+              transform: trayOpen ? 'translateY(0)' : 'translateY(-100%)',
+              transition: `transform 0.35s ${TOOLBAR_SPRING}`,
             }}
           >
-            {viewportConfig.width}&times;{viewportConfig.height}
-          </span>
-        )}
-        <select
-          data-testid="spatial-mode-select"
-          value={spatialMode}
-          onChange={handleSpatialModeChange}
-          title="Spatial Mode"
-          style={{
-            height: '28px',
-            padding: '0 4px',
-            border: '1px solid var(--sn-border, #e0e0e0)',
-            borderRadius: 'var(--sn-radius, 6px)',
-            background: 'var(--sn-surface, #fff)',
-            color: 'var(--sn-text, #1a1a2e)',
-            cursor: 'pointer',
-            fontSize: '11px',
-            fontFamily: 'inherit',
-          }}
-        >
-          <option value="2d">2D</option>
-          <option value="3d">3D</option>
-          <option value="vr">VR</option>
-          <option value="ar">AR</option>
-        </select>
-        {(spatialMode === 'vr' || spatialMode === 'ar') && (
-          <button
-            onClick={handleEnterXR}
-            title={`Enter WebXR (${spatialMode.toUpperCase()})`}
-            style={smallBtnBase}
-          >
-            <XRGogglesIcon />
-          </button>
-        )}
-        <button
-          onClick={handleArtboardPreviewToggle}
-          title={artboardPreviewMode ? 'Exit Artboard Preview' : 'Enter Artboard Preview'}
-          style={{
-            ...(artboardPreviewMode ? smallBtnActive : smallBtnBase),
-            padding: '0 8px',
-            width: 'auto',
-            fontSize: '11px',
-          }}
-        >
-          Artboard
-        </button>
-      </div>
+            {/* Extra Tools */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <TrayLabel>Tools</TrayLabel>
+              {TRAY_TOOLS.map((tool) => (
+                <LabeledToolBtn
+                  key={tool.id}
+                  testId={`tool-${tool.id}`}
+                  icon={tool.icon}
+                  label={tool.label}
+                  active={activeTool === tool.id}
+                  onClick={() => handleToolClick(tool.id)}
+                  title={`${tool.label}${tool.shortcut ? ` (${tool.shortcut})` : ''}`}
+                />
+              ))}
+            </div>
 
-      <div
-        style={{
-          width: '1px',
-          height: '24px',
-          background: 'var(--sn-border, #e0e0e0)',
-          margin: '0 8px',
-        }}
-      />
+            <Divider />
 
-      {/* Mode toggle + Fullscreen Preview */}
-      <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-        <button
-          data-testid="mode-toggle"
-          onClick={handleModeToggle}
-          title={isEditMode ? 'Switch to Preview (P)' : 'Switch to Edit (P)'}
-          style={{
-            height: '32px',
-            padding: '0 16px',
-            border: '1px solid var(--sn-border, #e0e0e0)',
-            borderRadius: 'var(--sn-radius, 6px)',
-            background: isEditMode ? 'transparent' : 'var(--sn-accent, #6366f1)',
-            color: isEditMode ? 'var(--sn-text, #1a1a2e)' : '#fff',
-            cursor: 'pointer',
-            fontSize: '12px',
-            fontFamily: 'inherit',
-            fontWeight: 600,
-            transition: 'all 0.1s ease',
-          }}
-        >
-          {isEditMode ? 'Run' : 'Edit'}
-        </button>
-        <button
-          data-testid="fullscreen-preview-btn"
-          onClick={handleFullscreenPreview}
-          title="Fullscreen Preview (Shift+F)"
-          style={{
-            ...smallBtnBase,
-            height: '32px',
-          }}
-        >
-          <FullscreenIcon />
-        </button>
-      </div>
+            {/* Grid */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }} data-testid="toolbar-grid">
+              <TrayLabel>Grid</TrayLabel>
+              <button data-testid="grid-toggle" onClick={handleGridToggle} title={gridConfig.enabled ? 'Hide grid (G)' : 'Show grid (G)'} style={{ ...(gridConfig.enabled ? smallBtnActive : smallBtnBase), padding: '0 8px', width: 'auto' }}>Grid</button>
+              {gridConfig.enabled && <button data-testid="grid-lines-toggle" onClick={handleGridLinesToggle} title={gridConfig.showGridLines ? 'Hide grid lines' : 'Show grid lines'} style={{ ...(gridConfig.showGridLines ? smallBtnActive : smallBtnBase), padding: '0 8px', width: 'auto' }}>Lines</button>}
+              <button data-testid="snap-toggle" onClick={handleSnapToggle} title={gridConfig.snapMode !== 'none' ? 'Disable snap' : 'Enable snap'} style={{ ...(gridConfig.snapMode !== 'none' ? smallBtnActive : smallBtnBase), padding: '0 8px', width: 'auto' }}>Snap</button>
+              {gridConfig.enabled && (
+                <select data-testid="grid-projection" value={gridConfig.projection} onChange={handleProjectionChange} title="Grid projection" style={traySelectStyle}>
+                  <option value="orthogonal">Square</option>
+                  <option value="isometric">Isometric</option>
+                  <option value="triangular">Triangular</option>
+                  <option value="hexagonal">Hexagonal</option>
+                </select>
+              )}
+              {gridConfig.enabled && (
+                <div ref={gridCustomizerRef} style={{ position: 'relative' }}>
+                  <button data-testid="grid-customizer-toggle" onClick={() => setGridCustomizerOpen(!gridCustomizerOpen)} title="Grid appearance" style={{ ...(gridCustomizerOpen ? smallBtnActive : smallBtnBase), padding: '0 6px', width: 'auto', fontSize: '11px' }}>{'\u2699'}</button>
+                  {gridCustomizerOpen && (
+                    <div data-testid="grid-customizer-popover" style={{ position: 'absolute', top: '100%', right: 0, marginTop: 4, padding: '10px 12px', background: 'var(--sn-surface, #fff)', border: '1px solid var(--sn-border, #e0e0e0)', borderRadius: 'var(--sn-radius, 6px)', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 100, minWidth: 180, display: 'flex', flexDirection: 'column', gap: 8, fontSize: '11px', fontFamily: 'inherit', color: 'var(--sn-text, #1a1a2e)' }}>
+                      <div>
+                        <div style={{ marginBottom: 4, fontWeight: 600 }}>Style</div>
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          {(['line', 'dot', 'cross'] as GridLineStyle[]).map((style) => (
+                            <button key={style} data-testid={`grid-style-${style}`} onClick={() => handleGridStyleChange(style)} style={{ ...(gridConfig.gridLineStyle === style || (!gridConfig.gridLineStyle && style === 'line') ? smallBtnActive : smallBtnBase), padding: '2px 8px', fontSize: '11px', textTransform: 'capitalize' }}>{style}</button>
+                          ))}
+                        </div>
+                      </div>
+                      <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span>Color</span>
+                        <input data-testid="grid-color-picker" type="color" value={gridConfig.gridLineColor?.startsWith('#') ? gridConfig.gridLineColor : '#ffffff'} onChange={handleGridColorChange} style={{ width: 28, height: 22, padding: 0, border: '1px solid var(--sn-border, #e0e0e0)', borderRadius: 3, cursor: 'pointer' }} />
+                      </label>
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Opacity</span><span style={{ color: 'var(--sn-text-muted, #888)' }}>{((gridConfig.gridLineOpacity ?? 0.1) * 100).toFixed(0)}%</span></div>
+                        <input data-testid="grid-opacity-slider" type="range" min="0" max="1" step="0.05" value={gridConfig.gridLineOpacity ?? 0.1} onChange={handleGridOpacityChange} style={{ width: '100%', cursor: 'pointer' }} />
+                      </label>
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Weight</span><span style={{ color: 'var(--sn-text-muted, #888)' }}>{gridConfig.gridLineWidth ?? 1}px</span></div>
+                        <input data-testid="grid-weight-slider" type="range" min="0.5" max="4" step="0.5" value={gridConfig.gridLineWidth ?? 1} onChange={handleGridWeightChange} style={{ width: '100%', cursor: 'pointer' }} />
+                      </label>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <Divider />
+
+            {/* Alignment */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <TrayLabel>Align</TrayLabel>
+              <button onClick={() => handleAlign('left')} disabled={selectedIds.size < 2} title="Align Left" style={{ ...smallBtnBase, opacity: selectedIds.size < 2 ? 0.4 : 1 }}><AlignLeftIcon /></button>
+              <button onClick={() => handleAlign('centerH')} disabled={selectedIds.size < 2} title="Center H" style={{ ...smallBtnBase, opacity: selectedIds.size < 2 ? 0.4 : 1 }}><AlignCenterHIcon /></button>
+              <button onClick={() => handleAlign('right')} disabled={selectedIds.size < 2} title="Align Right" style={{ ...smallBtnBase, opacity: selectedIds.size < 2 ? 0.4 : 1 }}><AlignRightIcon /></button>
+              <button onClick={() => handleAlign('top')} disabled={selectedIds.size < 2} title="Align Top" style={{ ...smallBtnBase, opacity: selectedIds.size < 2 ? 0.4 : 1 }}><AlignTopIcon /></button>
+              <button onClick={() => handleAlign('centerV')} disabled={selectedIds.size < 2} title="Center V" style={{ ...smallBtnBase, opacity: selectedIds.size < 2 ? 0.4 : 1 }}><AlignCenterVIcon /></button>
+              <button onClick={() => handleAlign('bottom')} disabled={selectedIds.size < 2} title="Align Bottom" style={{ ...smallBtnBase, opacity: selectedIds.size < 2 ? 0.4 : 1 }}><AlignBottomIcon /></button>
+            </div>
+
+            <Divider />
+
+            {/* Grouping */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <TrayLabel>Group</TrayLabel>
+              <button onClick={handleGroup} disabled={selectedIds.size < 2} title="Group (Ctrl+G)" style={{ ...smallBtnBase, padding: '0 8px', width: 'auto', opacity: selectedIds.size < 2 ? 0.4 : 1 }}>Group</button>
+              <button onClick={handleUngroup} disabled={selectedIds.size === 0} title="Ungroup (Ctrl+Shift+G)" style={{ ...smallBtnBase, padding: '0 8px', width: 'auto', opacity: selectedIds.size === 0 ? 0.4 : 1 }}>Ungroup</button>
+            </div>
+
+            <Divider />
+
+            {/* Canvas settings */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <TrayLabel>Canvas</TrayLabel>
+              <select data-testid="platform-select" value={canvasPlatform} onChange={handlePlatformChange} title="Platform" style={traySelectStyle}>
+                <option value="web">Web</option>
+                <option value="mobile">Mobile</option>
+                <option value="desktop">Desktop</option>
+              </select>
+              <select data-testid="canvas-size-preset" value={PLATFORM_PRESETS[canvasPlatform].find((p) => p.width === (platformConfigs[canvasPlatform]?.width ?? viewportConfig?.width) && p.height === (platformConfigs[canvasPlatform]?.height ?? viewportConfig?.height))?.label ?? '__current__'} onChange={handlePresetChange} title="Canvas size" style={{ ...traySelectStyle, maxWidth: '180px' }}>
+                {!PLATFORM_PRESETS[canvasPlatform].find((p) => p.width === (platformConfigs[canvasPlatform]?.width ?? viewportConfig?.width) && p.height === (platformConfigs[canvasPlatform]?.height ?? viewportConfig?.height)) && (
+                  <option value="__current__">{viewportConfig?.width && viewportConfig?.height ? `Custom (${viewportConfig.width}\u00D7${viewportConfig.height})` : 'Custom'}</option>
+                )}
+                {PLATFORM_PRESETS[canvasPlatform].map((preset) => <option key={preset.label} value={preset.label}>{preset.label}</option>)}
+              </select>
+              <select data-testid="spatial-mode-select" value={spatialMode} onChange={handleSpatialModeChange} title="Spatial Mode" style={traySelectStyle}>
+                <option value="2d">2D</option>
+                <option value="3d">3D</option>
+                <option value="vr">VR</option>
+                <option value="ar">AR</option>
+              </select>
+              {(spatialMode === 'vr' || spatialMode === 'ar') && <button onClick={handleEnterXR} title={`Enter WebXR (${spatialMode.toUpperCase()})`} style={smallBtnBase}><XRGogglesIcon /></button>}
+              <button onClick={handleArtboardPreviewToggle} title={artboardPreviewMode ? 'Exit Artboard Preview' : 'Artboard Preview'} style={{ ...(artboardPreviewMode ? smallBtnActive : smallBtnBase), padding: '0 8px', width: 'auto', fontSize: '11px' }}>Artboard</button>
+            </div>
+
+            <Divider />
+
+            {/* Docker + History + Settings */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <button onClick={handleDockerClick} title="Docker Library" style={{ ...smallBtnBase, gap: '4px', padding: '0 8px', minWidth: 'auto' }}><LibraryIcon /><span style={{ fontSize: '11px' }}>Library</span></button>
+              <button onClick={handleHistoryClick} title="History" style={{ ...smallBtnBase, gap: '4px', padding: '0 8px', minWidth: 'auto' }}><HistoryIcon /><span style={{ fontSize: '11px' }}>History</span></button>
+              <div style={{ position: 'relative' }}>
+                <button ref={settingsButtonRef} data-testid="canvas-settings-btn" onClick={() => setSettingsOpen(!settingsOpen)} title="Canvas Settings" style={{ ...smallBtnBase, padding: '0 8px', width: 'auto', borderColor: settingsOpen ? 'var(--sn-accent, #6366f1)' : undefined, background: settingsOpen ? 'var(--sn-accent, #6366f1)' : undefined, color: settingsOpen ? '#fff' : undefined }}>Settings</button>
+                <CanvasSettingsDropdown isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} anchorRef={settingsButtonRef} viewportConfig={viewportConfig} borderRadius={borderRadius} canvasPosition={canvasPosition} />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

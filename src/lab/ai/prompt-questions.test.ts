@@ -11,8 +11,8 @@ import type { AIGenerator, AIExplainResult } from './ai-generator';
 import {
   generateClarifyingQuestions,
   buildEnrichedPrompt,
+  computeCompatibility,
   type CompatibleWidget,
-  type PromptToggles,
   type EnrichedPromptInput,
 } from './prompt-questions';
 
@@ -56,7 +56,7 @@ describe('generateClarifyingQuestions', () => {
     await generateClarifyingQuestions(gen, 'A timer widget');
 
     expect(explainFn).toHaveBeenCalledTimes(1);
-    const [context, question] = explainFn.mock.calls[0];
+    const [_context, question] = explainFn.mock.calls[0];
     expect(question).toContain('A timer widget');
   });
 
@@ -145,7 +145,7 @@ describe('buildEnrichedPrompt', () => {
     expect(result).toContain('Additional context:');
     expect(result).toContain('interactive');
     expect(result).toContain('Emit events');
-    expect(result).not.toContain('dark mode');
+    expect(result).not.toContain('Dark mode');
   });
 
   it('includes dark mode toggle', () => {
@@ -154,13 +154,29 @@ describe('buildEnrichedPrompt', () => {
       toggles: { interactive: false, darkMode: true, emitEvents: false },
     });
 
-    expect(result).toContain('dark mode');
+    expect(result).toContain('Dark mode');
   });
 
   it('includes selected widgets with port info', () => {
     const widgets: CompatibleWidget[] = [
-      { name: 'Timer', ports: ['onTick', 'onComplete'] },
-      { name: 'Display', ports: ['textInput'] },
+      {
+        name: 'Timer',
+        ports: ['emits: onTick', 'emits: onComplete'],
+        portContracts: {
+          emits: [{ name: 'onTick' }, { name: 'onComplete' }],
+          subscribes: [],
+        },
+        compatibility: 'high',
+      },
+      {
+        name: 'Display',
+        ports: ['subscribes: textInput'],
+        portContracts: {
+          emits: [],
+          subscribes: [{ name: 'textInput' }],
+        },
+        compatibility: 'partial',
+      },
     ];
 
     const result = buildEnrichedPrompt({
@@ -169,10 +185,11 @@ describe('buildEnrichedPrompt', () => {
     });
 
     expect(result).toContain('Additional context:');
-    expect(result).toContain('Timer');
-    expect(result).toContain('onTick');
-    expect(result).toContain('Display');
-    expect(result).toContain('textInput');
+    expect(result).toContain('CONNECT TO: "Timer"');
+    expect(result).toContain('Emits: onTick');
+    expect(result).toContain('YOUR WIDGET MUST subscribe to "onTick"');
+    expect(result).toContain('CONNECT TO: "Display"');
+    expect(result).toContain('YOUR WIDGET MUST emit "textInput"');
   });
 
   it('includes non-empty Q&A answers', () => {
@@ -198,14 +215,19 @@ describe('buildEnrichedPrompt', () => {
     const result = buildEnrichedPrompt({
       originalPrompt: 'Make a chart',
       answers: { 'What type?': 'Bar chart' },
-      selectedWidgets: [{ name: 'DataTable', ports: ['rowSelected'] }],
+      selectedWidgets: [{
+        name: 'DataTable',
+        ports: ['emits: rowSelected'],
+        portContracts: { emits: [{ name: 'rowSelected' }], subscribes: [] },
+        compatibility: 'partial',
+      }],
       toggles: { interactive: true, darkMode: true, emitEvents: true },
     });
 
     expect(result).toContain('Make a chart');
     expect(result).toContain('Additional context:');
     expect(result).toContain('interactive');
-    expect(result).toContain('dark mode');
+    expect(result).toContain('Dark mode');
     expect(result).toContain('Emit events');
     expect(result).toContain('DataTable');
     expect(result).toContain('Bar chart');
@@ -214,10 +236,65 @@ describe('buildEnrichedPrompt', () => {
   it('excludes widgets with no ports', () => {
     const result = buildEnrichedPrompt({
       ...baseInput,
-      selectedWidgets: [{ name: 'EmptyWidget', ports: [] }],
+      selectedWidgets: [{
+        name: 'EmptyWidget',
+        ports: [],
+        portContracts: { emits: [], subscribes: [] },
+        compatibility: 'none',
+      }],
     });
 
     // Widget should still be listed even with no ports
     expect(result).toContain('EmptyWidget');
+  });
+});
+
+// ---------- computeCompatibility ----------
+
+describe('computeCompatibility', () => {
+  it('returns none when widget has zero ports', () => {
+    const result = computeCompatibility('Build a timer', {
+      name: 'EmptyWidget',
+      portContracts: { emits: [], subscribes: [] },
+    });
+    expect(result).toBe('none');
+  });
+
+  it('returns high when widget name appears in prompt', () => {
+    const result = computeCompatibility('Connect to the Clock widget', {
+      name: 'Clock',
+      portContracts: { emits: [{ name: 'tick' }], subscribes: [] },
+    });
+    expect(result).toBe('high');
+  });
+
+  it('returns high when a port name appears in prompt (case-insensitive)', () => {
+    const result = computeCompatibility('I want to react to tick events', {
+      name: 'Timer',
+      portContracts: { emits: [{ name: 'tick' }], subscribes: [] },
+    });
+    expect(result).toBe('high');
+  });
+
+  it('returns partial when widget has ports but no textual overlap', () => {
+    const result = computeCompatibility('Build a weather dashboard', {
+      name: 'Counter',
+      portContracts: {
+        emits: [{ name: 'count-changed' }],
+        subscribes: [{ name: 'increment' }],
+      },
+    });
+    expect(result).toBe('partial');
+  });
+
+  it('matches subscribe port names too', () => {
+    const result = computeCompatibility('listen for data-update events', {
+      name: 'Display',
+      portContracts: {
+        emits: [],
+        subscribes: [{ name: 'data-update' }],
+      },
+    });
+    expect(result).toBe('high');
   });
 });

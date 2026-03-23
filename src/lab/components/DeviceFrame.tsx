@@ -1,10 +1,12 @@
 /**
  * DeviceFrame — Phone/tablet/desktop frame wrapper for the preview pane.
  *
- * Renders a visual chrome wrapper (device bezel) around the preview iframe,
- * with a device selector to switch between phone (375x812), tablet (768x1024),
- * and desktop (1280x800) frames. The frame scales down to fit within its
- * container while preserving aspect ratio.
+ * Renders a minimal device bezel around the preview iframe with a
+ * device selector to switch between phone (375x812), tablet (768x1024),
+ * and desktop (1280x800) frames. Scales to fit container.
+ *
+ * Simplified design: no macOS window dots, minimal chrome,
+ * subtle inset shadow for depth.
  *
  * @module lab/components
  * @layer L2
@@ -29,8 +31,8 @@ const BEZEL_RADIUS: Record<DeviceType, number> = {
 
 const BEZEL_PADDING: Record<DeviceType, { top: number; bottom: number; sides: number }> = {
   phone: { top: 40, bottom: 40, sides: 8 },
-  tablet: { top: 28, bottom: 28, sides: 8 },
-  desktop: { top: 32, bottom: 8, sides: 8 },
+  tablet: { top: 24, bottom: 24, sides: 8 },
+  desktop: { top: 12, bottom: 8, sides: 8 },
 };
 
 // ═══════════════════════════════════════════════════════════════════
@@ -56,7 +58,7 @@ const DeviceSelector: React.FC<DeviceSelectorProps> = ({ device, onDeviceChange 
       display: 'flex',
       gap: 2,
       background: 'rgba(0,0,0,0.2)',
-      borderRadius: 6,
+      borderRadius: 8,
       padding: 2,
     }}
   >
@@ -68,25 +70,25 @@ const DeviceSelector: React.FC<DeviceSelectorProps> = ({ device, onDeviceChange 
         aria-label={DEVICE_LABELS[d]}
         onClick={() => onDeviceChange(d)}
         style={{
-          padding: '4px 10px',
+          padding: '5px 12px',
           fontSize: 10,
-          fontWeight: device === d ? 600 : 400,
+          fontWeight: device === d ? 500 : 400,
           fontFamily: 'var(--sn-font-family)',
           color: device === d ? labPalette.text : labPalette.textMuted,
           background: device === d
             ? 'var(--sn-surface-glass, rgba(20,17,24,0.75))'
             : 'transparent',
           border: 'none',
-          borderRadius: 4,
+          borderRadius: 6,
           cursor: 'pointer',
           transition: `all 300ms ${SPRING}`,
           outline: 'none',
           display: 'flex',
           alignItems: 'center',
-          gap: 4,
+          gap: 5,
         }}
       >
-        <span style={{ fontSize: 12 }}>{DEVICE_ICONS[d]}</span>
+        <span style={{ fontSize: 11 }}>{DEVICE_ICONS[d]}</span>
         {DEVICE_LABELS[d]}
       </button>
     ))}
@@ -121,11 +123,9 @@ export const DeviceFrame: React.FC<DeviceFrameProps> = ({
   const bezelPad = BEZEL_PADDING[device];
   const bezelRadius = BEZEL_RADIUS[device];
 
-  // Total bezel dimensions including padding
   const totalWidth = deviceSize.width + bezelPad.sides * 2;
   const totalHeight = deviceSize.height + bezelPad.top + bezelPad.bottom;
 
-  // Scale to fit container with some margin
   const margin = 24;
   const availW = Math.max(containerWidth - margin * 2, 100);
   const availH = Math.max(containerHeight - margin * 2, 100);
@@ -141,13 +141,13 @@ export const DeviceFrame: React.FC<DeviceFrameProps> = ({
         flexDirection: 'column',
         alignItems: 'center',
         height: '100%',
-        gap: 12,
+        gap: 10,
       }}
     >
-      {/* Device selector toolbar */}
+      {/* Device selector */}
       <DeviceSelector device={device} onDeviceChange={onDeviceChange} />
 
-      {/* Frame container — centers and scales the device bezel */}
+      {/* Frame container */}
       <div
         style={{
           flex: 1,
@@ -166,19 +166,19 @@ export const DeviceFrame: React.FC<DeviceFrameProps> = ({
             transformOrigin: 'center center',
             transition: `transform 300ms ${SPRING}`,
             borderRadius: bezelRadius,
-            background: 'linear-gradient(145deg, rgba(40,38,46,0.95) 0%, rgba(24,22,28,0.98) 100%)',
-            border: '1px solid rgba(255,255,255,0.06)',
+            background: 'linear-gradient(145deg, rgba(30,28,36,0.95) 0%, rgba(18,16,22,0.98) 100%)',
+            border: '1px solid rgba(255,255,255,0.04)',
             boxShadow: [
-              '0 4px 24px rgba(0,0,0,0.4)',
-              '0 1px 4px rgba(0,0,0,0.2)',
-              'inset 0 1px 0 rgba(255,255,255,0.04)',
+              '0 4px 24px rgba(0,0,0,0.3)',
+              '0 1px 4px rgba(0,0,0,0.15)',
+              'inset 0 1px 0 rgba(255,255,255,0.03)',
             ].join(', '),
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
           }}
         >
-          {/* Top notch / camera area (phone/tablet) */}
+          {/* Top bezel — minimal for all device types */}
           {device === 'phone' && (
             <div
               data-testid="device-notch"
@@ -191,34 +191,15 @@ export const DeviceFrame: React.FC<DeviceFrameProps> = ({
             >
               <div
                 style={{
-                  width: 80,
-                  height: 6,
+                  width: 60,
+                  height: 5,
                   borderRadius: 3,
-                  background: 'rgba(255,255,255,0.06)',
+                  background: 'rgba(255,255,255,0.04)',
                 }}
               />
             </div>
           )}
 
-          {/* Desktop title bar */}
-          {device === 'desktop' && (
-            <div
-              data-testid="device-titlebar"
-              style={{
-                height: bezelPad.top,
-                display: 'flex',
-                alignItems: 'center',
-                padding: '0 12px',
-                gap: 6,
-              }}
-            >
-              <div style={{ width: 10, height: 10, borderRadius: '50%', background: 'rgba(200,88,88,0.6)' }} />
-              <div style={{ width: 10, height: 10, borderRadius: '50%', background: 'rgba(212,160,76,0.6)' }} />
-              <div style={{ width: 10, height: 10, borderRadius: '50%', background: 'rgba(90,168,120,0.6)' }} />
-            </div>
-          )}
-
-          {/* Tablet top bar (minimal) */}
           {device === 'tablet' && (
             <div
               style={{
@@ -230,16 +211,20 @@ export const DeviceFrame: React.FC<DeviceFrameProps> = ({
             >
               <div
                 style={{
-                  width: 8,
-                  height: 8,
+                  width: 6,
+                  height: 6,
                   borderRadius: '50%',
-                  background: 'rgba(255,255,255,0.04)',
+                  background: 'rgba(255,255,255,0.03)',
                 }}
               />
             </div>
           )}
 
-          {/* Content area (the iframe goes here) */}
+          {device === 'desktop' && (
+            <div style={{ height: bezelPad.top }} />
+          )}
+
+          {/* Content area */}
           <div
             data-testid="device-content"
             style={{
@@ -248,8 +233,9 @@ export const DeviceFrame: React.FC<DeviceFrameProps> = ({
               margin: `0 ${bezelPad.sides}px`,
               borderRadius: device === 'phone' ? 4 : 2,
               overflow: 'hidden',
-              background: '#ffffff',
+              background: 'var(--sn-bg, #0A0A0E)',
               position: 'relative',
+              boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.3), inset 0 0 0 1px rgba(255,255,255,0.02)',
             }}
           >
             {children}
@@ -268,10 +254,10 @@ export const DeviceFrame: React.FC<DeviceFrameProps> = ({
             >
               <div
                 style={{
-                  width: 100,
+                  width: 80,
                   height: 4,
                   borderRadius: 2,
-                  background: 'rgba(255,255,255,0.08)',
+                  background: 'rgba(255,255,255,0.06)',
                 }}
               />
             </div>

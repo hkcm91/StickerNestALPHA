@@ -28,6 +28,8 @@ function createMockGenerator(overrides: Partial<AIGenerator> = {}): AIGenerator 
     isGenerating: vi.fn().mockReturnValue(false),
     cancel: vi.fn(),
     getLastResult: vi.fn().mockReturnValue(null),
+    setModel: vi.fn(),
+    getModel: vi.fn().mockReturnValue({ id: 'anthropic/claude-sonnet-4', name: 'Claude Sonnet 4', provider: 'anthropic', description: 'Test' }),
     ...overrides,
   };
 }

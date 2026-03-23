@@ -7,11 +7,14 @@
  */
 
 import { renderHook, act } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 
 import { useCreatorMode } from './useCreatorMode';
 
 describe('useCreatorMode', () => {
+  beforeEach(() => {
+    localStorage.removeItem('sn-lab-onboarding-seen');
+  });
   it('defaults to creator mode enabled', () => {
     const { result } = renderHook(() => useCreatorMode(false));
     expect(result.current.isCreatorMode).toBe(true);

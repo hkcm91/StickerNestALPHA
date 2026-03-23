@@ -98,7 +98,7 @@ export const SplitCanvasView: React.FC = () => {
       style={{
         display: 'flex',
         flexDirection: 'column',
-        height: 'calc(100vh - 44px)', // minus nav bar
+        height: '100%',
         background: themeVar('--sn-bg'),
         color: themeVar('--sn-text'),
         fontFamily: themeVar('--sn-font-family'),

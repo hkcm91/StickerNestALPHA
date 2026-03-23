@@ -1,11 +1,11 @@
 /**
- * PreviewChrome — Top bar inside the preview showing widget status and controls.
+ * PreviewChrome — Elevated overlay bar for the preview pane.
  *
- * Displays:
- * - Widget name + "running" indicator (green PulseIndicator)
- * - Reload button (restart widget lifecycle)
- * - Console toggle (shows/hides console output)
- * - Expand/collapse with spring animation (300ms, stiffness: 200, damping: 25)
+ * Glass-backed floating bar over the top of the preview. Shows:
+ * - Widget name (serif italic) + running indicator (PulseIndicator)
+ * - Reload (spring bounce), console toggle, expand/collapse
+ *
+ * Buttons use ghost variant glow on hover — matching InnerGlowButton style.
  *
  * @module lab/components
  * @layer L2
@@ -13,20 +13,29 @@
 
 import React, { useCallback, useState } from 'react';
 
-import { labPalette, SPRING } from './shared/palette';
+import { labPalette, SPRING, HEX, hexToRgb } from './shared/palette';
 import { PulseIndicator } from './shared/PulseIndicator';
 
 // ═══════════════════════════════════════════════════════════════════
-// Spring Animation
+// Chrome button styles
 // ═══════════════════════════════════════════════════════════════════
 
-/**
- * CSS spring approximation for expand/collapse.
- * Target: 300ms duration, stiffness: 200, damping: 25.
- * Approximated as a cubic-bezier for CSS transition.
- */
-const EXPAND_SPRING = 'cubic-bezier(0.16, 1, 0.3, 1)';
-const EXPAND_DURATION = '300ms';
+const [sr, sg, sb] = hexToRgb(HEX.storm);
+
+const chromeButton: React.CSSProperties = {
+  background: 'rgba(255,255,255,0.02)',
+  border: '1px solid rgba(255,255,255,0.04)',
+  color: labPalette.textMuted,
+  cursor: 'pointer',
+  fontSize: 13,
+  padding: '6px 10px',
+  lineHeight: 1,
+  borderRadius: 8,
+  transition: `all 300ms ${SPRING}`,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+};
 
 // ═══════════════════════════════════════════════════════════════════
 // Component
@@ -73,17 +82,18 @@ export const PreviewChrome: React.FC<PreviewChromeProps> = ({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '5px 10px',
+        padding: '10px 16px',
         borderBottom: '1px solid rgba(255,255,255,0.04)',
-        background: 'rgba(0,0,0,0.18)',
+        background: 'linear-gradient(180deg, rgba(20,17,24,0.4) 0%, transparent 100%)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
         fontFamily: 'var(--sn-font-family)',
-        fontSize: 11,
-        minHeight: 32,
-        transition: `all ${EXPAND_DURATION} ${EXPAND_SPRING}`,
+        fontSize: 12,
+        minHeight: 40,
       }}
     >
       {/* Left: widget name + running indicator */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
         <PulseIndicator
           state={isRunning ? 'success' : 'idle'}
           size={7}
@@ -92,29 +102,19 @@ export const PreviewChrome: React.FC<PreviewChromeProps> = ({
         <span
           data-testid="preview-chrome-name"
           style={{
-            color: labPalette.text,
-            fontWeight: 500,
+            color: labPalette.textSoft,
+            fontWeight: 400,
+            fontSize: 13,
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
+            fontFamily: 'var(--sn-font-serif, Newsreader, Georgia, serif)',
+            fontStyle: 'italic',
+            letterSpacing: '-0.01em',
           }}
         >
           {widgetName}
         </span>
-        {isRunning && (
-          <span
-            data-testid="preview-chrome-running-label"
-            style={{
-              color: labPalette.moss,
-              fontSize: 9,
-              fontWeight: 500,
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-            }}
-          >
-            running
-          </span>
-        )}
       </div>
 
       {/* Right: action buttons */}
@@ -125,16 +125,8 @@ export const PreviewChrome: React.FC<PreviewChromeProps> = ({
           aria-label="Reload widget"
           title="Reload widget"
           style={{
-            background: 'none',
-            border: 'none',
-            color: labPalette.textMuted,
-            cursor: 'pointer',
-            fontSize: 13,
-            padding: '2px 6px',
-            lineHeight: 1,
-            borderRadius: 4,
-            transition: `all 400ms ${SPRING}`,
-            transform: reloadBounce ? 'rotate(180deg) scale(1.15)' : 'none',
+            ...chromeButton,
+            transform: reloadBounce ? 'rotate(180deg) scale(1.1)' : 'none',
           }}
         >
           ↻
@@ -147,17 +139,16 @@ export const PreviewChrome: React.FC<PreviewChromeProps> = ({
           aria-pressed={consoleOpen}
           title={consoleOpen ? 'Hide console' : 'Show console'}
           style={{
-            background: consoleOpen ? 'rgba(255,255,255,0.06)' : 'none',
-            border: 'none',
+            ...chromeButton,
+            background: consoleOpen ? `rgba(${sr},${sg},${sb},0.08)` : chromeButton.background,
+            borderColor: consoleOpen ? `rgba(${sr},${sg},${sb},0.15)` : 'rgba(255,255,255,0.04)',
             color: consoleOpen ? labPalette.text : labPalette.textMuted,
-            cursor: 'pointer',
             fontSize: 10,
             fontWeight: 500,
             fontFamily: 'var(--sn-font-mono, "DM Mono", monospace)',
-            padding: '2px 8px',
-            lineHeight: 1.4,
-            borderRadius: 4,
-            transition: `all 300ms ${SPRING}`,
+            boxShadow: consoleOpen
+              ? `0 0 6px rgba(${sr},${sg},${sb},0.1)`
+              : 'none',
           }}
         >
           {'>_'}
@@ -170,16 +161,9 @@ export const PreviewChrome: React.FC<PreviewChromeProps> = ({
           aria-pressed={expanded}
           title={expanded ? 'Collapse preview' : 'Expand preview'}
           style={{
-            background: 'none',
-            border: 'none',
-            color: labPalette.textMuted,
-            cursor: 'pointer',
-            fontSize: 12,
-            padding: '2px 6px',
-            lineHeight: 1,
-            borderRadius: 4,
-            transition: `all ${EXPAND_DURATION} ${EXPAND_SPRING}`,
+            ...chromeButton,
             transform: expanded ? 'rotate(180deg)' : 'none',
+            fontSize: 12,
           }}
         >
           {expanded ? '\u2198' : '\u2197'}

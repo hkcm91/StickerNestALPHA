@@ -18,3 +18,4 @@ export {
   type ResizeDirection,
 } from './DockerResizeHandle';
 export { DockerLayer, type DockerLayerProps } from './DockerLayer';
+export { DockerDockZone, type DockerDockZoneProps } from './DockerDockZone';

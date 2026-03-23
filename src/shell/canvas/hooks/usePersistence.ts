@@ -8,10 +8,11 @@
  * @layer L6
  */
 
+import type React from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { CanvasEvents, CanvasDocumentEvents } from '@sn/types';
-import type { CanvasDocument } from '@sn/types';
+import { CanvasEvents, CanvasDocumentEvents, DockerEvents, GridEvents } from '@sn/types';
+import type { CanvasDocument, CanvasPositionConfig, ViewportConfig } from '@sn/types';
 
 import type { SceneGraph } from '../../../canvas/core';
 import { serialize, deserializeToSceneGraph } from '../../../canvas/core/persistence';
@@ -246,10 +247,17 @@ export function readStoredDocument(canvasSlug: string): CanvasDocument | null {
  * @param canvasSlug - The canvas slug (used as storage key)
  * @param sceneGraph - The scene graph to serialize/deserialize
  */
+export interface CanvasSettingsRefs {
+  viewportConfig?: React.RefObject<ViewportConfig | null>;
+  borderRadius?: React.RefObject<number>;
+  canvasPosition?: React.RefObject<CanvasPositionConfig | null>;
+}
+
 export function usePersistence(
   canvasSlug: string,
   sceneGraph: SceneGraph | null,
   canvasSummary?: Pick<LocalCanvasSummary, 'id' | 'name' | 'createdAt'>,
+  settingsRefs?: CanvasSettingsRefs,
 ): PersistenceState {
   const [status, setStatus] = useState<SaveStatus>('saved');
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
@@ -299,9 +307,12 @@ export function usePersistence(
           createdAt,
           updatedAt: nowIso,
         },
+        viewportConfig: settingsRefs?.viewportConfig?.current ?? undefined,
         platform: uiState.canvasPlatform,
         spatialMode: uiState.spatialMode,
         platformConfigs: uiState.platformConfigs as any,
+        borderRadius: settingsRefs?.borderRadius?.current ?? 0,
+        canvasPosition: settingsRefs?.canvasPosition?.current ?? undefined,
       });
 
       const storageKey = getStorageKey(canvasSlug);
@@ -389,6 +400,23 @@ export function usePersistence(
             uiStore.setPlatformConfig(p as any, config);
           }
         }
+        // Restore canvas settings via bus events so pages.tsx state stays in sync
+        if (loadedDoc.viewport) {
+          bus.emit(CanvasDocumentEvents.BACKGROUND_CHANGED, { background: loadedDoc.viewport.background });
+          bus.emit(CanvasDocumentEvents.VIEWPORT_CHANGED, {
+            viewport: {
+              width: loadedDoc.viewport.width,
+              height: loadedDoc.viewport.height,
+              sizeMode: loadedDoc.viewport.sizeMode,
+            },
+          });
+        }
+        if (loadedDoc.borderRadius !== undefined) {
+          bus.emit(CanvasDocumentEvents.BORDER_RADIUS_CHANGED, { borderRadius: loadedDoc.borderRadius });
+        }
+        if (loadedDoc.canvasPosition) {
+          bus.emit(CanvasDocumentEvents.CANVAS_POSITION_CHANGED, { position: loadedDoc.canvasPosition });
+        }
       }
       console.log('[Persistence] Load successful, sceneGraph entityCount:', sg.entityCount);
       setLoaded(true);
@@ -405,15 +433,55 @@ export function usePersistence(
 
   useEffect(() => {
     const unsubs = [
+      // Entity CRUD
       bus.subscribe(CanvasEvents.ENTITY_CREATED, scheduleSave),
       bus.subscribe(CanvasEvents.ENTITY_UPDATED, scheduleSave),
       bus.subscribe(CanvasEvents.ENTITY_DELETED, scheduleSave),
+      bus.subscribe(CanvasEvents.ENTITY_CONFIG_UPDATED, scheduleSave),
+      bus.subscribe(CanvasEvents.ENTITY_GROUPED, scheduleSave),
+      bus.subscribe(CanvasEvents.ENTITY_UNGROUPED, scheduleSave),
+
+      // Canvas document properties
+      bus.subscribe(CanvasDocumentEvents.BACKGROUND_CHANGED, scheduleSave),
+      bus.subscribe(CanvasDocumentEvents.VIEWPORT_CHANGED, scheduleSave),
+      bus.subscribe(CanvasDocumentEvents.BORDER_RADIUS_CHANGED, scheduleSave),
+      bus.subscribe(CanvasDocumentEvents.CANVAS_POSITION_CHANGED, scheduleSave),
+      bus.subscribe(CanvasDocumentEvents.PLATFORM_CHANGED, scheduleSave),
+      bus.subscribe(CanvasDocumentEvents.LAYOUT_MODE_CHANGED, scheduleSave),
+      bus.subscribe(CanvasDocumentEvents.META_UPDATED, scheduleSave),
+
+      // Pipeline events
+      bus.subscribe(CanvasEvents.PIPELINE_EDGE_CREATED, scheduleSave),
+      bus.subscribe(CanvasEvents.PIPELINE_EDGE_DELETED, scheduleSave),
+      bus.subscribe(CanvasEvents.PIPELINE_NODE_ADDED, scheduleSave),
+      bus.subscribe(CanvasEvents.PIPELINE_NODE_REMOVED, scheduleSave),
+
+      // Docker events
+      bus.subscribe(DockerEvents.CREATED, scheduleSave),
+      bus.subscribe(DockerEvents.DELETED, scheduleSave),
+      bus.subscribe(DockerEvents.UPDATED, scheduleSave),
+      bus.subscribe(DockerEvents.TAB_ADDED, scheduleSave),
+      bus.subscribe(DockerEvents.TAB_REMOVED, scheduleSave),
+      bus.subscribe(DockerEvents.WIDGET_ADDED, scheduleSave),
+      bus.subscribe(DockerEvents.WIDGET_REMOVED, scheduleSave),
+
+      // Grid events
+      bus.subscribe(GridEvents.CELL_PAINTED, scheduleSave),
+      bus.subscribe(GridEvents.CELLS_BATCH_PAINTED, scheduleSave),
+      bus.subscribe(GridEvents.CELL_CLEARED, scheduleSave),
+      bus.subscribe(GridEvents.CONFIG_CHANGED, scheduleSave),
+      bus.subscribe(GridEvents.TOGGLED, scheduleSave),
+      bus.subscribe(GridEvents.CLEARED, scheduleSave),
+
+      // Manual save
+      bus.subscribe(CanvasDocumentEvents.SAVE_REQUESTED, save),
     ];
 
     return () => {
       unsubs.forEach((fn) => fn());
       if (timerRef.current) {
         clearTimeout(timerRef.current);
+        timerRef.current = null;
       }
     };
   }, [scheduleSave]);

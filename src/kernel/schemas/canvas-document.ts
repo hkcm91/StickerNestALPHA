@@ -196,6 +196,17 @@ export const CANVAS_DOCUMENT_VERSION = 1;
  *
  * The version field enables migrations when the schema changes.
  */
+/**
+ * Canvas position alignment configuration
+ */
+export const CanvasPositionConfigSchema = z.object({
+  horizontal: z.enum(['left', 'center', 'right']).default('center'),
+  vertical: z.enum(['top', 'center', 'bottom']).default('center'),
+  topOffset: z.number().default(40),
+});
+
+export type CanvasPositionConfig = z.infer<typeof CanvasPositionConfigSchema>;
+
 export const CanvasDocumentSchema = z.object({
   /** Schema version for migrations */
   version: z.number().int().positive().default(CANVAS_DOCUMENT_VERSION),
@@ -217,6 +228,10 @@ export const CanvasDocumentSchema = z.object({
   platform: CanvasPlatformSchema.default('web'),
   /** Spatial visualization mode */
   spatialMode: SpatialModeSchema.default('2d'),
+  /** Canvas border radius in pixels */
+  borderRadius: z.number().optional(),
+  /** Canvas position/alignment configuration */
+  canvasPosition: CanvasPositionConfigSchema.optional(),
 });
 
 export type CanvasDocument = z.infer<typeof CanvasDocumentSchema>;

@@ -70,9 +70,9 @@ describe('DeviceFrame', () => {
     expect(screen.getByTestId('device-notch')).toBeDefined();
   });
 
-  it('renders desktop title bar with traffic lights for desktop device', () => {
+  it('renders desktop device without a titlebar (minimal bezel)', () => {
     render(<DeviceFrame {...createProps({ device: 'desktop' })} />);
-    expect(screen.getByTestId('device-titlebar')).toBeDefined();
+    expect(screen.queryByTestId('device-titlebar')).toBeNull();
   });
 
   it('renders home indicator for phone device', () => {

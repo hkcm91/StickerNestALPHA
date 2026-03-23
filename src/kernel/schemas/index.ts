@@ -295,6 +295,10 @@ export {
   // Notification Schemas
   NotificationTypeSchema,
   NotificationSchema,
+  // Widget Invite Schemas
+  WidgetInviteModeSchema,
+  WidgetInviteStatusSchema,
+  WidgetInviteSchema,
   // Feed Schemas
   FeedTypeSchema,
   FeedCursorSchema,
@@ -324,6 +328,9 @@ export {
   type CreateCommentInput,
   type NotificationType,
   type Notification,
+  type WidgetInviteMode,
+  type WidgetInviteStatus,
+  type WidgetInvite,
   type FeedType,
   type FeedCursor,
   type FeedResponse,
@@ -338,6 +345,7 @@ export {
   ReactionJSONSchema,
   NotificationJSONSchema,
   FeedResponseJSONSchema,
+  WidgetInviteJSONSchema,
 } from "./social-graph";
 
 // =============================================================================
@@ -494,6 +502,8 @@ export {
   type LayoutMode,
   type CanvasDocumentMeta,
   type CanvasDocument,
+  type CanvasPositionConfig,
+  CanvasPositionConfigSchema,
   type CreateCanvasDocumentInput,
   type UpdateCanvasDocumentInput,
   // JSON Schemas

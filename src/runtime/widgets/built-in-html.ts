@@ -2241,4 +2241,2088 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
       })();
     </script>
   `,
+
+  // ===========================================================================
+  // Connection Invite Test Widgets
+  // These are used to test the widget invite/connection flow between users.
+  // ===========================================================================
+
+  'wgt-live-chat': `
+    <div id="chat-root" style="display:flex;flex-direction:column;height:100%;font-family:var(--sn-font-family,system-ui);background:var(--sn-surface,#fff);color:var(--sn-text,#1a1a2e);">
+      <div id="chat-header" style="padding:10px 14px;border-bottom:1px solid var(--sn-border,#e0e0e0);font-weight:600;font-size:13px;display:flex;align-items:center;gap:8px;">
+        <span id="status-dot" style="width:8px;height:8px;border-radius:50%;background:#4caf50;"></span>
+        <span>Live Chat</span>
+        <span id="peer-name" style="font-weight:400;opacity:0.6;font-size:12px;margin-left:auto;"></span>
+      </div>
+      <div id="messages" style="flex:1;overflow-y:auto;padding:10px 14px;display:flex;flex-direction:column;gap:6px;">
+        <div style="font-size:12px;opacity:0.5;text-align:center;padding:20px 0;">Connected — messages appear here</div>
+      </div>
+      <div style="padding:8px 10px;border-top:1px solid var(--sn-border,#e0e0e0);display:flex;gap:6px;">
+        <input id="msg-input" type="text" placeholder="Type a message..." style="flex:1;padding:8px 12px;border:1px solid var(--sn-border,#e0e0e0);border-radius:8px;font-size:13px;font-family:inherit;background:var(--sn-bg,#f5f5f5);color:inherit;outline:none;" />
+        <button id="send-btn" style="padding:8px 14px;border:none;border-radius:8px;background:var(--sn-accent,#7c9a92);color:#fff;font-weight:600;font-size:13px;cursor:pointer;font-family:inherit;">Send</button>
+      </div>
+    </div>
+    <script>
+      (function() {
+        var messages = document.getElementById('messages');
+        var input = document.getElementById('msg-input');
+        var sendBtn = document.getElementById('send-btn');
+        var peerNameEl = document.getElementById('peer-name');
+        var statusDot = document.getElementById('status-dot');
+
+        var myId = ''; // Set from stable instanceId after INIT
+        var history = []; // { text, fromMe, senderName, ts, msgId }
+        var seenMsgIds = {}; // dedup cross-canvas + local
+
+        function addMessage(text, fromMe, senderName, skipSave, msgId) {
+          // Dedup by msgId
+          if (msgId && seenMsgIds[msgId]) return;
+          if (msgId) seenMsgIds[msgId] = true;
+
+          var div = document.createElement('div');
+          var nameTag = '';
+          if (!fromMe && senderName) {
+            nameTag = '<div style="font-size:10px;opacity:0.6;margin-bottom:2px;">' + senderName + '</div>';
+          }
+          div.style.cssText = 'padding:8px 12px;border-radius:12px;max-width:80%;font-size:13px;line-height:1.4;' +
+            (fromMe
+              ? 'align-self:flex-end;background:var(--sn-accent,#7c9a92);color:#fff;border-bottom-right-radius:4px;'
+              : 'align-self:flex-start;background:var(--sn-bg,#f0f0f0);color:var(--sn-text,#333);border-bottom-left-radius:4px;');
+          div.innerHTML = nameTag + '<div>' + text.replace(/</g, '&lt;') + '</div>';
+          messages.appendChild(div);
+          messages.scrollTop = messages.scrollHeight;
+
+          if (!skipSave) {
+            var id = msgId || (myId + '-' + Date.now());
+            history.push({ text: text, fromMe: fromMe, senderName: senderName || '', ts: Date.now(), msgId: id });
+            if (history.length > 100) history = history.slice(-100);
+            StickerNest.setState('messages', history);
+          }
+        }
+
+        function send() {
+          var text = input.value.trim();
+          if (!text) return;
+          var msgId = myId + '-' + Date.now();
+          addMessage(text, true, null, false, msgId);
+          input.value = '';
+          var payload = { text: text, senderId: myId, senderName: 'Kimber', ts: Date.now(), msgId: msgId };
+          // Emit to local bus (same-canvas widgets)
+          StickerNest.emit('chat.message', payload);
+          // Emit to cross-canvas channel (other tabs/canvases)
+          StickerNest.emitCrossCanvas(crossChannel, payload);
+        }
+
+        function handleIncoming(payload) {
+          if (payload.senderId === myId) return;
+          addMessage(payload.text, false, payload.senderName || 'Someone', false, payload.msgId);
+          if (payload.senderName && peerNameEl) {
+            peerNameEl.textContent = 'with ' + payload.senderName;
+          }
+        }
+
+        sendBtn.addEventListener('click', send);
+        input.addEventListener('keydown', function(e) { if (e.key === 'Enter') send(); });
+
+        // Listen on local bus (same-canvas)
+        StickerNest.subscribe('chat.message', handleIncoming);
+
+        StickerNest.register({
+          id: 'live-chat-v1', name: 'Live Chat', version: '1.0.0',
+          permissions: ['cross-canvas'],
+          events: { emits: ['chat.message'], receives: ['chat.message'] }
+        });
+        StickerNest.ready();
+
+        // After INIT, set stable ID and subscribe cross-canvas
+        var crossChannel = 'chat.live'; // default channel
+        setTimeout(function() {
+          myId = StickerNest.getInstanceId() || ('user-' + Math.random().toString(36).slice(2, 8));
+          // Check config for a custom cross-canvas channel (from invite)
+          var cfg = StickerNest.getConfig();
+          if (cfg && cfg.crossCanvasChannel) crossChannel = cfg.crossCanvasChannel;
+          StickerNest.subscribeCrossCanvas(crossChannel, handleIncoming);
+          statusDot.style.background = '#4caf50';
+        }, 100);
+
+        // Restore saved messages
+        StickerNest.getState('messages').then(function(saved) {
+          if (saved && saved.length) {
+            messages.innerHTML = '';
+            history = saved;
+            // Re-populate dedup set
+            saved.forEach(function(m) { if (m.msgId) seenMsgIds[m.msgId] = true; });
+            saved.forEach(function(m) { addMessage(m.text, m.fromMe, m.senderName, true, m.msgId); });
+          }
+        });
+      })();
+    </script>
+  `,
+
+  'wgt-price-ticker': `
+    <div id="ticker-root" style="display:flex;flex-direction:column;height:100%;font-family:var(--sn-font-family,system-ui);background:var(--sn-surface,#fff);color:var(--sn-text,#1a1a2e);padding:16px;">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;opacity:0.5;margin-bottom:8px;">Price Ticker</div>
+      <div id="ticker-list" style="display:flex;flex-direction:column;gap:12px;flex:1;"></div>
+    </div>
+    <script>
+      (function() {
+        var tickers = [
+          { sym: 'BTC', price: 67234.50, color: '#f7931a' },
+          { sym: 'ETH', price: 3456.78, color: '#627eea' },
+          { sym: 'SOL', price: 142.33, color: '#9945ff' },
+        ];
+        var list = document.getElementById('ticker-list');
+
+        function render() {
+          list.innerHTML = '';
+          tickers.forEach(function(t) {
+            var change = (Math.random() * 6 - 3).toFixed(2);
+            var isUp = parseFloat(change) >= 0;
+            t.price = t.price * (1 + parseFloat(change) / 100);
+            var row = document.createElement('div');
+            row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:10px;background:var(--sn-bg,#f8f8f8);';
+            row.innerHTML =
+              '<div style="display:flex;align-items:center;gap:8px;">' +
+                '<div style="width:32px;height:32px;border-radius:50%;background:' + t.color + ';display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:11px;">' + t.sym.charAt(0) + '</div>' +
+                '<div><div style="font-weight:600;font-size:14px;">' + t.sym + '</div></div>' +
+              '</div>' +
+              '<div style="text-align:right;">' +
+                '<div style="font-weight:600;font-size:14px;">$' + t.price.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) + '</div>' +
+                '<div style="font-size:12px;color:' + (isUp ? '#4caf50' : '#ef5350') + ';">' + (isUp ? '+' : '') + change + '%</div>' +
+              '</div>';
+            list.appendChild(row);
+          });
+
+          StickerNest.emit('price.update', {
+            prices: tickers.map(function(t) { return { sym: t.sym, price: t.price }; }),
+            ts: Date.now()
+          });
+        }
+
+        render();
+        setInterval(render, 3000);
+
+        StickerNest.register({
+          id: 'price-ticker-v2', name: 'Price Ticker', version: '2.0.0',
+          events: { emits: ['price.update'], receives: [] }
+        });
+        StickerNest.ready();
+      })();
+    </script>
+  `,
+
+  'wgt-weather': `
+    <div id="weather-root" style="display:flex;flex-direction:column;height:100%;font-family:var(--sn-font-family,system-ui);background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);color:#fff;padding:20px;position:relative;overflow:hidden;">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;opacity:0.7;margin-bottom:4px;">Weather Dashboard</div>
+      <div style="font-size:13px;opacity:0.8;margin-bottom:16px;" id="location">San Francisco, CA</div>
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">
+        <div id="temp" style="font-size:48px;font-weight:300;line-height:1;">72°</div>
+        <div id="icon" style="font-size:40px;">☀️</div>
+      </div>
+      <div id="condition" style="font-size:14px;opacity:0.9;margin-bottom:16px;">Sunny</div>
+      <div id="forecast" style="display:flex;gap:8px;margin-top:auto;"></div>
+    </div>
+    <script>
+      (function() {
+        var conditions = [
+          { temp: 72, icon: '☀️', label: 'Sunny' },
+          { temp: 68, icon: '⛅', label: 'Partly Cloudy' },
+          { temp: 65, icon: '🌧️', label: 'Light Rain' },
+          { temp: 58, icon: '🌫️', label: 'Foggy' },
+          { temp: 75, icon: '🌤️', label: 'Mostly Sunny' },
+        ];
+        var days = ['Mon','Tue','Wed','Thu','Fri'];
+        var tempEl = document.getElementById('temp');
+        var iconEl = document.getElementById('icon');
+        var condEl = document.getElementById('condition');
+        var forecastEl = document.getElementById('forecast');
+
+        function update() {
+          var c = conditions[Math.floor(Math.random() * conditions.length)];
+          var jitter = Math.floor(Math.random() * 6) - 3;
+          tempEl.textContent = (c.temp + jitter) + '°';
+          iconEl.textContent = c.icon;
+          condEl.textContent = c.label;
+
+          forecastEl.innerHTML = '';
+          days.forEach(function(d) {
+            var fc = conditions[Math.floor(Math.random() * conditions.length)];
+            var div = document.createElement('div');
+            div.style.cssText = 'flex:1;text-align:center;padding:8px 4px;background:rgba(255,255,255,0.15);border-radius:8px;';
+            div.innerHTML = '<div style="font-size:10px;opacity:0.7;">' + d + '</div>' +
+              '<div style="font-size:18px;margin:4px 0;">' + fc.icon + '</div>' +
+              '<div style="font-size:12px;font-weight:600;">' + (fc.temp + Math.floor(Math.random()*6)-3) + '°</div>';
+            forecastEl.appendChild(div);
+          });
+
+          StickerNest.emit('weather.update', {
+            temp: c.temp + jitter, condition: c.label, ts: Date.now()
+          });
+        }
+
+        update();
+        setInterval(update, 5000);
+
+        StickerNest.register({
+          id: 'weather-dashboard-v1', name: 'Weather Dashboard', version: '1.0.0',
+          events: { emits: ['weather.update'], receives: [] }
+        });
+        StickerNest.ready();
+      })();
+    </script>
+  `,
+
+  // ===========================================================================
+  // AI Agent Widget — Claude on the canvas
+  // Subscribes to chat.message events and responds intelligently.
+  // Place alongside Live Chat to test two-way widget communication.
+  // ===========================================================================
+
+  'wgt-ai-agent': `
+    <div style="display:flex;flex-direction:column;height:100%;font-family:var(--sn-font-family,system-ui);background:linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);color:#e0e0e0;">
+      <div style="padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.1);font-weight:600;font-size:13px;display:flex;align-items:center;gap:8px;">
+        <div style="width:24px;height:24px;border-radius:6px;background:linear-gradient(135deg,#d4a574,#c4956a);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#1a1a2e;">C</div>
+        <span>Claude Agent</span>
+        <span id="agent-status" style="margin-left:auto;font-size:11px;opacity:0.5;">listening</span>
+      </div>
+      <div id="agent-log" style="flex:1;overflow-y:auto;padding:10px 14px;display:flex;flex-direction:column;gap:6px;font-size:12px;">
+        <div style="opacity:0.4;text-align:center;padding:12px 0;">AI Agent active — listening to bus events</div>
+      </div>
+      <div style="padding:8px 14px;border-top:1px solid rgba(255,255,255,0.1);display:flex;gap:6px;">
+        <input id="agent-input" type="text" placeholder="Say something as Claude..." style="flex:1;padding:8px 12px;border:1px solid rgba(255,255,255,0.15);border-radius:8px;font-size:12px;font-family:inherit;background:rgba(255,255,255,0.08);color:#e0e0e0;outline:none;" />
+        <button id="agent-send" style="padding:8px 12px;border:none;border-radius:8px;background:#d4a574;color:#1a1a2e;font-weight:600;font-size:12px;cursor:pointer;font-family:inherit;">Send</button>
+      </div>
+    </div>
+    <script>
+      (function() {
+        var log = document.getElementById('agent-log');
+        var statusEl = document.getElementById('agent-status');
+        var agentInput = document.getElementById('agent-input');
+        var agentSend = document.getElementById('agent-send');
+        var agentId = ''; // Set from stable instanceId after INIT
+        var logHistory = []; // { text, type }
+        var seenMsgIds = {}; // dedup
+
+        var contextResponses = {
+          hello: ['Hello! I am Claude, your AI agent on this canvas. How can I help?', 'Hi there! What would you like to work on?'],
+          hi: ['Hey! Claude here. What can I do for you?', 'Hi! I am listening to all bus events on this canvas.'],
+          help: ['I can respond to chat messages, monitor widget events, and help you test connections. Try asking me anything!'],
+          weather: ['I can see weather updates coming through the bus! The Weather Dashboard widget emits temperature data every few seconds.'],
+          price: ['The Price Ticker broadcasts BTC, ETH, and SOL prices via price.update events. I can see them on the bus!'],
+          widget: ['Widgets communicate through the StickerNest event bus. Each widget emits and subscribes to typed events — I am one of those widgets!'],
+          canvas: ['This canvas is your workspace. You can place widgets, connect them with pipelines, and I will help monitor the data flow.'],
+          test: ['Everything looks good! The bus is running, events are flowing, and widget connections are active.'],
+          how: ['I work by subscribing to bus events. When you send a chat message, it flows through the bus and I pick it up, process it, and respond.'],
+          connect: ['Widget connections work through invites. When you accept an invite, the widget gets placed on your canvas and connects via the event bus.'],
+          invite: ['The invite system lets users share widgets with each other. Mutual follows can send direct invites, and creators can broadcast to all followers.'],
+        };
+
+        var fallbackResponses = [
+          'Interesting! Tell me more about what you are working on.',
+          'I am processing that. What else would you like to know?',
+          'Got it! I am here if you need help with anything on the canvas.',
+          'That is a great question. Let me think about how the widget system handles that...',
+          'I can see events flowing through the bus. Everything looks healthy!',
+          'As an AI agent on the canvas, I can monitor all widget communication. Pretty cool, right?',
+        ];
+        var fallbackIdx = 0;
+
+        function addLog(text, type, skipSave) {
+          var div = document.createElement('div');
+          var colors = {
+            received: 'rgba(100,200,255,0.15)',
+            sent: 'rgba(212,165,116,0.2)',
+            system: 'rgba(255,255,255,0.05)',
+            thinking: 'rgba(212,165,116,0.1)',
+          };
+          div.style.cssText = 'padding:8px 10px;border-radius:8px;background:' + (colors[type] || colors.system) + ';line-height:1.4;';
+
+          var prefix = '';
+          if (type === 'received') prefix = '<span style="color:#64b5f6;font-weight:600;">IN</span> ';
+          if (type === 'sent') prefix = '<span style="color:#d4a574;font-weight:600;">OUT</span> ';
+          if (type === 'thinking') prefix = '<span style="color:#d4a574;opacity:0.6;">...</span> ';
+
+          div.innerHTML = prefix + text.replace(/</g, '&lt;');
+          log.appendChild(div);
+          log.scrollTop = log.scrollHeight;
+
+          if (!skipSave && type !== 'thinking') {
+            logHistory.push({ text: text, type: type });
+            if (logHistory.length > 100) logHistory = logHistory.slice(-100);
+            StickerNest.setState('log', logHistory);
+          }
+          return div;
+        }
+
+        function getResponse(text) {
+          var lower = text.toLowerCase();
+          var keys = Object.keys(contextResponses);
+          for (var i = 0; i < keys.length; i++) {
+            if (lower.indexOf(keys[i]) !== -1) {
+              var options = contextResponses[keys[i]];
+              return options[Math.floor(Math.random() * options.length)];
+            }
+          }
+          var resp = fallbackResponses[fallbackIdx % fallbackResponses.length];
+          fallbackIdx++;
+          return resp;
+        }
+
+        function handleIncoming(payload) {
+          if (payload.senderId === agentId) return;
+          // Dedup
+          if (payload.msgId && seenMsgIds[payload.msgId]) return;
+          if (payload.msgId) seenMsgIds[payload.msgId] = true;
+
+          var sender = payload.senderName || 'Unknown';
+          addLog(sender + ': ' + payload.text, 'received');
+          statusEl.textContent = 'thinking...';
+          statusEl.style.color = '#d4a574';
+
+          var thinkingEl = addLog('generating response...', 'thinking');
+
+          setTimeout(function() {
+            if (thinkingEl.parentNode) log.removeChild(thinkingEl);
+            var response = getResponse(payload.text);
+            var msgId = agentId + '-' + Date.now();
+            addLog(response, 'sent');
+            statusEl.textContent = 'listening';
+            statusEl.style.color = '';
+
+            var responsePayload = {
+              text: response,
+              senderId: agentId,
+              senderName: 'Claude',
+              ts: Date.now(),
+              msgId: msgId
+            };
+            // Emit to local bus and cross-canvas
+            StickerNest.emit('chat.message', responsePayload);
+            StickerNest.emitCrossCanvas(agentCrossChannel, responsePayload);
+          }, 1000 + Math.random() * 1500);
+        }
+
+        // Manual send from agent input
+        function agentManualSend() {
+          var text = agentInput.value.trim();
+          if (!text) return;
+          agentInput.value = '';
+          var msgId = agentId + '-' + Date.now();
+          addLog(text, 'sent');
+          var payload = { text: text, senderId: agentId, senderName: 'Claude', ts: Date.now(), msgId: msgId };
+          StickerNest.emit('chat.message', payload);
+          StickerNest.emitCrossCanvas(agentCrossChannel, payload);
+        }
+
+        agentSend.addEventListener('click', agentManualSend);
+        agentInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') agentManualSend(); });
+
+        // Listen for chat messages on local bus
+        StickerNest.subscribe('chat.message', handleIncoming);
+
+        // Also monitor other events for the log
+        StickerNest.subscribe('weather.update', function(payload) {
+          addLog('weather: ' + payload.temp + '° ' + payload.condition, 'system');
+        });
+
+        StickerNest.subscribe('price.update', function(payload) {
+          if (payload.prices && payload.prices.length > 0) {
+            var summary = payload.prices.map(function(p) { return p.sym + ' $' + p.price.toFixed(0); }).join(' | ');
+            addLog('prices: ' + summary, 'system');
+          }
+        });
+
+        StickerNest.register({
+          id: 'ai-agent-v1', name: 'Claude Agent', version: '1.0.0',
+          permissions: ['cross-canvas'],
+          events: {
+            emits: ['chat.message'],
+            receives: ['chat.message', 'weather.update', 'price.update']
+          }
+        });
+        StickerNest.ready();
+
+        // After INIT, set stable ID and subscribe cross-canvas
+        var agentCrossChannel = 'chat.live'; // default channel
+        setTimeout(function() {
+          agentId = StickerNest.getInstanceId() || 'claude-agent';
+          var cfg = StickerNest.getConfig();
+          if (cfg && cfg.crossCanvasChannel) agentCrossChannel = cfg.crossCanvasChannel;
+          StickerNest.subscribeCrossCanvas(agentCrossChannel, handleIncoming);
+          statusEl.textContent = 'listening (cross-canvas)';
+        }, 100);
+
+        // Restore saved log
+        StickerNest.getState('log').then(function(saved) {
+          if (saved && saved.length) {
+            log.innerHTML = '';
+            logHistory = saved;
+            saved.forEach(function(entry) { addLog(entry.text, entry.type, true); });
+          } else {
+            addLog('Claude Agent initialized. Listening for chat.message, weather.update, price.update events.', 'system');
+          }
+        });
+      })();
+    </script>
+  `,
+
+  'wgt-tictactoe': `
+    <div id="ttt-root" style="display:flex;flex-direction:column;height:100%;font-family:var(--sn-font-family,system-ui);background:var(--sn-surface,#fff);color:var(--sn-text,#1a1a2e);overflow:hidden;">
+      <!-- Lobby Screen -->
+      <div id="lobby" style="display:flex;flex-direction:column;height:100%;padding:16px;">
+        <div style="text-align:center;padding:16px 0 8px;">
+          <div style="font-size:22px;font-weight:700;letter-spacing:-0.5px;">Tic-Tac-Toe</div>
+          <div style="font-size:11px;opacity:0.5;margin-top:4px;">Cross-canvas multiplayer</div>
+        </div>
+        <button id="create-btn" style="margin:12px 0;padding:12px 0;border:none;border-radius:10px;background:var(--sn-accent,#7c9a92);color:#fff;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit;transition:opacity 0.15s;">Create Room</button>
+        <div id="waiting" style="display:none;text-align:center;padding:16px 0;">
+          <div style="font-size:13px;font-weight:600;">Waiting for opponent...</div>
+          <div id="room-code" style="font-size:11px;opacity:0.5;margin-top:4px;"></div>
+        </div>
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;opacity:0.4;margin-top:12px;margin-bottom:6px;">Available Rooms</div>
+        <div id="rooms-list" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;">
+          <div id="no-rooms" style="font-size:12px;opacity:0.4;text-align:center;padding:20px 0;">No rooms available yet</div>
+        </div>
+      </div>
+      <!-- Game Screen -->
+      <div id="game" style="display:none;flex-direction:column;height:100%;padding:16px;">
+        <div id="players" style="text-align:center;font-size:13px;font-weight:600;padding:6px 0;"></div>
+        <div id="turn-indicator" style="text-align:center;font-size:12px;opacity:0.7;padding:4px 0 12px;"></div>
+        <div id="board" style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;aspect-ratio:1;max-width:260px;width:100%;margin:0 auto;"></div>
+      </div>
+      <!-- Result Screen -->
+      <div id="result" style="display:none;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:16px;gap:16px;">
+        <div id="result-text" style="font-size:28px;font-weight:700;"></div>
+        <div id="result-sub" style="font-size:13px;opacity:0.6;"></div>
+        <button id="play-again" style="margin-top:12px;padding:12px 32px;border:none;border-radius:10px;background:var(--sn-accent,#7c9a92);color:#fff;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit;">Play Again</button>
+      </div>
+    </div>
+    <script>
+      (function() {
+        var LOBBY_CH = 'game.lobby';
+        var myPlayerId = '';
+        var myName = 'Player';
+        var roomId = null;
+        var isHost = false;
+        var opponentName = '';
+        var gameActive = false;
+        var board = [null,null,null,null,null,null,null,null,null];
+        var currentTurn = 0;
+        var myMark = 'X';
+        var rooms = {}; // roomId -> { hostName, hostId }
+        var gameChannelSub = null;
+
+        var WIN_LINES = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+
+        // DOM refs
+        var lobbyEl = document.getElementById('lobby');
+        var gameEl = document.getElementById('game');
+        var resultEl = document.getElementById('result');
+        var createBtn = document.getElementById('create-btn');
+        var waitingEl = document.getElementById('waiting');
+        var roomCodeEl = document.getElementById('room-code');
+        var roomsListEl = document.getElementById('rooms-list');
+        var noRoomsEl = document.getElementById('no-rooms');
+        var playersEl = document.getElementById('players');
+        var turnEl = document.getElementById('turn-indicator');
+        var boardEl = document.getElementById('board');
+        var resultText = document.getElementById('result-text');
+        var resultSub = document.getElementById('result-sub');
+        var playAgainBtn = document.getElementById('play-again');
+
+        function generateRoomId() {
+          return 'r-' + Math.random().toString(36).slice(2, 8);
+        }
+
+        function showScreen(name) {
+          lobbyEl.style.display = name === 'lobby' ? 'flex' : 'none';
+          gameEl.style.display = name === 'game' ? 'flex' : 'none';
+          resultEl.style.display = name === 'result' ? 'flex' : 'none';
+        }
+
+        function renderRoomsList() {
+          var keys = Object.keys(rooms);
+          if (keys.length === 0) {
+            noRoomsEl.style.display = 'block';
+            // Remove any room cards
+            var cards = roomsListEl.querySelectorAll('.room-card');
+            for (var i = 0; i < cards.length; i++) roomsListEl.removeChild(cards[i]);
+            return;
+          }
+          noRoomsEl.style.display = 'none';
+          // Clear old cards
+          var old = roomsListEl.querySelectorAll('.room-card');
+          for (var j = 0; j < old.length; j++) roomsListEl.removeChild(old[j]);
+          for (var k = 0; k < keys.length; k++) {
+            (function(rid) {
+              var r = rooms[rid];
+              var card = document.createElement('div');
+              card.className = 'room-card';
+              card.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:1px solid var(--sn-border,#e0e0e0);border-radius:8px;background:var(--sn-bg,#f5f5f5);';
+              var info = document.createElement('div');
+              info.style.cssText = 'font-size:13px;font-weight:500;';
+              info.textContent = r.hostName + "'s room";
+              var joinBtn = document.createElement('button');
+              joinBtn.style.cssText = 'padding:6px 14px;border:none;border-radius:6px;background:var(--sn-accent,#7c9a92);color:#fff;font-weight:600;font-size:12px;cursor:pointer;font-family:inherit;';
+              joinBtn.textContent = 'Join';
+              joinBtn.addEventListener('click', function() { joinRoom(rid, r); });
+              card.appendChild(info);
+              card.appendChild(joinBtn);
+              roomsListEl.appendChild(card);
+            })(keys[k]);
+          }
+        }
+
+        function renderBoard() {
+          boardEl.innerHTML = '';
+          for (var i = 0; i < 9; i++) {
+            (function(idx) {
+              var cell = document.createElement('div');
+              cell.style.cssText = 'display:flex;align-items:center;justify-content:center;background:var(--sn-bg,#f5f5f5);border-radius:8px;font-size:32px;font-weight:700;cursor:pointer;aspect-ratio:1;transition:background 0.12s;user-select:none;';
+              if (board[idx] === 'X') {
+                cell.textContent = 'X';
+                cell.style.color = 'var(--sn-accent,#7c9a92)';
+              } else if (board[idx] === 'O') {
+                cell.textContent = 'O';
+                cell.style.color = '#e17055';
+              }
+              cell.addEventListener('click', function() { onCellClick(idx); });
+              cell.addEventListener('mouseenter', function() { if (!board[idx] && isMyTurn()) cell.style.background = 'var(--sn-border,#e0e0e0)'; });
+              cell.addEventListener('mouseleave', function() { cell.style.background = 'var(--sn-bg,#f5f5f5)'; });
+              boardEl.appendChild(cell);
+            })(i);
+          }
+        }
+
+        function isMyTurn() {
+          if (!gameActive) return false;
+          if (isHost) return currentTurn % 2 === 0;
+          return currentTurn % 2 === 1;
+        }
+
+        function updateTurnIndicator() {
+          if (isMyTurn()) {
+            turnEl.textContent = 'Your turn (' + myMark + ')';
+            turnEl.style.fontWeight = '600';
+            turnEl.style.opacity = '1';
+          } else {
+            turnEl.textContent = "Opponent's turn";
+            turnEl.style.fontWeight = '400';
+            turnEl.style.opacity = '0.5';
+          }
+        }
+
+        function checkWin(mark) {
+          for (var i = 0; i < WIN_LINES.length; i++) {
+            var line = WIN_LINES[i];
+            if (board[line[0]] === mark && board[line[1]] === mark && board[line[2]] === mark) return true;
+          }
+          return false;
+        }
+
+        function checkDraw() {
+          for (var i = 0; i < 9; i++) { if (board[i] === null) return false; }
+          return true;
+        }
+
+        function showResult(outcome) {
+          gameActive = false;
+          if (outcome === 'win') {
+            resultText.textContent = 'You Win!';
+            resultText.style.color = 'var(--sn-accent,#7c9a92)';
+            resultSub.textContent = opponentName + ' was no match for you';
+          } else if (outcome === 'lose') {
+            resultText.textContent = 'You Lose!';
+            resultText.style.color = '#e17055';
+            resultSub.textContent = opponentName + ' wins this round';
+          } else {
+            resultText.textContent = 'Draw!';
+            resultText.style.color = 'var(--sn-text,#1a1a2e)';
+            resultSub.textContent = 'Evenly matched';
+          }
+          showScreen('result');
+        }
+
+        function onCellClick(idx) {
+          if (!gameActive || !isMyTurn() || board[idx] !== null) return;
+          board[idx] = myMark;
+          currentTurn++;
+          renderBoard();
+          // Emit move
+          StickerNest.emitCrossCanvas('game.' + roomId + '.move', {
+            type: 'move', cell: idx, mark: myMark, turn: currentTurn
+          });
+          // Check result
+          if (checkWin(myMark)) { showResult('win'); return; }
+          if (checkDraw()) { showResult('draw'); return; }
+          updateTurnIndicator();
+        }
+
+        function handleMove(payload) {
+          if (payload.type !== 'move') return;
+          if (payload.mark === myMark) return; // Ignore own moves
+          board[payload.cell] = payload.mark;
+          currentTurn = payload.turn;
+          renderBoard();
+          // Check if opponent won
+          if (checkWin(payload.mark)) { showResult('lose'); return; }
+          if (checkDraw()) { showResult('draw'); return; }
+          updateTurnIndicator();
+        }
+
+        function startGame(hostName, guestName, amHost) {
+          isHost = amHost;
+          myMark = isHost ? 'X' : 'O';
+          opponentName = isHost ? guestName : hostName;
+          board = [null,null,null,null,null,null,null,null,null];
+          currentTurn = 0;
+          gameActive = true;
+          playersEl.textContent = (isHost ? myName : opponentName) + ' (X) vs ' + (isHost ? opponentName : myName) + ' (O)';
+          renderBoard();
+          updateTurnIndicator();
+          showScreen('game');
+        }
+
+        function createRoom() {
+          roomId = generateRoomId();
+          isHost = true;
+          createBtn.style.display = 'none';
+          waitingEl.style.display = 'block';
+          roomCodeEl.textContent = 'Room: ' + roomId;
+          // Subscribe to game channel
+          StickerNest.subscribeCrossCanvas('game.' + roomId + '.move', handleMove);
+          // Broadcast room availability
+          StickerNest.emitCrossCanvas(LOBBY_CH, {
+            type: 'room.created', roomId: roomId, hostId: myPlayerId, hostName: myName
+          });
+          // Re-broadcast periodically so new tabs see it
+          var broadcastInterval = setInterval(function() {
+            if (gameActive) { clearInterval(broadcastInterval); return; }
+            StickerNest.emitCrossCanvas(LOBBY_CH, {
+              type: 'room.created', roomId: roomId, hostId: myPlayerId, hostName: myName
+            });
+          }, 2000);
+        }
+
+        function joinRoom(rid, r) {
+          roomId = rid;
+          isHost = false;
+          // Subscribe to game channel
+          StickerNest.subscribeCrossCanvas('game.' + roomId + '.move', handleMove);
+          // Notify host
+          StickerNest.emitCrossCanvas(LOBBY_CH, {
+            type: 'room.joined', roomId: rid, guestId: myPlayerId, guestName: myName
+          });
+          // Start game as guest
+          startGame(r.hostName, myName, false);
+        }
+
+        function handleLobbyMessage(payload) {
+          if (!payload || !payload.type) return;
+          if (payload.type === 'room.created') {
+            if (payload.hostId === myPlayerId) return; // own room
+            rooms[payload.roomId] = { hostName: payload.hostName, hostId: payload.hostId };
+            renderRoomsList();
+          }
+          if (payload.type === 'room.closed') {
+            delete rooms[payload.roomId];
+            renderRoomsList();
+          }
+          if (payload.type === 'room.joined') {
+            if (payload.roomId === roomId && isHost) {
+              opponentName = payload.guestName || 'Guest';
+              // Notify lobby that room is taken
+              StickerNest.emitCrossCanvas(LOBBY_CH, { type: 'room.closed', roomId: roomId });
+              // Notify guest to confirm game start
+              StickerNest.emitCrossCanvas('game.' + roomId + '.move', {
+                type: 'game.start', hostName: myName, guestName: opponentName
+              });
+              startGame(myName, opponentName, true);
+            }
+          }
+        }
+
+        function resetToLobby() {
+          roomId = null;
+          isHost = false;
+          opponentName = '';
+          gameActive = false;
+          board = [null,null,null,null,null,null,null,null,null];
+          currentTurn = 0;
+          rooms = {};
+          createBtn.style.display = 'block';
+          waitingEl.style.display = 'none';
+          renderRoomsList();
+          showScreen('lobby');
+          // Re-announce presence to discover rooms
+          StickerNest.emitCrossCanvas(LOBBY_CH, { type: 'discover' });
+        }
+
+        createBtn.addEventListener('click', createRoom);
+        playAgainBtn.addEventListener('click', resetToLobby);
+
+        // Register manifest and signal ready
+        StickerNest.register({
+          id: 'tictactoe-v1', name: 'Tic-Tac-Toe', version: '1.0.0',
+          permissions: ['cross-canvas'],
+          events: { emits: ['game.lobby', 'game.move'], receives: ['game.lobby', 'game.move'] }
+        });
+        StickerNest.ready();
+
+        // After INIT, set stable ID and subscribe to lobby
+        setTimeout(function() {
+          myPlayerId = StickerNest.getInstanceId() || ('p-' + Math.random().toString(36).slice(2, 8));
+          var cfg = StickerNest.getConfig();
+          if (cfg && cfg.playerName) myName = cfg.playerName;
+          StickerNest.subscribeCrossCanvas(LOBBY_CH, handleLobbyMessage);
+        }, 100);
+      })();
+    </script>
+  `,
+
+  'wgt-connect4': `
+    <div id="c4-root" style="display:flex;flex-direction:column;height:100%;font-family:var(--sn-font-family,system-ui);background:var(--sn-surface,#fff);color:var(--sn-text,#1a1a2e);overflow:hidden;">
+      <!-- Lobby Screen -->
+      <div id="lobby" style="display:flex;flex-direction:column;height:100%;padding:16px;">
+        <div style="text-align:center;padding:16px 0 8px;">
+          <div style="font-size:22px;font-weight:700;letter-spacing:-0.5px;">Connect Four</div>
+          <div style="font-size:11px;opacity:0.5;margin-top:4px;">Cross-canvas multiplayer</div>
+        </div>
+        <button id="create-btn" style="margin:12px 0;padding:12px 0;border:none;border-radius:10px;background:var(--sn-accent,#7c9a92);color:#fff;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit;transition:opacity 0.15s;">Create Room</button>
+        <div id="waiting" style="display:none;text-align:center;padding:16px 0;">
+          <div style="font-size:13px;font-weight:600;">Waiting for opponent...</div>
+          <div id="room-code" style="font-size:11px;opacity:0.5;margin-top:4px;"></div>
+        </div>
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;opacity:0.4;margin-top:12px;margin-bottom:6px;">Available Rooms</div>
+        <div id="rooms-list" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;">
+          <div id="no-rooms" style="font-size:12px;opacity:0.4;text-align:center;padding:20px 0;">No rooms available yet</div>
+        </div>
+      </div>
+      <!-- Game Screen -->
+      <div id="game" style="display:none;flex-direction:column;height:100%;padding:12px;">
+        <div id="players" style="text-align:center;font-size:13px;font-weight:600;padding:4px 0;"></div>
+        <div id="turn-indicator" style="text-align:center;font-size:12px;opacity:0.7;padding:4px 0 8px;"></div>
+        <div id="board-wrapper" style="flex:1;display:flex;align-items:center;justify-content:center;">
+          <div id="board" style="display:grid;grid-template-columns:repeat(7,1fr);grid-template-rows:repeat(6,1fr);gap:4px;background:#1565c0;border-radius:10px;padding:6px;width:100%;max-width:320px;aspect-ratio:7/6;"></div>
+        </div>
+      </div>
+      <!-- Result Screen -->
+      <div id="result" style="display:none;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:16px;gap:16px;">
+        <div id="result-text" style="font-size:28px;font-weight:700;"></div>
+        <div id="result-sub" style="font-size:13px;opacity:0.6;"></div>
+        <button id="play-again" style="margin-top:12px;padding:12px 32px;border:none;border-radius:10px;background:var(--sn-accent,#7c9a92);color:#fff;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit;">Play Again</button>
+      </div>
+    </div>
+    <style>
+      .c4-cell { width:100%;aspect-ratio:1;border-radius:50%;transition:background 0.25s,transform 0.15s; }
+      .c4-col:hover .c4-cell.c4-empty { background:rgba(255,255,255,0.35) !important; }
+    </style>
+    <script>
+      (function() {
+        var LOBBY_CH = 'game.lobby';
+        var ROWS = 6;
+        var COLS = 7;
+        var myPlayerId = '';
+        var myName = 'Player';
+        var roomId = null;
+        var isHost = false;
+        var opponentName = '';
+        var gameActive = false;
+        var board = [];
+        var currentTurn = 0;
+        var myMark = 'R';
+        var rooms = {};
+        var gameChannelSub = null;
+
+        function initBoard() {
+          board = [];
+          for (var r = 0; r < ROWS; r++) {
+            board.push([null, null, null, null, null, null, null]);
+          }
+        }
+        initBoard();
+
+        // DOM refs
+        var lobbyEl = document.getElementById('lobby');
+        var gameEl = document.getElementById('game');
+        var resultEl = document.getElementById('result');
+        var createBtn = document.getElementById('create-btn');
+        var waitingEl = document.getElementById('waiting');
+        var roomCodeEl = document.getElementById('room-code');
+        var roomsListEl = document.getElementById('rooms-list');
+        var noRoomsEl = document.getElementById('no-rooms');
+        var playersEl = document.getElementById('players');
+        var turnEl = document.getElementById('turn-indicator');
+        var boardEl = document.getElementById('board');
+        var resultText = document.getElementById('result-text');
+        var resultSub = document.getElementById('result-sub');
+        var playAgainBtn = document.getElementById('play-again');
+
+        function generateRoomId() {
+          return 'c4-' + Math.random().toString(36).slice(2, 8);
+        }
+
+        function showScreen(name) {
+          lobbyEl.style.display = name === 'lobby' ? 'flex' : 'none';
+          gameEl.style.display = name === 'game' ? 'flex' : 'none';
+          resultEl.style.display = name === 'result' ? 'flex' : 'none';
+        }
+
+        function renderRoomsList() {
+          var keys = Object.keys(rooms);
+          if (keys.length === 0) {
+            noRoomsEl.style.display = 'block';
+            var cards = roomsListEl.querySelectorAll('.room-card');
+            for (var i = 0; i < cards.length; i++) roomsListEl.removeChild(cards[i]);
+            return;
+          }
+          noRoomsEl.style.display = 'none';
+          var old = roomsListEl.querySelectorAll('.room-card');
+          for (var j = 0; j < old.length; j++) roomsListEl.removeChild(old[j]);
+          for (var k = 0; k < keys.length; k++) {
+            (function(rid) {
+              var r = rooms[rid];
+              var card = document.createElement('div');
+              card.className = 'room-card';
+              card.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:1px solid var(--sn-border,#e0e0e0);border-radius:8px;background:var(--sn-bg,#f5f5f5);';
+              var info = document.createElement('div');
+              info.style.cssText = 'font-size:13px;font-weight:500;';
+              info.textContent = r.hostName + "'s room";
+              var joinBtn = document.createElement('button');
+              joinBtn.style.cssText = 'padding:6px 14px;border:none;border-radius:6px;background:var(--sn-accent,#7c9a92);color:#fff;font-weight:600;font-size:12px;cursor:pointer;font-family:inherit;';
+              joinBtn.textContent = 'Join';
+              joinBtn.addEventListener('click', function() { joinRoom(rid, r); });
+              card.appendChild(info);
+              card.appendChild(joinBtn);
+              roomsListEl.appendChild(card);
+            })(keys[k]);
+          }
+        }
+
+        function findLowestEmptyRow(col) {
+          for (var r = ROWS - 1; r >= 0; r--) {
+            if (board[r][col] === null) return r;
+          }
+          return -1;
+        }
+
+        function renderBoard() {
+          boardEl.innerHTML = '';
+          for (var c = 0; c < COLS; c++) {
+            (function(col) {
+              var colDiv = document.createElement('div');
+              colDiv.className = 'c4-col';
+              colDiv.style.cssText = 'display:flex;flex-direction:column;gap:4px;cursor:pointer;';
+              for (var r = 0; r < ROWS; r++) {
+                var cell = document.createElement('div');
+                cell.className = 'c4-cell';
+                var val = board[r][col];
+                if (val === 'R') {
+                  cell.style.cssText = 'width:100%;aspect-ratio:1;border-radius:50%;background:#f44336;transition:background 0.25s,transform 0.15s;box-shadow:inset 0 -2px 4px rgba(0,0,0,0.2);';
+                } else if (val === 'Y') {
+                  cell.style.cssText = 'width:100%;aspect-ratio:1;border-radius:50%;background:#ffeb3b;transition:background 0.25s,transform 0.15s;box-shadow:inset 0 -2px 4px rgba(0,0,0,0.15);';
+                } else {
+                  cell.className = 'c4-cell c4-empty';
+                  cell.style.cssText = 'width:100%;aspect-ratio:1;border-radius:50%;background:rgba(255,255,255,0.2);transition:background 0.25s,transform 0.15s;';
+                }
+                colDiv.appendChild(cell);
+              }
+              colDiv.addEventListener('click', function() { onColumnClick(col); });
+              boardEl.appendChild(colDiv);
+            })(c);
+          }
+        }
+
+        function isMyTurn() {
+          if (!gameActive) return false;
+          if (isHost) return currentTurn % 2 === 0;
+          return currentTurn % 2 === 1;
+        }
+
+        function updateTurnIndicator() {
+          if (isMyTurn()) {
+            turnEl.textContent = 'Your turn (' + (myMark === 'R' ? 'Red' : 'Yellow') + ')';
+            turnEl.style.fontWeight = '600';
+            turnEl.style.opacity = '1';
+          } else {
+            turnEl.textContent = "Opponent's turn";
+            turnEl.style.fontWeight = '400';
+            turnEl.style.opacity = '0.5';
+          }
+        }
+
+        function checkWin(mark) {
+          var r, c;
+          // Horizontal
+          for (r = 0; r < ROWS; r++) {
+            for (c = 0; c <= COLS - 4; c++) {
+              if (board[r][c] === mark && board[r][c+1] === mark && board[r][c+2] === mark && board[r][c+3] === mark) return true;
+            }
+          }
+          // Vertical
+          for (c = 0; c < COLS; c++) {
+            for (r = 0; r <= ROWS - 4; r++) {
+              if (board[r][c] === mark && board[r+1][c] === mark && board[r+2][c] === mark && board[r+3][c] === mark) return true;
+            }
+          }
+          // Diagonal down-right
+          for (r = 0; r <= ROWS - 4; r++) {
+            for (c = 0; c <= COLS - 4; c++) {
+              if (board[r][c] === mark && board[r+1][c+1] === mark && board[r+2][c+2] === mark && board[r+3][c+3] === mark) return true;
+            }
+          }
+          // Diagonal down-left
+          for (r = 0; r <= ROWS - 4; r++) {
+            for (c = 3; c < COLS; c++) {
+              if (board[r][c] === mark && board[r+1][c-1] === mark && board[r+2][c-2] === mark && board[r+3][c-3] === mark) return true;
+            }
+          }
+          return false;
+        }
+
+        function checkDraw() {
+          for (var c = 0; c < COLS; c++) {
+            if (board[0][c] === null) return false;
+          }
+          return true;
+        }
+
+        function showResult(outcome) {
+          gameActive = false;
+          if (outcome === 'win') {
+            resultText.textContent = 'You Win!';
+            resultText.style.color = myMark === 'R' ? '#f44336' : '#f9a825';
+            resultSub.textContent = opponentName + ' was no match for you';
+          } else if (outcome === 'lose') {
+            var oppMark = myMark === 'R' ? 'Y' : 'R';
+            resultText.textContent = 'You Lose!';
+            resultText.style.color = oppMark === 'R' ? '#f44336' : '#f9a825';
+            resultSub.textContent = opponentName + ' wins this round';
+          } else {
+            resultText.textContent = 'Draw!';
+            resultText.style.color = 'var(--sn-text,#1a1a2e)';
+            resultSub.textContent = 'The board is full!';
+          }
+          showScreen('result');
+        }
+
+        function onColumnClick(col) {
+          if (!gameActive || !isMyTurn()) return;
+          var row = findLowestEmptyRow(col);
+          if (row === -1) return;
+          board[row][col] = myMark;
+          currentTurn++;
+          renderBoard();
+          StickerNest.emitCrossCanvas('game.' + roomId + '.move', {
+            type: 'move', col: col, row: row, mark: myMark, turn: currentTurn
+          });
+          if (checkWin(myMark)) { showResult('win'); return; }
+          if (checkDraw()) { showResult('draw'); return; }
+          updateTurnIndicator();
+        }
+
+        function handleMove(payload) {
+          if (payload.type !== 'move') return;
+          if (payload.mark === myMark) return;
+          board[payload.row][payload.col] = payload.mark;
+          currentTurn = payload.turn;
+          renderBoard();
+          if (checkWin(payload.mark)) { showResult('lose'); return; }
+          if (checkDraw()) { showResult('draw'); return; }
+          updateTurnIndicator();
+        }
+
+        function startGame(hostName, guestName, amHost) {
+          isHost = amHost;
+          myMark = isHost ? 'R' : 'Y';
+          opponentName = isHost ? guestName : hostName;
+          initBoard();
+          currentTurn = 0;
+          gameActive = true;
+          var redName = isHost ? myName : opponentName;
+          var yellowName = isHost ? opponentName : myName;
+          playersEl.innerHTML = '<span style="color:#f44336;font-weight:700;">' + redName + '</span> vs <span style="color:#f9a825;font-weight:700;">' + yellowName + '</span>';
+          renderBoard();
+          updateTurnIndicator();
+          showScreen('game');
+        }
+
+        function createRoom() {
+          roomId = generateRoomId();
+          isHost = true;
+          createBtn.style.display = 'none';
+          waitingEl.style.display = 'block';
+          roomCodeEl.textContent = 'Room: ' + roomId;
+          StickerNest.subscribeCrossCanvas('game.' + roomId + '.move', handleMove);
+          StickerNest.emitCrossCanvas(LOBBY_CH, {
+            type: 'room.created', roomId: roomId, hostId: myPlayerId, hostName: myName, gameId: 'connect4'
+          });
+          var broadcastInterval = setInterval(function() {
+            if (gameActive) { clearInterval(broadcastInterval); return; }
+            StickerNest.emitCrossCanvas(LOBBY_CH, {
+              type: 'room.created', roomId: roomId, hostId: myPlayerId, hostName: myName, gameId: 'connect4'
+            });
+          }, 2000);
+        }
+
+        function joinRoom(rid, r) {
+          roomId = rid;
+          isHost = false;
+          StickerNest.subscribeCrossCanvas('game.' + roomId + '.move', handleMove);
+          StickerNest.emitCrossCanvas(LOBBY_CH, {
+            type: 'room.joined', roomId: rid, guestId: myPlayerId, guestName: myName, gameId: 'connect4'
+          });
+          startGame(r.hostName, myName, false);
+        }
+
+        function handleLobbyMessage(payload) {
+          if (!payload || !payload.type) return;
+          if (payload.gameId && payload.gameId !== 'connect4') return;
+          if (payload.type === 'room.created') {
+            if (payload.hostId === myPlayerId) return;
+            rooms[payload.roomId] = { hostName: payload.hostName, hostId: payload.hostId };
+            renderRoomsList();
+          }
+          if (payload.type === 'room.closed') {
+            delete rooms[payload.roomId];
+            renderRoomsList();
+          }
+          if (payload.type === 'room.joined') {
+            if (payload.roomId === roomId && isHost) {
+              opponentName = payload.guestName || 'Guest';
+              StickerNest.emitCrossCanvas(LOBBY_CH, { type: 'room.closed', roomId: roomId });
+              StickerNest.emitCrossCanvas('game.' + roomId + '.move', {
+                type: 'game.start', hostName: myName, guestName: opponentName
+              });
+              startGame(myName, opponentName, true);
+            }
+          }
+        }
+
+        function resetToLobby() {
+          roomId = null;
+          isHost = false;
+          opponentName = '';
+          gameActive = false;
+          initBoard();
+          currentTurn = 0;
+          rooms = {};
+          createBtn.style.display = 'block';
+          waitingEl.style.display = 'none';
+          renderRoomsList();
+          showScreen('lobby');
+          StickerNest.emitCrossCanvas(LOBBY_CH, { type: 'discover', gameId: 'connect4' });
+        }
+
+        createBtn.addEventListener('click', createRoom);
+        playAgainBtn.addEventListener('click', resetToLobby);
+
+        StickerNest.register({
+          id: 'connect4-v1', name: 'Connect Four', version: '1.0.0',
+          permissions: ['cross-canvas'],
+          events: { emits: ['game.lobby', 'game.move'], receives: ['game.lobby', 'game.move'] }
+        });
+        StickerNest.ready();
+
+        setTimeout(function() {
+          myPlayerId = StickerNest.getInstanceId() || ('p-' + Math.random().toString(36).slice(2, 8));
+          var cfg = StickerNest.getConfig();
+          if (cfg && cfg.playerName) myName = cfg.playerName;
+          StickerNest.subscribeCrossCanvas(LOBBY_CH, handleLobbyMessage);
+        }, 100);
+      })();
+    </script>
+  `,
+
+  'wgt-pong': `
+    <div id="pong-root" style="display:flex;flex-direction:column;height:100%;font-family:var(--sn-font-family,system-ui);background:#000;color:#fff;overflow:hidden;">
+      <!-- Lobby Screen -->
+      <div id="lobby" style="display:flex;flex-direction:column;height:100%;padding:16px;">
+        <div style="text-align:center;padding:16px 0 8px;">
+          <div style="font-size:22px;font-weight:700;letter-spacing:-0.5px;">Pong</div>
+          <div style="font-size:11px;opacity:0.5;margin-top:4px;">Cross-canvas multiplayer</div>
+        </div>
+        <button id="create-btn" style="margin:12px 0;padding:12px 0;border:none;border-radius:10px;background:var(--sn-accent,#7c9a92);color:#fff;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit;transition:opacity 0.15s;">Create Room</button>
+        <div id="waiting" style="display:none;text-align:center;padding:16px 0;">
+          <div style="font-size:13px;font-weight:600;">Waiting for opponent...</div>
+          <div id="room-code" style="font-size:11px;opacity:0.5;margin-top:4px;"></div>
+        </div>
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;opacity:0.4;margin-top:12px;margin-bottom:6px;">Available Rooms</div>
+        <div id="rooms-list" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;">
+          <div id="no-rooms" style="font-size:12px;opacity:0.4;text-align:center;padding:20px 0;">No rooms available yet</div>
+        </div>
+      </div>
+      <!-- Game Screen -->
+      <div id="game" style="display:none;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:8px;">
+        <canvas id="pong-canvas" width="400" height="300" style="width:100%;max-width:400px;background:#000;display:block;image-rendering:pixelated;"></canvas>
+      </div>
+      <!-- Result Screen -->
+      <div id="result" style="display:none;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:16px;gap:16px;">
+        <div id="result-text" style="font-size:28px;font-weight:700;"></div>
+        <div id="result-sub" style="font-size:13px;opacity:0.6;"></div>
+        <button id="play-again" style="margin-top:12px;padding:12px 32px;border:none;border-radius:10px;background:var(--sn-accent,#7c9a92);color:#fff;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit;">Play Again</button>
+      </div>
+    </div>
+    <script>
+      (function() {
+        var LOBBY_CH = 'game.lobby';
+        var GAME_ID = 'pong';
+        var W = 400;
+        var H = 300;
+        var PADDLE_W = 10;
+        var PADDLE_H = 60;
+        var BALL_SIZE = 8;
+        var WIN_SCORE = 5;
+        var INITIAL_BALL_SPEED = 3;
+
+        var myPlayerId = '';
+        var myName = 'Player';
+        var roomId = null;
+        var isHost = false;
+        var opponentName = '';
+        var gameActive = false;
+        var rooms = {};
+        var animFrameId = null;
+
+        // Game state
+        var paddleLeft = H / 2 - PADDLE_H / 2;
+        var paddleRight = H / 2 - PADDLE_H / 2;
+        var ball = { x: W / 2, y: H / 2, vx: 0, vy: 0 };
+        var score = { left: 0, right: 0 };
+        var ballSpeed = INITIAL_BALL_SPEED;
+        var guestPaddleY = H / 2 - PADDLE_H / 2;
+        var lastPaddleBroadcast = 0;
+
+        // DOM refs
+        var lobbyEl = document.getElementById('lobby');
+        var gameEl = document.getElementById('game');
+        var resultEl = document.getElementById('result');
+        var createBtn = document.getElementById('create-btn');
+        var waitingEl = document.getElementById('waiting');
+        var roomCodeEl = document.getElementById('room-code');
+        var roomsListEl = document.getElementById('rooms-list');
+        var noRoomsEl = document.getElementById('no-rooms');
+        var resultText = document.getElementById('result-text');
+        var resultSub = document.getElementById('result-sub');
+        var playAgainBtn = document.getElementById('play-again');
+        var canvas = document.getElementById('pong-canvas');
+        var ctx = canvas.getContext('2d');
+
+        function generateRoomId() {
+          return 'pn-' + Math.random().toString(36).slice(2, 8);
+        }
+
+        function showScreen(name) {
+          lobbyEl.style.display = name === 'lobby' ? 'flex' : 'none';
+          gameEl.style.display = name === 'game' ? 'flex' : 'none';
+          resultEl.style.display = name === 'result' ? 'flex' : 'none';
+        }
+
+        function renderRoomsList() {
+          var keys = Object.keys(rooms);
+          if (keys.length === 0) {
+            noRoomsEl.style.display = 'block';
+            var cards = roomsListEl.querySelectorAll('.room-card');
+            for (var i = 0; i < cards.length; i++) roomsListEl.removeChild(cards[i]);
+            return;
+          }
+          noRoomsEl.style.display = 'none';
+          var old = roomsListEl.querySelectorAll('.room-card');
+          for (var j = 0; j < old.length; j++) roomsListEl.removeChild(old[j]);
+          for (var k = 0; k < keys.length; k++) {
+            (function(rid) {
+              var r = rooms[rid];
+              var card = document.createElement('div');
+              card.className = 'room-card';
+              card.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:1px solid rgba(255,255,255,0.2);border-radius:8px;background:rgba(255,255,255,0.05);';
+              var info = document.createElement('div');
+              info.style.cssText = 'font-size:13px;font-weight:500;';
+              info.textContent = r.hostName + "'s room";
+              var joinBtn = document.createElement('button');
+              joinBtn.style.cssText = 'padding:6px 14px;border:none;border-radius:6px;background:var(--sn-accent,#7c9a92);color:#fff;font-weight:600;font-size:12px;cursor:pointer;font-family:inherit;';
+              joinBtn.textContent = 'Join';
+              joinBtn.addEventListener('click', function() { joinRoom(rid, r); });
+              card.appendChild(info);
+              card.appendChild(joinBtn);
+              roomsListEl.appendChild(card);
+            })(keys[k]);
+          }
+        }
+
+        function resetBall() {
+          ball.x = W / 2;
+          ball.y = H / 2;
+          ballSpeed = INITIAL_BALL_SPEED;
+          var dir = Math.random() > 0.5 ? 1 : -1;
+          var angle = (Math.random() * 0.8 - 0.4);
+          ball.vx = dir * ballSpeed * Math.cos(angle);
+          ball.vy = ballSpeed * Math.sin(angle);
+        }
+
+        function clampPaddle(y) {
+          if (y < 0) return 0;
+          if (y > H - PADDLE_H) return H - PADDLE_H;
+          return y;
+        }
+
+        function updatePhysics() {
+          if (!isHost || !gameActive) return;
+
+          // Use guest paddle position
+          paddleRight = guestPaddleY;
+
+          // Move ball
+          ball.x += ball.vx;
+          ball.y += ball.vy;
+
+          // Bounce off top/bottom
+          if (ball.y <= 0) { ball.y = 0; ball.vy = -ball.vy; }
+          if (ball.y >= H - BALL_SIZE) { ball.y = H - BALL_SIZE; ball.vy = -ball.vy; }
+
+          // Left paddle collision (host)
+          if (ball.vx < 0 && ball.x <= PADDLE_W + 5 && ball.x >= 0) {
+            var paddleCenter = paddleLeft + PADDLE_H / 2;
+            var ballCenter = ball.y + BALL_SIZE / 2;
+            if (ballCenter >= paddleLeft && ballCenter <= paddleLeft + PADDLE_H) {
+              ball.x = PADDLE_W + 5;
+              var hitPos = (ballCenter - paddleCenter) / (PADDLE_H / 2);
+              ballSpeed += 0.15;
+              ball.vx = ballSpeed * Math.cos(hitPos * 0.6);
+              ball.vy = ballSpeed * Math.sin(hitPos * 0.6);
+              if (ball.vx < 0.5) ball.vx = 0.5;
+            }
+          }
+
+          // Right paddle collision (guest)
+          if (ball.vx > 0 && ball.x + BALL_SIZE >= W - PADDLE_W - 5 && ball.x <= W) {
+            var paddleCenter2 = paddleRight + PADDLE_H / 2;
+            var ballCenter2 = ball.y + BALL_SIZE / 2;
+            if (ballCenter2 >= paddleRight && ballCenter2 <= paddleRight + PADDLE_H) {
+              ball.x = W - PADDLE_W - 5 - BALL_SIZE;
+              var hitPos2 = (ballCenter2 - paddleCenter2) / (PADDLE_H / 2);
+              ballSpeed += 0.15;
+              ball.vx = -ballSpeed * Math.cos(hitPos2 * 0.6);
+              ball.vy = ballSpeed * Math.sin(hitPos2 * 0.6);
+              if (ball.vx > -0.5) ball.vx = -0.5;
+            }
+          }
+
+          // Score — ball passed left edge
+          if (ball.x < -BALL_SIZE) {
+            score.right++;
+            if (score.right >= WIN_SCORE) {
+              endGame();
+              return;
+            }
+            resetBall();
+          }
+
+          // Score — ball passed right edge
+          if (ball.x > W + BALL_SIZE) {
+            score.left++;
+            if (score.left >= WIN_SCORE) {
+              endGame();
+              return;
+            }
+            resetBall();
+          }
+        }
+
+        function render() {
+          ctx.fillStyle = '#000';
+          ctx.fillRect(0, 0, W, H);
+
+          // Center dashed line
+          ctx.strokeStyle = '#fff';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([6, 6]);
+          ctx.beginPath();
+          ctx.moveTo(W / 2, 0);
+          ctx.lineTo(W / 2, H);
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          // Paddles
+          ctx.fillStyle = '#fff';
+          ctx.fillRect(5, paddleLeft, PADDLE_W, PADDLE_H);
+          ctx.fillRect(W - PADDLE_W - 5, paddleRight, PADDLE_W, PADDLE_H);
+
+          // Ball
+          ctx.fillRect(ball.x, ball.y, BALL_SIZE, BALL_SIZE);
+
+          // Score
+          ctx.font = 'bold 36px monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText('' + score.left, W / 4, 45);
+          ctx.fillText('' + score.right, 3 * W / 4, 45);
+        }
+
+        function gameLoop() {
+          if (!gameActive) return;
+
+          if (isHost) {
+            updatePhysics();
+            // Broadcast state ~30fps
+            var now = Date.now();
+            if (now - lastPaddleBroadcast >= 33) {
+              lastPaddleBroadcast = now;
+              StickerNest.emitCrossCanvas('game.' + roomId + '.move', {
+                type: 'state',
+                ball: { x: ball.x, y: ball.y },
+                score: { left: score.left, right: score.right },
+                paddleHost: paddleLeft
+              });
+            }
+          }
+
+          render();
+          animFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        function endGame() {
+          gameActive = false;
+          if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
+
+          var hostWon = score.left >= WIN_SCORE;
+          var iWon = (isHost && hostWon) || (!isHost && !hostWon);
+          var winnerLabel = iWon ? 'You Win!' : 'You Lose!';
+          var scoreStr = score.left + '-' + score.right;
+
+          resultText.textContent = winnerLabel;
+          resultText.style.color = iWon ? 'var(--sn-accent,#7c9a92)' : '#e17055';
+          resultSub.textContent = (iWon ? myName : opponentName) + ' wins! (' + scoreStr + ')';
+
+          // Broadcast game over
+          if (isHost) {
+            StickerNest.emitCrossCanvas('game.' + roomId + '.move', {
+              type: 'gameover', score: { left: score.left, right: score.right }
+            });
+          }
+
+          showScreen('result');
+        }
+
+        function handleGameMessage(payload) {
+          if (!payload || !payload.type) return;
+
+          if (payload.type === 'state' && !isHost) {
+            // Guest receives state from host
+            ball.x = payload.ball.x;
+            ball.y = payload.ball.y;
+            score.left = payload.score.left;
+            score.right = payload.score.right;
+            paddleLeft = payload.paddleHost;
+          }
+
+          if (payload.type === 'paddle' && isHost) {
+            // Host receives guest paddle position
+            guestPaddleY = clampPaddle(payload.y);
+          }
+
+          if (payload.type === 'gameover') {
+            score.left = payload.score.left;
+            score.right = payload.score.right;
+            endGame();
+          }
+
+          if (payload.type === 'game.start' && !isHost) {
+            startGame(payload.hostName, payload.guestName, false);
+          }
+        }
+
+        function handleInput(e) {
+          if (!gameActive) return;
+          var rect = canvas.getBoundingClientRect();
+          var clientY = e.touches ? e.touches[0].clientY : e.clientY;
+          var scaleY = H / rect.height;
+          var y = (clientY - rect.top) * scaleY - PADDLE_H / 2;
+          y = clampPaddle(y);
+
+          if (isHost) {
+            paddleLeft = y;
+          } else {
+            paddleRight = y;
+            // Throttle paddle broadcasts to ~30fps
+            var now = Date.now();
+            if (now - lastPaddleBroadcast >= 33) {
+              lastPaddleBroadcast = now;
+              StickerNest.emitCrossCanvas('game.' + roomId + '.move', {
+                type: 'paddle', y: y
+              });
+            }
+          }
+        }
+
+        canvas.addEventListener('mousemove', handleInput);
+        canvas.addEventListener('touchmove', function(e) { e.preventDefault(); handleInput(e); }, { passive: false });
+
+        function startGame(hostName, guestName, amHost) {
+          isHost = amHost;
+          opponentName = isHost ? guestName : hostName;
+          score = { left: 0, right: 0 };
+          paddleLeft = H / 2 - PADDLE_H / 2;
+          paddleRight = H / 2 - PADDLE_H / 2;
+          guestPaddleY = H / 2 - PADDLE_H / 2;
+          ballSpeed = INITIAL_BALL_SPEED;
+          gameActive = true;
+          lastPaddleBroadcast = 0;
+          resetBall();
+          showScreen('game');
+          animFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        function createRoom() {
+          roomId = generateRoomId();
+          isHost = true;
+          createBtn.style.display = 'none';
+          waitingEl.style.display = 'block';
+          roomCodeEl.textContent = 'Room: ' + roomId;
+          StickerNest.subscribeCrossCanvas('game.' + roomId + '.move', handleGameMessage);
+          StickerNest.emitCrossCanvas(LOBBY_CH, {
+            type: 'room.created', roomId: roomId, hostId: myPlayerId, hostName: myName, gameId: GAME_ID
+          });
+          var broadcastInterval = setInterval(function() {
+            if (gameActive) { clearInterval(broadcastInterval); return; }
+            StickerNest.emitCrossCanvas(LOBBY_CH, {
+              type: 'room.created', roomId: roomId, hostId: myPlayerId, hostName: myName, gameId: GAME_ID
+            });
+          }, 2000);
+        }
+
+        function joinRoom(rid, r) {
+          roomId = rid;
+          isHost = false;
+          StickerNest.subscribeCrossCanvas('game.' + roomId + '.move', handleGameMessage);
+          StickerNest.emitCrossCanvas(LOBBY_CH, {
+            type: 'room.joined', roomId: rid, guestId: myPlayerId, guestName: myName
+          });
+        }
+
+        function handleLobbyMessage(payload) {
+          if (!payload || !payload.type) return;
+          if (payload.type === 'room.created') {
+            if (payload.hostId === myPlayerId) return;
+            if (payload.gameId && payload.gameId !== GAME_ID) return;
+            rooms[payload.roomId] = { hostName: payload.hostName, hostId: payload.hostId };
+            renderRoomsList();
+          }
+          if (payload.type === 'room.closed') {
+            delete rooms[payload.roomId];
+            renderRoomsList();
+          }
+          if (payload.type === 'room.joined') {
+            if (payload.roomId === roomId && isHost) {
+              opponentName = payload.guestName || 'Guest';
+              StickerNest.emitCrossCanvas(LOBBY_CH, { type: 'room.closed', roomId: roomId });
+              StickerNest.emitCrossCanvas('game.' + roomId + '.move', {
+                type: 'game.start', hostName: myName, guestName: opponentName
+              });
+              startGame(myName, opponentName, true);
+            }
+          }
+        }
+
+        function resetToLobby() {
+          roomId = null;
+          isHost = false;
+          opponentName = '';
+          gameActive = false;
+          if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
+          score = { left: 0, right: 0 };
+          rooms = {};
+          createBtn.style.display = 'block';
+          waitingEl.style.display = 'none';
+          renderRoomsList();
+          showScreen('lobby');
+          StickerNest.emitCrossCanvas(LOBBY_CH, { type: 'discover' });
+        }
+
+        createBtn.addEventListener('click', createRoom);
+        playAgainBtn.addEventListener('click', resetToLobby);
+
+        StickerNest.register({
+          id: 'pong-v1', name: 'Pong', version: '1.0.0',
+          permissions: ['cross-canvas'],
+          events: { emits: ['game.lobby', 'game.move'], receives: ['game.lobby', 'game.move'] }
+        });
+        StickerNest.ready();
+
+        setTimeout(function() {
+          myPlayerId = StickerNest.getInstanceId() || ('p-' + Math.random().toString(36).slice(2, 8));
+          var cfg = StickerNest.getConfig();
+          if (cfg && cfg.playerName) myName = cfg.playerName;
+          StickerNest.subscribeCrossCanvas(LOBBY_CH, handleLobbyMessage);
+        }, 100);
+      })();
+    </script>
+  `,
+
+  'wgt-battleship': `
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: var(--sn-font-family, system-ui); color: var(--sn-text, #1a1a2e); overflow: hidden; }
+      #bs-root { display:flex;flex-direction:column;height:100%;background:var(--sn-surface,#fff);overflow:hidden; }
+      .bs-btn { padding:12px 0;border:none;border-radius:10px;background:var(--sn-accent,#7c9a92);color:#fff;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit;transition:opacity 0.15s;width:100%; }
+      .bs-btn:disabled { opacity:0.4;cursor:default; }
+      .bs-btn-sm { padding:6px 14px;border:none;border-radius:6px;background:var(--sn-accent,#7c9a92);color:#fff;font-weight:600;font-size:12px;cursor:pointer;font-family:inherit; }
+      .bs-grid { display:grid;grid-template-columns:repeat(10,28px);grid-template-rows:repeat(10,28px);gap:1px; }
+      .bs-cell { width:28px;height:28px;border-radius:3px;cursor:pointer;transition:background 0.1s;border:1px solid rgba(0,0,0,0.08); }
+      .bs-water { background:#1976d2; }
+      .bs-ship { background:#455a64; }
+      .bs-hit { background:#f44336; }
+      .bs-miss { background:#90a4ae; }
+      .bs-sunk { background:#b71c1c; }
+      .bs-unknown { background:#1976d2; }
+      .bs-label { font-size:11px;text-transform:uppercase;letter-spacing:1px;opacity:0.4;margin-bottom:4px; }
+    </style>
+    <div id="bs-root" style="padding:12px;">
+      <!-- Lobby Screen -->
+      <div id="lobby" style="display:flex;flex-direction:column;height:100%;">
+        <div style="text-align:center;padding:12px 0 8px;">
+          <div style="font-size:22px;font-weight:700;letter-spacing:-0.5px;">Battleship</div>
+          <div style="font-size:11px;opacity:0.5;margin-top:4px;">Cross-canvas multiplayer</div>
+        </div>
+        <button id="create-btn" class="bs-btn" style="margin:12px 0;">Create Room</button>
+        <div id="waiting" style="display:none;text-align:center;padding:16px 0;">
+          <div style="font-size:13px;font-weight:600;">Waiting for opponent...</div>
+          <div id="room-code" style="font-size:11px;opacity:0.5;margin-top:4px;"></div>
+        </div>
+        <div class="bs-label" style="margin-top:12px;">Available Rooms</div>
+        <div id="rooms-list" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;">
+          <div id="no-rooms" style="font-size:12px;opacity:0.4;text-align:center;padding:20px 0;">No rooms available yet</div>
+        </div>
+      </div>
+      <!-- Setup Screen -->
+      <div id="setup" style="display:none;flex-direction:column;align-items:center;">
+        <div style="font-size:16px;font-weight:700;margin-bottom:8px;">Place Your Ships</div>
+        <div id="setup-ship-info" style="font-size:13px;font-weight:500;margin-bottom:6px;"></div>
+        <div id="setup-hint" style="font-size:11px;opacity:0.5;margin-bottom:8px;">Click a cell to place. Click same cell to rotate.</div>
+        <div id="setup-grid" class="bs-grid"></div>
+        <div id="ship-list" style="margin-top:8px;font-size:12px;display:flex;flex-wrap:wrap;gap:4px;justify-content:center;"></div>
+        <button id="ready-btn" class="bs-btn" style="margin-top:10px;" disabled>Ready</button>
+        <div id="waiting-opponent" style="display:none;font-size:13px;font-weight:600;margin-top:10px;text-align:center;">Waiting for opponent...</div>
+      </div>
+      <!-- Game Screen -->
+      <div id="game" style="display:none;flex-direction:column;align-items:center;">
+        <div id="turn-indicator" style="font-size:14px;font-weight:600;margin-bottom:6px;"></div>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;">
+          <div>
+            <div class="bs-label">Your Fleet</div>
+            <div id="my-grid" class="bs-grid"></div>
+          </div>
+          <div>
+            <div class="bs-label">Attack Board</div>
+            <div id="attack-grid" class="bs-grid"></div>
+          </div>
+        </div>
+        <div id="sunk-log" style="font-size:11px;opacity:0.6;margin-top:6px;text-align:center;max-height:40px;overflow-y:auto;"></div>
+      </div>
+      <!-- Result Screen -->
+      <div id="result" style="display:none;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;">
+        <div id="result-text" style="font-size:28px;font-weight:700;"></div>
+        <div id="result-sub" style="font-size:13px;opacity:0.6;"></div>
+        <button id="play-again" class="bs-btn" style="margin-top:12px;max-width:200px;">Play Again</button>
+      </div>
+    </div>
+    <script>
+      (function() {
+        var LOBBY_CH = 'game.lobby';
+        var myPlayerId = '';
+        var myName = 'Player';
+        var roomId = null;
+        var isHost = false;
+        var opponentName = '';
+        var gameChannel = null;
+        var rooms = {};
+
+        // Ship definitions
+        var SHIP_DEFS = [
+          { name: 'Carrier', size: 5, color: '#37474f' },
+          { name: 'Battleship', size: 4, color: '#455a64' },
+          { name: 'Cruiser', size: 3, color: '#546e7a' },
+          { name: 'Submarine', size: 3, color: '#607d8b' },
+          { name: 'Destroyer', size: 2, color: '#78909c' }
+        ];
+
+        // Setup state
+        var placedShips = [];
+        var currentShipIdx = 0;
+        var lastPlacedCell = null;
+        var lastPlacedHorizontal = true;
+
+        // Game state
+        var myBoard = [];
+        var myHits = [];
+        var attackBoard = [];
+        var myShipHealth = {};
+        var opponentSunkCount = 0;
+        var myTurn = false;
+        var gameActive = false;
+        var iAmReady = false;
+        var opponentReady = false;
+        var pendingAttack = null;
+
+        // DOM refs
+        var lobbyEl = document.getElementById('lobby');
+        var setupEl = document.getElementById('setup');
+        var gameEl = document.getElementById('game');
+        var resultEl = document.getElementById('result');
+        var createBtn = document.getElementById('create-btn');
+        var waitingEl = document.getElementById('waiting');
+        var roomCodeEl = document.getElementById('room-code');
+        var roomsListEl = document.getElementById('rooms-list');
+        var noRoomsEl = document.getElementById('no-rooms');
+        var setupGridEl = document.getElementById('setup-grid');
+        var setupShipInfo = document.getElementById('setup-ship-info');
+        var shipListEl = document.getElementById('ship-list');
+        var readyBtn = document.getElementById('ready-btn');
+        var waitingOpponent = document.getElementById('waiting-opponent');
+        var turnEl = document.getElementById('turn-indicator');
+        var myGridEl = document.getElementById('my-grid');
+        var attackGridEl = document.getElementById('attack-grid');
+        var sunkLogEl = document.getElementById('sunk-log');
+        var resultText = document.getElementById('result-text');
+        var resultSub = document.getElementById('result-sub');
+        var playAgainBtn = document.getElementById('play-again');
+
+        function generateRoomId() {
+          return 'bs-' + Math.random().toString(36).slice(2, 8);
+        }
+
+        function showScreen(name) {
+          lobbyEl.style.display = name === 'lobby' ? 'flex' : 'none';
+          setupEl.style.display = name === 'setup' ? 'flex' : 'none';
+          gameEl.style.display = name === 'game' ? 'flex' : 'none';
+          resultEl.style.display = name === 'result' ? 'flex' : 'none';
+        }
+
+        function initBoards() {
+          myBoard = [];
+          myHits = [];
+          attackBoard = [];
+          for (var r = 0; r < 10; r++) {
+            myBoard[r] = [];
+            myHits[r] = [];
+            attackBoard[r] = [];
+            for (var c = 0; c < 10; c++) {
+              myBoard[r][c] = null;
+              myHits[r][c] = false;
+              attackBoard[r][c] = null;
+            }
+          }
+          myShipHealth = {};
+          opponentSunkCount = 0;
+          placedShips = [];
+          currentShipIdx = 0;
+          lastPlacedCell = null;
+          lastPlacedHorizontal = true;
+          iAmReady = false;
+          opponentReady = false;
+          pendingAttack = null;
+        }
+
+        // ── Lobby ──
+        function renderRoomsList() {
+          var keys = Object.keys(rooms);
+          var old = roomsListEl.querySelectorAll('.room-card');
+          for (var j = 0; j < old.length; j++) roomsListEl.removeChild(old[j]);
+          if (keys.length === 0) {
+            noRoomsEl.style.display = 'block';
+            return;
+          }
+          noRoomsEl.style.display = 'none';
+          for (var k = 0; k < keys.length; k++) {
+            (function(rid) {
+              var r = rooms[rid];
+              var card = document.createElement('div');
+              card.className = 'room-card';
+              card.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:1px solid var(--sn-border,#e0e0e0);border-radius:8px;background:var(--sn-bg,#f5f5f5);';
+              var info = document.createElement('div');
+              info.style.cssText = 'font-size:13px;font-weight:500;';
+              info.textContent = r.hostName + "'s room";
+              var joinBtn = document.createElement('button');
+              joinBtn.className = 'bs-btn-sm';
+              joinBtn.textContent = 'Join';
+              joinBtn.addEventListener('click', function() { joinRoom(rid, r); });
+              card.appendChild(info);
+              card.appendChild(joinBtn);
+              roomsListEl.appendChild(card);
+            })(keys[k]);
+          }
+        }
+
+        function createRoom() {
+          roomId = generateRoomId();
+          isHost = true;
+          createBtn.style.display = 'none';
+          waitingEl.style.display = 'block';
+          roomCodeEl.textContent = 'Room: ' + roomId;
+          gameChannel = 'game.' + roomId + '.move';
+          StickerNest.subscribeCrossCanvas(gameChannel, handleGameMessage);
+          StickerNest.emitCrossCanvas(LOBBY_CH, {
+            type: 'room.created', roomId: roomId, hostId: myPlayerId, hostName: myName, gameId: 'battleship'
+          });
+          var broadcastInterval = setInterval(function() {
+            if (gameActive || iAmReady) { clearInterval(broadcastInterval); return; }
+            StickerNest.emitCrossCanvas(LOBBY_CH, {
+              type: 'room.created', roomId: roomId, hostId: myPlayerId, hostName: myName, gameId: 'battleship'
+            });
+          }, 2000);
+        }
+
+        function joinRoom(rid, r) {
+          roomId = rid;
+          isHost = false;
+          gameChannel = 'game.' + roomId + '.move';
+          StickerNest.subscribeCrossCanvas(gameChannel, handleGameMessage);
+          StickerNest.emitCrossCanvas(LOBBY_CH, {
+            type: 'room.joined', roomId: rid, guestId: myPlayerId, guestName: myName, gameId: 'battleship'
+          });
+          opponentName = r.hostName;
+          initBoards();
+          showScreen('setup');
+          renderSetup();
+        }
+
+        function handleLobbyMessage(payload) {
+          if (!payload || !payload.type) return;
+          if (payload.gameId && payload.gameId !== 'battleship') return;
+          if (payload.type === 'room.created') {
+            if (payload.hostId === myPlayerId) return;
+            rooms[payload.roomId] = { hostName: payload.hostName, hostId: payload.hostId };
+            renderRoomsList();
+          }
+          if (payload.type === 'room.closed') {
+            delete rooms[payload.roomId];
+            renderRoomsList();
+          }
+          if (payload.type === 'room.joined') {
+            if (payload.roomId === roomId && isHost) {
+              opponentName = payload.guestName || 'Guest';
+              StickerNest.emitCrossCanvas(LOBBY_CH, { type: 'room.closed', roomId: roomId });
+              StickerNest.emitCrossCanvas(gameChannel, { type: 'game.start', hostName: myName, guestName: opponentName });
+              initBoards();
+              showScreen('setup');
+              renderSetup();
+            }
+          }
+        }
+
+        // ── Setup ──
+        function getSetupBoard() {
+          var board = [];
+          for (var r = 0; r < 10; r++) {
+            board[r] = [];
+            for (var c = 0; c < 10; c++) board[r][c] = null;
+          }
+          for (var s = 0; s < placedShips.length; s++) {
+            var ship = placedShips[s];
+            for (var i = 0; i < ship.cells.length; i++) {
+              board[ship.cells[i].y][ship.cells[i].x] = ship;
+            }
+          }
+          return board;
+        }
+
+        function canPlaceShip(x, y, size, horizontal, excludeIdx) {
+          var board = getSetupBoard();
+          if (typeof excludeIdx === 'number') {
+            var ex = placedShips[excludeIdx];
+            for (var ei = 0; ei < ex.cells.length; ei++) {
+              board[ex.cells[ei].y][ex.cells[ei].x] = null;
+            }
+          }
+          for (var i = 0; i < size; i++) {
+            var cx = horizontal ? x + i : x;
+            var cy = horizontal ? y : y + i;
+            if (cx < 0 || cx >= 10 || cy < 0 || cy >= 10) return false;
+            if (board[cy][cx] !== null) return false;
+          }
+          return true;
+        }
+
+        function shipCells(x, y, size, horizontal) {
+          var cells = [];
+          for (var i = 0; i < size; i++) {
+            cells.push({ x: horizontal ? x + i : x, y: horizontal ? y : y + i });
+          }
+          return cells;
+        }
+
+        function renderSetup() {
+          var board = getSetupBoard();
+          if (currentShipIdx < SHIP_DEFS.length) {
+            var sd = SHIP_DEFS[currentShipIdx];
+            setupShipInfo.textContent = 'Place: ' + sd.name + ' (' + sd.size + ' cells)';
+          } else {
+            setupShipInfo.textContent = 'All ships placed!';
+          }
+          setupGridEl.innerHTML = '';
+          for (var r = 0; r < 10; r++) {
+            for (var c = 0; c < 10; c++) {
+              (function(x, y) {
+                var cell = document.createElement('div');
+                cell.className = 'bs-cell';
+                if (board[y][x]) {
+                  cell.style.background = board[y][x].color;
+                } else {
+                  cell.className += ' bs-water';
+                }
+                cell.addEventListener('click', function() { onSetupCellClick(x, y); });
+                setupGridEl.appendChild(cell);
+              })(c, r);
+            }
+          }
+          // Ship list
+          shipListEl.innerHTML = '';
+          for (var si = 0; si < SHIP_DEFS.length; si++) {
+            var span = document.createElement('span');
+            span.style.cssText = 'padding:2px 8px;border-radius:4px;font-size:11px;';
+            if (si < placedShips.length) {
+              span.style.background = SHIP_DEFS[si].color;
+              span.style.color = '#fff';
+              span.textContent = SHIP_DEFS[si].name + ' \u2713';
+            } else if (si === currentShipIdx) {
+              span.style.background = 'var(--sn-accent,#7c9a92)';
+              span.style.color = '#fff';
+              span.textContent = SHIP_DEFS[si].name + ' \u25C0';
+            } else {
+              span.style.background = 'var(--sn-border,#e0e0e0)';
+              span.textContent = SHIP_DEFS[si].name;
+            }
+            shipListEl.appendChild(span);
+          }
+          readyBtn.disabled = placedShips.length < 5;
+        }
+
+        function onSetupCellClick(x, y) {
+          if (currentShipIdx >= SHIP_DEFS.length) return;
+          var sd = SHIP_DEFS[currentShipIdx];
+          // Check if clicking same cell as last placed -> rotate
+          if (lastPlacedCell && lastPlacedCell.x === x && lastPlacedCell.y === y && placedShips.length > 0) {
+            var lastIdx = placedShips.length - 1;
+            var lastShip = placedShips[lastIdx];
+            var newH = !lastPlacedHorizontal;
+            if (canPlaceShip(x, y, lastShip.size, newH, lastIdx)) {
+              lastPlacedHorizontal = newH;
+              placedShips[lastIdx] = {
+                name: lastShip.name, size: lastShip.size, color: lastShip.color,
+                cells: shipCells(x, y, lastShip.size, newH)
+              };
+              renderSetup();
+            }
+            return;
+          }
+          // Try placing current ship
+          var horizontal = true;
+          if (!canPlaceShip(x, y, sd.size, true, undefined)) {
+            horizontal = false;
+            if (!canPlaceShip(x, y, sd.size, false, undefined)) return;
+          }
+          placedShips.push({
+            name: sd.name, size: sd.size, color: sd.color,
+            cells: shipCells(x, y, sd.size, horizontal)
+          });
+          lastPlacedCell = { x: x, y: y };
+          lastPlacedHorizontal = horizontal;
+          currentShipIdx++;
+          renderSetup();
+        }
+
+        function onReady() {
+          if (placedShips.length < 5) return;
+          iAmReady = true;
+          readyBtn.disabled = true;
+          readyBtn.textContent = 'Ready!';
+          waitingOpponent.style.display = 'block';
+          // Write ships to myBoard
+          for (var s = 0; s < placedShips.length; s++) {
+            var ship = placedShips[s];
+            myShipHealth[ship.name] = ship.size;
+            for (var i = 0; i < ship.cells.length; i++) {
+              myBoard[ship.cells[i].y][ship.cells[i].x] = ship.name;
+            }
+          }
+          StickerNest.emitCrossCanvas(gameChannel, { type: 'ready' });
+          if (opponentReady) startGame();
+        }
+
+        readyBtn.addEventListener('click', onReady);
+
+        function startGame() {
+          gameActive = true;
+          myTurn = isHost;
+          renderGame();
+          showScreen('game');
+        }
+
+        // ── Game ──
+        function renderGame() {
+          if (gameActive) {
+            if (myTurn) {
+              turnEl.textContent = 'Your Turn \u2014 Choose a target';
+              turnEl.style.color = 'var(--sn-accent,#7c9a92)';
+            } else {
+              turnEl.textContent = "Opponent's Turn...";
+              turnEl.style.color = 'var(--sn-text-muted,#6b7280)';
+            }
+          }
+          // My grid
+          myGridEl.innerHTML = '';
+          for (var r = 0; r < 10; r++) {
+            for (var c = 0; c < 10; c++) {
+              var cell = document.createElement('div');
+              cell.className = 'bs-cell';
+              if (myHits[r][c]) {
+                cell.className += myBoard[r][c] ? ' bs-hit' : ' bs-miss';
+              } else if (myBoard[r][c]) {
+                cell.className += ' bs-ship';
+              } else {
+                cell.className += ' bs-water';
+              }
+              myGridEl.appendChild(cell);
+            }
+          }
+          // Attack grid
+          attackGridEl.innerHTML = '';
+          for (var ar = 0; ar < 10; ar++) {
+            for (var ac = 0; ac < 10; ac++) {
+              (function(x, y) {
+                var acell = document.createElement('div');
+                acell.className = 'bs-cell';
+                var v = attackBoard[y][x];
+                if (v === 'hit') {
+                  acell.className += ' bs-hit';
+                } else if (v === 'miss') {
+                  acell.className += ' bs-miss';
+                } else {
+                  acell.className += ' bs-unknown';
+                  if (myTurn && gameActive) {
+                    acell.style.cursor = 'pointer';
+                    acell.addEventListener('mouseenter', function() { acell.style.opacity = '0.7'; });
+                    acell.addEventListener('mouseleave', function() { acell.style.opacity = '1'; });
+                  }
+                }
+                acell.addEventListener('click', function() { onAttack(x, y); });
+                attackGridEl.appendChild(acell);
+              })(ac, ar);
+            }
+          }
+        }
+
+        function onAttack(x, y) {
+          if (!gameActive || !myTurn) return;
+          if (attackBoard[y][x] !== null) return;
+          myTurn = false;
+          pendingAttack = { x: x, y: y };
+          StickerNest.emitCrossCanvas(gameChannel, { type: 'attack', x: x, y: y });
+          renderGame();
+        }
+
+        function handleAttack(x, y) {
+          myHits[y][x] = true;
+          var shipName = myBoard[y][x];
+          var hit = !!shipName;
+          var sunk = null;
+          if (hit && shipName) {
+            myShipHealth[shipName]--;
+            if (myShipHealth[shipName] <= 0) sunk = shipName;
+          }
+          StickerNest.emitCrossCanvas(gameChannel, { type: 'result', x: x, y: y, hit: hit, sunk: sunk });
+          renderGame();
+          // Check if I lost
+          var allSunk = true;
+          for (var key in myShipHealth) {
+            if (myShipHealth[key] > 0) { allSunk = false; break; }
+          }
+          if (allSunk) {
+            gameActive = false;
+            showResultScreen('lose');
+          }
+        }
+
+        function handleResult(x, y, hit, sunk) {
+          attackBoard[y][x] = hit ? 'hit' : 'miss';
+          if (sunk) {
+            opponentSunkCount++;
+            sunkLogEl.textContent = (sunkLogEl.textContent ? sunkLogEl.textContent + ' | ' : '') + 'Sunk: ' + sunk;
+          }
+          myTurn = true;
+          renderGame();
+          if (opponentSunkCount >= 5) {
+            gameActive = false;
+            showResultScreen('win');
+          }
+        }
+
+        function showResultScreen(outcome) {
+          if (outcome === 'win') {
+            resultText.textContent = 'Victory!';
+            resultText.style.color = 'var(--sn-accent,#7c9a92)';
+            resultSub.textContent = 'You sunk all of ' + opponentName + "'s ships!";
+          } else {
+            resultText.textContent = 'Defeat';
+            resultText.style.color = '#f44336';
+            resultSub.textContent = opponentName + ' sunk your entire fleet.';
+          }
+          showScreen('result');
+        }
+
+        function handleGameMessage(payload) {
+          if (!payload || !payload.type) return;
+          if (payload.type === 'game.start') {
+            if (!isHost) {
+              opponentName = payload.hostName || 'Host';
+            }
+          }
+          if (payload.type === 'ready') {
+            opponentReady = true;
+            if (iAmReady) startGame();
+          }
+          if (payload.type === 'attack') {
+            handleAttack(payload.x, payload.y);
+          }
+          if (payload.type === 'result') {
+            handleResult(payload.x, payload.y, payload.hit, payload.sunk);
+          }
+        }
+
+        function resetToLobby() {
+          roomId = null;
+          isHost = false;
+          opponentName = '';
+          gameActive = false;
+          gameChannel = null;
+          rooms = {};
+          initBoards();
+          sunkLogEl.textContent = '';
+          createBtn.style.display = 'block';
+          waitingEl.style.display = 'none';
+          readyBtn.disabled = true;
+          readyBtn.textContent = 'Ready';
+          waitingOpponent.style.display = 'none';
+          renderRoomsList();
+          showScreen('lobby');
+          StickerNest.emitCrossCanvas(LOBBY_CH, { type: 'discover', gameId: 'battleship' });
+        }
+
+        createBtn.addEventListener('click', createRoom);
+        playAgainBtn.addEventListener('click', resetToLobby);
+
+        StickerNest.register({
+          id: 'battleship-v1', name: 'Battleship', version: '1.0.0',
+          permissions: ['cross-canvas'],
+          events: { emits: ['game.lobby', 'game.move'], receives: ['game.lobby', 'game.move'] }
+        });
+        StickerNest.ready();
+
+        setTimeout(function() {
+          myPlayerId = StickerNest.getInstanceId() || ('p-' + Math.random().toString(36).slice(2, 8));
+          var cfg = StickerNest.getConfig();
+          if (cfg && cfg.playerName) myName = cfg.playerName;
+          StickerNest.subscribeCrossCanvas(LOBBY_CH, handleLobbyMessage);
+        }, 100);
+      })();
+    </script>
+  `,
 };

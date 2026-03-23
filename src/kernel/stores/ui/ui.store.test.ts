@@ -40,12 +40,12 @@ describe('uiStore', () => {
       expect(useUIStore.getState().activeTool).toBe('select');
     });
 
-    it('should have left sidebar open', () => {
-      expect(useUIStore.getState().sidebarLeftOpen).toBe(true);
+    it('should have left sidebar closed', () => {
+      expect(useUIStore.getState().sidebarLeftOpen).toBe(false);
     });
 
-    it('should have right sidebar open', () => {
-      expect(useUIStore.getState().sidebarRightOpen).toBe(true);
+    it('should have right sidebar closed', () => {
+      expect(useUIStore.getState().sidebarRightOpen).toBe(false);
     });
 
     it('should have empty panels', () => {
@@ -81,18 +81,18 @@ describe('uiStore', () => {
 
     it('toggleSidebarLeft should toggle left sidebar', () => {
       useUIStore.getState().toggleSidebarLeft();
-      expect(useUIStore.getState().sidebarLeftOpen).toBe(false);
+      expect(useUIStore.getState().sidebarLeftOpen).toBe(true);
 
       useUIStore.getState().toggleSidebarLeft();
-      expect(useUIStore.getState().sidebarLeftOpen).toBe(true);
+      expect(useUIStore.getState().sidebarLeftOpen).toBe(false);
     });
 
     it('toggleSidebarRight should toggle right sidebar', () => {
       useUIStore.getState().toggleSidebarRight();
-      expect(useUIStore.getState().sidebarRightOpen).toBe(false);
+      expect(useUIStore.getState().sidebarRightOpen).toBe(true);
 
       useUIStore.getState().toggleSidebarRight();
-      expect(useUIStore.getState().sidebarRightOpen).toBe(true);
+      expect(useUIStore.getState().sidebarRightOpen).toBe(false);
     });
 
     it('setPanelOpen should set panel state', () => {
@@ -172,8 +172,8 @@ describe('uiStore', () => {
       const state = useUIStore.getState();
       expect(state.canvasInteractionMode).toBe('edit');
       expect(state.activeTool).toBe('select');
-      expect(state.sidebarLeftOpen).toBe(true);
-      expect(state.sidebarRightOpen).toBe(true);
+      expect(state.sidebarLeftOpen).toBe(false);
+      expect(state.sidebarRightOpen).toBe(false);
       expect(state.panels).toEqual({});
       expect(state.theme).toBe('light');
       expect(state.isGlobalLoading).toBe(false);

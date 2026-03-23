@@ -19,3 +19,6 @@ export type { PipelinePersistence } from './persistence';
 
 export { initCanvasWiring, teardownCanvasWiring, isCanvasWiringInitialized } from './init';
 export type { CanvasWiringContext } from './init';
+
+export { derivePipelineChannelName, initCrossCanvasEdgeHandler } from './cross-canvas-edge';
+export type { CrossCanvasEdgeRequest } from './cross-canvas-edge';

@@ -75,6 +75,8 @@ export interface CanvasWorkspaceProps {
   theme?: Record<string, string>;
   /** Called when selection changes */
   onSelectionChange?: (ids: Set<string>) => void;
+  /** Canvas background opacity (0-1) — only affects background, not entities */
+  canvasOpacity?: number;
 }
 
 /**
@@ -89,6 +91,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   widgetHtmlMap,
   theme,
   onSelectionChange,
+  canvasOpacity = 1,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -462,6 +465,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
             viewport={viewport}
             background={background}
             gridConfig={gridConfig}
+            canvasOpacity={canvasOpacity}
           />
 
           {/* Layer 1.5: Background Interaction (portal target for tool-layer empty space clicks) */}

@@ -129,6 +129,15 @@ export const CanvasEvents = {
 
   // Pen-path tool preview state (emitted by tool for shell overlay rendering)
   PEN_PATH_PREVIEW: 'canvas.tool.penpath.preview',
+
+  // Ghost widget tool (invite placement)
+  GHOST_ACTIVATED: 'canvas.ghost.activated',
+  GHOST_DEACTIVATED: 'canvas.ghost.deactivated',
+  GHOST_POSITION_UPDATE: 'canvas.ghost.positionUpdate',
+  GHOST_PLACED: 'canvas.ghost.placed',
+
+  // Cross-canvas pipeline edge request (from ghost tool)
+  PIPELINE_CROSS_CANVAS_EDGE_REQUESTED: 'canvas.pipeline.crossCanvasEdge.requested',
 } as const;
 
 /**
@@ -275,6 +284,8 @@ export const CanvasDocumentEvents = {
   CANVAS_POSITION_CHANGED: 'canvas.document.position.changed',
   /** Canvas platform changed (web/mobile/desktop) */
   PLATFORM_CHANGED: 'canvas.document.platform.changed',
+  /** Request an immediate save (e.g. after seeding) */
+  SAVE_REQUESTED: 'canvas.document.save.requested',
 } as const;
 
 /**
@@ -392,6 +403,7 @@ export const SocialGraphEvents = {
   FOLLOW_DELETED: 'kernel.socialgraph.follow.deleted',
   FOLLOW_ACCEPTED: 'kernel.socialgraph.follow.accepted',
   FOLLOW_REJECTED: 'kernel.socialgraph.follow.rejected',
+  MUTUAL_FOLLOW_CREATED: 'kernel.socialgraph.mutualFollow.created',
 
   // Post events
   POST_CREATED: 'kernel.socialgraph.post.created',
@@ -418,6 +430,12 @@ export const SocialGraphEvents = {
 
   // Message events
   MESSAGE_SENT: 'kernel.socialgraph.message.sent',
+
+  // Widget invite events
+  WIDGET_INVITE_SENT: 'kernel.socialgraph.widgetInvite.sent',
+  WIDGET_INVITE_ACCEPTED: 'kernel.socialgraph.widgetInvite.accepted',
+  WIDGET_INVITE_DECLINED: 'kernel.socialgraph.widgetInvite.declined',
+  WIDGET_BROADCAST_SENT: 'kernel.socialgraph.widgetBroadcast.sent',
 } as const;
 
 /**

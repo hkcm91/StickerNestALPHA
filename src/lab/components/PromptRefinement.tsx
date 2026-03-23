@@ -27,7 +27,7 @@ export interface PromptRefinementProps {
   initialPrompt: string;
   generator: AIGenerator;
   compatibleWidgets: CompatibleWidget[];
-  onGenerate: (enrichedPrompt: string) => void;
+  onGenerate: (enrichedPrompt: string, selectedWidgets: CompatibleWidget[]) => void;
   onCancel: () => void;
 }
 
@@ -166,7 +166,7 @@ export const PromptRefinement: React.FC<PromptRefinementProps> = ({
       selectedWidgets: selectedList,
       toggles,
     });
-    onGenerate(enriched);
+    onGenerate(enriched, selectedList);
   }, [prompt, selectedWidgets, compatibleWidgets, answers, toggles, onGenerate]);
 
   // Keyboard handlers
@@ -294,7 +294,7 @@ export const PromptRefinement: React.FC<PromptRefinementProps> = ({
           {/* 2. Compatible widgets (conditional) */}
           {compatibleWidgets.length > 0 && (
             <div style={{ marginBottom: 18 }}>
-              <label style={sectionLabelStyle}>WIRE TO PIPELINE WIDGETS</label>
+              <label style={sectionLabelStyle}>CONNECT TO WIDGETS</label>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {compatibleWidgets.map((widget, i) => (
                   <label
@@ -313,6 +313,19 @@ export const PromptRefinement: React.FC<PromptRefinementProps> = ({
                       checked={selectedWidgets.has(i)}
                       onChange={() => toggleWidget(i)}
                       style={{ accentColor: HEX.storm }}
+                    />
+                    <span
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: '50%',
+                        background:
+                          widget.compatibility === 'high' ? '#5AA878'
+                          : widget.compatibility === 'partial' ? '#E8B86C'
+                          : '#666',
+                        display: 'inline-block',
+                        flexShrink: 0,
+                      }}
                     />
                     <span style={{ flex: 1 }}>{widget.name}</span>
                     {widget.ports.length > 0 && (

@@ -113,8 +113,18 @@ describe('PromptRefinement', () => {
 
   it('shows compatible widgets when provided', async () => {
     const widgets: CompatibleWidget[] = [
-      { name: 'DataFetcher', ports: ['dataOut', 'errorOut'] },
-      { name: 'ChartRenderer', ports: ['dataIn'] },
+      {
+        name: 'DataFetcher',
+        ports: ['dataOut', 'errorOut'],
+        portContracts: { emits: [{ name: 'dataOut' }, { name: 'errorOut' }], subscribes: [] },
+        compatibility: 'high',
+      },
+      {
+        name: 'ChartRenderer',
+        ports: ['dataIn'],
+        portContracts: { emits: [], subscribes: [{ name: 'dataIn' }] },
+        compatibility: 'partial',
+      },
     ];
     const props = defaultProps({ compatibleWidgets: widgets });
     render(<PromptRefinement {...props} />);
@@ -129,7 +139,7 @@ describe('PromptRefinement', () => {
     const props = defaultProps({ compatibleWidgets: [] });
     render(<PromptRefinement {...props} />);
 
-    expect(screen.queryByText('WIRE TO PIPELINE WIDGETS')).toBeNull();
+    expect(screen.queryByText('CONNECT TO WIDGETS')).toBeNull();
   });
 
   it('shows toggle pills', () => {

@@ -15,6 +15,8 @@ function mockGenerator(html: string): AIGenerator {
     isGenerating() { return false; },
     cancel() {},
     getLastResult() { return null; },
+    setModel() {},
+    getModel() { return { id: 'anthropic/claude-sonnet-4', name: 'Claude Sonnet 4', provider: 'anthropic' as const, description: 'Test' }; },
   };
 }
 

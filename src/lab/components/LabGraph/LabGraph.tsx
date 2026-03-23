@@ -16,6 +16,7 @@ import {
   Background,
   Controls,
   MiniMap,
+  Position,
   addEdge,
   useNodesState,
   useEdgesState,
@@ -26,7 +27,7 @@ import {
   type EdgeTypes,
   type OnConnect,
 } from '@xyflow/react';
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import '@xyflow/react/dist/style.css';
 
 import type { WidgetManifest } from '@sn/types';
@@ -49,11 +50,9 @@ import { labPalette, SPRING } from '../shared/palette';
 
 import { AuroraEdge } from './AuroraEdge';
 import { CardNode } from './CardNode';
-import type { CardNodeData } from './CardNode';
-import { ConnectionFeedbackProvider, useConnectionFeedback } from './ConnectionFeedback';
+import { ConnectionFeedbackProvider } from './ConnectionFeedback';
 import { GhostEdge } from './GhostEdge';
 import { GlowEdge } from './GlowEdge';
-import { GraphBreadcrumb } from './GraphBreadcrumb';
 import { NodeShell } from './NodeShell';
 import { PortDot } from './PortDot';
 import type { SceneNodeData } from './SceneNode';
@@ -112,7 +111,7 @@ const WidgetNodeComponent: React.FC<{ data: WidgetGraphNodeData; selected?: bool
           key={port.id}
           portId={port.id}
           type="target"
-          position={'left' as any}
+          position={Position.Left}
           label={port.name}
           color={port.color}
           index={i}
@@ -126,7 +125,7 @@ const WidgetNodeComponent: React.FC<{ data: WidgetGraphNodeData; selected?: bool
           key={port.id}
           portId={port.id}
           type="source"
-          position={'right' as any}
+          position={Position.Right}
           label={port.name}
           color={port.color}
           index={i}
@@ -271,8 +270,57 @@ function sceneEdgesToFlow(sceneEdges: SceneEdge[]): Edge[] {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// Floating graph action button
+// ═══════════════════════════════════════════════════════════════════
+
+const FloatingGraphButton: React.FC<{
+  label: string;
+  title?: string;
+  active?: boolean;
+  onClick: () => void;
+}> = ({ label, title, active = false, onClick }) => {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <button
+      title={title}
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        padding: '5px 12px',
+        fontSize: 10,
+        fontWeight: 600,
+        fontFamily: 'var(--sn-font-family)',
+        color: active ? labPalette.text : labPalette.textMuted,
+        background: hovered ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.3)',
+        backdropFilter: 'blur(12px)',
+        border: `1px solid ${active ? 'rgba(78,123,142,0.3)' : 'rgba(255,255,255,0.06)'}`,
+        borderRadius: 6,
+        cursor: 'pointer',
+        transition: `all 200ms ${SPRING}`,
+        outline: 'none',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {label}
+    </button>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════════════
 // Component
 // ═══════════════════════════════════════════════════════════════════
+
+/** Imperative API exposed by LabGraph to parent components */
+export interface LabGraphAPI {
+  addNode: (type: NodeType | SceneNodeType) => void;
+  addWidgetFromLibrary: (entry: WidgetRegistryEntry) => void;
+  addSceneEdge: (sourceNodeId: string, sourcePortId: string, targetNodeId: string, targetPortId: string) => void;
+  getSceneNodes: () => SceneNode[];
+  compile: () => void;
+  toggleSync: () => void;
+  getNodeCount: () => number;
+}
 
 export interface LabGraphProps {
   graphSync?: GraphSync;
@@ -285,6 +333,8 @@ export interface LabGraphProps {
   onGraphStateChange?: (nodes: SceneNode[], edges: SceneEdge[]) => void;
   /** Called when user requests AI description of a widget */
   onDescribeWidget?: (manifest: WidgetManifest) => void;
+  /** Called once with the graph's imperative API after mount */
+  onAPIReady?: (api: LabGraphAPI) => void;
 }
 
 export const LabGraph: React.FC<LabGraphProps> = ({
@@ -293,14 +343,18 @@ export const LabGraph: React.FC<LabGraphProps> = ({
   initialSceneNodes = [],
   initialSceneEdges = [],
   onGraphStateChange,
-  onDescribeWidget,
+  onDescribeWidget: _onDescribeWidget,
+  onAPIReady,
 }) => {
+  // Reserved for future use — library picker "Ask AI" button
+  void _onDescribeWidget;
   // ─── Navigation State ───────────────────────────────────────────
   const [level, setLevel] = useState<GraphLevel>('scene');
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbSegment[]>([
     { id: 'scene', label: 'Scene', level: 'scene', nodeId: null },
   ]);
-  const [currentWidgetNodeId, setCurrentWidgetNodeId] = useState<string | null>(null);
+  const [_currentWidgetNodeId, setCurrentWidgetNodeId] = useState<string | null>(null);
+  void _currentWidgetNodeId; // Used by breadcrumb nav when re-added
 
   // ─── Scene-level State ──────────────────────────────────────────
   const sceneNodesRef = useRef<SceneNode[]>(initialSceneNodes);
@@ -324,7 +378,7 @@ export const LabGraph: React.FC<LabGraphProps> = ({
     ]);
   }, []);
 
-  // ─── Breadcrumb navigation ─────────────────────────────────────
+  // ─── Breadcrumb navigation (retained for when breadcrumb UI is re-added)
   const handleBreadcrumbNavigate = useCallback((segmentIndex: number) => {
     const segment = breadcrumbs[segmentIndex];
     if (!segment) return;
@@ -333,6 +387,7 @@ export const LabGraph: React.FC<LabGraphProps> = ({
     setLevel(segment.level);
     setCurrentWidgetNodeId(segment.level === 'widget' ? segment.nodeId : null);
   }, [breadcrumbs]);
+  void handleBreadcrumbNavigate;
 
   // ─── Flow State ─────────────────────────────────────────────────
   const initialFlowNodes = useMemo((): Node[] => {
@@ -512,6 +567,39 @@ export const LabGraph: React.FC<LabGraphProps> = ({
     notifyGraphStateChange();
   }, [setNodes, handleEnterWidget, notifyGraphStateChange]);
 
+  // ─── Add Scene Edge (imperative) ───────────────────────────────
+  const handleAddSceneEdge = useCallback((
+    sourceNodeId: string,
+    sourcePortId: string,
+    targetNodeId: string,
+    targetPortId: string,
+  ) => {
+    const edgeId = `edge-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+
+    setEdges((eds) => addEdge({
+      id: edgeId,
+      source: sourceNodeId,
+      sourceHandle: sourcePortId,
+      target: targetNodeId,
+      targetHandle: targetPortId,
+      type: 'glow',
+    }, eds));
+
+    sceneEdgesRef.current = [...sceneEdgesRef.current, {
+      id: edgeId,
+      sourceNodeId,
+      sourcePortId,
+      targetNodeId,
+      targetPortId,
+    }];
+    notifyGraphStateChange();
+  }, [setEdges, notifyGraphStateChange]);
+
+  // ─── Get Scene Nodes ───────────────────────────────────────────
+  const handleGetSceneNodes = useCallback(() => {
+    return sceneNodesRef.current;
+  }, []);
+
   // ─── Compile ────────────────────────────────────────────────────
   const handleCompile = useCallback(() => {
     if (level === 'scene') {
@@ -568,13 +656,58 @@ export const LabGraph: React.FC<LabGraphProps> = ({
     }
   }, [graphSync, syncToBackend]);
 
-  // ─── Empty state message ────────────────────────────────────────
-  const currentWidgetLabel = currentWidgetNodeId
-    ? sceneNodesRef.current.find((n) => n.id === currentWidgetNodeId)?.label
-    : null;
-  const emptyMessage = level === 'scene'
-    ? 'Add widgets and stickers to design your scene'
-    : `Add nodes to build ${currentWidgetLabel ?? 'widget'} logic`;
+  // ─── Expose imperative API to parent ──────────────────────────
+  const apiRef = useRef<LabGraphAPI | null>(null);
+  if (!apiRef.current) {
+    apiRef.current = {
+      addNode: () => {},
+      addWidgetFromLibrary: () => {},
+      addSceneEdge: () => {},
+      getSceneNodes: () => [],
+      compile: () => {},
+      toggleSync: () => {},
+      getNodeCount: () => 0,
+    };
+  }
+  // Keep API methods current (avoids stale closures)
+  apiRef.current.addNode = handleAddNode;
+  apiRef.current.addWidgetFromLibrary = handleAddWidgetFromLibrary;
+  apiRef.current.addSceneEdge = handleAddSceneEdge;
+  apiRef.current.getSceneNodes = handleGetSceneNodes;
+  apiRef.current.compile = handleCompile;
+  apiRef.current.toggleSync = handleSyncToggle;
+  apiRef.current.getNodeCount = () => nodes.length;
+
+  // Notify parent once on mount
+  const apiNotified = useRef(false);
+  if (!apiNotified.current && onAPIReady) {
+    apiNotified.current = true;
+    // Wrap in stable proxy so parent always calls latest methods
+    const stableApi: LabGraphAPI = {
+      addNode: (...args) => apiRef.current!.addNode(...args),
+      addWidgetFromLibrary: (...args) => apiRef.current!.addWidgetFromLibrary(...args),
+      addSceneEdge: (...args) => apiRef.current!.addSceneEdge(...args),
+      getSceneNodes: () => apiRef.current!.getSceneNodes(),
+      compile: () => apiRef.current!.compile(),
+      toggleSync: () => apiRef.current!.toggleSync(),
+      getNodeCount: () => apiRef.current!.getNodeCount(),
+    };
+    onAPIReady(stableApi);
+  }
+
+  // ─── Keyboard shortcut: Ctrl+B to compile ─────────────────────
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+        e.preventDefault();
+        handleCompile();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [handleCompile]);
+
+  // ─── Empty state (used by ghost wireframe below) ──────────────
 
   return (
     <ConnectionFeedbackProvider>
@@ -627,16 +760,43 @@ export const LabGraph: React.FC<LabGraphProps> = ({
             overflow: 'hidden',
           }}
         />
-        <MiniMap
-          style={{
-            background: 'rgba(0,0,0,0.4)',
-            borderRadius: 10,
-            border: '1px solid rgba(255,255,255,0.04)',
-          }}
-          maskColor="rgba(0,0,0,0.6)"
-          nodeColor={() => 'rgba(78,123,142,0.4)'}
-        />
+        {/* MiniMap — only show when canvas has content */}
+        {nodes.length > 0 && (
+          <MiniMap
+            style={{
+              background: 'rgba(0,0,0,0.4)',
+              borderRadius: 10,
+              border: '1px solid rgba(255,255,255,0.04)',
+            }}
+            maskColor="rgba(0,0,0,0.6)"
+            nodeColor={() => 'rgba(78,123,142,0.4)'}
+          />
+        )}
       </ReactFlow>
+
+      {/* Floating graph actions — compile + sync (only when nodes exist) */}
+      {nodes.length > 0 && (
+        <div style={{
+          position: 'absolute',
+          top: 12,
+          right: 12,
+          zIndex: 10,
+          display: 'flex',
+          gap: 4,
+        }}>
+          <FloatingGraphButton
+            label={syncMode ? 'Sync: On' : 'Sync: Off'}
+            title="Toggle graph ↔ editor sync"
+            active={syncMode}
+            onClick={handleSyncToggle}
+          />
+          <FloatingGraphButton
+            label="Compile"
+            title="Compile pipeline (Ctrl+B)"
+            onClick={handleCompile}
+          />
+        </div>
+      )}
 
       {/* Ghost pipeline wireframe — fades on first entity */}
       {nodes.length === 0 && (

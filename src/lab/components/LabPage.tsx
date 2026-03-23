@@ -21,7 +21,9 @@ import { useAuthStore } from '../../kernel/stores/auth/auth.store';
 import { useWidgetStore } from '../../kernel/stores/widget/widget.store';
 import type { WidgetRegistryEntry } from '../../kernel/stores/widget/widget.store';
 import { buildAIGraphContext, serializeContextForPrompt } from '../ai/ai-context';
-import type { CompatibleWidget } from '../ai/prompt-questions';
+import { autoWireWidget } from '../ai/auto-wire';
+import { extractManifestFromHtml } from '../ai/manifest-extractor';
+import { computeCompatibility, type CompatibleWidget } from '../ai/prompt-questions';
 import type { SceneNode, SceneEdge , SceneNodeType } from '../graph/scene-types';
 import { checkLabAccess } from '../guards/access-guard';
 import { checkDesktopViewport } from '../guards/mobile-guard';
@@ -396,7 +398,11 @@ const LabContent: React.FC = () => {
   const handleStreamDone = useCallback((error?: string | null) => {
     setStreamingDone(true);
     if (error) setStreamingError(error);
-    // Preview stays visible showing the completed widget (or error)
+    // Auto-dismiss the streaming overlay after a short delay
+    // so it doesn't permanently cover the graph
+    setTimeout(() => {
+      setStreamingActive(false);
+    }, error ? 3000 : 1500);
   }, []);
 
   const handleGeneratingChange = useCallback((generating: boolean) => {
@@ -412,23 +418,81 @@ const LabContent: React.FC = () => {
 
   // ─── Prompt refinement ──────────────────────────────────────────
   const compatibleWidgets: CompatibleWidget[] = useMemo(() => {
-    if (graphNodes.length === 0) return [];
-    return graphNodes
-      .filter((n) => n.type === 'widget')
-      .map((n) => ({
+    const seen = new Set<string>();
+    const result: CompatibleWidget[] = [];
+    const prompt = pendingRefinementPrompt ?? '';
+
+    // 1. Widgets already in the pipeline graph
+    for (const n of graphNodes) {
+      if (n.type !== 'widget') continue;
+      seen.add(n.label);
+      const portContracts = {
+        emits: n.outputPorts.map((p) => ({
+          name: p.name,
+          description: undefined as string | undefined,
+          schema: p.schema as Record<string, unknown> | undefined,
+        })),
+        subscribes: n.inputPorts.map((p) => ({
+          name: p.name,
+          description: undefined as string | undefined,
+          schema: p.schema as Record<string, unknown> | undefined,
+        })),
+      };
+      const widget: CompatibleWidget = {
         name: n.label,
+        widgetId: n.widgetId,
         ports: [
           ...n.inputPorts.map((p) => `subscribes: ${p.name}`),
           ...n.outputPorts.map((p) => `emits: ${p.name}`),
         ],
-      }));
-  }, [graphNodes]);
+        portContracts,
+        compatibility: 'partial',
+      };
+      widget.compatibility = computeCompatibility(prompt, widget);
+      result.push(widget);
+    }
+
+    // 2. Installed widgets from the library (not already in the graph)
+    for (const entry of installedWidgets) {
+      if (seen.has(entry.manifest.name)) continue;
+      const emits = entry.manifest.events?.emits ?? [];
+      const subs = entry.manifest.events?.subscribes ?? [];
+      const portContracts = {
+        emits: emits.map((e) => ({
+          name: e.name,
+          description: e.description,
+          schema: e.schema as Record<string, unknown> | undefined,
+        })),
+        subscribes: subs.map((e) => ({
+          name: e.name,
+          description: e.description,
+          schema: e.schema as Record<string, unknown> | undefined,
+        })),
+      };
+      const widget: CompatibleWidget = {
+        name: entry.manifest.name,
+        widgetId: entry.widgetId,
+        ports: [
+          ...subs.map((e) => `subscribes: ${e.name}`),
+          ...emits.map((e) => `emits: ${e.name}`),
+        ],
+        portContracts,
+        compatibility: 'partial',
+      };
+      widget.compatibility = computeCompatibility(prompt, widget);
+      result.push(widget);
+    }
+
+    return result;
+  }, [graphNodes, installedWidgets, pendingRefinementPrompt]);
 
   const handlePromptReady = useCallback((prompt: string) => {
     setPendingRefinementPrompt(prompt);
+    // Dismiss any lingering streaming overlay when starting a new prompt
+    setStreamingActive(false);
   }, []);
 
-  const handleRefinementGenerate = useCallback(async (enrichedPrompt: string) => {
+  const handleRefinementGenerate = useCallback(async (enrichedPrompt: string, selectedWidgets: CompatibleWidget[]) => {
     setPendingRefinementPrompt(null);
     if (!lab.instances?.aiGenerator) return;
     handleGeneratingChange(true);
@@ -438,6 +502,48 @@ const LabContent: React.FC = () => {
         handleStreamChunk(result.html);
         handleStreamDone(null);
         handleApplyCode(result.html);
+
+        // Add selected widgets to the graph so they're ready to test
+        if (selectedWidgets.length > 0 && graphAPIRef.current) {
+          try {
+            const currentNodes = graphAPIRef.current.getSceneNodes();
+            for (const sw of selectedWidgets) {
+              // Skip if already in the graph
+              const exists = currentNodes.some(
+                (n) => n.widgetId === sw.widgetId || n.label === sw.name,
+              );
+              if (exists) continue;
+              // Find in installed registry and add
+              if (sw.widgetId) {
+                const entry = installedWidgets.find((w) => w.widgetId === sw.widgetId);
+                if (entry) graphAPIRef.current.addWidgetFromLibrary(entry);
+              }
+            }
+
+            // Auto-wire: extract manifest from generated HTML and wire to selected widgets
+            const manifest = extractManifestFromHtml(result.html);
+            if (manifest) {
+              const syntheticEntry: WidgetRegistryEntry = {
+                widgetId: `gen-${Date.now()}`,
+                manifest,
+                htmlContent: result.html,
+                isBuiltIn: false,
+                installedAt: new Date().toISOString(),
+              };
+              graphAPIRef.current.addWidgetFromLibrary(syntheticEntry);
+
+              autoWireWidget(
+                syntheticEntry.widgetId,
+                manifest,
+                selectedWidgets,
+                graphAPIRef.current,
+                installedWidgets,
+              );
+            }
+          } catch {
+            // Auto-wire failure is non-blocking — widget still works standalone
+          }
+        }
       } else {
         handleStreamDone(result.errors[0] ?? 'Generation failed');
       }
@@ -446,7 +552,7 @@ const LabContent: React.FC = () => {
     } finally {
       handleGeneratingChange(false);
     }
-  }, [lab.instances, graphContext, handleGeneratingChange, handleStreamChunk, handleStreamDone, handleApplyCode]);
+  }, [lab.instances, graphContext, installedWidgets, handleGeneratingChange, handleStreamChunk, handleStreamDone, handleApplyCode]);
 
   const handleRefinementCancel = useCallback(() => {
     setPendingRefinementPrompt(null);

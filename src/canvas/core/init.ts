@@ -37,8 +37,29 @@ export function initCanvasCore(): CanvasCoreContext {
   // Subscribe to entity CRUD bus events
   unsubscribers.push(
     bus.subscribe<CanvasEntity>(CanvasEvents.ENTITY_CREATED, (event: BusEvent<CanvasEntity>) => {
-      sceneGraph.addEntity(event.payload);
-      const bounds = entityBounds(event.payload);
+      const now = new Date().toISOString();
+      const entity = { ...event.payload } as Record<string, unknown>;
+
+      // Fill in required base fields if missing
+      if (!entity.id) entity.id = crypto.randomUUID();
+      if (!entity.canvasId) entity.canvasId = 'default';
+      if (!entity.createdAt) entity.createdAt = now;
+      if (!entity.updatedAt) entity.updatedAt = now;
+      if (!entity.createdBy) entity.createdBy = 'local';
+      if (entity.flipH === undefined) entity.flipH = false;
+      if (entity.flipV === undefined) entity.flipV = false;
+      if (entity.opacity === undefined) entity.opacity = 1;
+      if (entity.borderRadius === undefined) entity.borderRadius = 0;
+      if (entity.canvasVisibility === undefined) entity.canvasVisibility = 'both';
+      if (entity.syncTransform2d3d === undefined) entity.syncTransform2d3d = true;
+
+      // Widget entities need a widgetInstanceId for serialization
+      if (entity.type === 'widget' && !entity.widgetInstanceId) {
+        entity.widgetInstanceId = crypto.randomUUID();
+      }
+
+      sceneGraph.addEntity(entity as CanvasEntity);
+      const bounds = entityBounds(entity as CanvasEntity);
       dirtyTracker.markDirty(bounds);
     }),
   );

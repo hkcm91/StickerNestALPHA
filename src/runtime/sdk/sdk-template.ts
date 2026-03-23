@@ -14,6 +14,10 @@
  * The StickerNest SDK interface available to widgets as `window.StickerNest`.
  */
 export interface StickerNestSDK {
+  /** Returns the stable instance ID for this widget instance */
+  getInstanceId(): string;
+  /** Returns the widget ID */
+  getWidgetId(): string;
   /** Emit an event to the host bus via bridge */
   emit(type: string, payload: unknown): void;
   /** Subscribe to events from the host bus */
@@ -66,6 +70,8 @@ export function generateSDKTemplate(): string {
   var _manifest = null;
   var _registered = false;
   var _ready = false;
+  var _instanceId = '';
+  var _widgetId = '';
   var _eventHandlers = {};
   var _themeHandlers = [];
   var _resizeHandlers = [];
@@ -114,6 +120,8 @@ export function generateSDKTemplate(): string {
     switch (data.type) {
       case 'INIT':
         _config = data.config || {};
+        _instanceId = data.instanceId || '';
+        _widgetId = data.widgetId || '';
         if (data.theme) {
           for (var i = 0; i < _themeHandlers.length; i++) {
             try { _themeHandlers[i](data.theme); } catch(e) { console.error('[StickerNest SDK] Theme handler error:', e); }
@@ -199,6 +207,11 @@ export function generateSDKTemplate(): string {
   });
 
   window.StickerNest = {
+    /** Returns the stable instance ID for this widget instance */
+    getInstanceId: function() { return _instanceId; },
+    /** Returns the widget ID */
+    getWidgetId: function() { return _widgetId; },
+
     emit: function(type, payload) {
       postToHost({ type: 'EMIT', eventType: type, payload: payload });
     },

@@ -25,6 +25,8 @@ export interface CanvasOverlayLayerProps {
   gridConfig?: GridConfig;
   /** Selection rectangle in canvas space (during marquee select) */
   selectionRect?: { x: number; y: number; width: number; height: number } | null;
+  /** Canvas background opacity (0-1) — only affects background rendering */
+  canvasOpacity?: number;
 }
 
 /**
@@ -35,6 +37,7 @@ export const CanvasOverlayLayer: React.FC<CanvasOverlayLayerProps> = ({
   background = DEFAULT_BACKGROUND,
   gridConfig = DEFAULT_GRID_CONFIG,
   selectionRect,
+  canvasOpacity = 1,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const bgRendererRef = useRef<BackgroundRenderer | null>(null);
@@ -67,12 +70,15 @@ export const CanvasOverlayLayer: React.FC<CanvasOverlayLayerProps> = ({
     // Clear
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Background
+    // Background (with canvas opacity applied only to background, not grid)
     const bgR = bgRendererRef.current;
     if (bgR) {
+      ctx.save();
+      ctx.globalAlpha = canvasOpacity;
       bgR.setBackground(background);
       bgR.setViewport(viewport);
       bgR.render(ctx);
+      ctx.restore();
     }
 
     // Grid
@@ -102,7 +108,7 @@ export const CanvasOverlayLayer: React.FC<CanvasOverlayLayerProps> = ({
       ctx.fillRect(sx, sy, sw, sh);
       ctx.restore();
     }
-  }, [viewport, background, gridConfig, selectionRect]);
+  }, [viewport, background, gridConfig, selectionRect, canvasOpacity]);
 
   return (
     <canvas

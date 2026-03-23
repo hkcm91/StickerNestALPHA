@@ -157,10 +157,19 @@ export function createCrossCanvasRouter(userId?: string): CrossCanvasRouter {
   }
 
   function handleRemoteEnvelope(channel: string, data: unknown) {
+    console.debug(`[CrossCanvas] handleRemoteEnvelope: "${channel}"`, data ? 'has data' : 'no data');
     if (!data || typeof data !== 'object') return;
     const envelope = data as Partial<CrossCanvasEnvelope>;
-    if (!envelope.id || !('payload' in envelope)) return;
-    if (!trackMessageId(envelope.id)) return;
+    if (!envelope.id || !('payload' in envelope)) {
+      console.debug(`[CrossCanvas] handleRemoteEnvelope: dropped (missing id or payload)`);
+      return;
+    }
+    if (!trackMessageId(envelope.id)) {
+      console.debug(`[CrossCanvas] handleRemoteEnvelope: deduped (already seen ${envelope.id})`);
+      return;
+    }
+    const entry = channels.get(channel);
+    console.debug(`[CrossCanvas] handleRemoteEnvelope: delivering to ${entry?.callbacks.size ?? 0} callbacks`);
     deliverLocal(channel, envelope.payload);
   }
 
@@ -170,11 +179,16 @@ export function createCrossCanvasRouter(userId?: string): CrossCanvasRouter {
     if (entry) return entry;
 
     const scoped = scopedChannel(channel);
+    console.debug(`[CrossCanvas] ensureChannel: "${channel}" → scoped: "${scoped}" (userId: ${userId ?? 'none'})`);
 
     let bc: BroadcastChannel | null = null;
     if (typeof BroadcastChannel !== 'undefined') {
       bc = new BroadcastChannel(`crosscanvas:${scoped}`);
-      bc.onmessage = (event) => handleRemoteEnvelope(channel, event.data);
+      bc.onmessage = (event) => {
+        console.debug(`[CrossCanvas] BroadcastChannel RECEIVED on "crosscanvas:${scoped}"`, event.data?.id?.slice?.(0, 8) ?? '(no id)');
+        handleRemoteEnvelope(channel, event.data);
+      };
+      console.debug(`[CrossCanvas] BroadcastChannel created: "crosscanvas:${scoped}"`);
     }
 
     const rtChannel = supabase.channel(`crosscanvas:${scoped}`, {
@@ -216,6 +230,7 @@ export function createCrossCanvasRouter(userId?: string): CrossCanvasRouter {
 
       const entry = ensureChannel(channel);
       entry.callbacks.add(callback);
+      console.debug(`[CrossCanvas] subscribe: "${channel}" (${entry.callbacks.size} callbacks, userId: ${userId ?? 'none'})`);
 
       // Return per-callback unsubscribe (like the kernel event bus)
       return () => {
@@ -236,6 +251,8 @@ export function createCrossCanvasRouter(userId?: string): CrossCanvasRouter {
         return;
       }
 
+      console.debug(`[CrossCanvas] emit: "${channel}" (userId: ${userId ?? 'none'}, sender: ${sender?.instanceId ?? 'unknown'})`);
+
       // 1. Local delivery — same-page, instant
       deliverLocal(channel, payload);
 
@@ -255,7 +272,14 @@ export function createCrossCanvasRouter(userId?: string): CrossCanvasRouter {
 
       // 2. BroadcastChannel — cross-tab
       if (entry.bc) {
-        try { entry.bc.postMessage(envelope); } catch { /* closed */ }
+        try {
+          entry.bc.postMessage(envelope);
+          console.debug(`[CrossCanvas] BroadcastChannel posted envelope ${envelope.id.slice(0, 8)}… to "crosscanvas:${scopedChannel(channel)}"`);
+        } catch (err) {
+          console.warn(`[CrossCanvas] BroadcastChannel postMessage failed:`, err);
+        }
+      } else {
+        console.warn(`[CrossCanvas] No BroadcastChannel available for "${channel}"`);
       }
 
       // 3. Supabase Realtime — cross-user / cross-device

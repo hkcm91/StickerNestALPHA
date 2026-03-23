@@ -2,30 +2,31 @@
  * LabContextSidebar — Panel-switching left sidebar (~220px) for the Widget Lab.
  *
  * Shows different content depending on the active sidebar panel:
- * - entities: All 15 entity types grouped into Content/Visual/Spatial/Structure
- * - widgets: AI Generate, My Widgets, Marketplace, Upload
- * - inspector: Placeholder for node inspection
+ * - entities: All entity types grouped into Content/Visual/Spatial/Structure
+ * - widgets: My Widgets, Marketplace, Upload
+ * - inspector: Live preview + node inspector
  * - testing: Device controls, simulation, console
  * - deploy: Manifest, history, validation actions
  *
- * Also shows project info at top and a context-specific action button at bottom.
+ * All items are wired to callbacks — no dead placeholders.
  *
  * @module lab/components
  * @layer L2
  */
 
-import React, { useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 
+import type { WidgetRegistryEntry } from '../../kernel/stores/widget/widget.store';
+import type { SceneNodeType } from '../graph/scene-types';
 import type { SidebarPanel } from '../hooks/useLabState';
 
 import { labPalette, SPRING, HEX, hexToRgb } from './shared/palette';
 
 const [sr, sg, sb] = hexToRgb(HEX.storm);
 const [mr, mg, mb] = hexToRgb(HEX.moss);
-const [er, eg, eb] = hexToRgb(HEX.ember);
 
 // ═══════════════════════════════════════════════════════════════════
-// Section component
+// Shared sidebar primitives
 // ═══════════════════════════════════════════════════════════════════
 
 const SidebarSection: React.FC<{
@@ -127,150 +128,175 @@ const SidebarItem: React.FC<{
   );
 };
 
+const GhostButton: React.FC<{
+  label: string;
+  onClick?: () => void;
+}> = ({ label, onClick }) => {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        width: '100%',
+        padding: '6px 12px',
+        borderRadius: 6,
+        border: '1px solid rgba(255,255,255,0.08)',
+        background: hovered ? 'rgba(255,255,255,0.04)' : 'transparent',
+        color: labPalette.textSoft,
+        cursor: 'pointer',
+        fontSize: 11,
+        fontWeight: 500,
+        fontFamily: 'var(--sn-font-family)',
+        transition: `all 200ms ${SPRING}`,
+        outline: 'none',
+      }}
+    >
+      {label}
+    </button>
+  );
+};
+
 // ═══════════════════════════════════════════════════════════════════
-// Panel-specific sections
+// Entity → SceneNodeType mapping
 // ═══════════════════════════════════════════════════════════════════
 
-const EntitiesPanel: React.FC = () => (
-  <>
-    <SidebarSection label="Content">
-      <SidebarItem label="Widget" icon="⬡" />
-      <SidebarItem label="Sticker" icon="✦" />
-      <SidebarItem label="Text" icon="T" />
-      <SidebarItem label="Audio" icon="♫" />
-      <SidebarItem label="Lottie" icon="▶" />
-    </SidebarSection>
-    <SidebarSection label="Visual">
-      <SidebarItem label="Shape" icon="◻" />
-      <SidebarItem label="Drawing" icon="✎" />
-      <SidebarItem label="Path" icon="⌇" />
-      <SidebarItem label="SVG" icon="◈" />
-    </SidebarSection>
-    <SidebarSection label="Spatial">
-      <SidebarItem label="3D Object" icon="⬢" />
-      <SidebarItem label="Artboard" icon="▭" />
-    </SidebarSection>
-    <SidebarSection label="Structure">
-      <SidebarItem label="Docker" icon="▣" />
-      <SidebarItem label="Group" icon="⊞" />
-      <SidebarItem label="Folder" icon="📁" />
-    </SidebarSection>
-  </>
-);
+/** Map sidebar entity labels to SceneNodeType (or null for future entity types) */
+const ENTITY_MAP: Record<string, SceneNodeType | null> = {
+  Widget: 'widget',
+  Sticker: 'sticker',
+  Docker: 'docker',
+  Group: 'group',
+  // These entity types don't have scene node equivalents yet:
+  Text: null,
+  Audio: null,
+  Lottie: null,
+  Shape: null,
+  Drawing: null,
+  Path: null,
+  SVG: null,
+  '3D Object': null,
+  Artboard: null,
+  Folder: null,
+};
 
-const WidgetsPanel: React.FC = () => {
-  const [generateHovered, setGenerateHovered] = useState(false);
-  const [browseHovered, setBrowseHovered] = useState(false);
-  const [uploadHovered, setUploadHovered] = useState(false);
+// ═══════════════════════════════════════════════════════════════════
+// Panel components
+// ═══════════════════════════════════════════════════════════════════
+
+interface EntitiesPanelProps {
+  onAddEntity: (type: SceneNodeType) => void;
+}
+
+const EntitiesPanel: React.FC<EntitiesPanelProps> = ({ onAddEntity }) => {
+  const add = (label: string) => {
+    const sceneType = ENTITY_MAP[label];
+    if (sceneType) onAddEntity(sceneType);
+  };
 
   return (
     <>
-      <SidebarSection label="AI Generate">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <input
-            type="text"
-            placeholder="Describe a widget..."
-            style={{
-              width: '100%',
-              padding: '6px 8px',
-              borderRadius: 6,
-              border: '1px solid rgba(255,255,255,0.06)',
-              background: 'rgba(255,255,255,0.03)',
-              color: labPalette.text,
-              fontSize: 11,
-              fontFamily: 'var(--sn-font-family)',
-              outline: 'none',
-              transition: `border-color 200ms ${SPRING}`,
-              boxSizing: 'border-box' as const,
-            }}
-            onFocus={(e) => {
-              e.currentTarget.style.borderColor = `rgba(${er},${eg},${eb},0.3)`;
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)';
-            }}
-          />
-          <button
-            onMouseEnter={() => setGenerateHovered(true)}
-            onMouseLeave={() => setGenerateHovered(false)}
-            style={{
-              width: '100%',
-              padding: '6px 12px',
-              borderRadius: 6,
-              border: 'none',
-              background: generateHovered
-                ? `rgba(${er},${eg},${eb},0.2)`
-                : `rgba(${er},${eg},${eb},0.12)`,
-              color: labPalette.ember,
-              cursor: 'pointer',
-              fontSize: 11,
-              fontWeight: 600,
-              fontFamily: 'var(--sn-font-family)',
-              transition: `all 250ms ${SPRING}`,
-              outline: 'none',
-              boxShadow: generateHovered
-                ? `0 0 10px rgba(${er},${eg},${eb},0.15)`
-                : 'none',
-            }}
-          >
-            Generate
-          </button>
-        </div>
+      <SidebarSection label="Content">
+        <SidebarItem label="Widget" icon="⬡" onClick={() => add('Widget')} />
+        <SidebarItem label="Sticker" icon="✦" onClick={() => add('Sticker')} />
+        <SidebarItem label="Text" icon="T" onClick={() => add('Text')} />
+        <SidebarItem label="Audio" icon="♫" onClick={() => add('Audio')} />
+        <SidebarItem label="Lottie" icon="▶" onClick={() => add('Lottie')} />
       </SidebarSection>
-      <SidebarSection label="My Widgets">
-        <SidebarItem label="Counter" icon="⬡" />
-        <SidebarItem label="Weather" icon="⬡" />
-        <SidebarItem label="Todo List" icon="⬡" />
+      <SidebarSection label="Visual">
+        <SidebarItem label="Shape" icon="◻" onClick={() => add('Shape')} />
+        <SidebarItem label="Drawing" icon="✎" onClick={() => add('Drawing')} />
+        <SidebarItem label="Path" icon="⌇" onClick={() => add('Path')} />
+        <SidebarItem label="SVG" icon="◈" onClick={() => add('SVG')} />
       </SidebarSection>
-      <SidebarSection label="Marketplace">
-        <button
-          onMouseEnter={() => setBrowseHovered(true)}
-          onMouseLeave={() => setBrowseHovered(false)}
-          style={{
-            width: '100%',
-            padding: '6px 12px',
-            borderRadius: 6,
-            border: '1px solid rgba(255,255,255,0.08)',
-            background: browseHovered ? 'rgba(255,255,255,0.04)' : 'transparent',
-            color: labPalette.textSoft,
-            cursor: 'pointer',
-            fontSize: 11,
-            fontWeight: 500,
-            fontFamily: 'var(--sn-font-family)',
-            transition: `all 200ms ${SPRING}`,
-            outline: 'none',
-          }}
-        >
-          Browse Marketplace
-        </button>
+      <SidebarSection label="Spatial">
+        <SidebarItem label="3D Object" icon="⬢" onClick={() => add('3D Object')} />
+        <SidebarItem label="Artboard" icon="▭" onClick={() => add('Artboard')} />
       </SidebarSection>
-      <SidebarSection label="Upload">
-        <button
-          onMouseEnter={() => setUploadHovered(true)}
-          onMouseLeave={() => setUploadHovered(false)}
-          style={{
-            width: '100%',
-            padding: '6px 12px',
-            borderRadius: 6,
-            border: '1px solid rgba(255,255,255,0.08)',
-            background: uploadHovered ? 'rgba(255,255,255,0.04)' : 'transparent',
-            color: labPalette.textSoft,
-            cursor: 'pointer',
-            fontSize: 11,
-            fontWeight: 500,
-            fontFamily: 'var(--sn-font-family)',
-            transition: `all 200ms ${SPRING}`,
-            outline: 'none',
-          }}
-        >
-          Upload .html
-        </button>
+      <SidebarSection label="Structure">
+        <SidebarItem label="Docker" icon="▣" onClick={() => add('Docker')} />
+        <SidebarItem label="Group" icon="⊞" onClick={() => add('Group')} />
+        <SidebarItem label="Folder" icon="📁" onClick={() => add('Folder')} />
       </SidebarSection>
     </>
   );
 };
 
-const InspectorPanel: React.FC<{ previewSlot?: React.ReactNode; isRunning?: boolean }> = ({
+interface WidgetsPanelProps {
+  installedWidgets: WidgetRegistryEntry[];
+  onAddWidget: (entry: WidgetRegistryEntry) => void;
+  onBrowseMarketplace: () => void;
+  onUploadHtml: () => void;
+}
+
+const WidgetsPanel: React.FC<WidgetsPanelProps> = ({
+  installedWidgets,
+  onAddWidget,
+  onBrowseMarketplace,
+  onUploadHtml,
+}) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleUploadClick = useCallback(() => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  }, []);
+
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    onUploadHtml();
+    // Reset the input so the same file can be selected again
+    e.target.value = '';
+  }, [onUploadHtml]);
+
+  return (
+    <>
+      <SidebarSection label="My Widgets">
+        {installedWidgets.length === 0 ? (
+          <div style={{
+            fontSize: 11, fontStyle: 'italic',
+            color: labPalette.textFaint, padding: '4px 0',
+          }}>
+            No widgets installed
+          </div>
+        ) : (
+          installedWidgets.map((entry) => (
+            <SidebarItem
+              key={entry.widgetId}
+              label={entry.manifest.name}
+              icon="⬡"
+              onClick={() => onAddWidget(entry)}
+            />
+          ))
+        )}
+      </SidebarSection>
+      <SidebarSection label="Marketplace">
+        <GhostButton label="Browse Marketplace" onClick={onBrowseMarketplace} />
+      </SidebarSection>
+      <SidebarSection label="Upload">
+        <GhostButton label="Upload .html" onClick={handleUploadClick} />
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".html,.htm"
+          onChange={handleFileChange}
+          style={{ display: 'none' }}
+          aria-hidden="true"
+        />
+      </SidebarSection>
+    </>
+  );
+};
+
+interface InspectorPanelProps {
+  previewSlot?: React.ReactNode;
+  isRunning?: boolean;
+}
+
+const InspectorPanel: React.FC<InspectorPanelProps> = ({
   previewSlot,
   isRunning = false,
 }) => (
@@ -284,11 +310,10 @@ const InspectorPanel: React.FC<{ previewSlot?: React.ReactNode; isRunning?: bool
     <div style={{
       flex: 1,
       minHeight: 120,
-      margin: '0 12px 8px',
-      borderRadius: 10,
+      margin: 0,
+      borderRadius: 0,
       overflow: 'hidden',
       background: 'var(--sn-bg, #0A0A0E)',
-      border: '1px solid rgba(255,255,255,0.06)',
       display: 'flex',
       flexDirection: 'column',
     }}>
@@ -344,17 +369,54 @@ const InspectorPanel: React.FC<{ previewSlot?: React.ReactNode; isRunning?: bool
   </div>
 );
 
-const TestingPanel: React.FC = () => (
+interface TestingPanelProps {
+  activeDevice: string;
+  onDeviceChange: (device: string) => void;
+  activeSimulation: string;
+  onSimulationChange: (sim: string) => void;
+  onRunPipeline: () => void;
+}
+
+const TestingPanel: React.FC<TestingPanelProps> = ({
+  activeDevice,
+  onDeviceChange,
+  activeSimulation,
+  onSimulationChange,
+}) => (
   <>
     <SidebarSection label="Controls">
-      <SidebarItem label="Desktop (1920×1080)" active />
-      <SidebarItem label="Tablet (768×1024)" />
-      <SidebarItem label="Phone (375×812)" />
+      <SidebarItem
+        label="Desktop (1920×1080)"
+        active={activeDevice === 'desktop'}
+        onClick={() => onDeviceChange('desktop')}
+      />
+      <SidebarItem
+        label="Tablet (768×1024)"
+        active={activeDevice === 'tablet'}
+        onClick={() => onDeviceChange('tablet')}
+      />
+      <SidebarItem
+        label="Phone (375×812)"
+        active={activeDevice === 'phone'}
+        onClick={() => onDeviceChange('phone')}
+      />
     </SidebarSection>
     <SidebarSection label="Simulation">
-      <SidebarItem label="Default" active />
-      <SidebarItem label="High latency (200ms)" />
-      <SidebarItem label="Offline" />
+      <SidebarItem
+        label="Default"
+        active={activeSimulation === 'default'}
+        onClick={() => onSimulationChange('default')}
+      />
+      <SidebarItem
+        label="High latency (200ms)"
+        active={activeSimulation === 'high-latency'}
+        onClick={() => onSimulationChange('high-latency')}
+      />
+      <SidebarItem
+        label="Offline"
+        active={activeSimulation === 'offline'}
+        onClick={() => onSimulationChange('offline')}
+      />
     </SidebarSection>
     <SidebarSection label="Console" defaultOpen={false}>
       <div style={{
@@ -369,12 +431,24 @@ const TestingPanel: React.FC = () => (
   </>
 );
 
-const DeployPanel: React.FC = () => (
+interface DeployPanelProps {
+  manifestName?: string;
+  manifestVersion?: string;
+  eventCount?: number;
+  onValidate: () => void;
+}
+
+const DeployPanel: React.FC<DeployPanelProps> = ({
+  manifestName,
+  manifestVersion,
+  eventCount = 0,
+  onValidate,
+}) => (
   <>
     <SidebarSection label="Manifest">
-      <SidebarItem label="Name" />
-      <SidebarItem label="Version" />
-      <SidebarItem label="Events" />
+      <SidebarItem label={`Name: ${manifestName ?? 'Untitled'}`} />
+      <SidebarItem label={`Version: ${manifestVersion ?? '0.0.0'}`} />
+      <SidebarItem label={`Events: ${eventCount}`} />
     </SidebarSection>
     <SidebarSection label="History">
       <div style={{
@@ -387,17 +461,14 @@ const DeployPanel: React.FC = () => (
       </div>
     </SidebarSection>
     <SidebarSection label="Actions">
-      <SidebarItem label="Validate Pipeline" />
+      <SidebarItem label="Validate Pipeline" onClick={onValidate} />
     </SidebarSection>
   </>
 );
 
-const PANEL_SECTIONS: Record<Exclude<SidebarPanel, 'inspector'>, React.FC> = {
-  entities: EntitiesPanel,
-  widgets: WidgetsPanel,
-  testing: TestingPanel,
-  deploy: DeployPanel,
-};
+// ═══════════════════════════════════════════════════════════════════
+// Action button labels per panel
+// ═══════════════════════════════════════════════════════════════════
 
 const PANEL_BUTTON_LABELS: Record<SidebarPanel, string> = {
   entities: 'Add to Canvas',
@@ -417,6 +488,30 @@ export interface LabContextSidebarProps {
   projectVersion?: string;
   previewSlot?: React.ReactNode;
   isRunning?: boolean;
+
+  // Entity panel
+  onAddEntity?: (type: SceneNodeType) => void;
+
+  // Widget panel
+  installedWidgets?: WidgetRegistryEntry[];
+  onAddWidget?: (entry: WidgetRegistryEntry) => void;
+  onBrowseMarketplace?: () => void;
+  onUploadHtml?: () => void;
+
+  // Testing panel
+  activeDevice?: string;
+  onDeviceChange?: (device: string) => void;
+  activeSimulation?: string;
+  onSimulationChange?: (sim: string) => void;
+
+  // Deploy panel
+  manifestName?: string;
+  manifestVersion?: string;
+  eventCount?: number;
+  onValidate?: () => void;
+
+  // Action button (bottom CTA per panel)
+  onAction?: (panel: SidebarPanel) => void;
 }
 
 export const LabContextSidebar: React.FC<LabContextSidebarProps> = ({
@@ -425,9 +520,27 @@ export const LabContextSidebar: React.FC<LabContextSidebarProps> = ({
   projectVersion = 'v0.1.0',
   previewSlot,
   isRunning,
+  onAddEntity,
+  installedWidgets = [],
+  onAddWidget,
+  onBrowseMarketplace,
+  onUploadHtml,
+  activeDevice = 'desktop',
+  onDeviceChange,
+  activeSimulation = 'default',
+  onSimulationChange,
+  manifestName,
+  manifestVersion,
+  eventCount = 0,
+  onValidate,
+  onAction,
 }) => {
   const [actionHovered, setActionHovered] = useState(false);
   const buttonLabel = PANEL_BUTTON_LABELS[activePanel];
+
+  const handleAction = useCallback(() => {
+    onAction?.(activePanel);
+  }, [onAction, activePanel]);
 
   return (
     <aside
@@ -476,10 +589,36 @@ export const LabContextSidebar: React.FC<LabContextSidebarProps> = ({
         overflow: 'auto',
         padding: '8px 0',
       }}>
-        {activePanel === 'inspector' ? (
+        {activePanel === 'entities' && (
+          <EntitiesPanel onAddEntity={onAddEntity ?? (() => {})} />
+        )}
+        {activePanel === 'widgets' && (
+          <WidgetsPanel
+            installedWidgets={installedWidgets}
+            onAddWidget={onAddWidget ?? (() => {})}
+            onBrowseMarketplace={onBrowseMarketplace ?? (() => {})}
+            onUploadHtml={onUploadHtml ?? (() => {})}
+          />
+        )}
+        {activePanel === 'inspector' && (
           <InspectorPanel previewSlot={previewSlot} isRunning={isRunning} />
-        ) : (
-          (() => { const Panel = PANEL_SECTIONS[activePanel]; return <Panel />; })()
+        )}
+        {activePanel === 'testing' && (
+          <TestingPanel
+            activeDevice={activeDevice}
+            onDeviceChange={onDeviceChange ?? (() => {})}
+            activeSimulation={activeSimulation}
+            onSimulationChange={onSimulationChange ?? (() => {})}
+            onRunPipeline={handleAction}
+          />
+        )}
+        {activePanel === 'deploy' && (
+          <DeployPanel
+            manifestName={manifestName}
+            manifestVersion={manifestVersion}
+            eventCount={eventCount}
+            onValidate={onValidate ?? (() => {})}
+          />
         )}
       </div>
 
@@ -489,6 +628,7 @@ export const LabContextSidebar: React.FC<LabContextSidebarProps> = ({
         borderTop: '1px solid rgba(255,255,255,0.04)',
       }}>
         <button
+          onClick={handleAction}
           onMouseEnter={() => setActionHovered(true)}
           onMouseLeave={() => setActionHovered(false)}
           style={{

@@ -10,6 +10,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 
 import type { AIGenerator, AIGenerationResult } from '../ai/ai-generator';
+import { getDefaultModel } from '../ai/models';
 
 import { PromptBar } from './PromptBar';
 
@@ -24,6 +25,11 @@ function createMockGenerator(overrides: Partial<AIGenerator> = {}): AIGenerator 
       isValid: true,
       errors: [],
     }),
+    generateStream: vi.fn<AIGenerator['generateStream']>().mockResolvedValue({
+      html: '<div>Hello</div><script>console.log("hi")</script>',
+      isValid: true,
+      errors: [],
+    }),
     explain: vi.fn<AIGenerator['explain']>().mockResolvedValue({
       text: 'Explanation here',
       error: null,
@@ -31,6 +37,8 @@ function createMockGenerator(overrides: Partial<AIGenerator> = {}): AIGenerator 
     isGenerating: vi.fn().mockReturnValue(false),
     cancel: vi.fn(),
     getLastResult: vi.fn().mockReturnValue(null),
+    setModel: vi.fn(),
+    getModel: vi.fn().mockReturnValue(getDefaultModel()),
     ...overrides,
   };
 }
@@ -65,7 +73,7 @@ describe('PromptBar', () => {
   it('shows "Go" button when no editor content', () => {
     render(<PromptBar />);
     expect(screen.getByLabelText('Generate widget')).toBeDefined();
-    expect(screen.getByText('Go')).toBeDefined();
+    expect(screen.getByText('Generate')).toBeDefined();
   });
 
   it('shows "Edit" button when editor content exists', () => {
@@ -189,32 +197,6 @@ describe('PromptBar', () => {
 
     // Input should be cleared immediately
     expect(input.value).toBe('');
-  });
-
-  it('renders expand button for full AI thread', () => {
-    const onExpand = vi.fn();
-    render(<PromptBar onExpandThread={onExpand} />);
-
-    const expandBtn = screen.getByLabelText('Open AI thread');
-    expect(expandBtn).toBeDefined();
-
-    fireEvent.click(expandBtn);
-    expect(onExpand).toHaveBeenCalledOnce();
-  });
-
-  it('shows close label when thread is open', () => {
-    render(<PromptBar threadOpen={true} />);
-    expect(screen.getByLabelText('Close AI thread')).toBeDefined();
-  });
-
-  it('sets aria-expanded on expand button', () => {
-    const { rerender } = render(<PromptBar threadOpen={false} />);
-    const btn = screen.getByLabelText('Open AI thread');
-    expect(btn.getAttribute('aria-expanded')).toBe('false');
-
-    rerender(<PromptBar threadOpen={true} />);
-    const closeBtn = screen.getByLabelText('Close AI thread');
-    expect(closeBtn.getAttribute('aria-expanded')).toBe('true');
   });
 
   it('passes graphContext to generator', async () => {
