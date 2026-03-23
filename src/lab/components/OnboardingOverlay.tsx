@@ -193,17 +193,19 @@ export const OnboardingOverlay: React.FC<OnboardingOverlayProps> = ({
             Skip
           </button>
 
-          {/* Header */}
+          {/* Header — generous breathing room */}
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0, transition: SPRING_TRANSITION }}
             style={{
-              margin: '0 0 12px 0',
-              fontSize: '32px',
+              margin: '0 0 16px 0',
+              fontSize: '36px',
               fontWeight: 700,
               color: 'var(--sn-text, #E8E6ED)',
               fontFamily: 'var(--sn-font-serif, Newsreader, Georgia, serif)',
               textAlign: 'center',
+              letterSpacing: '-0.03em',
+              lineHeight: 1.2,
             }}
           >
             What do you want to create?
@@ -213,10 +215,13 @@ export const OnboardingOverlay: React.FC<OnboardingOverlayProps> = ({
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0, transition: { ...SPRING_TRANSITION, delay: 0.08 } }}
             style={{
-              margin: '0 0 40px 0',
+              margin: '0 0 48px 0',
               fontSize: '15px',
               color: 'var(--sn-text-muted, #7A7784)',
               textAlign: 'center',
+              fontFamily: 'var(--sn-font-serif, Newsreader, Georgia, serif)',
+              fontStyle: 'italic',
+              lineHeight: 1.6,
             }}
           >
             Pick a starting point — you can always switch approaches later.
@@ -225,7 +230,7 @@ export const OnboardingOverlay: React.FC<OnboardingOverlayProps> = ({
           {/* Path cards */}
           <div style={{
             display: 'flex',
-            gap: '20px',
+            gap: '24px',
             flexWrap: 'wrap',
             justifyContent: 'center',
           }}>

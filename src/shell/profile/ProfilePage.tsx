@@ -14,6 +14,7 @@ import { Link, useParams } from 'react-router-dom';
 import type { UserProfile } from '@sn/types';
 
 import {
+  getProfile,
   getProfileByUsername,
   getUserPublicCanvases,
   followUser,
@@ -26,6 +27,8 @@ import {
 } from '../../kernel/social-graph';
 import type { PublicCanvas } from '../../kernel/social-graph';
 import { useAuthStore } from '../../kernel/stores/auth/auth.store';
+
+import { FollowersPanel } from './FollowersPanel';
 
 // ---------------------------------------------------------------------------
 // Sub-components
@@ -72,8 +75,20 @@ const ProfileAvatar: React.FC<{ avatarUrl?: string; displayName: string }> = ({
   </div>
 );
 
-const StatItem: React.FC<{ label: string; value: number }> = ({ label, value }) => (
-  <div style={{ textAlign: 'center' }}>
+const StatItem: React.FC<{
+  label: string;
+  value: number;
+  onClick?: () => void;
+}> = ({ label, value, onClick }) => (
+  <div
+    style={{
+      textAlign: 'center',
+      cursor: onClick ? 'pointer' : 'default',
+    }}
+    onClick={onClick}
+    role={onClick ? 'button' : undefined}
+    tabIndex={onClick ? 0 : undefined}
+  >
     <div style={{ fontWeight: 700, fontSize: 18, color: 'var(--sn-text, #111827)' }}>
       {value}
     </div>
@@ -176,12 +191,14 @@ export const ProfilePage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [followersPanel, setFollowersPanel] = useState<'followers' | 'following' | null>(null);
 
   const isOwnProfile = currentUser?.id != null && profile?.userId === currentUser.id;
 
   // Fetch profile data
   useEffect(() => {
     if (!username) return;
+    if (username === 'me' && !currentUser?.id) return;
 
     let cancelled = false;
 
@@ -189,7 +206,10 @@ export const ProfilePage: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      const profileResult = await getProfileByUsername(username!);
+      // Handle "/profile/me" — resolve to the current user's profile by ID
+      const profileResult = username === 'me' && currentUser?.id
+        ? await getProfile(currentUser.id)
+        : await getProfileByUsername(username!);
 
       if (cancelled) return;
 
@@ -474,11 +494,28 @@ export const ProfilePage: React.FC = () => {
             borderBottom: '1px solid var(--sn-border, #e5e7eb)',
           }}
         >
-          <StatItem label="Followers" value={profile.followerCount} />
-          <StatItem label="Following" value={profile.followingCount} />
+          <StatItem
+            label="Followers"
+            value={profile.followerCount}
+            onClick={() => setFollowersPanel('followers')}
+          />
+          <StatItem
+            label="Following"
+            value={profile.followingCount}
+            onClick={() => setFollowersPanel('following')}
+          />
           <StatItem label="Posts" value={profile.postCount} />
         </div>
       </div>
+
+      {/* Followers/Following popout panel */}
+      {followersPanel && (
+        <FollowersPanel
+          userId={profile.userId}
+          initialTab={followersPanel}
+          onClose={() => setFollowersPanel(null)}
+        />
+      )}
 
       {/* Public canvases section */}
       <div

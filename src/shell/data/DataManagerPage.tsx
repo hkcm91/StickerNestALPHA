@@ -372,7 +372,7 @@ const styles: Record<string, React.CSSProperties> = {
   page: {
     display: 'flex',
     flexDirection: 'column',
-    height: 'calc(100vh - 48px)',
+    height: '100%',
     background: 'var(--sn-bg, #fff)',
   },
   tabBar: {

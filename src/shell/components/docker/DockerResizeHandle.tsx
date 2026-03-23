@@ -1,18 +1,15 @@
 /**
- * DockerResizeHandle — handles for resizing docker containers.
- *
- * @remarks
- * Provides resize handles for all 8 positions (corners + edges).
- * For floating dockers: all handles are active.
- * For docked dockers: only relevant handles are active.
+ * DockerResizeHandle — glass-styled resize handles with storm-colored hover.
  *
  * @module shell/components/docker
  * @layer L6
  */
 
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 
 import type { Point2D } from '@sn/types';
+
+import { STORM_RGB, HOVER_TRANSITION } from './docker-palette';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -23,15 +20,10 @@ export type ResizeDirection =
   | 'ne' | 'nw' | 'se' | 'sw';
 
 export interface DockerResizeHandleProps {
-  /** Direction this handle controls */
   direction: ResizeDirection;
-  /** Called during resize with total delta values from start */
   onResize: (totalDeltaX: number, totalDeltaY: number, direction: ResizeDirection) => void;
-  /** Called when resize starts */
   onResizeStart?: () => void;
-  /** Called when resize ends */
   onResizeEnd?: () => void;
-  /** Whether the handle is disabled */
   disabled?: boolean;
 }
 
@@ -53,6 +45,9 @@ const positionStyles: Record<ResizeDirection, React.CSSProperties> = {
   sw: { bottom: 0, left: 0, width: CORNER_SIZE, height: CORNER_SIZE, cursor: 'nesw-resize' },
 };
 
+// Which axis the handle affects — used for visual indicator direction
+const isCorner = (d: ResizeDirection) => d.length === 2;
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -65,6 +60,8 @@ export const DockerResizeHandle: React.FC<DockerResizeHandleProps> = ({
   disabled = false,
 }) => {
   const startPos = useRef<Point2D | null>(null);
+  const [isHovered, setIsHovered] = useState(false);
+  const [isActive, setIsActive] = useState(false);
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
@@ -74,6 +71,7 @@ export const DockerResizeHandle: React.FC<DockerResizeHandleProps> = ({
       e.stopPropagation();
 
       startPos.current = { x: e.clientX, y: e.clientY };
+      setIsActive(true);
       onResizeStart?.();
 
       const handleMouseMove = (moveEvent: MouseEvent) => {
@@ -87,6 +85,7 @@ export const DockerResizeHandle: React.FC<DockerResizeHandleProps> = ({
 
       const handleMouseUp = () => {
         startPos.current = null;
+        setIsActive(false);
         onResizeEnd?.();
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
@@ -100,16 +99,51 @@ export const DockerResizeHandle: React.FC<DockerResizeHandleProps> = ({
 
   if (disabled) return null;
 
+  const showIndicator = isHovered || isActive;
+  const indicatorAlpha = isActive ? 0.5 : 0.25;
+
   return (
     <div
       data-testid={`docker-resize-${direction}`}
       onMouseDown={handleMouseDown}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       style={{
         position: 'absolute',
         ...positionStyles[direction],
         zIndex: 10,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
       }}
-    />
+    >
+      {/* Visual indicator — line for edges, dot for corners */}
+      {showIndicator && (
+        isCorner(direction) ? (
+          <div
+            aria-hidden
+            style={{
+              width: 5,
+              height: 5,
+              borderRadius: '50%',
+              background: `rgba(${STORM_RGB.r},${STORM_RGB.g},${STORM_RGB.b},${indicatorAlpha})`,
+              transition: HOVER_TRANSITION,
+            }}
+          />
+        ) : (
+          <div
+            aria-hidden
+            style={{
+              width: direction === 'n' || direction === 's' ? 24 : 2,
+              height: direction === 'n' || direction === 's' ? 2 : 24,
+              borderRadius: 1,
+              background: `rgba(${STORM_RGB.r},${STORM_RGB.g},${STORM_RGB.b},${indicatorAlpha})`,
+              transition: HOVER_TRANSITION,
+            }}
+          />
+        )
+      )}
+    </div>
   );
 };
 
@@ -118,21 +152,14 @@ export const DockerResizeHandle: React.FC<DockerResizeHandleProps> = ({
 // ---------------------------------------------------------------------------
 
 export interface DockerResizeHandlesProps {
-  /** Called during resize */
   onResize: (deltaX: number, deltaY: number, direction: ResizeDirection) => void;
-  /** Called when resize starts */
   onResizeStart?: () => void;
-  /** Called when resize ends */
   onResizeEnd?: () => void;
-  /** Which handles to show (default: all) */
   enabledDirections?: ResizeDirection[];
 }
 
 const ALL_DIRECTIONS: ResizeDirection[] = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'];
 
-/**
- * Renders all resize handles for a docker container.
- */
 export const DockerResizeHandles: React.FC<DockerResizeHandlesProps> = ({
   onResize,
   onResizeStart,

@@ -30,27 +30,30 @@ describe('PreviewChrome', () => {
     expect(screen.getByTestId('preview-chrome-name').textContent).toBe('My Widget');
   });
 
-  it('shows "running" label when widget is running', () => {
-    render(<PreviewChrome {...createProps({ isRunning: true })} />);
-    expect(screen.getByTestId('preview-chrome-running-label')).toBeDefined();
-    expect(screen.getByTestId('preview-chrome-running-label').textContent).toBe('running');
-  });
-
-  it('hides "running" label when widget is not running', () => {
-    render(<PreviewChrome {...createProps({ isRunning: false })} />);
-    expect(screen.queryByTestId('preview-chrome-running-label')).toBeNull();
-  });
-
-  it('renders a green PulseIndicator when running', () => {
+  it('shows running status via PulseIndicator when widget is running', () => {
     render(<PreviewChrome {...createProps({ isRunning: true })} />);
     const indicator = screen.getByRole('status');
     expect(indicator.getAttribute('aria-label')).toBe('Widget running');
   });
 
-  it('renders an idle PulseIndicator when not running', () => {
+  it('shows idle status via PulseIndicator when widget is not running', () => {
     render(<PreviewChrome {...createProps({ isRunning: false })} />);
     const indicator = screen.getByRole('status');
     expect(indicator.getAttribute('aria-label')).toBe('Widget stopped');
+  });
+
+  it('renders PulseIndicator with success state when running', () => {
+    render(<PreviewChrome {...createProps({ isRunning: true })} />);
+    const indicators = screen.getAllByRole('status');
+    const runningIndicator = indicators.find(el => el.getAttribute('aria-label') === 'Widget running');
+    expect(runningIndicator).toBeDefined();
+  });
+
+  it('renders PulseIndicator with idle state when not running', () => {
+    render(<PreviewChrome {...createProps({ isRunning: false })} />);
+    const indicators = screen.getAllByRole('status');
+    const idleIndicator = indicators.find(el => el.getAttribute('aria-label') === 'Widget stopped');
+    expect(idleIndicator).toBeDefined();
   });
 
   it('calls onReload when reload button is clicked', () => {

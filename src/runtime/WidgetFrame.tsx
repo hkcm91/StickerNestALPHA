@@ -38,7 +38,11 @@ const MAX_CROSS_CANVAS_PAYLOAD_SIZE = 65_536;
  */
 function hasCrossCanvasPermission(widgetId: string): boolean {
   const entry = useWidgetStore.getState().registry[widgetId];
-  return entry?.manifest?.permissions?.includes('cross-canvas') ?? false;
+  const has = entry?.manifest?.permissions?.includes('cross-canvas') ?? false;
+  if (!has) {
+    console.debug(`[WidgetFrame] hasCrossCanvasPermission("${widgetId}"): ${has}, registry keys: [${Object.keys(useWidgetStore.getState().registry).join(', ')}], permissions: ${JSON.stringify(entry?.manifest?.permissions)}`);
+  }
+  return has;
 }
 
 /** Maximum user state size per value: 10MB */
@@ -132,6 +136,25 @@ const WidgetIframe: React.FC<WidgetFrameProps> = (props) => {
             lifecycle.transition('READY');
             lifecycle.transition('RUNNING');
           }
+          // Auto-register instance in widget store if not already present
+          {
+            const ws = useWidgetStore.getState();
+            if (!ws.instances[instanceId]) {
+              // Restore persisted state from localStorage if available
+              let savedState: Record<string, unknown> = {};
+              try {
+                const raw = localStorage.getItem(`sn:widget-state:${instanceId}`);
+                if (raw) savedState = JSON.parse(raw);
+              } catch { /* ignore parse errors */ }
+              ws.addInstance({
+                instanceId,
+                widgetId,
+                canvasId: '',
+                state: savedState,
+                config: config ?? {},
+              });
+            }
+          }
           // Send initial config and theme
           bridge.send({
             type: 'INIT',
@@ -142,9 +165,41 @@ const WidgetIframe: React.FC<WidgetFrameProps> = (props) => {
           });
           break;
 
-        case 'REGISTER':
-          // Widget registered its manifest — no action needed on host
+        case 'REGISTER': {
+          // Store widget manifest in registry so permissions (e.g. cross-canvas) are available
+          const manifest = message.manifest as Record<string, unknown> | null;
+          if (manifest) {
+            const permissions = (Array.isArray(manifest.permissions) ? manifest.permissions : []) as string[];
+            const events = (manifest.events && typeof manifest.events === 'object' ? manifest.events : {}) as Record<string, unknown>;
+            console.debug(`[WidgetFrame][${instanceId}] REGISTER: widgetId=${widgetId}, permissions=${JSON.stringify(permissions)}`);
+            const ws = useWidgetStore.getState();
+            if (!ws.registry[widgetId]) {
+              ws.registerWidget({
+                widgetId,
+                manifest: {
+                  id: (manifest.id as string) ?? widgetId,
+                  name: (manifest.name as string) ?? widgetId,
+                  version: (manifest.version as string) ?? '1.0.0',
+                  permissions,
+                  events,
+                },
+                htmlContent: '',
+                isBuiltIn: true,
+                installedAt: new Date().toISOString(),
+              });
+            } else {
+              // Update manifest if already registered (permissions may have changed)
+              ws.registry[widgetId].manifest = {
+                ...ws.registry[widgetId].manifest,
+                permissions: permissions.length > 0 ? permissions : ws.registry[widgetId].manifest.permissions,
+              };
+            }
+            // Verify it was stored
+            const stored = useWidgetStore.getState().registry[widgetId];
+            console.debug(`[WidgetFrame][${instanceId}] REGISTER stored: permissions=${JSON.stringify(stored?.manifest?.permissions)}`);
+          }
           break;
+        }
 
         case 'EMIT':
           // Forward to kernel event bus
@@ -198,10 +253,12 @@ const WidgetIframe: React.FC<WidgetFrameProps> = (props) => {
           const widgetStore = useWidgetStore.getState();
           const instance = widgetStore.instances[instanceId];
           if (instance) {
-            widgetStore.updateInstanceState(instanceId, {
-              ...instance.state,
-              [message.key]: message.value,
-            });
+            const newState = { ...instance.state, [message.key]: message.value };
+            widgetStore.updateInstanceState(instanceId, newState);
+            // Persist to localStorage
+            try {
+              localStorage.setItem(`sn:widget-state:${instanceId}`, JSON.stringify(newState));
+            } catch { /* quota exceeded — silently skip */ }
           }
           break;
         }

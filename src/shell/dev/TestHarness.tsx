@@ -272,7 +272,7 @@ export const TestHarness: React.FC<{ initialTab?: DevTab }> = ({ initialTab }) =
   const selectedEntity = selectedId ? sceneGraph.getEntity(selectedId) ?? null : null;
 
   return (
-    <div style={{ background: 'var(--sn-bg, #111827)', color: 'var(--sn-text, #e5e7eb)', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ background: 'var(--sn-bg, #111827)', color: 'var(--sn-text, #e5e7eb)', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* ── Header + Tabs ───────────────────────────────────────── */}
       <div style={{
         padding: '12px 20px 0',
@@ -391,7 +391,7 @@ export const TestHarness: React.FC<{ initialTab?: DevTab }> = ({ initialTab }) =
         )}
 
         {activeTab === 'split' && (
-          <div id="devpanel-split" role="tabpanel" style={{ height: 'calc(100vh - 90px)' }}>
+          <div id="devpanel-split" role="tabpanel" style={{ flex: 1, minHeight: 0 }}>
             <SplitCanvasView />
           </div>
         )}

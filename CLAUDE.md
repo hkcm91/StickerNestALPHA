@@ -64,9 +64,11 @@ Each layer must be independently testable before the next begins. Never skip ahe
 - **Docker** — a container widget that hosts child widgets
 
 ### Stores
-Seven Zustand stores — one domain each: `authStore`, `workspaceStore`, `canvasStore`,
-`historyStore`, `widgetStore`, `socialStore`, `uiStore`.
+Nine Zustand stores — one domain each: `authStore`, `workspaceStore`, `canvasStore`,
+`historyStore`, `widgetStore`, `socialStore`, `uiStore`, `dockerStore`, `galleryStore`.
 Stores **do not** reach into each other's state. Use the event bus or explicit selectors.
+Each store exports a `setup*BusSubscriptions()` function; all are called from
+`initAllStores()` in `src/kernel/stores/index.ts` during app bootstrap.
 
 ### Canvas Interaction Modes
 - **Edit mode** — full entity manipulation, pipeline graph, config panels (Owner/Editor role)
@@ -146,7 +148,24 @@ npm run scaffold:store    # new store boilerplate
 
 ## Key Technical Details
 
-- **Path alias**: `@sn/types` resolves to `src/kernel/schemas/index.ts` (configured in `tsconfig.json`, `vite.config.ts`, `vitest.config.ts`)
-- **Commitlint**: enforced via husky pre-commit hook; scope is **required** and must be one of: `kernel`, `social`, `runtime`, `lab`, `canvas-core`, `canvas-tools`, `canvas-wiring`, `canvas-panels`, `spatial`, `marketplace`, `shell`, `deps`, `config`, `ci`
-- **MCP dev server**: lives in `mcp-dev/` (separate package with its own `package.json`)
+- **Path alias**: `@sn/types` resolves to `src/kernel/schemas/index.ts`; deep imports like `@sn/types/spatial` also work (configured in `tsconfig.json`, `vite.config.ts`, `vitest.config.ts`)
+- **Commitlint**: enforced via husky commit-msg hook; scope is **required** and must be one of: `kernel`, `social`, `runtime`, `lab`, `canvas-core`, `canvas-tools`, `canvas-wiring`, `canvas-panels`, `spatial`, `marketplace`, `shell`, `deps`, `config`, `ci`
+- **Pre-commit hook**: runs `lint-staged` which applies ESLint autofix to staged `.ts/.tsx` files
+- **Vite base path**: set to `/StickerNest5.0/` in GitHub Actions CI (for GitHub Pages); `/` locally
+- **Vite dedupe**: `three`, `react`, `react-dom` are deduped in `vite.config.ts` — do not remove this or duplicate instances will break Three.js/React
+- **MCP dev server**: separate package in `mcp-dev/` with its own `tsconfig.json`; uses `@modelcontextprotocol/sdk`; run with `cd mcp-dev && npm run dev`
 - **Storybook**: `npm run storybook` on port 6006
+
+### Kernel Submodules Beyond Core
+
+Beyond the stores, bus, schemas, auth, datasource, and supabase modules documented
+in the L0 rule file, the kernel also contains:
+
+| Path | Purpose |
+|---|---|
+| `src/kernel/billing/` | Billing API — tier management, Stripe/PayPal integration |
+| `src/kernel/quota/` | Quota enforcement — per-tier limits, `useQuotaCheck` hook |
+| `src/kernel/api-keys/` | API key management for external integrations |
+| `src/kernel/social-graph/` | Social graph — profiles, follows, blocks, messages, posts, reactions |
+| `src/kernel/world/` | World manager — tick loop, world instances (entity systems runtime) |
+| `src/kernel/systems/` | Entity systems — animation system, physics system |

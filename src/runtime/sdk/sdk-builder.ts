@@ -29,6 +29,7 @@ export interface SrcdocBuildOptions {
  * Escapes HTML special characters to prevent injection in attributes.
  */
 function escapeHtml(str: string): string {
+  if (!str) return '';
   return str
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')

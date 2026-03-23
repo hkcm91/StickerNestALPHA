@@ -11,6 +11,7 @@ import type {
   CanvasDocument,
   CanvasDocumentMeta,
   CanvasEntity,
+  CanvasPositionConfig,
   ViewportConfig,
   LayoutMode,
   CanvasPlatform,
@@ -40,6 +41,10 @@ export interface SerializeContext {
   spatialMode?: SpatialMode;
   /** Optional platform-specific configs */
   platformConfigs?: Record<string, ViewportConfig>;
+  /** Optional border radius */
+  borderRadius?: number;
+  /** Optional canvas position/alignment */
+  canvasPosition?: CanvasPositionConfig;
 }
 
 /**
@@ -133,6 +138,8 @@ export function serialize(
     platform: context.platform ?? 'web',
     spatialMode: context.spatialMode ?? '2d',
     platformConfigs: context.platformConfigs,
+    borderRadius: context.borderRadius ?? 0,
+    canvasPosition: context.canvasPosition,
   };
 }
 

@@ -126,7 +126,7 @@ export const MarketplacePageFull: React.FC = () => {
   }, [fetchListings]);
 
   const pageStyle: React.CSSProperties = {
-    minHeight: 'calc(100vh - 44px)', padding: '24px', boxSizing: 'border-box',
+    minHeight: '100%', padding: '24px', boxSizing: 'border-box',
     background: themeVar('--sn-bg'), color: themeVar('--sn-text'),
     fontFamily: themeVar('--sn-font-family'), maxWidth: '1100px', margin: '0 auto',
   };

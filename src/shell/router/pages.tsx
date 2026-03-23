@@ -41,8 +41,9 @@ import {
 import type { LocalCanvasSummary } from '../canvas';
 import { HistoryPanel } from '../canvas/panels';
 import type { CanvasPositionConfig } from '../canvas/panels/CanvasSettingsDropdown';
-import { seedDemoEntities, seedCommerceCanvas } from '../canvas/seedDemoEntities';
+import { seedDemoEntities, seedCommerceCanvas, seedClaudeLabCanvas } from '../canvas/seedDemoEntities';
 import { StickerSettingsModal, LoginForm } from '../components';
+import { GhostWidgetOverlay } from '../components/GhostWidgetOverlay';
 import type { StickerSettings } from '../components/StickerSettingsModal';
 import { ShellLayout } from '../layout';
 import { THEME_TOKENS } from '../theme/theme-tokens';
@@ -53,9 +54,16 @@ const CANVAS_DOCKER_NAME = 'Canvas Docker';
 const HISTORY_WIDGET_INSTANCE_ID = '44444444-4444-4444-4444-444444444444';
 const DEFAULT_DOCKER_WIDGET_ID = 'wgt-clock';
 const DEFAULT_DOCKER_WIDGET_INSTANCE_ID = '33333333-3333-4333-8333-333333333333';
-const DEFAULT_DOCKER_WIDGET_ENTITY_ID = 'docker-widget-clock-default';
+const DEFAULT_DOCKER_WIDGET_ENTITY_ID = 'ddc00000-0000-4000-a000-000000000001';
 const DEMO_CANVAS_ID = '00000000-0000-4000-8000-000000000001';
 const DEFAULT_CANVAS_TOP_SPACING = 40;
+
+/** Parse hex color to RGB components */
+function hexToRgb(hex: string): { r: number; g: number; b: number } {
+  const h = hex.replace('#', '');
+  const n = parseInt(h.length === 3 ? h.split('').map(c => c + c).join('') : h, 16);
+  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+}
 const DEFAULT_ARTBOARD_LIMIT_PER_DASHBOARD = 10;
 const BUILT_IN_WIDGET_HTML_KEY_BY_WIDGET_ID: Record<string, string> = {
   'sn.builtin.clock': 'wgt-clock',
@@ -71,6 +79,15 @@ const BUILT_IN_WIDGET_HTML_KEY_BY_WIDGET_ID: Record<string, string> = {
   'sn.builtin.creator-dashboard': 'wgt-creator-dashboard',
   'sn.builtin.xc-broadcaster': 'wgt-xc-broadcaster',
   'sn.builtin.xc-listener': 'wgt-xc-listener',
+  // Connection invite test widgets
+  'live-chat-v1': 'wgt-live-chat',
+  'price-ticker-v2': 'wgt-price-ticker',
+  'weather-dashboard-v1': 'wgt-weather',
+  'ai-agent-v1': 'wgt-ai-agent',
+  'tictactoe-v1': 'wgt-tictactoe',
+  'connect4-v1': 'wgt-connect4',
+  'pong-v1': 'wgt-pong',
+  'battleship-v1': 'wgt-battleship',
 };
 
 function resolveBuiltInWidgetHtml(widgetId: string): string {
@@ -78,7 +95,32 @@ function resolveBuiltInWidgetHtml(widgetId: string): string {
     return BUILT_IN_WIDGET_HTML[widgetId];
   }
   const htmlKey = BUILT_IN_WIDGET_HTML_KEY_BY_WIDGET_ID[widgetId];
-  return htmlKey ? (BUILT_IN_WIDGET_HTML[htmlKey] ?? '') : '';
+  if (htmlKey && BUILT_IN_WIDGET_HTML[htmlKey]) {
+    return BUILT_IN_WIDGET_HTML[htmlKey];
+  }
+  // Fallback for unresolved widgets — renders a live connected placeholder.
+  // Accepting an invite IS installing: no separate install step needed.
+  const name = widgetId.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  return `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;font-family:var(--sn-font-family,system-ui);color:var(--sn-text,#333);background:var(--sn-surface,#f8f8f8);gap:8px;padding:16px;text-align:center;">
+    <style>
+      @keyframes connPulse { 0%,100%{opacity:0.4} 50%{opacity:0.8} }
+      .conn-dot { width:8px;height:8px;border-radius:50%;background:var(--sn-accent,#7c9a92);animation:connPulse 2s ease-in-out infinite; }
+    </style>
+    <div class="conn-dot"></div>
+    <div style="font-weight:600;font-size:14px;">${name}</div>
+    <div style="font-size:11px;opacity:0.5;line-height:1.4;">Connected widget<br>Waiting for data from sender</div>
+    <script>
+      (function() {
+        if (window.StickerNest) {
+          StickerNest.register({ name: '${widgetId}', version: '0.0.0', events: { emits: [], receives: ['data.update'] } });
+          StickerNest.ready();
+          StickerNest.subscribe('data.update', function(payload) {
+            document.querySelector('.conn-dot').style.background = '#4caf50';
+          });
+        }
+      })();
+    </script>
+  </div>`;
 }
 
 function titleFromSlug(slug: string): string {
@@ -90,7 +132,7 @@ function titleFromSlug(slug: string): string {
 }
 
 const appPageStyle: React.CSSProperties = {
-  minHeight: 'calc(100vh - 44px)',
+  minHeight: '100%',
   padding: '20px',
   boxSizing: 'border-box',
   background: themeVar('--sn-bg'),
@@ -419,6 +461,7 @@ export const CanvasPage: React.FC = () => {
   const setFullscreenPreview = useUIStore((s) => s.setFullscreenPreview);
   const normalizedSlug = canvasSlug.trim().toLowerCase();
   const isDemo = normalizedSlug === 'demo';
+  const isClaudeLab = normalizedSlug === 'claude-lab';
   const isCommerceDemo = normalizedSlug === 'alice-art-shop';
   const seededRef = useRef(false);
   const [sceneGraph, setSceneGraph] = useState<SceneGraph | null>(null);
@@ -477,7 +520,13 @@ export const CanvasPage: React.FC = () => {
     }
   }, [viewportConfig.width, viewportConfig.height, viewportConfig.sizeMode, canvasPlatform, setPlatformConfig]);
 
-  const [borderRadius, setBorderRadius] = useState(0);
+  const [borderRadius, setBorderRadius] = useState<number | { topLeft: number; topRight: number; bottomRight: number; bottomLeft: number }>(0);
+  const [canvasOpacity, setCanvasOpacity] = useState(1);
+  const [canvasStroke, setCanvasStroke] = useState<{ weight: number; style: string; color: string; opacity: number; gradient?: { enabled: boolean; stops: { offset: number; color: string }[]; angle: number } }>({ weight: 0, style: 'solid', color: '#000000', opacity: 1 });
+  const [workspaceBg, setWorkspaceBg] = useState<{ mode: string; imageUrl: string; imageMode: string; opacity: number; parallaxStrength: number; reactiveCode: string }>({ mode: 'none', imageUrl: '', imageMode: 'cover', opacity: 1, parallaxStrength: 0.3, reactiveCode: '' });
+  const [dropShadow, setDropShadow] = useState<{ type: string; offsetX: number; offsetY: number; blur: number; spread: number; color: string; opacity: number }>({ type: 'outer', offsetX: 0, offsetY: 4, blur: 24, spread: 0, color: '#000000', opacity: 0.12 });
+  const [canvasFilters, setCanvasFilters] = useState<{ brightness: number; contrast: number; saturation: number; hueRotate: number; blur: number }>({ brightness: 100, contrast: 100, saturation: 100, hueRotate: 0, blur: 0 });
+  const [canvasPadding, setCanvasPadding] = useState<{ top: number; right: number; bottom: number; left: number }>({ top: 0, right: 0, bottom: 0, left: 0 });
   const [canvasPosition, setCanvasPosition] = useState<CanvasPositionConfig>({
     horizontal: 'center',
     vertical: 'center',
@@ -551,10 +600,33 @@ export const CanvasPage: React.FC = () => {
       toolsMod.initCanvasTools(coreCtx.sceneGraph, getMode);
       cleanupTools = toolsMod.teardownCanvasTools;
 
-      // Seed demo entities for /canvas/demo route
+      // Helper: check if saved canvas has a specific widget
+      const savedCanvasHasWidget = (slug: string, widgetId: string): boolean => {
+        try {
+          const raw = localStorage.getItem(`sn:canvas:${slug}`);
+          if (!raw) return false;
+          const doc = JSON.parse(raw) as { entities?: Array<{ widgetId?: string }> };
+          return doc.entities?.some((e) => e.widgetId === widgetId) ?? false;
+        } catch { return false; }
+      };
+
+      // Seed demo entities for /canvas/demo route — skip if chat widget already saved
       if (isDemo && !seededRef.current) {
         seededRef.current = true;
-        seedDemoEntities();
+        if (!savedCanvasHasWidget('demo', 'wgt-live-chat')) {
+          seedDemoEntities();
+          // Force immediate save so data persists even if user navigates away quickly
+          setTimeout(() => bus.emit(CanvasDocumentEvents.SAVE_REQUESTED, {}), 500);
+        }
+      }
+
+      // Seed Claude's Lab canvas — skip if chat widget already saved
+      if (isClaudeLab && !seededRef.current) {
+        seededRef.current = true;
+        if (!savedCanvasHasWidget('claude-lab', 'wgt-live-chat')) {
+          seedClaudeLabCanvas();
+          setTimeout(() => bus.emit(CanvasDocumentEvents.SAVE_REQUESTED, {}), 500);
+        }
       }
     };
 
@@ -601,13 +673,23 @@ export const CanvasPage: React.FC = () => {
       setSceneGraph(null);
       seededRef.current = false;
     };
-  }, [canvasKey, isCommerceDemo, isDemo]);
+  }, [canvasKey, isClaudeLab, isCommerceDemo, isDemo]);
 
   // Subscribe to scene graph changes for sidebar panels
   const entities = useSceneGraph(sceneGraph);
 
   // Persistence: auto-save + manual save/load
-  const persistence = usePersistence(canvasKey, sceneGraph, canvasSummary ?? undefined);
+  const viewportConfigRef = useRef(viewportConfig);
+  viewportConfigRef.current = viewportConfig;
+  const borderRadiusRef = useRef(typeof borderRadius === 'number' ? borderRadius : 0);
+  borderRadiusRef.current = typeof borderRadius === 'number' ? borderRadius : 0;
+  const canvasPositionRef = useRef(canvasPosition);
+  canvasPositionRef.current = canvasPosition;
+  const persistence = usePersistence(canvasKey, sceneGraph, canvasSummary ?? undefined, {
+    viewportConfig: viewportConfigRef,
+    borderRadius: borderRadiusRef,
+    canvasPosition: canvasPositionRef,
+  });
 
   useEffect(() => {
     if (!sceneGraph) return;
@@ -631,9 +713,7 @@ export const CanvasPage: React.FC = () => {
       if (entity.type === 'widget') {
         const wEntity = entity as { widgetInstanceId: string; widgetId: string };
         const html = resolveBuiltInWidgetHtml(wEntity.widgetId);
-        if (html) {
-          map.set(wEntity.widgetInstanceId, html);
-        }
+        map.set(wEntity.widgetInstanceId, html);
       }
     }
     return map;
@@ -651,25 +731,38 @@ export const CanvasPage: React.FC = () => {
         return <HistoryPanel />;
       }
 
-      const entity = entities.find(
+      // Look up by widgetInstanceId first, then by entity id as fallback
+      // (entities docked from canvas use entity.id as the slot key)
+      let entity = entities.find(
         (item) => item.type === 'widget' && item.widgetInstanceId === widgetInstanceId,
       );
       if (!entity || entity.type !== 'widget') {
+        entity = entities.find(
+          (item) => item.type === 'widget' && item.id === widgetInstanceId,
+        );
+      }
+      if (!entity || entity.type !== 'widget') {
         return null;
       }
+
+      // Docker widgets render in a flex container that fills the slot.
+      // Use a unique docker-scoped instanceId to avoid bridge conflicts with the canvas copy.
+      const dockInstanceId = `dock-${widgetInstanceId}`;
+      const dockW = 300;
+      const dockH = 192;
 
       const BuiltInComponent = BUILT_IN_WIDGET_COMPONENTS[entity.widgetId];
       if (BuiltInComponent) {
         return (
           <InlineWidgetFrame
             widgetId={entity.widgetId}
-            instanceId={widgetInstanceId}
+            instanceId={dockInstanceId}
             Component={BuiltInComponent}
             config={entity.config}
             theme={widgetTheme}
             visible={true}
-            width={entity.transform.size.width}
-            height={entity.transform.size.height}
+            width={dockW}
+            height={dockH}
           />
         );
       }
@@ -678,13 +771,13 @@ export const CanvasPage: React.FC = () => {
       return (
         <WidgetFrame
           widgetId={entity.widgetId}
-          instanceId={widgetInstanceId}
+          instanceId={dockInstanceId}
           widgetHtml={widgetHtml}
           config={entity.config}
           theme={widgetTheme}
           visible={true}
-          width={entity.transform.size.width}
-          height={entity.transform.size.height}
+          width={dockW}
+          height={dockH}
         />
       );
     },
@@ -731,6 +824,26 @@ export const CanvasPage: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [toggleMode, fullscreenPreview, exitFullscreenPreview, setFullscreenPreview, setMode]);
 
+  // Ghost widget placement — read URL params from invite acceptance
+  const location = useLocation();
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const ghostWidgetId = params.get('ghostWidget');
+    const inviteId = params.get('inviteId');
+    if (!ghostWidgetId || !inviteId) return;
+
+    // Delay slightly so canvas tools are initialized
+    const timer = setTimeout(() => {
+      bus.emit(CanvasEvents.GHOST_ACTIVATED, {
+        widgetId: ghostWidgetId,
+        inviteId,
+        mode: 'share',
+      });
+    }, 600);
+
+    return () => clearTimeout(timer);
+  }, [location.search]);
+
   useEffect(() => {
     const dockerStore = useDockerStore.getState();
     const hasCanvasDocker = Object.values(dockerStore.dockers).some(
@@ -764,6 +877,7 @@ export const CanvasPage: React.FC = () => {
       (entity) => entity.type === 'widget' && entity.widgetInstanceId === DEFAULT_DOCKER_WIDGET_INSTANCE_ID,
     );
     if (!existingDefaultWidget) {
+      const now = new Date().toISOString();
       bus.emit(CanvasEvents.ENTITY_CREATED, {
         id: DEFAULT_DOCKER_WIDGET_ENTITY_ID,
         type: 'widget',
@@ -776,13 +890,20 @@ export const CanvasPage: React.FC = () => {
         },
         zIndex: 1,
         visible: false,
+        canvasVisibility: 'both' as const,
         locked: false,
+        flipH: false,
+        flipV: false,
         opacity: 1,
         borderRadius: 8,
+        syncTransform2d3d: true,
         name: 'Clock',
         widgetInstanceId: DEFAULT_DOCKER_WIDGET_INSTANCE_ID,
         widgetId: DEFAULT_DOCKER_WIDGET_ID,
         config: {},
+        createdAt: now,
+        updatedAt: now,
+        createdBy: user?.id ?? '00000000-0000-4000-a000-000000000000',
       });
       return;
     }
@@ -859,9 +980,45 @@ export const CanvasPage: React.FC = () => {
 
     const unsubBr = bus.subscribe(
       CanvasDocumentEvents.BORDER_RADIUS_CHANGED,
-      (event: { payload: { borderRadius: number } }) => {
+      (event: { payload: { borderRadius: number | { topLeft: number; topRight: number; bottomRight: number; bottomLeft: number } } }) => {
         setBorderRadius(event.payload.borderRadius);
       },
+    );
+
+    const unsubOpacity = bus.subscribe(
+      'canvas.document.opacity.changed',
+      (event: { payload: { opacity: number } }) => {
+        setCanvasOpacity(event.payload.opacity);
+      },
+    );
+
+    const unsubStroke = bus.subscribe(
+      'canvas.document.stroke.changed',
+      (event: { payload: { stroke: any } }) => {
+        setCanvasStroke(event.payload.stroke);
+      },
+    );
+
+    const unsubWorkspaceBg = bus.subscribe(
+      'canvas.document.workspaceBg.changed',
+      (event: { payload: { workspaceBg: any } }) => {
+        setWorkspaceBg(event.payload.workspaceBg);
+      },
+    );
+
+    const unsubDropShadow = bus.subscribe(
+      'canvas.document.dropShadow.changed',
+      (event: { payload: { dropShadow: any } }) => { setDropShadow(event.payload.dropShadow); },
+    );
+
+    const unsubFilters = bus.subscribe(
+      'canvas.document.filters.changed',
+      (event: { payload: { filters: any } }) => { setCanvasFilters(event.payload.filters); },
+    );
+
+    const unsubPadding = bus.subscribe(
+      'canvas.document.padding.changed',
+      (event: { payload: { padding: any } }) => { setCanvasPadding(event.payload.padding); },
     );
 
     const unsubPos = bus.subscribe(
@@ -894,6 +1051,12 @@ export const CanvasPage: React.FC = () => {
       unsubBg();
       unsubVp();
       unsubBr();
+      unsubOpacity();
+      unsubStroke();
+      unsubWorkspaceBg();
+      unsubDropShadow();
+      unsubFilters();
+      unsubPadding();
       unsubPos();
       unsubSync();
     };
@@ -979,8 +1142,8 @@ export const CanvasPage: React.FC = () => {
       data-testid="page-canvas"
       data-mode={mode}
       style={{
-        width: '100vw',
-        height: '100vh',
+        width: '100%',
+        height: '100%',
         background: themeVar('--sn-bg'),
         color: themeVar('--sn-text'),
         fontFamily: themeVar('--sn-font-family'),
@@ -995,7 +1158,7 @@ export const CanvasPage: React.FC = () => {
             canvasName={canvasSummary?.name}
             onRename={handleCanvasRename}
             viewportConfig={viewportConfig}
-            borderRadius={borderRadius}
+            borderRadius={typeof borderRadius === 'number' ? borderRadius : borderRadius.topLeft}
             canvasPosition={canvasPosition}
             selectedIds={selectedIds}
           />
@@ -1005,7 +1168,7 @@ export const CanvasPage: React.FC = () => {
         sidebarRight={
           mode === 'edit' ? (
             <>
-              <PropertiesPanel entities={entities} />
+              <PropertiesPanel entities={entities} viewportConfig={viewportConfig} borderRadius={borderRadius} canvasOpacity={canvasOpacity} canvasStroke={canvasStroke as any} workspaceBg={workspaceBg as any} dropShadow={dropShadow as any} canvasFilters={canvasFilters as any} canvasPadding={canvasPadding as any} />
               <LayersPanel entities={entities} />
               <TextSettingsPanel entities={entities} />
             </>
@@ -1032,6 +1195,16 @@ export const CanvasPage: React.FC = () => {
                 : canvasPosition.vertical === 'bottom'
                   ? 'flex-end'
                   : 'center',
+            position: 'relative',
+            ...(workspaceBg.mode === 'image' || workspaceBg.mode === 'parallax'
+              ? {
+                  backgroundImage: workspaceBg.imageUrl ? `url(${workspaceBg.imageUrl})` : undefined,
+                  backgroundSize: workspaceBg.imageMode === 'tile' ? 'auto' : workspaceBg.imageMode,
+                  backgroundPosition: 'center',
+                  backgroundRepeat: workspaceBg.imageMode === 'tile' ? 'repeat' : 'no-repeat',
+                  backgroundAttachment: workspaceBg.mode === 'parallax' ? 'fixed' : 'scroll',
+                }
+              : {}),
           }}
         >
           <div
@@ -1044,14 +1217,42 @@ export const CanvasPage: React.FC = () => {
                 viewportConfig.sizeMode === 'bounded' && viewportConfig.height
                   ? `${viewportConfig.height}px`
                   : '100%',
-              borderRadius: `${borderRadius}px`,
+              borderRadius: typeof borderRadius === 'number'
+                ? `${borderRadius}px`
+                : `${borderRadius.topLeft}px ${borderRadius.topRight}px ${borderRadius.bottomRight}px ${borderRadius.bottomLeft}px`,
               overflow: 'hidden',
               flexShrink: 0,
               transition: 'width 200ms ease, height 200ms ease',
-              boxShadow:
-                viewportConfig.sizeMode === 'bounded'
-                  ? '0 0 0 1px var(--sn-border), 0 4px 24px rgba(0,0,0,0.12)'
-                  : 'none',
+              border: canvasStroke.weight > 0
+                ? `${canvasStroke.weight}px ${canvasStroke.style} ${canvasStroke.color}`
+                : undefined,
+              borderImageSource: canvasStroke.weight > 0 && canvasStroke.gradient?.enabled
+                ? `linear-gradient(${canvasStroke.gradient.angle}deg, ${canvasStroke.gradient.stops.map(s => `${s.color} ${s.offset * 100}%`).join(', ')})`
+                : undefined,
+              borderImageSlice: canvasStroke.weight > 0 && canvasStroke.gradient?.enabled ? 1 : undefined,
+              boxShadow: (() => {
+                const parts: string[] = [];
+                // Drop shadow from settings
+                const { r: sr, g: sg, b: sb } = hexToRgb(dropShadow.color);
+                parts.push(`${dropShadow.type === 'inner' ? 'inset ' : ''}${dropShadow.offsetX}px ${dropShadow.offsetY}px ${dropShadow.blur}px ${dropShadow.spread}px rgba(${sr},${sg},${sb},${dropShadow.opacity})`);
+                // Default border outline when no stroke
+                if (viewportConfig.sizeMode === 'bounded' && canvasStroke.weight === 0) {
+                  parts.push('0 0 0 1px var(--sn-border)');
+                }
+                return parts.join(', ');
+              })(),
+              filter: (canvasFilters.brightness !== 100 || canvasFilters.contrast !== 100 || canvasFilters.saturation !== 100 || canvasFilters.hueRotate !== 0 || canvasFilters.blur !== 0)
+                ? [
+                    canvasFilters.brightness !== 100 ? `brightness(${canvasFilters.brightness}%)` : '',
+                    canvasFilters.contrast !== 100 ? `contrast(${canvasFilters.contrast}%)` : '',
+                    canvasFilters.saturation !== 100 ? `saturate(${canvasFilters.saturation}%)` : '',
+                    canvasFilters.hueRotate !== 0 ? `hue-rotate(${canvasFilters.hueRotate}deg)` : '',
+                    canvasFilters.blur !== 0 ? `blur(${canvasFilters.blur}px)` : '',
+                  ].filter(Boolean).join(' ') || undefined
+                : undefined,
+              padding: (canvasPadding.top || canvasPadding.right || canvasPadding.bottom || canvasPadding.left)
+                ? `${canvasPadding.top}px ${canvasPadding.right}px ${canvasPadding.bottom}px ${canvasPadding.left}px`
+                : undefined,
             }}
           >
             <CanvasWorkspace
@@ -1060,6 +1261,7 @@ export const CanvasPage: React.FC = () => {
               maxArtboardsPerDashboard={DEFAULT_ARTBOARD_LIMIT_PER_DASHBOARD}
               widgetHtmlMap={widgetHtmlMap}
               background={viewportConfig.background}
+              canvasOpacity={canvasOpacity}
               theme={widgetTheme}
             />
           </div>
@@ -1120,6 +1322,9 @@ export const CanvasPage: React.FC = () => {
               : undefined
         }
       />
+
+      {/* Ghost widget overlay for invite placement */}
+      <GhostWidgetOverlay />
 
       {/* Fullscreen preview overlay — strips all chrome, shows canvas only */}
       {fullscreenPreview && (

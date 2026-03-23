@@ -33,6 +33,8 @@ export { createShapeTool } from './shape';
 export type { ShapeMode } from './shape';
 export { createStickerTool } from './sticker';
 export { createWidgetTool } from './widget';
+export { createGhostWidgetTool } from './ghost-widget';
+export type { GhostWidgetPayload } from './ghost-widget';
 
 export { createGridPaintTool, createGridPaintToolWithController } from './grid-paint';
 export type { GridPaintToolOptions, GridPaintToolController } from './grid-paint';

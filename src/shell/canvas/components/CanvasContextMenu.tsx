@@ -63,6 +63,7 @@ function getEntityMenu(hasMultiple: boolean): MenuGroup[] {
     {
       items: [
         { id: "lock", label: "Lock", icon: "🔒" },
+        { id: "dockToPanel", label: "Dock to panel", icon: "⊟" },
       ],
     },
     {
@@ -164,6 +165,9 @@ export const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
           for (const id of ids) {
             bus.emit(CanvasEvents.ENTITY_UPDATED, { id, updates: { locked: true } });
           }
+          break;
+        case "dockToPanel":
+          bus.emit("docker.widget.dockRequested", { entityIds: ids });
           break;
         case "selectAll":
           bus.emit("canvas.entity.selectAll", {});

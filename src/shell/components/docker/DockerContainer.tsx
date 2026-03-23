@@ -1,18 +1,33 @@
 /**
- * DockerContainer — main docker panel component.
+ * DockerContainer — bioluminescent glass panel with iPad Stage Manager feel.
  *
  * @remarks
- * Composes DockerHeader, DockerTabBar, DockerContent, and DockerResizeHandles
- * into a complete docker panel. Supports floating and docked modes.
+ * Full visual treatment matching the StickerNest design language:
+ * - Proximity-based glow that tracks cursor (P17: bioluminescent, not LED)
+ * - Flashlight border effect on cursor position
+ * - Grain texture overlay (P18: physical texture beneath digital surfaces)
+ * - Breathing idle animation (P2: idle is alive)
+ * - Two-phase open/close animation (P9: widgets open like unfolding)
+ * - Minimize to pill with spring animation
+ * - Spring physics on all transitions (P4)
  *
  * @module shell/components/docker
  * @layer L6
  */
 
-import React, { useCallback, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { Docker, Point2D, Size2D, DockerDockMode } from '@sn/types';
 
+import {
+  MIN_WIDTH,
+  MIN_HEIGHT,
+  DOCK_TRANSITION,
+  GLASS_INSET,
+  SNAP_THRESHOLD,
+  UNDOCK_DRAG_THRESHOLD,
+  STORM_RGB,
+} from './docker-palette';
 import { DockerContent } from './DockerContent';
 import { DockerHeader } from './DockerHeader';
 import { DockerResizeHandles, type ResizeDirection } from './DockerResizeHandle';
@@ -23,46 +38,37 @@ import { DockerTabBar } from './DockerTabBar';
 // ---------------------------------------------------------------------------
 
 export interface DockerContainerProps {
-  /** Docker data */
   docker: Docker;
-  /** Z-index for stacking floating dockers */
   zIndex?: number;
-  /** Called when position changes (floating mode drag) */
   onPositionChange: (id: string, position: Point2D) => void;
-  /** Called when size changes */
   onSizeChange: (id: string, size: Size2D) => void;
-  /** Called when dock mode changes */
   onDockModeChange: (id: string, mode: DockerDockMode) => void;
-  /** Called to toggle visibility */
   onClose: (id: string) => void;
-  /** Called to toggle pin state */
   onTogglePin: (id: string) => void;
-  /** Called to rename the docker */
   onRename: (id: string, name: string) => void;
-  /** Called when a tab is clicked */
   onTabClick: (id: string, index: number) => void;
-  /** Called to add a new tab */
   onAddTab: (id: string) => void;
-  /** Called to rename a tab */
   onRenameTab: (id: string, index: number, name: string) => void;
-  /** Called to remove a tab */
   onRemoveTab: (id: string, index: number) => void;
-  /** Called when a widget is resized */
   onWidgetResize: (id: string, widgetInstanceId: string, height: number | undefined) => void;
-  /** Called when a widget is removed */
   onWidgetRemove: (id: string, widgetInstanceId: string) => void;
-  /** Render function for widget content */
   renderWidget: (widgetInstanceId: string) => React.ReactNode;
-  /** Called when this docker is clicked (for z-order) */
   onFocus?: (id: string) => void;
+  onDragStateChange?: (isDragging: boolean) => void;
+  /** Called when a canvas entity is dropped onto this docker */
+  onWidgetDrop?: (dockerId: string, entityId: string) => void;
 }
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-const MIN_WIDTH = 200;
-const MIN_HEIGHT = 150;
+const { r: sr, g: sg, b: sb } = STORM_RGB;
+const PILL_WIDTH = 140;
+const PILL_HEIGHT = 32;
+
+// Grain SVG as inline data URI (P18: physical texture beneath digital surfaces)
+const GRAIN_SVG = `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='0.06'/%3E%3C/svg%3E")`;
 
 // ---------------------------------------------------------------------------
 // Component
@@ -85,251 +91,407 @@ export const DockerContainer: React.FC<DockerContainerProps> = ({
   onWidgetRemove,
   renderWidget,
   onFocus,
+  onDragStateChange,
+  onWidgetDrop,
 }) => {
   const { id, name, dockMode, position, size, pinned, tabs, activeTabIndex } = docker;
 
-  // Refs for stable dragging/resizing
+  const containerRef = useRef<HTMLDivElement>(null);
   const dragStartState = useRef<{ position: Point2D; size: Size2D } | null>(null);
 
-  // Get active tab
+  const [isDragging, setIsDragging] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
+  const [animPhase, setAnimPhase] = useState<'entering' | 'ready'>('entering');
+  const [isMinimized, setIsMinimized] = useState(false);
+
+  // Proximity glow tracking (P17: bioluminescent glow)
+  const [proximity, setProximity] = useState(0);
+  const [mouseXY, setMouseXY] = useState({ x: 0, y: 0 });
+  const lastGlowUpdate = useRef(0);
+
   const activeTab = tabs[activeTabIndex] ?? tabs[0];
 
-  // Compute enabled resize directions based on dock mode
-  const enabledResizeDirections = useMemo<ResizeDirection[]>(() => {
-    switch (dockMode) {
-      case 'docked-left':
-        return ['e']; // Only resize width from right edge
-      case 'docked-right':
-        return ['w']; // Only resize width from left edge
-      case 'floating':
-      default:
-        return ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'];
-    }
-  }, [dockMode]);
+  // Two-phase entrance animation (P9)
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => setAnimPhase('ready'));
+    return () => cancelAnimationFrame(raf);
+  }, []);
 
-  // Handle drag start
-  const handleDragStart = useCallback(() => {
-    dragStartState.current = {
-      position: position || { x: 100, y: 100 },
-      size,
-    };
-    onFocus?.(id);
-  }, [id, position, size, onFocus]);
-
-  // Handle drag
-  const handleDrag = useCallback(
-    (totalDelta: Point2D) => {
-      if (dockMode !== 'floating' || !dragStartState.current) return;
-
-      const newPosition = {
-        x: Math.max(0, dragStartState.current.position.x + totalDelta.x),
-        y: Math.max(0, dragStartState.current.position.y + totalDelta.y),
-      };
-
-      onPositionChange(id, newPosition);
+  // Proximity glow handler — 30fps throttled
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent) => {
+      if (isMinimized) return;
+      const now = performance.now();
+      if (now - lastGlowUpdate.current < 33) return;
+      lastGlowUpdate.current = now;
+      const el = containerRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const dist = Math.hypot(e.clientX - cx, e.clientY - cy);
+      const maxDist = Math.max(rect.width, rect.height) * 1.2;
+      setProximity(Math.max(0, 1 - dist / maxDist));
+      setMouseXY({ x: e.clientX - rect.left, y: e.clientY - rect.top });
     },
-    [id, dockMode, onPositionChange]
+    [isMinimized]
   );
 
-  // Handle drag end (Snap-to-dock logic)
+  const handleMouseLeave = useCallback(() => {
+    setProximity(0);
+    setMouseXY({ x: 0, y: 0 });
+  }, []);
+
+  // Resize directions
+  const enabledResizeDirections = useMemo<ResizeDirection[]>(() => {
+    if (isMinimized) return [];
+    switch (dockMode) {
+      case 'docked-left': return ['e'];
+      case 'docked-right': return ['w'];
+      default: return ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'];
+    }
+  }, [dockMode, isMinimized]);
+
+  // --- Drag handlers ---
+  const handleDragStart = useCallback(() => {
+    dragStartState.current = { position: position || { x: 100, y: 100 }, size };
+    setIsDragging(true);
+    onDragStateChange?.(true);
+    onFocus?.(id);
+  }, [id, position, size, onFocus, onDragStateChange]);
+
+  const handleDrag = useCallback(
+    (totalDelta: Point2D) => {
+      if (!dragStartState.current) return;
+      if (dockMode !== 'floating') {
+        const dist = Math.hypot(totalDelta.x, totalDelta.y);
+        if (dist < UNDOCK_DRAG_THRESHOLD) return;
+        onDockModeChange(id, 'floating');
+        const currentX = dockMode === 'docked-left' ? size.width / 2 : window.innerWidth - size.width / 2;
+        dragStartState.current = { position: { x: currentX - size.width / 2, y: 100 }, size };
+        return;
+      }
+      onPositionChange(id, {
+        x: Math.max(0, dragStartState.current.position.x + totalDelta.x),
+        y: Math.max(0, dragStartState.current.position.y + totalDelta.y),
+      });
+    },
+    [id, dockMode, size, onPositionChange, onDockModeChange]
+  );
+
   const handleDragEnd = useCallback(
     (finalMousePos: Point2D) => {
       dragStartState.current = null;
-
-      // Snap to dock logic
-      const snapThreshold = 40;
+      setIsDragging(false);
+      onDragStateChange?.(false);
+      if (dockMode !== 'floating') return;
       const screenWidth = window.innerWidth;
-
-      if (finalMousePos.x < snapThreshold) {
-        onDockModeChange(id, 'docked-left');
-      } else if (finalMousePos.x > screenWidth - snapThreshold) {
-        onDockModeChange(id, 'docked-right');
-      }
+      if (finalMousePos.x < SNAP_THRESHOLD) onDockModeChange(id, 'docked-left');
+      else if (finalMousePos.x > screenWidth - SNAP_THRESHOLD) onDockModeChange(id, 'docked-right');
     },
-    [id, onDockModeChange]
+    [id, dockMode, onDockModeChange, onDragStateChange]
   );
 
-  // Handle resize start
+  // --- Resize handlers ---
   const handleResizeStart = useCallback(() => {
-    dragStartState.current = {
-      position: position || { x: 100, y: 100 },
-      size,
-    };
+    dragStartState.current = { position: position || { x: 100, y: 100 }, size };
+    setIsResizing(true);
     onFocus?.(id);
   }, [id, position, size, onFocus]);
 
-  // Handle resize
   const handleResize = useCallback(
     (totalDeltaX: number, totalDeltaY: number, direction: ResizeDirection) => {
       if (!dragStartState.current) return;
+      const { size: ss, position: sp } = dragStartState.current;
+      let w = ss.width, h = ss.height, x = sp.x, y = sp.y;
 
-      const startSize = dragStartState.current.size;
-      const startPos = dragStartState.current.position;
-
-      let newWidth = startSize.width;
-      let newHeight = startSize.height;
-      let newX = startPos.x;
-      let newY = startPos.y;
-
-      // Adjust size and position based on direction
-      if (direction.includes('e')) {
-        newWidth = Math.max(MIN_WIDTH, startSize.width + totalDeltaX);
-      }
+      if (direction.includes('e')) w = Math.max(MIN_WIDTH, ss.width + totalDeltaX);
       if (direction.includes('w')) {
-        const widthDelta = Math.min(totalDeltaX, startSize.width - MIN_WIDTH);
-        newWidth = startSize.width - widthDelta;
-        if (dockMode === 'floating') {
-          newX = startPos.x + widthDelta;
-        }
+        const wd = Math.min(totalDeltaX, ss.width - MIN_WIDTH);
+        w = ss.width - wd;
+        if (dockMode === 'floating') x = sp.x + wd;
       }
-      if (direction.includes('s')) {
-        newHeight = Math.max(MIN_HEIGHT, startSize.height + totalDeltaY);
-      }
+      if (direction.includes('s')) h = Math.max(MIN_HEIGHT, ss.height + totalDeltaY);
       if (direction.includes('n')) {
-        const heightDelta = Math.min(totalDeltaY, startSize.height - MIN_HEIGHT);
-        newHeight = startSize.height - heightDelta;
-        if (dockMode === 'floating') {
-          newY = startPos.y + heightDelta;
-        }
+        const hd = Math.min(totalDeltaY, ss.height - MIN_HEIGHT);
+        h = ss.height - hd;
+        if (dockMode === 'floating') y = sp.y + hd;
       }
-
-      onSizeChange(id, { width: newWidth, height: newHeight });
-
-      // Update position if needed (floating mode north/west resize)
+      onSizeChange(id, { width: w, height: h });
       if (dockMode === 'floating' && (direction.includes('n') || direction.includes('w'))) {
-        onPositionChange(id, { x: newX, y: newY });
+        onPositionChange(id, { x, y });
       }
     },
     [id, dockMode, onSizeChange, onPositionChange]
   );
 
-  // Handle resize end
   const handleResizeEnd = useCallback(() => {
     dragStartState.current = null;
+    setIsResizing(false);
   }, []);
 
-  // Handle widget resize in active tab
   const handleWidgetResize = useCallback(
-    (widgetInstanceId: string, height: number | undefined) => {
-      onWidgetResize(id, widgetInstanceId, height);
-    },
+    (wid: string, h: number | undefined) => onWidgetResize(id, wid, h),
     [id, onWidgetResize]
   );
 
-  // Handle widget remove in active tab
   const handleWidgetRemove = useCallback(
-    (widgetInstanceId: string) => {
-      onWidgetRemove(id, widgetInstanceId);
-    },
+    (wid: string) => onWidgetRemove(id, wid),
     [id, onWidgetRemove]
   );
 
-  // Compute container styles based on dock mode
+  // Minimize toggle
+  const handleMinimize = useCallback(() => setIsMinimized((v) => !v), []);
+
+  // --- Dynamic glow styles ---
+  const glowBlur = Math.round(16 + proximity * 12);
+  const glowSat = (1.2 + proximity * 0.15).toFixed(2);
+  const borderAlpha = (0.06 + proximity * 0.14).toFixed(2);
+
+  const dynamicShadow = [
+    // 4-layer bioluminescent phosphorescent halos (P17)
+    `0 0 ${Math.round(1 + proximity * 3)}px rgba(${sr},${sg},${sb},${(0.06 + proximity * 0.2).toFixed(2)})`,
+    `0 0 ${Math.round(4 + proximity * 10)}px rgba(${sr},${sg},${sb},${(0.03 + proximity * 0.1).toFixed(2)})`,
+    `0 0 ${Math.round(12 + proximity * 28)}px rgba(${sr},${sg},${sb},${(0.02 + proximity * 0.06).toFixed(2)})`,
+    `0 0 ${Math.round(24 + proximity * 48)}px rgba(${sr},${sg},${sb},${(proximity * 0.03).toFixed(2)})`,
+    // Structural shadows
+    '0 2px 8px rgba(0,0,0,0.3)',
+    '0 8px 32px rgba(0,0,0,0.15)',
+    // Inset top highlight
+    GLASS_INSET,
+  ].join(', ');
+
+  const dockedShadow = [
+    `0 0 ${Math.round(1 + proximity * 2)}px rgba(${sr},${sg},${sb},${(proximity * 0.15).toFixed(2)})`,
+    '0 0 1px rgba(0,0,0,0.3)',
+    '4px 0 16px rgba(0,0,0,0.15)',
+    GLASS_INSET,
+  ].join(', ');
+
+  // --- Container styles ---
   const containerStyle = useMemo<React.CSSProperties>(() => {
+    const isInteracting = isDragging || isResizing;
+    const isEntering = animPhase === 'entering';
+
+    // Minimized pill state
+    if (isMinimized && dockMode === 'floating') {
+      return {
+        position: 'absolute',
+        top: position?.y ?? 100,
+        left: position?.x ?? 100,
+        width: PILL_WIDTH,
+        height: PILL_HEIGHT,
+        display: 'flex',
+        flexDirection: 'column',
+        background: `linear-gradient(135deg, rgba(255,255,255,0.04) 0%, transparent 50%), var(--sn-surface-glass, rgba(20,17,24,0.85))`,
+        backdropFilter: `blur(${glowBlur}px) saturate(${glowSat})`,
+        WebkitBackdropFilter: `blur(${glowBlur}px) saturate(${glowSat})`,
+        border: `1px solid rgba(${sr},${sg},${sb},${borderAlpha})`,
+        borderRadius: 16,
+        boxShadow: dynamicShadow,
+        overflow: 'hidden',
+        zIndex,
+        transition: DOCK_TRANSITION,
+        opacity: isEntering ? 0 : 1,
+        cursor: 'pointer',
+      };
+    }
+
     const baseStyle: React.CSSProperties = {
       position: 'absolute',
       display: 'flex',
       flexDirection: 'column',
-      background: 'var(--sn-surface, #fff)',
-      border: '1px solid var(--sn-border, #e0e0e0)',
-      borderRadius: dockMode === 'floating' ? '12px' : '0',
-      boxShadow: dockMode === 'floating' ? '0 8px 32px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.06)' : 'none',
+      background: `linear-gradient(135deg, rgba(255,255,255,0.03) 0%, transparent 50%), var(--sn-surface-glass, rgba(20,17,24,0.75))`,
+      backdropFilter: `blur(${glowBlur}px) saturate(${glowSat})`,
+      WebkitBackdropFilter: `blur(${glowBlur}px) saturate(${glowSat})`,
+      border: `1px solid rgba(${sr},${sg},${sb},${borderAlpha})`,
       overflow: 'hidden',
       zIndex,
-      transition: dragStartState.current ? 'none' : 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+      transition: isInteracting ? 'none' : DOCK_TRANSITION,
+      opacity: isEntering ? 0 : 1,
+      transform: isEntering ? 'scale(0.95)' : 'scale(1)',
     };
 
     switch (dockMode) {
       case 'docked-left':
         return {
           ...baseStyle,
-          top: 0,
-          left: 0,
-          bottom: 0,
-          width: size.width,
+          top: 0, left: 0, bottom: 0, width: size.width,
+          borderRadius: '0 14px 14px 0',
           borderLeft: 'none',
-          borderTop: 'none',
-          borderBottom: 'none',
+          boxShadow: dockedShadow,
         };
-
       case 'docked-right':
         return {
           ...baseStyle,
-          top: 0,
-          right: 0,
-          bottom: 0,
-          width: size.width,
+          top: 0, right: 0, bottom: 0, width: size.width,
+          borderRadius: '14px 0 0 14px',
           borderRight: 'none',
-          borderTop: 'none',
-          borderBottom: 'none',
+          boxShadow: dockedShadow.replace('4px', '-4px'),
         };
-
-      case 'floating':
       default:
         return {
           ...baseStyle,
-          top: position?.y ?? 100,
-          left: position?.x ?? 100,
-          width: size.width,
-          height: size.height,
+          top: position?.y ?? 100, left: position?.x ?? 100,
+          width: size.width, height: size.height,
+          borderRadius: 14,
+          boxShadow: dynamicShadow,
         };
     }
-  }, [dockMode, position, size, zIndex]);
+  }, [dockMode, position, size, zIndex, isDragging, isResizing, animPhase, isMinimized, glowBlur, glowSat, borderAlpha, dynamicShadow, dockedShadow]);
 
-  // Handle container click for z-order focus
   const handleContainerClick = useCallback(() => {
+    if (isMinimized) {
+      setIsMinimized(false);
+      return;
+    }
     onFocus?.(id);
-  }, [id, onFocus]);
+  }, [id, onFocus, isMinimized]);
 
-  if (!activeTab) {
-    return null;
+  if (!activeTab) return null;
+
+  // Minimized pill rendering
+  if (isMinimized && dockMode === 'floating') {
+    return (
+      <div
+        data-testid={`docker-container-${id}`}
+        ref={containerRef}
+        style={containerStyle}
+        onClick={handleContainerClick}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+      >
+        {/* Flashlight border */}
+        {proximity > 0 && (
+          <div aria-hidden style={{
+            position: 'absolute', inset: -1, borderRadius: 17,
+            pointerEvents: 'none', zIndex: 2,
+            background: `radial-gradient(200px circle at ${mouseXY.x}px ${mouseXY.y}px, rgba(${sr},${sg},${sb},${(proximity * 0.35).toFixed(2)}), transparent 50%)`,
+            padding: 1,
+            WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+            WebkitMaskComposite: 'xor',
+            mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+            maskComposite: 'exclude' as React.CSSProperties['maskComposite'],
+          }} />
+        )}
+        <div style={{
+          position: 'relative', zIndex: 1,
+          display: 'flex', alignItems: 'center', height: '100%',
+          padding: '0 12px', gap: 6,
+        }}>
+          {/* Breathing dot (P2: idle is alive) */}
+          <div style={{
+            width: 6, height: 6, borderRadius: '50%',
+            background: `rgb(${sr},${sg},${sb})`,
+            boxShadow: `0 0 6px rgba(${sr},${sg},${sb},0.5)`,
+            animation: 'sn-docker-breathe 3s ease-in-out infinite',
+          }} />
+          <span style={{
+            fontSize: 12, fontWeight: 400, letterSpacing: '0.01em',
+            color: 'var(--sn-text-soft, #B8B5C0)',
+            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+          }}>
+            {name}
+          </span>
+          <span style={{
+            fontSize: 10, color: 'var(--sn-text-muted, #7A7784)',
+            marginLeft: 'auto', flexShrink: 0,
+          }}>
+            {tabs[activeTabIndex]?.widgets.length ?? 0}
+          </span>
+        </div>
+        {/* Grain texture */}
+        <div aria-hidden style={{
+          position: 'absolute', inset: 0, borderRadius: 16,
+          backgroundImage: GRAIN_SVG, backgroundSize: '128px 128px',
+          pointerEvents: 'none', zIndex: 3, mixBlendMode: 'overlay',
+        }} />
+      </div>
+    );
   }
 
   return (
     <div
       data-testid={`docker-container-${id}`}
+      ref={containerRef}
       style={containerStyle}
       onMouseDown={handleContainerClick}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
     >
-      {/* Header */}
-      <DockerHeader
-        name={name}
-        dockMode={dockMode}
-        pinned={pinned}
-        onDragStart={handleDragStart}
-        onDrag={handleDrag}
-        onDragEnd={handleDragEnd}
-        onRename={(newName) => onRename(id, newName)}
-        onDockModeChange={(mode) => onDockModeChange(id, mode)}
-        onTogglePin={() => onTogglePin(id)}
-        onClose={() => onClose(id)}
-      />
+      {/* Flashlight border — cursor-tracked radial glow on border edge (P17) */}
+      {proximity > 0 && (
+        <div aria-hidden style={{
+          position: 'absolute', inset: -1,
+          borderRadius: dockMode === 'docked-left' ? '0 15px 15px 0'
+            : dockMode === 'docked-right' ? '15px 0 0 15px' : 15,
+          pointerEvents: 'none', zIndex: 4,
+          background: `radial-gradient(300px circle at ${mouseXY.x}px ${mouseXY.y}px, rgba(${sr},${sg},${sb},${(proximity * 0.3).toFixed(2)}), transparent 50%)`,
+          padding: 1,
+          WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+          WebkitMaskComposite: 'xor',
+          mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+          maskComposite: 'exclude' as React.CSSProperties['maskComposite'],
+          transition: 'opacity 200ms ease-out',
+        }} />
+      )}
 
-      {/* Tab bar */}
-      <DockerTabBar
-        tabs={tabs}
-        activeTabIndex={activeTabIndex}
-        onTabClick={(index) => onTabClick(id, index)}
-        onAddTab={() => onAddTab(id)}
-        onRenameTab={(index, tabName) => onRenameTab(id, index, tabName)}
-        onRemoveTab={(index) => onRemoveTab(id, index)}
-      />
+      {/* Grain texture overlay (P18: physical texture) */}
+      <div aria-hidden style={{
+        position: 'absolute', inset: 0,
+        borderRadius: dockMode === 'floating' ? 14 : undefined,
+        backgroundImage: GRAIN_SVG, backgroundSize: '128px 128px',
+        pointerEvents: 'none', zIndex: 3, mixBlendMode: 'overlay',
+      }} />
 
-      {/* Content */}
-      <DockerContent
-        tab={activeTab}
-        onWidgetResize={handleWidgetResize}
-        onWidgetRemove={handleWidgetRemove}
-        renderWidget={renderWidget}
-      />
+      {/* Content stack */}
+      <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+        <DockerHeader
+          name={name}
+          dockMode={dockMode}
+          pinned={pinned}
+          onDragStart={handleDragStart}
+          onDrag={handleDrag}
+          onDragEnd={handleDragEnd}
+          onRename={(newName) => onRename(id, newName)}
+          onDockModeChange={(mode) => onDockModeChange(id, mode)}
+          onTogglePin={() => onTogglePin(id)}
+          onClose={() => onClose(id)}
+          onMinimize={dockMode === 'floating' ? handleMinimize : undefined}
+        />
 
-      {/* Resize handles */}
+        <DockerTabBar
+          tabs={tabs}
+          activeTabIndex={activeTabIndex}
+          onTabClick={(index) => onTabClick(id, index)}
+          onAddTab={() => onAddTab(id)}
+          onRenameTab={(index, tabName) => onRenameTab(id, index, tabName)}
+          onRemoveTab={(index) => onRemoveTab(id, index)}
+        />
+
+        <DockerContent
+          tab={activeTab}
+          onWidgetResize={handleWidgetResize}
+          onWidgetRemove={handleWidgetRemove}
+          renderWidget={renderWidget}
+          onWidgetDrop={onWidgetDrop ? (entityId) => onWidgetDrop(id, entityId) : undefined}
+        />
+      </div>
+
       <DockerResizeHandles
         onResizeStart={handleResizeStart}
         onResize={handleResize}
         onResizeEnd={handleResizeEnd}
         enabledDirections={enabledResizeDirections}
       />
+
+      {/* Keyframe injection for breathing animation */}
+      <style>{`
+        @keyframes sn-docker-breathe {
+          0%, 100% { opacity: 0.6; transform: scale(1); }
+          50% { opacity: 1; transform: scale(1.2); }
+        }
+      `}</style>
     </div>
   );
 };

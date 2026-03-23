@@ -64,8 +64,17 @@ export const EntityRenderer: React.FC<EntityRendererProps> = ({
     return { ...entity, transform } as CanvasEntity;
   }, [entity, platform]);
 
+  const handleDragStart = (e: React.DragEvent) => {
+    e.dataTransfer.setData('application/sn-entity-id', entity.id);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
   const renderWithAutoPointer = (children: React.ReactNode) => (
-    <div style={{ pointerEvents: 'auto', display: 'contents' }}>
+    <div
+      style={{ pointerEvents: 'auto', display: 'contents' }}
+      draggable={interactionMode === 'edit'}
+      onDragStart={handleDragStart}
+    >
       {children}
     </div>
   );

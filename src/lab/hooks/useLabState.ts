@@ -9,7 +9,7 @@
  * @layer L2
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { AIGenerator } from '../ai/ai-generator';
 import { createAIGenerator } from '../ai/ai-generator';
@@ -29,8 +29,15 @@ import { createPublishPipeline } from '../publish/pipeline';
 import type { VersionManager } from '../versions/version-manager';
 import { createVersionManager } from '../versions/version-manager';
 
-export type LabView = 'editor' | 'graph';
-export type LabBottomTab = 'manifest' | 'versions' | 'publish' | null;
+/** @deprecated Will be removed — Lab is now a single-canvas pipeline builder */
+export type LabView = 'canvas' | 'library' | 'pipeline' | 'toybox';
+/** @deprecated Will be removed — Lab is now a single-canvas pipeline builder */
+export type CanvasSubView = 'graph' | 'editor';
+/** @deprecated Will be removed — Lab is now a single-canvas pipeline builder */
+export type LabBottomTab = 'inspector' | 'manifest' | 'versions' | 'publish' | null;
+
+/** Sidebar panels in the new single-canvas Lab layout */
+export type SidebarPanel = 'entities' | 'widgets' | 'inspector' | 'testing' | 'deploy';
 
 export interface LabInstances {
   editor: LabEditor;
@@ -49,27 +56,50 @@ export interface LabState {
   /** Whether the Lab session is fully initialized */
   ready: boolean;
 
-  // UI state
-  activeView: LabView;
-  activeBottomTab: LabBottomTab;
+  // UI state — new single-canvas layout
+  debugMode: boolean;
+  activeSidebarPanel: SidebarPanel;
   aiExpanded: boolean;
   previewMode: PreviewMode;
 
-  // UI state setters
-  setActiveView: (view: LabView) => void;
-  setActiveBottomTab: (tab: LabBottomTab) => void;
+  // New setters
+  toggleDebugMode: () => void;
+  setActiveSidebarPanel: (panel: SidebarPanel) => void;
   setAiExpanded: (expanded: boolean) => void;
   toggleAiExpanded: () => void;
   setPreviewMode: (mode: PreviewMode) => void;
+
+  // --- Deprecated UI state (will be removed in subsequent tasks) ---
+  /** @deprecated */
+  activeView: LabView;
+  /** @deprecated */
+  canvasSubView: CanvasSubView;
+  /** @deprecated */
+  activeBottomTab: LabBottomTab;
+  /** @deprecated */
+  revealedBottomTabs: ReadonlySet<string>;
+  /** @deprecated */
+  setActiveView: (view: LabView) => void;
+  /** @deprecated */
+  setCanvasSubView: (sub: CanvasSubView) => void;
+  /** @deprecated */
+  setActiveBottomTab: (tab: LabBottomTab) => void;
+  /** @deprecated */
+  revealBottomTab: (tab: string) => void;
 }
 
 export function useLabState(): LabState {
   const instancesRef = useRef<LabInstances | null>(null);
   const [ready, setReady] = useState(false);
-  const [activeView, setActiveView] = useState<LabView>('editor');
-  const [activeBottomTab, setActiveBottomTab] = useState<LabBottomTab>(null);
+  const [debugMode, setDebugMode] = useState(false);
+  const [activeSidebarPanel, setActiveSidebarPanel] = useState<SidebarPanel>('entities');
   const [aiExpanded, setAiExpanded] = useState(false);
   const [previewMode, setPreviewMode] = useState<PreviewMode>('2d-isolated');
+
+  // Deprecated state (kept for backward compat until consumers are updated)
+  const [activeView, setActiveView] = useState<LabView>('canvas');
+  const [canvasSubView, setCanvasSubView] = useState<CanvasSubView>('graph');
+  const [activeBottomTab, setActiveBottomTab] = useState<LabBottomTab>(null);
 
   useEffect(() => {
     // Initialize the Lab layer (bus subscriptions, etc.)
@@ -82,7 +112,7 @@ export function useLabState(): LabState {
     const manifest = createManifestEditor();
     const versions = createVersionManager('draft-widget');
     const graphSync = createGraphSync(editor);
-    const aiGenerator = createAIGenerator('/api/ai/generate');
+    const aiGenerator = createAIGenerator();
     const publishPipeline = createPublishPipeline();
 
     // Wire editor changes to preview
@@ -118,6 +148,22 @@ export function useLabState(): LabState {
     };
   }, []);
 
+  const [revealedTabsSet, setRevealedTabsSet] = useState<Set<string>>(new Set());
+  const revealedBottomTabs: ReadonlySet<string> = useMemo(() => revealedTabsSet, [revealedTabsSet]);
+
+  const revealBottomTab = useCallback((tab: string) => {
+    setRevealedTabsSet((prev) => {
+      if (prev.has(tab)) return prev;
+      const next = new Set(prev);
+      next.add(tab);
+      return next;
+    });
+  }, []);
+
+  const toggleDebugMode = useCallback(() => {
+    setDebugMode((prev) => !prev);
+  }, []);
+
   const toggleAiExpanded = useCallback(() => {
     setAiExpanded((prev) => !prev);
   }, []);
@@ -130,14 +176,28 @@ export function useLabState(): LabState {
   return {
     instances: instancesRef.current,
     ready,
-    activeView,
-    activeBottomTab,
+
+    // New state
+    debugMode,
+    activeSidebarPanel,
     aiExpanded,
     previewMode,
-    setActiveView,
-    setActiveBottomTab,
+
+    // New setters
+    toggleDebugMode,
+    setActiveSidebarPanel,
     setAiExpanded,
     toggleAiExpanded,
     setPreviewMode: handleSetPreviewMode,
+
+    // Deprecated (kept for backward compat)
+    activeView,
+    canvasSubView,
+    activeBottomTab,
+    revealedBottomTabs,
+    setActiveView,
+    setCanvasSubView,
+    setActiveBottomTab,
+    revealBottomTab,
   };
 }

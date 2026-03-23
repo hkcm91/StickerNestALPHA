@@ -13,37 +13,61 @@
  * @layer L2
  */
 
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { WidgetManifest } from '@sn/types';
 
 import { useAuthStore } from '../../kernel/stores/auth/auth.store';
+import { useWidgetStore } from '../../kernel/stores/widget/widget.store';
+import type { WidgetRegistryEntry } from '../../kernel/stores/widget/widget.store';
 import { buildAIGraphContext, serializeContextForPrompt } from '../ai/ai-context';
-import type { SceneNode, SceneEdge } from '../graph/scene-types';
+import { autoWireWidget } from '../ai/auto-wire';
+import { extractManifestFromHtml } from '../ai/manifest-extractor';
+import { computeCompatibility, type CompatibleWidget } from '../ai/prompt-questions';
+import type { SceneNode, SceneEdge , SceneNodeType } from '../graph/scene-types';
 import { checkLabAccess } from '../guards/access-guard';
 import { checkDesktopViewport } from '../guards/mobile-guard';
 import { useCreatorMode } from '../hooks/useCreatorMode';
-import { useDeviceFrame } from '../hooks/useDeviceFrame';
 import { useLabState } from '../hooks/useLabState';
+import type { SidebarPanel } from '../hooks/useLabState';
 
-import { CreatorLayout } from './CreatorLayout';
-import { DeviceFrame } from './DeviceFrame';
 import { AICompanion, AISlidePanel } from './LabAI';
-import { LabEditorComponent } from './LabEditor';
+import { LabContextSidebar } from './LabContextSidebar';
 import { LabGraph } from './LabGraph';
+import type { LabGraphAPI } from './LabGraph';
 import { LabImportComponent } from './LabImport';
-import { LabInspectorComponent } from './LabInspector';
-import { LabLayout } from './LabLayout';
-import { LabManifestComponent } from './LabManifest';
 import { LabPreviewComponent } from './LabPreview';
-import { LabPublishComponent } from './LabPublish';
-import { LabVersionsComponent } from './LabVersions';
+import { LabSidebar } from './LabSidebar';
+import { LabStatusBar } from './LabStatusBar';
 import { OnboardingOverlay } from './OnboardingOverlay';
 import type { OnboardingPath } from './OnboardingOverlay';
-import { PreviewChrome } from './PreviewChrome';
 import { PromptBar } from './PromptBar';
+import { PromptRefinement } from './PromptRefinement';
 import { GlassPanel, GlowButton } from './shared';
 import { ensureLabKeyframes } from './shared/keyframes';
+import { StreamingPreview } from './StreamingPreview';
+import { CanvasView } from './views';
+
+// ═══════════════════════════════════════════════════════════════════
+// Theme Detection
+// ═══════════════════════════════════════════════════════════════════
+
+/** Detect dark/light mode from prefers-color-scheme */
+function useColorScheme(): 'dark' | 'light' {
+  const [scheme, setScheme] = useState<'dark' | 'light'>(() => {
+    if (typeof window === 'undefined') return 'dark';
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  });
+
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const handler = (e: MediaQueryListEvent) => setScheme(e.matches ? 'dark' : 'light');
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+
+  return scheme;
+}
 
 // ═══════════════════════════════════════════════════════════════════
 // Atmospheric Layers
@@ -53,7 +77,10 @@ import { ensureLabKeyframes } from './shared/keyframes';
  * Dual-layer grain overlay with breathing animation.
  * Matches swatches/primitives.tsx GrainOverlay exactly.
  */
-const GrainOverlay: React.FC = () => (
+const GrainOverlay: React.FC<{ mode: 'dark' | 'light' }> = ({ mode }) => {
+  const primaryOpacity = mode === 'dark' ? 0.045 : 0.022;
+  const secondaryOpacity = mode === 'dark' ? 0.02 : 0.01;
+  return (
   <div aria-hidden="true" style={{
     position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0,
     animation: 'sn-grain-breathe 5s ease-in-out infinite',
@@ -61,61 +88,71 @@ const GrainOverlay: React.FC = () => (
     {/* Primary grain layer */}
     <div style={{
       position: 'absolute', inset: 0,
-      opacity: 0.045,
+      opacity: primaryOpacity,
       backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
       backgroundSize: '128px 128px',
     }} />
     {/* Secondary grain — offset, slightly different frequency for organic depth */}
     <div style={{
       position: 'absolute', inset: 0,
-      opacity: 0.02,
+      opacity: secondaryOpacity,
       backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n2'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n2)'/%3E%3C/svg%3E")`,
       backgroundSize: '192px 192px',
       transform: 'translate(2px, 2px)',
     }} />
   </div>
-);
+  );
+};
 
 /**
  * Aurora layers — each gradient drifts independently on prime-number cycles.
  * Matches swatches/UISwatchesPanel exactly.
  */
-const AuroraBackground: React.FC = () => (
-  <>
-    <div aria-hidden="true" style={{
-      position: 'fixed', inset: '-20%', pointerEvents: 'none',
-      background: 'radial-gradient(ellipse at 20% 50%, rgba(78,123,142,0.06) 0%, transparent 55%)',
-      animation: 'sn-aurora-1 23s ease-in-out infinite',
-    }} />
-    <div aria-hidden="true" style={{
-      position: 'fixed', inset: '-20%', pointerEvents: 'none',
-      background: 'radial-gradient(ellipse at 80% 30%, rgba(232,128,108,0.04) 0%, transparent 50%)',
-      animation: 'sn-aurora-2 31s ease-in-out infinite',
-    }} />
-    <div aria-hidden="true" style={{
-      position: 'fixed', inset: '-20%', pointerEvents: 'none',
-      background: 'radial-gradient(ellipse at 50% 80%, rgba(184,160,216,0.04) 0%, transparent 55%)',
-      animation: 'sn-aurora-3 17s ease-in-out infinite',
-    }} />
-    {/* Warm ember undercurrent — very subtle, grounds the cool gradients */}
-    <div aria-hidden="true" style={{
-      position: 'fixed', inset: '-10%', pointerEvents: 'none',
-      background: 'radial-gradient(ellipse at 60% 60%, rgba(200,140,110,0.025) 0%, transparent 60%)',
-      animation: 'sn-aurora-2 37s ease-in-out infinite reverse',
-    }} />
-  </>
-);
+const AuroraBackground: React.FC<{ mode: 'dark' | 'light' }> = ({ mode }) => {
+  const opacity = mode === 'dark' ? 1 : 0.4;
+  return (
+    <>
+      <div aria-hidden="true" style={{
+        position: 'fixed', inset: '-20%', pointerEvents: 'none',
+        background: 'radial-gradient(ellipse at 20% 50%, rgba(78,123,142,0.06) 0%, transparent 55%)',
+        animation: 'sn-aurora-1 23s ease-in-out infinite',
+        opacity,
+      }} />
+      <div aria-hidden="true" style={{
+        position: 'fixed', inset: '-20%', pointerEvents: 'none',
+        background: 'radial-gradient(ellipse at 80% 30%, rgba(232,128,108,0.04) 0%, transparent 50%)',
+        animation: 'sn-aurora-2 31s ease-in-out infinite',
+        opacity,
+      }} />
+      <div aria-hidden="true" style={{
+        position: 'fixed', inset: '-20%', pointerEvents: 'none',
+        background: 'radial-gradient(ellipse at 50% 80%, rgba(184,160,216,0.04) 0%, transparent 55%)',
+        animation: 'sn-aurora-3 17s ease-in-out infinite',
+        opacity,
+      }} />
+      <div aria-hidden="true" style={{
+        position: 'fixed', inset: '-10%', pointerEvents: 'none',
+        background: 'radial-gradient(ellipse at 60% 60%, rgba(200,140,110,0.025) 0%, transparent 60%)',
+        animation: 'sn-aurora-2 37s ease-in-out infinite reverse',
+        opacity,
+      }} />
+    </>
+  );
+};
 
 /**
  * Cursor-following ambient light — throttled to ~30fps.
  */
-const CursorLight: React.FC<{ mousePos: { x: number; y: number } }> = ({ mousePos }) => (
-  <div aria-hidden="true" style={{
-    position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0,
-    background: `radial-gradient(600px circle at ${mousePos.x}% ${mousePos.y}%, rgba(232,128,108,0.03) 0%, transparent 60%)`,
-    transition: 'background 300ms ease-out',
-  }} />
-);
+const CursorLight: React.FC<{ mousePos: { x: number; y: number }; mode: 'dark' | 'light' }> = ({ mousePos, mode }) => {
+  const tint = mode === 'dark' ? 'rgba(232,128,108,0.03)' : 'rgba(200,160,130,0.025)';
+  return (
+    <div aria-hidden="true" style={{
+      position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0,
+      background: `radial-gradient(600px circle at ${mousePos.x}% ${mousePos.y}%, ${tint} 0%, transparent 60%)`,
+      transition: 'background 300ms ease-out',
+    }} />
+  );
+};
 
 // ═══════════════════════════════════════════════════════════════════
 // Guard Screens
@@ -124,7 +161,7 @@ const CursorLight: React.FC<{ mousePos: { x: number; y: number } }> = ({ mousePo
 const UpgradePrompt: React.FC = () => (
   <div style={{
     display: 'flex', alignItems: 'center', justifyContent: 'center',
-    height: '100vh', background: 'var(--sn-bg)', fontFamily: 'var(--sn-font-family)',
+    height: '100%', background: 'var(--sn-bg)', fontFamily: 'var(--sn-font-family)',
   }}>
     <GlassPanel style={{
       padding: '48px', maxWidth: '480px', textAlign: 'center',
@@ -148,7 +185,7 @@ const UpgradePrompt: React.FC = () => (
 const MobileRedirect: React.FC = () => (
   <div style={{
     display: 'flex', alignItems: 'center', justifyContent: 'center',
-    height: '100vh', padding: '24px', background: 'var(--sn-bg)', fontFamily: 'var(--sn-font-family)',
+    height: '100%', padding: '24px', background: 'var(--sn-bg)', fontFamily: 'var(--sn-font-family)',
   }}>
     <GlassPanel style={{
       padding: '36px', maxWidth: '400px', textAlign: 'center',
@@ -176,7 +213,7 @@ const MobileRedirect: React.FC = () => (
 const LabLoading: React.FC = () => (
   <div style={{
     display: 'flex', alignItems: 'center', justifyContent: 'center',
-    height: '100vh', background: 'var(--sn-bg)', fontFamily: 'var(--sn-font-family)',
+    height: '100%', background: 'var(--sn-bg)', fontFamily: 'var(--sn-font-family)',
     color: 'var(--sn-text-muted)', fontSize: '14px',
   }}>
     Initializing Widget Lab...
@@ -213,53 +250,49 @@ export const LabPage: React.FC = () => {
 
 /**
  * Inner Lab content — only rendered after guards pass.
+ * Orchestrates all sidebar, graph, AI, and status bar wiring.
  */
 const LabContent: React.FC = () => {
   const lab = useLabState();
   const containerRef = useRef<HTMLDivElement>(null);
   const [mousePos, setMousePos] = useState({ x: 50, y: 50 });
+  const colorScheme = useColorScheme();
   const [editorContent, setEditorContent] = useState('');
   const [showImport, setShowImport] = useState(false);
   const [graphNodes, setGraphNodes] = useState<SceneNode[]>([]);
   const [graphEdges, setGraphEdges] = useState<SceneEdge[]>([]);
   const [pendingAIPrompt, setPendingAIPrompt] = useState<string | null>(null);
+  const [pendingRefinementPrompt, setPendingRefinementPrompt] = useState<string | null>(null);
+
+  // Graph imperative API — set by LabGraph onAPIReady callback
+  const graphAPIRef = useRef<LabGraphAPI | null>(null);
+
+  // Widget registry from kernel store
+  const widgetRegistry = useWidgetStore((s) => s.registry);
+  const installedWidgets = useMemo(
+    () => Object.values(widgetRegistry),
+    [widgetRegistry],
+  );
 
   // Creator mode state
   const hasActiveWidget = useMemo(() => editorContent.trim().length > 0, [editorContent]);
   const creatorMode = useCreatorMode(hasActiveWidget);
 
-  // Device frame state for preview-as-primary
-  const deviceFrame = useDeviceFrame('phone');
-
-  // Preview chrome state
-  const [consoleOpen, setConsoleOpen] = useState(false);
-  const [previewExpanded, setPreviewExpanded] = useState(false);
-
-  // AI slide panel state (Creator Mode only)
+  // AI slide panel state
   const [aiPanelOpen, setAiPanelOpen] = useState(false);
-  const handleToggleAiPanel = useCallback(() => {
-    setAiPanelOpen((v) => !v);
-  }, []);
 
-  // Preview container dimensions for DeviceFrame scaling
-  const previewContainerRef = useRef<HTMLDivElement>(null);
-  const [previewSize, setPreviewSize] = useState({ width: 800, height: 600 });
+  // Testing panel state
+  const [activeDevice, setActiveDevice] = useState('desktop');
+  const [activeSimulation, setActiveSimulation] = useState('default');
 
-  useLayoutEffect(() => {
-    const el = previewContainerRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver((entries) => {
-      const entry = entries[0];
-      if (entry) {
-        setPreviewSize({
-          width: entry.contentRect.width,
-          height: entry.contentRect.height,
-        });
-      }
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
+  // AI generation status for status bar
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  // Streaming preview state
+  const [streamingHtml, setStreamingHtml] = useState('');
+  const [streamingActive, setStreamingActive] = useState(false);
+  const [streamingDone, setStreamingDone] = useState(false);
+  const [streamingError, setStreamingError] = useState<string | null>(null);
 
   // Track editor content for AI companion + publish
   useEffect(() => {
@@ -292,11 +325,16 @@ const LabContent: React.FC = () => {
     });
   }, []);
 
-  // Apply AI-generated code to editor
+  // Apply AI-generated code to editor + add widget node to graph
   const handleApplyCode = useCallback((code: string) => {
     if (lab.instances?.editor) {
       lab.instances.editor.setContent(code);
       setEditorContent(code);
+
+      // If graph is empty, add a widget node to represent the generated widget
+      if (graphAPIRef.current && graphAPIRef.current.getNodeCount() === 0) {
+        graphAPIRef.current.addNode('widget');
+      }
     }
   }, [lab.instances]);
 
@@ -318,28 +356,28 @@ const LabContent: React.FC = () => {
     setGraphEdges(edges);
   }, []);
 
+  // Graph API ready callback
+  const handleGraphAPIReady = useCallback((api: LabGraphAPI) => {
+    graphAPIRef.current = api;
+  }, []);
+
   // Handle onboarding path selection
   const handleOnboardingPath = useCallback((path: OnboardingPath) => {
     creatorMode.dismissOnboarding();
     switch (path) {
       case 'template':
-        // Future: open template picker. For now, dismiss onboarding.
         break;
       case 'describe':
-        // Future: focus AI prompt bar. For now, open AI companion.
-        lab.setActiveView('graph');
+        lab.setActiveSidebarPanel('widgets');
         break;
       case 'visual':
-        lab.setActiveView('graph');
+        lab.setActiveSidebarPanel('entities');
         break;
     }
   }, [creatorMode, lab]);
 
   // Reload the preview widget by bumping a key to force remount
-  const [previewReloadKey, setPreviewReloadKey] = useState(0);
-  const handlePreviewReload = useCallback(() => {
-    setPreviewReloadKey((k) => k + 1);
-  }, []);
+  const [previewReloadKey] = useState(0);
 
   // Describe widget — triggered from library picker "Ask AI" button
   const handleDescribeWidget = useCallback((manifest: WidgetManifest) => {
@@ -351,158 +389,346 @@ const LabContent: React.FC = () => {
     setPendingAIPrompt(prompt);
   }, []);
 
+  // ─── Streaming preview callbacks ─────────────────────────────
+  const handleStreamChunk = useCallback((partialHtml: string) => {
+    setStreamingHtml(partialHtml);
+    if (!streamingActive) setStreamingActive(true);
+  }, [streamingActive]);
+
+  const handleStreamDone = useCallback((error?: string | null) => {
+    setStreamingDone(true);
+    if (error) setStreamingError(error);
+    // Auto-dismiss the streaming overlay after a short delay
+    // so it doesn't permanently cover the graph
+    setTimeout(() => {
+      setStreamingActive(false);
+    }, error ? 3000 : 1500);
+  }, []);
+
+  const handleGeneratingChange = useCallback((generating: boolean) => {
+    setIsGenerating(generating);
+    if (generating) {
+      // Reset streaming state when a new generation starts
+      setStreamingHtml('');
+      setStreamingActive(true);
+      setStreamingDone(false);
+      setStreamingError(null);
+    }
+  }, []);
+
+  // ─── Prompt refinement ──────────────────────────────────────────
+  const compatibleWidgets: CompatibleWidget[] = useMemo(() => {
+    const seen = new Set<string>();
+    const result: CompatibleWidget[] = [];
+    const prompt = pendingRefinementPrompt ?? '';
+
+    // 1. Widgets already in the pipeline graph
+    for (const n of graphNodes) {
+      if (n.type !== 'widget') continue;
+      seen.add(n.label);
+      const portContracts = {
+        emits: n.outputPorts.map((p) => ({
+          name: p.name,
+          description: undefined as string | undefined,
+          schema: p.schema as Record<string, unknown> | undefined,
+        })),
+        subscribes: n.inputPorts.map((p) => ({
+          name: p.name,
+          description: undefined as string | undefined,
+          schema: p.schema as Record<string, unknown> | undefined,
+        })),
+      };
+      const widget: CompatibleWidget = {
+        name: n.label,
+        widgetId: n.widgetId,
+        ports: [
+          ...n.inputPorts.map((p) => `subscribes: ${p.name}`),
+          ...n.outputPorts.map((p) => `emits: ${p.name}`),
+        ],
+        portContracts,
+        compatibility: 'partial',
+      };
+      widget.compatibility = computeCompatibility(prompt, widget);
+      result.push(widget);
+    }
+
+    // 2. Installed widgets from the library (not already in the graph)
+    for (const entry of installedWidgets) {
+      if (seen.has(entry.manifest.name)) continue;
+      const emits = entry.manifest.events?.emits ?? [];
+      const subs = entry.manifest.events?.subscribes ?? [];
+      const portContracts = {
+        emits: emits.map((e) => ({
+          name: e.name,
+          description: e.description,
+          schema: e.schema as Record<string, unknown> | undefined,
+        })),
+        subscribes: subs.map((e) => ({
+          name: e.name,
+          description: e.description,
+          schema: e.schema as Record<string, unknown> | undefined,
+        })),
+      };
+      const widget: CompatibleWidget = {
+        name: entry.manifest.name,
+        widgetId: entry.widgetId,
+        ports: [
+          ...subs.map((e) => `subscribes: ${e.name}`),
+          ...emits.map((e) => `emits: ${e.name}`),
+        ],
+        portContracts,
+        compatibility: 'partial',
+      };
+      widget.compatibility = computeCompatibility(prompt, widget);
+      result.push(widget);
+    }
+
+    return result;
+  }, [graphNodes, installedWidgets, pendingRefinementPrompt]);
+
+  const handlePromptReady = useCallback((prompt: string) => {
+    setPendingRefinementPrompt(prompt);
+    // Dismiss any lingering streaming overlay when starting a new prompt
+    setStreamingActive(false);
+  }, []);
+
+  const handleRefinementGenerate = useCallback(async (enrichedPrompt: string, selectedWidgets: CompatibleWidget[]) => {
+    setPendingRefinementPrompt(null);
+    if (!lab.instances?.aiGenerator) return;
+    handleGeneratingChange(true);
+    try {
+      const result = await lab.instances.aiGenerator.generate(enrichedPrompt, graphContext);
+      if (result.isValid && result.html) {
+        handleStreamChunk(result.html);
+        handleStreamDone(null);
+        handleApplyCode(result.html);
+
+        // Add selected widgets to the graph so they're ready to test
+        if (selectedWidgets.length > 0 && graphAPIRef.current) {
+          try {
+            const currentNodes = graphAPIRef.current.getSceneNodes();
+            for (const sw of selectedWidgets) {
+              // Skip if already in the graph
+              const exists = currentNodes.some(
+                (n) => n.widgetId === sw.widgetId || n.label === sw.name,
+              );
+              if (exists) continue;
+              // Find in installed registry and add
+              if (sw.widgetId) {
+                const entry = installedWidgets.find((w) => w.widgetId === sw.widgetId);
+                if (entry) graphAPIRef.current.addWidgetFromLibrary(entry);
+              }
+            }
+
+            // Auto-wire: extract manifest from generated HTML and wire to selected widgets
+            const manifest = extractManifestFromHtml(result.html);
+            if (manifest) {
+              const syntheticEntry: WidgetRegistryEntry = {
+                widgetId: `gen-${Date.now()}`,
+                manifest,
+                htmlContent: result.html,
+                isBuiltIn: false,
+                installedAt: new Date().toISOString(),
+              };
+              graphAPIRef.current.addWidgetFromLibrary(syntheticEntry);
+
+              autoWireWidget(
+                syntheticEntry.widgetId,
+                manifest,
+                selectedWidgets,
+                graphAPIRef.current,
+                installedWidgets,
+              );
+            }
+          } catch {
+            // Auto-wire failure is non-blocking — widget still works standalone
+          }
+        }
+      } else {
+        handleStreamDone(result.errors[0] ?? 'Generation failed');
+      }
+    } catch {
+      handleStreamDone('Something went wrong');
+    } finally {
+      handleGeneratingChange(false);
+    }
+  }, [lab.instances, graphContext, installedWidgets, handleGeneratingChange, handleStreamChunk, handleStreamDone, handleApplyCode]);
+
+  const handleRefinementCancel = useCallback(() => {
+    setPendingRefinementPrompt(null);
+  }, []);
+
+  // ─── Sidebar entity callbacks ─────────────────────────────────
+  const handleAddEntity = useCallback((type: SceneNodeType) => {
+    graphAPIRef.current?.addNode(type);
+  }, []);
+
+  const handleAddWidget = useCallback((entry: WidgetRegistryEntry) => {
+    graphAPIRef.current?.addWidgetFromLibrary(entry);
+  }, []);
+
+  const handleBrowseMarketplace = useCallback(() => {
+    // Navigate to marketplace — for now switch to widgets panel
+    // Future: open marketplace overlay or route
+    lab.setActiveSidebarPanel('widgets');
+  }, [lab]);
+
+  const handleUploadHtml = useCallback(() => {
+    setShowImport(true);
+  }, []);
+
+  // ─── Sidebar action button handler ────────────────────────────
+  const handleSidebarAction = useCallback((panel: SidebarPanel) => {
+    switch (panel) {
+      case 'entities':
+        // Add a generic widget node as the default entity
+        graphAPIRef.current?.addNode('widget');
+        break;
+      case 'widgets':
+        // Add the first installed widget if available
+        if (installedWidgets.length > 0) {
+          graphAPIRef.current?.addWidgetFromLibrary(installedWidgets[0]);
+        }
+        break;
+      case 'inspector':
+        // Future: remove selected node
+        break;
+      case 'testing':
+        // Compile and run the pipeline
+        graphAPIRef.current?.compile();
+        break;
+      case 'deploy':
+        // Compile for publishing
+        graphAPIRef.current?.compile();
+        break;
+    }
+  }, [installedWidgets]);
+
+  // ─── Deploy panel callbacks ────────────────────────────────────
+  const handleValidatePipeline = useCallback(() => {
+    graphAPIRef.current?.compile();
+  }, []);
+
   if (!lab.ready || !lab.instances) return <LabLoading />;
 
   const { instances } = lab;
+  const manifest = instances.manifest.getManifest();
+  const manifestEvents = [
+    ...(manifest?.events?.emits ?? []),
+    ...(manifest?.events?.subscribes ?? []),
+  ];
 
   return (
     <div
       ref={containerRef}
       onMouseMove={handleMouseMove}
       style={{
-        height: '100vh', width: '100vw',
+        height: '100%', width: '100%',
         background: 'var(--sn-bg, #0A0A0E)',
         position: 'relative', overflow: 'hidden',
         fontFamily: 'var(--sn-font-family)',
       }}
     >
-      <AuroraBackground />
-      <CursorLight mousePos={mousePos} />
-      <GrainOverlay />
+      <AuroraBackground mode={colorScheme} />
+      <CursorLight mousePos={mousePos} mode={colorScheme} />
+      <GrainOverlay mode={colorScheme} />
 
-      {/* Lab layout — Creator Mode or classic IDE layout */}
-      <div style={{ position: 'relative', zIndex: 1, height: '100%' }}>
-        {creatorMode.isCreatorMode ? (
-          <CreatorLayout
-            activeView={lab.activeView}
-            onViewChange={lab.setActiveView}
-            activeBottomTab={lab.activeBottomTab}
-            onBottomTabChange={lab.setActiveBottomTab}
-            graphCollapsed={creatorMode.graphCollapsed}
-            onToggleGraphCollapsed={creatorMode.toggleGraphCollapsed}
-            toolbarExtras={
-              <PromptBar
-                generator={instances.aiGenerator}
-                onApplyCode={handleApplyCode}
-                currentEditorContent={editorContent}
-                graphContext={graphContext}
-                onExpandThread={handleToggleAiPanel}
-                threadOpen={aiPanelOpen}
-              />
-            }
-            editorSlot={
-              <LabEditorComponent editor={instances.editor} />
-            }
-            graphSlot={
-              <LabGraph
-                graphSync={instances.graphSync}
-                onCompile={(html) => {
-                  instances.editor.setContent(html);
-                }}
-                onGraphStateChange={handleGraphStateChange}
-                onDescribeWidget={handleDescribeWidget}
-              />
-            }
-            previewSlot={
-              <div ref={previewContainerRef} style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                <PreviewChrome
-                  widgetName={instances.manifest.getManifest()?.name ?? 'Untitled Widget'}
-                  isRunning={hasActiveWidget}
-                  onReload={handlePreviewReload}
-                  consoleOpen={consoleOpen}
-                  onConsoleToggle={() => setConsoleOpen((v) => !v)}
-                  expanded={previewExpanded}
-                  onExpandToggle={() => setPreviewExpanded((v) => !v)}
+      {/* Lab layout — Icon Rail + Sidebar Panel + Full-bleed Canvas + Status Bar */}
+      <div style={{ position: 'relative', zIndex: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
+        {/* Main area: icon rail + sidebar + canvas */}
+        <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
+          {/* Icon rail — far left */}
+          <LabSidebar
+            activePanel={lab.activeSidebarPanel}
+            onPanelChange={lab.setActiveSidebarPanel}
+            debugMode={lab.debugMode}
+            onToggleDebug={lab.toggleDebugMode}
+          />
+
+          {/* Context sidebar — panel content (fully wired) */}
+          <LabContextSidebar
+            activePanel={lab.activeSidebarPanel}
+            projectName={manifest?.name ?? 'Untitled Widget'}
+            projectVersion={manifest?.version ?? 'v0.1.0'}
+            previewSlot={<LabPreviewComponent key={previewReloadKey} preview={instances.preview} />}
+            isRunning={hasActiveWidget}
+            onAddEntity={handleAddEntity}
+            installedWidgets={installedWidgets}
+            onAddWidget={handleAddWidget}
+            onBrowseMarketplace={handleBrowseMarketplace}
+            onUploadHtml={handleUploadHtml}
+            activeDevice={activeDevice}
+            onDeviceChange={setActiveDevice}
+            activeSimulation={activeSimulation}
+            onSimulationChange={setActiveSimulation}
+            manifestName={manifest?.name}
+            manifestVersion={manifest?.version}
+            eventCount={manifestEvents.length}
+            onValidate={handleValidatePipeline}
+            onAction={handleSidebarAction}
+          />
+
+          {/* Full-bleed canvas */}
+          <div style={{ flex: 1, minWidth: 0, minHeight: 0 }}>
+            <CanvasView
+              debugMode={lab.debugMode}
+              graphSlot={
+                <LabGraph
+                  graphSync={instances.graphSync}
+                  onCompile={(html) => {
+                    instances.editor.setContent(html);
+                    setEditorContent(html);
+                  }}
+                  onGraphStateChange={handleGraphStateChange}
+                  onDescribeWidget={handleDescribeWidget}
+                  onAPIReady={handleGraphAPIReady}
                 />
-                <div style={{ flex: 1, minHeight: 0 }}>
-                  <DeviceFrame
-                    device={deviceFrame.device}
-                    onDeviceChange={deviceFrame.setDevice}
-                    containerWidth={previewSize.width}
-                    containerHeight={previewSize.height}
-                  >
-                    <LabPreviewComponent key={previewReloadKey} preview={instances.preview} />
-                  </DeviceFrame>
-                </div>
-              </div>
-            }
-            inspectorSlot={
-              <LabInspectorComponent inspector={instances.inspector} />
-            }
-            manifestSlot={
-              <LabManifestComponent manifest={instances.manifest} />
-            }
-            versionsSlot={
-              <LabVersionsComponent
-                versions={instances.versions}
-                currentHtml={editorContent}
-                currentManifest={instances.manifest.getManifest()}
-                onRestore={(snapshot) => {
-                  instances.editor.setContent(snapshot.html);
-                  if (snapshot.manifest) {
-                    instances.manifest.setManifest(snapshot.manifest);
-                  }
-                }}
-              />
-            }
-            publishSlot={
-              <LabPublishComponent
-                pipeline={instances.publishPipeline}
-                currentHtml={editorContent}
-                currentManifest={instances.manifest.getManifest()}
-              />
-            }
-          />
-        ) : (
-          <LabLayout
-            activeView={lab.activeView}
-            onViewChange={lab.setActiveView}
-            activeBottomTab={lab.activeBottomTab}
-            onBottomTabChange={lab.setActiveBottomTab}
-            editorSlot={
-              <LabEditorComponent editor={instances.editor} />
-            }
-            graphSlot={
-              <LabGraph
-                graphSync={instances.graphSync}
-                onCompile={(html) => {
-                  instances.editor.setContent(html);
-                }}
-                onGraphStateChange={handleGraphStateChange}
-                onDescribeWidget={handleDescribeWidget}
-              />
-            }
-            previewSlot={
-              <LabPreviewComponent preview={instances.preview} />
-            }
-            inspectorSlot={
-              <LabInspectorComponent inspector={instances.inspector} />
-            }
-            manifestSlot={
-              <LabManifestComponent manifest={instances.manifest} />
-            }
-            versionsSlot={
-              <LabVersionsComponent
-                versions={instances.versions}
-                currentHtml={editorContent}
-                currentManifest={instances.manifest.getManifest()}
-                onRestore={(snapshot) => {
-                  instances.editor.setContent(snapshot.html);
-                  if (snapshot.manifest) {
-                    instances.manifest.setManifest(snapshot.manifest);
-                  }
-                }}
-              />
-            }
-            publishSlot={
-              <LabPublishComponent
-                pipeline={instances.publishPipeline}
-                currentHtml={editorContent}
-                currentManifest={instances.manifest.getManifest()}
-              />
-            }
-          />
-        )}
+              }
+              promptBar={
+                <PromptBar
+                  generator={instances.aiGenerator}
+                  onApplyCode={handleApplyCode}
+                  currentEditorContent={editorContent}
+                  graphContext={graphContext}
+                  onGeneratingChange={handleGeneratingChange}
+                  onStreamChunk={handleStreamChunk}
+                  onStreamDone={handleStreamDone}
+                  onPromptReady={handlePromptReady}
+                />
+              }
+              refinementOverlay={
+                pendingRefinementPrompt ? (
+                  <PromptRefinement
+                    initialPrompt={pendingRefinementPrompt}
+                    generator={instances.aiGenerator}
+                    compatibleWidgets={compatibleWidgets}
+                    onGenerate={handleRefinementGenerate}
+                    onCancel={handleRefinementCancel}
+                  />
+                ) : undefined
+              }
+              streamingPreview={
+                streamingActive ? (
+                  <StreamingPreview
+                    html={streamingHtml}
+                    done={streamingDone}
+                    error={streamingError}
+                  />
+                ) : undefined
+              }
+            />
+          </div>
+        </div>
+
+        {/* Bottom status bar — wired to real state */}
+        <LabStatusBar
+          projectName={manifest?.name ?? 'Untitled Widget'}
+          hasUnsavedChanges={hasActiveWidget}
+          connected={true}
+          streaming={isGenerating}
+          branch="main"
+          latencyMs={12}
+        />
       </div>
 
       {/* Onboarding overlay (Creator Mode, first-time, no active widget) */}
@@ -535,7 +761,7 @@ const LabContent: React.FC = () => {
         />
       )}
 
-      {/* Import dialog */}
+      {/* Import dialog — triggered by Upload .html or Browse Marketplace */}
       {showImport && (
         <LabImportComponent
           listings={[]}

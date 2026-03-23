@@ -3,7 +3,7 @@
  *
  * Manages:
  * - Whether Creator Mode is active (preview-primary layout)
- * - Onboarding overlay visibility (first-time, no active widget)
+ * - Onboarding overlay visibility (first-visit only, persisted via localStorage)
  * - Graph/code panel collapsed state
  *
  * @module lab/hooks
@@ -11,6 +11,24 @@
  */
 
 import { useCallback, useState } from 'react';
+
+const ONBOARDING_SEEN_KEY = 'sn-lab-onboarding-seen';
+
+function hasSeenOnboarding(): boolean {
+  try {
+    return localStorage.getItem(ONBOARDING_SEEN_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+function markOnboardingSeen(): void {
+  try {
+    localStorage.setItem(ONBOARDING_SEEN_KEY, 'true');
+  } catch {
+    // localStorage unavailable — degrade silently
+  }
+}
 
 export interface CreatorModeState {
   /** Whether Creator Mode (preview-primary layout) is active */
@@ -32,13 +50,15 @@ export interface CreatorModeState {
 
 export function useCreatorMode(hasActiveWidget: boolean): CreatorModeState {
   const [isCreatorMode, setCreatorMode] = useState(true);
-  const [onboardingDismissed, setOnboardingDismissed] = useState(false);
+  const [onboardingDismissed, setOnboardingDismissed] = useState(() => hasSeenOnboarding());
   const [graphCollapsed, setGraphCollapsed] = useState(false);
 
+  // Show onboarding only on first-ever visit AND when no widget is loaded
   const showOnboarding = isCreatorMode && !hasActiveWidget && !onboardingDismissed;
 
   const dismissOnboarding = useCallback(() => {
     setOnboardingDismissed(true);
+    markOnboardingSeen();
   }, []);
 
   const toggleGraphCollapsed = useCallback(() => {

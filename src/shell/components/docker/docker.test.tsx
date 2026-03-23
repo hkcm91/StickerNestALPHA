@@ -15,6 +15,7 @@ import type { Docker, DockerTab, DockerDockMode } from '@sn/types';
 
 import { DockerContainer } from './DockerContainer';
 import { DockerContent } from './DockerContent';
+import { DockerDockZone } from './DockerDockZone';
 import { DockerHeader } from './DockerHeader';
 import { DockerResizeHandle, DockerResizeHandles, type ResizeDirection } from './DockerResizeHandle';
 import { DockerTabBar } from './DockerTabBar';
@@ -176,11 +177,11 @@ describe('DockerTabBar', () => {
 // =============================================================================
 
 describe('DockerWidgetSlot', () => {
-  const createDefaultProps = (overrides: { height?: number } = {}) => ({
+  const createDefaultProps = (overrides: { height?: number; effectiveHeight?: number } = {}) => ({
     slot: { widgetInstanceId: 'widget-1', height: overrides.height },
-    onResize: noopFn,
     onRemove: noopFn,
     children: <div data-testid="widget-widget-1">Widget widget-1</div>,
+    effectiveHeight: overrides.effectiveHeight,
   });
 
   beforeEach(() => {
@@ -193,10 +194,16 @@ describe('DockerWidgetSlot', () => {
     expect(screen.getByText('Widget widget-1')).toBeInTheDocument();
   });
 
-  it('should render with fixed height when provided', () => {
-    render(<DockerWidgetSlot {...createDefaultProps({ height: 200 })} />);
+  it('should render with effectiveHeight when provided', () => {
+    render(<DockerWidgetSlot {...createDefaultProps({ effectiveHeight: 200 })} />);
     const slot = screen.getByTestId('docker-widget-slot-widget-1');
     expect(slot).toHaveStyle({ height: '200px' });
+  });
+
+  it('should render with slot height when no effectiveHeight', () => {
+    render(<DockerWidgetSlot {...createDefaultProps({ height: 180 })} />);
+    const slot = screen.getByTestId('docker-widget-slot-widget-1');
+    expect(slot).toHaveStyle({ height: '180px' });
   });
 
   it('should render with auto height when no height provided', () => {
@@ -205,9 +212,9 @@ describe('DockerWidgetSlot', () => {
     expect(slot).toHaveStyle({ height: 'auto' });
   });
 
-  it('should render resize handle', () => {
+  it('should not render a per-slot resize handle', () => {
     render(<DockerWidgetSlot {...createDefaultProps()} />);
-    expect(screen.getByTestId('docker-widget-resize-widget-1')).toBeInTheDocument();
+    expect(screen.queryByTestId('docker-widget-resize-widget-1')).not.toBeInTheDocument();
   });
 });
 
@@ -244,6 +251,64 @@ describe('DockerContent', () => {
     const emptyTab = createMockTab({ widgets: [] });
     render(<DockerContent {...defaultProps} tab={emptyTab} />);
     expect(screen.getByTestId('docker-content-empty')).toBeInTheDocument();
+  });
+
+  it('should render a divider between two widgets', () => {
+    render(<DockerContent {...defaultProps} />);
+    const dividers = screen.getAllByTestId('docker-divider');
+    expect(dividers).toHaveLength(1);
+  });
+
+  it('should not render a divider when only one widget', () => {
+    const singleTab = createMockTab({
+      widgets: [{ widgetInstanceId: 'widget-1', height: 200 }],
+    });
+    render(<DockerContent {...defaultProps} tab={singleTab} />);
+    expect(screen.queryByTestId('docker-divider')).not.toBeInTheDocument();
+  });
+
+  it('should call onWidgetResize for both slots when divider is dragged', () => {
+    const onWidgetResize = vi.fn();
+    const twoWidgetTab = createMockTab({
+      widgets: [
+        { widgetInstanceId: 'widget-1', height: 200 },
+        { widgetInstanceId: 'widget-2', height: 200 },
+      ],
+    });
+    render(<DockerContent {...defaultProps} tab={twoWidgetTab} onWidgetResize={onWidgetResize} />);
+
+    const divider = screen.getByTestId('docker-divider');
+
+    // Simulate pointer drag: down, move 50px, up
+    fireEvent.pointerDown(divider, { clientY: 200 });
+    fireEvent.pointerMove(divider, { clientY: 250 });
+    fireEvent.pointerUp(divider);
+
+    // Both slots should have been resized
+    expect(onWidgetResize).toHaveBeenCalledWith('widget-1', 250);
+    expect(onWidgetResize).toHaveBeenCalledWith('widget-2', 150);
+  });
+
+  it('should clamp divider drag to minHeight (60px)', () => {
+    const onWidgetResize = vi.fn();
+    const twoWidgetTab = createMockTab({
+      widgets: [
+        { widgetInstanceId: 'widget-1', height: 100 },
+        { widgetInstanceId: 'widget-2', height: 100 },
+      ],
+    });
+    render(<DockerContent {...defaultProps} tab={twoWidgetTab} onWidgetResize={onWidgetResize} />);
+
+    const divider = screen.getByTestId('docker-divider');
+
+    // Drag far enough to exceed the bottom slot's min height
+    fireEvent.pointerDown(divider, { clientY: 100 });
+    fireEvent.pointerMove(divider, { clientY: 200 }); // +100px delta
+    fireEvent.pointerUp(divider);
+
+    // Bottom slot should clamp to 60px, top gets the rest (140px)
+    expect(onWidgetResize).toHaveBeenCalledWith('widget-1', 140);
+    expect(onWidgetResize).toHaveBeenCalledWith('widget-2', 60);
   });
 });
 
@@ -392,5 +457,97 @@ describe('DockerContainer', () => {
     expect(screen.getByTestId('docker-resize-w')).toBeInTheDocument();
     expect(screen.queryByTestId('docker-resize-e')).not.toBeInTheDocument();
     expect(screen.queryByTestId('docker-resize-n')).not.toBeInTheDocument();
+  });
+
+  it('should apply glass surface styles (backdrop-filter)', () => {
+    render(<DockerContainer {...defaultProps} />);
+    const container = screen.getByTestId('docker-container-docker-1');
+    const style = container.style;
+    expect(style.backdropFilter).toContain('blur');
+  });
+
+  it('should apply rounded corners for docked-left (right side only)', () => {
+    const docker = createMockDocker({ dockMode: 'docked-left' });
+    render(<DockerContainer {...defaultProps} docker={docker} />);
+    const container = screen.getByTestId('docker-container-docker-1');
+    expect(container.style.borderRadius).toBe('0px 14px 14px 0px');
+  });
+
+  it('should call onDragStateChange when drag starts', () => {
+    const onDragStateChange = vi.fn();
+    render(<DockerContainer {...defaultProps} onDragStateChange={onDragStateChange} />);
+
+    const header = screen.getByTestId('docker-header');
+    fireEvent.mouseDown(header);
+    expect(onDragStateChange).toHaveBeenCalledWith(true);
+  });
+});
+
+// =============================================================================
+// DockerDockZone Tests
+// =============================================================================
+
+describe('DockerDockZone', () => {
+  it('should not render when not active', () => {
+    render(<DockerDockZone side="left" active={false} />);
+    expect(screen.queryByTestId('docker-dock-zone-left')).not.toBeInTheDocument();
+  });
+
+  it('should render when active', () => {
+    render(<DockerDockZone side="left" active={true} />);
+    expect(screen.getByTestId('docker-dock-zone-left')).toBeInTheDocument();
+  });
+
+  it('should render right zone on the right side', () => {
+    render(<DockerDockZone side="right" active={true} />);
+    const zone = screen.getByTestId('docker-dock-zone-right');
+    expect(zone).toBeInTheDocument();
+  });
+});
+
+// =============================================================================
+// DockerTabBar — Close button tests
+// =============================================================================
+
+describe('DockerTabBar — close button', () => {
+  const tabs: DockerTab[] = [
+    { id: 'tab-1', name: 'Tab 1', widgets: [] },
+    { id: 'tab-2', name: 'Tab 2', widgets: [] },
+  ];
+
+  it('should show close button on tab hover when multiple tabs', () => {
+    render(
+      <DockerTabBar
+        tabs={tabs}
+        activeTabIndex={0}
+        onTabClick={noopFn}
+        onAddTab={noopFn}
+        onRenameTab={noopFn}
+        onRemoveTab={noopFn}
+      />
+    );
+
+    const tab = screen.getByTestId('docker-tab-0');
+    fireEvent.mouseEnter(tab);
+    expect(screen.getByTestId('docker-tab-close-0')).toBeInTheDocument();
+  });
+
+  it('should call onRemoveTab when close button clicked', () => {
+    const onRemoveTab = vi.fn();
+    render(
+      <DockerTabBar
+        tabs={tabs}
+        activeTabIndex={0}
+        onTabClick={noopFn}
+        onAddTab={noopFn}
+        onRenameTab={noopFn}
+        onRemoveTab={onRemoveTab}
+      />
+    );
+
+    const tab = screen.getByTestId('docker-tab-0');
+    fireEvent.mouseEnter(tab);
+    fireEvent.click(screen.getByTestId('docker-tab-close-0'));
+    expect(onRemoveTab).toHaveBeenCalledWith(0);
   });
 });

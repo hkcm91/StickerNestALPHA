@@ -265,13 +265,15 @@ Deno.serve(async (req: Request) => {
   );
 
   // Set the session config for decrypt/encrypt helper functions.
-  await serviceClient.rpc("set_config", {
-    setting_name: "app.api_key_secret",
-    setting_value: API_KEY_SECRET,
-    is_local: true,
-  }).catch(() => {
+  try {
+    await serviceClient.rpc("set_config", {
+      setting_name: "app.api_key_secret",
+      setting_value: API_KEY_SECRET,
+      is_local: true,
+    });
+  } catch {
     // If this fails, get_decrypted_api_key may fail and fallback paths will be used.
-  });
+  }
 
   // Handle revalidation request
   if (isRevalidateRequest(body)) {

@@ -9,6 +9,7 @@ import type { FollowRelationship, UserProfile } from '@sn/types';
 import { bus } from '../bus';
 import { supabase } from '../supabase';
 
+import { createNotification } from './notifications';
 import type { SocialResult, PaginationOptions, Paginated, QueryResult } from './types';
 
 /**
@@ -125,6 +126,34 @@ export async function followUser(
     follow,
     isPending: status === 'pending',
   });
+
+  // Notify the target user they have a new follower (or follow request)
+  if (status === 'active') {
+    await createNotification(followingId, callerId, 'follow');
+  } else {
+    await createNotification(followingId, callerId, 'follow_request');
+  }
+
+  // Check for mutual follow — does the target already follow the caller?
+  if (status === 'active') {
+    const { data: reverse } = (await supabase
+      .from('follows')
+      .select('id')
+      .eq('follower_id', followingId)
+      .eq('following_id', callerId)
+      .eq('status', 'active')
+      .single()) as QueryResult<{ id: string }>;
+
+    if (reverse) {
+      // Mutual follow detected — notify both users
+      await createNotification(callerId, followingId, 'mutual_follow');
+      await createNotification(followingId, callerId, 'mutual_follow');
+      bus.emit(SocialGraphEvents.MUTUAL_FOLLOW_CREATED, {
+        userA: callerId,
+        userB: followingId,
+      });
+    }
+  }
 
   return { success: true, data: follow };
 }
@@ -261,9 +290,10 @@ export async function getFollowers(
 ): Promise<SocialResult<Paginated<UserProfile>>> {
   const limit = Math.min(options.limit ?? 20, 100);
 
+  // Step 1: Get follower IDs from follows table
   let query = supabase
     .from('follows')
-    .select('follower_id, user_profiles!follows_follower_id_fkey(*)')
+    .select('follower_id, created_at')
     .eq('following_id', userId)
     .eq('status', 'active')
     .order('created_at', { ascending: false })
@@ -273,8 +303,8 @@ export async function getFollowers(
     query = query.lt('created_at', options.cursor);
   }
 
-  const { data, error } = (await query) as QueryResult<
-    Array<{ follower_id: string; user_profiles: Record<string, unknown> }>
+  const { data: followRows, error } = (await query) as QueryResult<
+    Array<{ follower_id: string; created_at: string }>
   >;
 
   if (error) {
@@ -284,19 +314,30 @@ export async function getFollowers(
     };
   }
 
-  const items = (data ?? []).slice(0, limit);
-  const hasMore = (data ?? []).length > limit;
-  const nextCursor = hasMore && items.length > 0
-    ? (items[items.length - 1].user_profiles.created_at as string)
-    : undefined;
+  const rows = (followRows ?? []).slice(0, limit);
+  const hasMore = (followRows ?? []).length > limit;
+  const nextCursor = hasMore && rows.length > 0 ? rows[rows.length - 1].created_at : undefined;
+
+  if (rows.length === 0) {
+    return { success: true, data: { items: [], hasMore: false } };
+  }
+
+  // Step 2: Fetch profiles for those follower IDs
+  const followerIds = rows.map((r) => r.follower_id);
+  const { data: profiles } = (await supabase
+    .from('user_profiles')
+    .select('*')
+    .in('user_id', followerIds)) as QueryResult<Record<string, unknown>[]>;
+
+  const profileMap = new Map((profiles ?? []).map((p) => [p.user_id as string, p]));
+  const items = rows
+    .map((r) => profileMap.get(r.follower_id))
+    .filter((p): p is Record<string, unknown> => p != null)
+    .map(mapProfileRow);
 
   return {
     success: true,
-    data: {
-      items: items.map((row) => mapProfileRow(row.user_profiles)),
-      nextCursor,
-      hasMore,
-    },
+    data: { items, nextCursor, hasMore },
   };
 }
 
@@ -309,9 +350,10 @@ export async function getFollowing(
 ): Promise<SocialResult<Paginated<UserProfile>>> {
   const limit = Math.min(options.limit ?? 20, 100);
 
+  // Step 1: Get following IDs from follows table
   let query = supabase
     .from('follows')
-    .select('following_id, user_profiles!follows_following_id_fkey(*)')
+    .select('following_id, created_at')
     .eq('follower_id', userId)
     .eq('status', 'active')
     .order('created_at', { ascending: false })
@@ -321,8 +363,8 @@ export async function getFollowing(
     query = query.lt('created_at', options.cursor);
   }
 
-  const { data, error } = (await query) as QueryResult<
-    Array<{ following_id: string; user_profiles: Record<string, unknown> }>
+  const { data: followRows, error } = (await query) as QueryResult<
+    Array<{ following_id: string; created_at: string }>
   >;
 
   if (error) {
@@ -332,19 +374,30 @@ export async function getFollowing(
     };
   }
 
-  const items = (data ?? []).slice(0, limit);
-  const hasMore = (data ?? []).length > limit;
-  const nextCursor = hasMore && items.length > 0
-    ? (items[items.length - 1].user_profiles.created_at as string)
-    : undefined;
+  const rows = (followRows ?? []).slice(0, limit);
+  const hasMore = (followRows ?? []).length > limit;
+  const nextCursor = hasMore && rows.length > 0 ? rows[rows.length - 1].created_at : undefined;
+
+  if (rows.length === 0) {
+    return { success: true, data: { items: [], hasMore: false } };
+  }
+
+  // Step 2: Fetch profiles for those following IDs
+  const followingIds = rows.map((r) => r.following_id);
+  const { data: profiles } = (await supabase
+    .from('user_profiles')
+    .select('*')
+    .in('user_id', followingIds)) as QueryResult<Record<string, unknown>[]>;
+
+  const profileMap = new Map((profiles ?? []).map((p) => [p.user_id as string, p]));
+  const items = rows
+    .map((r) => profileMap.get(r.following_id))
+    .filter((p): p is Record<string, unknown> => p != null)
+    .map(mapProfileRow);
 
   return {
     success: true,
-    data: {
-      items: items.map((row) => mapProfileRow(row.user_profiles)),
-      nextCursor,
-      hasMore,
-    },
+    data: { items, nextCursor, hasMore },
   };
 }
 

@@ -1,5 +1,5 @@
 export { LabGraph } from './LabGraph';
-export type { LabGraphProps } from './LabGraph';
+export type { LabGraphProps, LabGraphAPI } from './LabGraph';
 export { NodeShell } from './NodeShell';
 export type { NodeShellProps } from './NodeShell';
 export { GlowEdge } from './GlowEdge';

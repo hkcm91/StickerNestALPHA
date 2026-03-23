@@ -1,13 +1,9 @@
 /**
- * DockerHeader — title bar with drag handle, controls, and dock mode toggle.
+ * DockerHeader — glass title bar with drag handle, controls, and dock mode toggle.
  *
  * @remarks
- * Features:
- * - Drag handle for moving floating dockers
- * - Docker name (editable)
- * - Pin toggle button
- * - Dock mode selector (floating / left / right)
- * - Close button
+ * Supports dragging in both floating AND docked modes. In docked mode,
+ * dragging past the undock threshold triggers an undock + float transition.
  *
  * @module shell/components/docker
  * @layer L6
@@ -17,66 +13,70 @@ import React, { useCallback, useRef, useState } from 'react';
 
 import type { DockerDockMode, Point2D } from '@sn/types';
 
+import { HOVER_TRANSITION, EMBER_RGB, STORM_RGB } from './docker-palette';
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
 export interface DockerHeaderProps {
-  /** Docker name */
   name: string;
-  /** Current dock mode */
   dockMode: DockerDockMode;
-  /** Whether docker is pinned */
   pinned: boolean;
-  /** Called when dragging (floating mode only). Passes total delta from start. */
   onDrag?: (delta: Point2D) => void;
-  /** Called when drag starts */
   onDragStart?: () => void;
-  /** Called when drag ends. Passes final mouse position for snap-to-dock. */
   onDragEnd?: (finalPos: Point2D) => void;
-  /** Called to rename the docker */
   onRename: (name: string) => void;
-  /** Called to change dock mode */
   onDockModeChange: (mode: DockerDockMode) => void;
-  /** Called to toggle pin state */
   onTogglePin: () => void;
-  /** Called to close/hide the docker */
   onClose: () => void;
+  /** Called to minimize the docker (floating mode only) */
+  onMinimize?: () => void;
 }
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-const HEADER_HEIGHT = 36;
+const HEADER_HEIGHT = 38;
 
 // ---------------------------------------------------------------------------
-// Icon Components (Improved SVGs)
+// Icon Components (16px, stroke-based)
 // ---------------------------------------------------------------------------
 
 const PinIcon: React.FC<{ pinned: boolean }> = ({ pinned }) => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 10V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v2a2 2 0 0 0 1 1.73L12 17l8-5.27A2 2 0 0 0 21 10z" fill={pinned ? 'currentColor' : 'none'} />
-    <path d="M12 22v-5" />
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    {pinned ? (
+      <>
+        <line x1="12" y1="17" x2="12" y2="22" />
+        <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z" />
+      </>
+    ) : (
+      <>
+        <line x1="2" y1="2" x2="22" y2="22" />
+        <line x1="12" y1="17" x2="12" y2="22" />
+        <path d="M9 9v1.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H9.2" />
+      </>
+    )}
   </svg>
 );
 
 const DockLeftIcon: React.FC = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
     <line x1="9" y1="3" x2="9" y2="21" />
   </svg>
 );
 
 const DockRightIcon: React.FC = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
     <line x1="15" y1="3" x2="15" y2="21" />
   </svg>
 );
 
 const FloatIcon: React.FC = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M15 3h6v6" />
     <path d="M9 21H3v-6" />
     <path d="M21 3l-7 7" />
@@ -85,11 +85,36 @@ const FloatIcon: React.FC = () => (
 );
 
 const CloseIcon: React.FC = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <line x1="18" y1="6" x2="6" y2="18" />
     <line x1="6" y1="6" x2="18" y2="18" />
   </svg>
 );
+
+const MinimizeIcon: React.FC = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="5" y1="12" x2="19" y2="12" />
+  </svg>
+);
+
+// ---------------------------------------------------------------------------
+// Shared button style
+// ---------------------------------------------------------------------------
+
+const btnBase: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: 26,
+  height: 26,
+  padding: 0,
+  border: 'none',
+  background: 'transparent',
+  color: 'var(--sn-text-muted, #7A7784)',
+  borderRadius: 6,
+  cursor: 'pointer',
+  transition: HOVER_TRANSITION,
+};
 
 // ---------------------------------------------------------------------------
 // Component
@@ -106,21 +131,22 @@ export const DockerHeader: React.FC<DockerHeaderProps> = ({
   onDockModeChange,
   onTogglePin,
   onClose,
+  onMinimize,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(name);
+  const [isGrabbing, setIsGrabbing] = useState(false);
   const dragStart = useRef<Point2D | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Handle drag for floating mode
+  // Handle drag — works for both floating AND docked modes
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
-      // Don't start drag if clicking on buttons or input
       if ((e.target as HTMLElement).closest('button, input')) return;
-      if (dockMode !== 'floating') return;
 
       e.preventDefault();
       dragStart.current = { x: e.clientX, y: e.clientY };
+      setIsGrabbing(true);
       onDragStart?.();
 
       const handleMouseMove = (moveEvent: MouseEvent) => {
@@ -136,6 +162,7 @@ export const DockerHeader: React.FC<DockerHeaderProps> = ({
 
       const handleMouseUp = (upEvent: MouseEvent) => {
         dragStart.current = null;
+        setIsGrabbing(false);
         onDragEnd?.({ x: upEvent.clientX, y: upEvent.clientY });
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
@@ -144,7 +171,7 @@ export const DockerHeader: React.FC<DockerHeaderProps> = ({
       document.addEventListener('mousemove', handleMouseMove, { passive: true });
       document.addEventListener('mouseup', handleMouseUp);
     },
-    [dockMode, onDrag, onDragStart, onDragEnd]
+    [onDrag, onDragStart, onDragEnd]
   );
 
   // Handle name editing
@@ -192,23 +219,17 @@ export const DockerHeader: React.FC<DockerHeaderProps> = ({
         display: 'flex',
         alignItems: 'center',
         height: HEADER_HEIGHT,
-        padding: '0 8px',
-        background: 'var(--sn-surface, #fff)',
-        borderBottom: '1px solid var(--sn-border, #e0e0e0)',
-        cursor: dockMode === 'floating' ? 'move' : 'default',
+        padding: '0 8px 0 12px',
+        background: 'linear-gradient(135deg, rgba(255,255,255,0.03) 0%, transparent 50%)',
+        borderBottom: '1px solid rgba(255,255,255,0.06)',
+        cursor: isGrabbing ? 'grabbing' : 'grab',
         userSelect: 'none',
-        gap: '4px',
+        gap: 2,
         flexShrink: 0,
       }}
     >
       {/* Docker name */}
-      <div
-        style={{
-          flex: 1,
-          minWidth: 0,
-          overflow: 'hidden',
-        }}
-      >
+      <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
         {isEditing ? (
           <input
             ref={inputRef}
@@ -219,11 +240,14 @@ export const DockerHeader: React.FC<DockerHeaderProps> = ({
             onKeyDown={handleKeyDown}
             style={{
               width: '100%',
-              padding: '2px 4px',
-              border: '1px solid var(--sn-accent, #3b82f6)',
-              borderRadius: '3px',
-              fontSize: '13px',
-              fontFamily: 'var(--sn-font-family, system-ui)',
+              padding: '2px 6px',
+              border: `1px solid rgba(${STORM_RGB.r},${STORM_RGB.g},${STORM_RGB.b},0.4)`,
+              borderRadius: 4,
+              fontSize: 13,
+              fontFamily: 'var(--sn-font-family, "Outfit", system-ui)',
+              fontWeight: 400,
+              color: 'var(--sn-text, #E8E6ED)',
+              background: 'rgba(255,255,255,0.06)',
               outline: 'none',
             }}
           />
@@ -233,9 +257,10 @@ export const DockerHeader: React.FC<DockerHeaderProps> = ({
             title="Double-click to rename"
             style={{
               display: 'block',
-              fontSize: '13px',
-              fontWeight: 500,
-              color: 'var(--sn-text, #1f2937)',
+              fontSize: 13,
+              fontWeight: 400,
+              letterSpacing: '0.01em',
+              color: 'var(--sn-text-soft, #B8B5C0)',
               whiteSpace: 'nowrap',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
@@ -253,18 +278,28 @@ export const DockerHeader: React.FC<DockerHeaderProps> = ({
         onClick={onTogglePin}
         title={pinned ? 'Unpin' : 'Pin'}
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: '24px',
-          height: '24px',
-          padding: 0,
-          border: 'none',
-          background: pinned ? 'var(--sn-accent, #3b82f6)' : 'transparent',
-          color: pinned ? '#fff' : 'var(--sn-text-muted, #6b7280)',
-          borderRadius: '4px',
-          cursor: 'pointer',
-          transition: 'background 0.15s, color 0.15s',
+          ...btnBase,
+          background: pinned
+            ? `rgba(${EMBER_RGB.r},${EMBER_RGB.g},${EMBER_RGB.b},0.15)`
+            : 'transparent',
+          color: pinned
+            ? `rgb(${EMBER_RGB.r},${EMBER_RGB.g},${EMBER_RGB.b})`
+            : 'var(--sn-text-muted, #7A7784)',
+          boxShadow: pinned
+            ? `0 0 8px rgba(${EMBER_RGB.r},${EMBER_RGB.g},${EMBER_RGB.b},0.15)`
+            : 'none',
+        }}
+        onMouseEnter={(e) => {
+          if (!pinned) {
+            e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+            e.currentTarget.style.color = 'var(--sn-text-soft, #B8B5C0)';
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (!pinned) {
+            e.currentTarget.style.background = 'transparent';
+            e.currentTarget.style.color = 'var(--sn-text-muted, #7A7784)';
+          }
         }}
       >
         <PinIcon pinned={pinned} />
@@ -275,42 +310,52 @@ export const DockerHeader: React.FC<DockerHeaderProps> = ({
         data-testid="docker-dock-mode"
         onClick={cycleDockMode}
         title={`Dock mode: ${dockMode}`}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: '24px',
-          height: '24px',
-          padding: 0,
-          border: 'none',
-          background: 'transparent',
-          color: 'var(--sn-text-muted, #6b7280)',
-          borderRadius: '4px',
-          cursor: 'pointer',
-          transition: 'background 0.15s, color 0.15s',
+        style={btnBase}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+          e.currentTarget.style.color = 'var(--sn-text-soft, #B8B5C0)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = 'transparent';
+          e.currentTarget.style.color = 'var(--sn-text-muted, #7A7784)';
         }}
       >
         <DockIcon />
       </button>
+
+      {/* Minimize button (floating mode only) */}
+      {onMinimize && (
+        <button
+          data-testid="docker-header-minimize"
+          onClick={onMinimize}
+          title="Minimize to pill"
+          style={btnBase}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+            e.currentTarget.style.color = 'var(--sn-text-soft, #B8B5C0)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'transparent';
+            e.currentTarget.style.color = 'var(--sn-text-muted, #7A7784)';
+          }}
+        >
+          <MinimizeIcon />
+        </button>
+      )}
 
       {/* Close button */}
       <button
         data-testid="docker-header-close"
         onClick={onClose}
         title="Close"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: '24px',
-          height: '24px',
-          padding: 0,
-          border: 'none',
-          background: 'transparent',
-          color: 'var(--sn-text-muted, #6b7280)',
-          borderRadius: '4px',
-          cursor: 'pointer',
-          transition: 'background 0.15s, color 0.15s',
+        style={btnBase}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = 'rgba(200,88,88,0.15)';
+          e.currentTarget.style.color = '#C85858';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = 'transparent';
+          e.currentTarget.style.color = 'var(--sn-text-muted, #7A7784)';
         }}
       >
         <CloseIcon />
