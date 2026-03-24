@@ -53,6 +53,10 @@ export interface StickerNestSDK {
   subscribeCrossCanvas(channel: string, handler: (payload: unknown) => void): void;
   /** Cross-canvas event unsubscription */
   unsubscribeCrossCanvas(channel: string): void;
+  /** Create an entity on the canvas (requires canvas-write permission) */
+  createEntity(entity: Record<string, unknown>): Promise<{ success: boolean; entityId?: string }>;
+  /** Delete an entity from the canvas (requires canvas-write permission) */
+  deleteEntity(entityId: string): Promise<{ success: boolean; entityId?: string }>;
   /** DataSource API — persistent data access through host proxy */
   datasource: {
     create(dsType: string, scope: string, options?: { schema?: Record<string, unknown>; metadata?: Record<string, unknown> }): Promise<unknown>;
@@ -213,6 +217,15 @@ export function generateSDKTemplate(): string {
         }
         break;
 
+      case 'ENTITY_RESPONSE':
+        var entityKey = 'entity_' + data.requestId;
+        if (data.error) {
+          rejectPending(entityKey, new Error(data.error));
+        } else {
+          resolvePending(entityKey, data.result);
+        }
+        break;
+
       case 'DESTROY':
         _eventHandlers = {};
         _themeHandlers = [];
@@ -350,6 +363,24 @@ export function generateSDKTemplate(): string {
     unsubscribeCrossCanvas: function(channel) {
       delete _crossCanvasHandlers[channel];
       postToHost({ type: 'CROSS_CANVAS_UNSUBSCRIBE', channel: channel });
+    },
+
+    /** Create an entity on the canvas (requires canvas-write permission) */
+    createEntity: function(entity) {
+      return new Promise(function(resolve, reject) {
+        var requestId = 'req_' + (++_requestCounter);
+        addPendingRequest('entity_' + requestId, resolve, reject);
+        postToHost({ type: 'CREATE_ENTITY', requestId: requestId, entity: entity });
+      });
+    },
+
+    /** Delete an entity from the canvas (requires canvas-write permission) */
+    deleteEntity: function(entityId) {
+      return new Promise(function(resolve, reject) {
+        var requestId = 'req_' + (++_requestCounter);
+        addPendingRequest('entity_' + requestId, resolve, reject);
+        postToHost({ type: 'DELETE_ENTITY', requestId: requestId, entityId: entityId });
+      });
     },
 
     /** DataSource API — persistent data access through host proxy */

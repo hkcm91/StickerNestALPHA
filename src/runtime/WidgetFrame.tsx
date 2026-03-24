@@ -18,6 +18,7 @@ import { useWidgetStore } from '../kernel/stores/widget/widget.store';
 import { createWidgetBridge } from './bridge/bridge';
 import type { WidgetBridge } from './bridge/bridge';
 import { handleDataSourceMessage } from './bridge/datasource-handler';
+import { handleEntityMessage } from './bridge/entity-handler';
 import type { ThemeTokens } from './bridge/message-types';
 import { getSharedCrossCanvasRouter, isValidChannelName } from './cross-canvas/cross-canvas-router';
 import type { CrossCanvasRouter } from './cross-canvas/cross-canvas-router';
@@ -426,8 +427,10 @@ const WidgetIframe: React.FC<WidgetFrameProps> = (props) => {
         }
 
         default:
-          // Delegate DataSource messages to the dedicated handler
-          handleDataSourceMessage(message, { widgetId, instanceId, bridge });
+          // Delegate to entity handler first, then DataSource handler
+          if (!handleEntityMessage(message, { widgetId, instanceId, bridge })) {
+            handleDataSourceMessage(message, { widgetId, instanceId, bridge });
+          }
           break;
       }
     });
