@@ -67,6 +67,9 @@ const WidgetMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('MCP_RESOURCE_READ'), requestId: z.string(), serverName: z.string(), uri: z.string() }),
   z.object({ type: z.literal('MCP_LIST_TOOLS'), requestId: z.string(), serverName: z.string() }),
   z.object({ type: z.literal('MCP_LIST_RESOURCES'), requestId: z.string(), serverName: z.string() }),
+  // AI completion messages
+  z.object({ type: z.literal('AI_COMPLETE'), requestId: z.string(), prompt: z.string(), systemPrompt: z.string().optional(), model: z.string().optional(), maxTokens: z.number().optional() }),
+  z.object({ type: z.literal('AI_STREAM'), requestId: z.string(), prompt: z.string(), systemPrompt: z.string().optional(), model: z.string().optional(), maxTokens: z.number().optional() }),
 ]);
 
 // ---------------------------------------------------------------------------
@@ -96,6 +99,8 @@ const HostMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('CROSS_CANVAS_EVENT'), channel: z.string(), payload: z.unknown() }),
   z.object({ type: z.literal('DS_RESPONSE'), requestId: z.string(), result: z.unknown(), error: z.string().optional() }),
   z.object({ type: z.literal('MCP_RESPONSE'), requestId: z.string(), result: z.unknown(), error: z.string().optional() }),
+  z.object({ type: z.literal('AI_RESPONSE'), requestId: z.string(), text: z.string(), error: z.string().optional() }),
+  z.object({ type: z.literal('AI_CHUNK'), requestId: z.string(), chunk: z.string(), done: z.boolean() }),
   z.object({ type: z.literal('DESTROY') }),
 ]);
 

@@ -38,6 +38,8 @@ export type HostMessage =
   | { type: 'CROSS_CANVAS_EVENT'; channel: string; payload: unknown }
   | { type: 'DS_RESPONSE'; requestId: string; result: unknown; error?: string }
   | { type: 'MCP_RESPONSE'; requestId: string; result: unknown; error?: string }
+  | { type: 'AI_RESPONSE'; requestId: string; text: string; error?: string }
+  | { type: 'AI_CHUNK'; requestId: string; chunk: string; done: boolean }
   | { type: 'DESTROY' };
 
 /**
@@ -72,4 +74,6 @@ export type WidgetMessage =
   | { type: 'MCP_TOOL_CALL'; requestId: string; serverName: string; toolName: string; args: Record<string, unknown> }
   | { type: 'MCP_RESOURCE_READ'; requestId: string; serverName: string; uri: string }
   | { type: 'MCP_LIST_TOOLS'; requestId: string; serverName: string }
-  | { type: 'MCP_LIST_RESOURCES'; requestId: string; serverName: string };
+  | { type: 'MCP_LIST_RESOURCES'; requestId: string; serverName: string }
+  | { type: 'AI_COMPLETE'; requestId: string; prompt: string; systemPrompt?: string; model?: string; maxTokens?: number }
+  | { type: 'AI_STREAM'; requestId: string; prompt: string; systemPrompt?: string; model?: string; maxTokens?: number };

@@ -53,6 +53,11 @@ export interface StickerNestSDK {
   subscribeCrossCanvas(channel: string, handler: (payload: unknown) => void): void;
   /** Cross-canvas event unsubscription */
   unsubscribeCrossCanvas(channel: string): void;
+  /** AI completion API through host proxy (requires 'ai' permission) */
+  ai: {
+    complete(prompt: string, options?: { systemPrompt?: string; model?: string; maxTokens?: number }): Promise<string>;
+    stream(prompt: string, options?: { systemPrompt?: string; model?: string; maxTokens?: number }): Promise<AsyncIterable<string>>;
+  };
   /** MCP (Model Context Protocol) server access through host proxy */
   mcp(serverName: string): {
     callTool(toolName: string, args?: Record<string, unknown>): Promise<unknown>;
@@ -97,6 +102,7 @@ export function generateSDKTemplate(): string {
   var _themeHandlers = [];
   var _resizeHandlers = [];
   var _crossCanvasHandlers = {};
+  var _aiStreams = {};
   var _pendingRequests = {};
   var _requestCounter = 0;
   var REQUEST_TIMEOUT_MS = 10000;
@@ -226,6 +232,37 @@ export function generateSDKTemplate(): string {
           rejectPending(mcpKey, new Error(data.error));
         } else {
           resolvePending(mcpKey, data.result);
+        }
+        break;
+
+      case 'AI_RESPONSE':
+        var aiKey = 'ai_' + data.requestId;
+        if (data.error) {
+          rejectPending(aiKey, new Error(data.error));
+        } else {
+          resolvePending(aiKey, data.text);
+        }
+        break;
+
+      case 'AI_CHUNK':
+        var aiStreamKey = 'ai_stream_' + data.requestId;
+        var streamState = _aiStreams[data.requestId];
+        if (streamState) {
+          if (data.done) {
+            streamState.done = true;
+            if (streamState.resolve) {
+              streamState.resolve({ value: undefined, done: true });
+              streamState.resolve = null;
+            }
+            delete _aiStreams[data.requestId];
+          } else {
+            streamState.buffer.push(data.chunk);
+            if (streamState.resolve) {
+              var chunk = streamState.buffer.shift();
+              streamState.resolve({ value: chunk, done: false });
+              streamState.resolve = null;
+            }
+          }
         }
         break;
 
@@ -369,6 +406,55 @@ export function generateSDKTemplate(): string {
     },
 
     /** DataSource API — persistent data access through host proxy */
+    ai: {
+      complete: function(prompt, options) {
+        return new Promise(function(resolve, reject) {
+          var requestId = 'req_' + (++_requestCounter);
+          addPendingRequest('ai_' + requestId, resolve, reject);
+          postToHost({
+            type: 'AI_COMPLETE',
+            requestId: requestId,
+            prompt: prompt,
+            systemPrompt: options && options.systemPrompt,
+            model: options && options.model,
+            maxTokens: options && options.maxTokens
+          });
+        });
+      },
+      stream: function(prompt, options) {
+        var requestId = 'req_' + (++_requestCounter);
+        var streamState = { buffer: [], done: false, resolve: null };
+        _aiStreams[requestId] = streamState;
+
+        postToHost({
+          type: 'AI_STREAM',
+          requestId: requestId,
+          prompt: prompt,
+          systemPrompt: options && options.systemPrompt,
+          model: options && options.model,
+          maxTokens: options && options.maxTokens
+        });
+
+        var iterator = {};
+        iterator[Symbol.asyncIterator] = function() {
+          return {
+            next: function() {
+              if (streamState.buffer.length > 0) {
+                return Promise.resolve({ value: streamState.buffer.shift(), done: false });
+              }
+              if (streamState.done) {
+                return Promise.resolve({ value: undefined, done: true });
+              }
+              return new Promise(function(resolve) {
+                streamState.resolve = resolve;
+              });
+            }
+          };
+        };
+        return Promise.resolve(iterator);
+      }
+    },
+
     mcp: function(serverName) {
       return {
         callTool: function(toolName, args) {
