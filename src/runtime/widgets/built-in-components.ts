@@ -9,6 +9,7 @@
 
 import type React from 'react';
 
+import { AICanvasAgentWidget } from './ai-canvas-agent/ai-canvas-agent.widget';
 import { ImageGeneratorWidget } from './image-generator/image-generator.widget';
 import { KanbanWidget } from './kanban/kanban.widget';
 import { PathfinderWidget } from './pathfinder/pathfinder.widget';
@@ -18,6 +19,7 @@ import { TodoListWidget } from './todo-list/todo-list.widget';
  * Map of widget IDs to their React component implementations.
  */
 export const BUILT_IN_WIDGET_COMPONENTS: Record<string, React.ComponentType<any>> = {
+  'sn.builtin.ai-canvas-agent': AICanvasAgentWidget,
   'sn.builtin.image-generator': ImageGeneratorWidget,
   'sn.builtin.kanban': KanbanWidget,
   'sn.builtin.pathfinder': PathfinderWidget,

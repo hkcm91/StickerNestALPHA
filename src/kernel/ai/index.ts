@@ -23,3 +23,23 @@ export {
   type BuildAIPromptOptions,
   type AIPrompt,
 } from './prompt-builder';
+
+export {
+  entityDistance,
+  pointToEntityDistance,
+  entitiesOverlap,
+  entityContains,
+  findNearbyEntities,
+  findKNearest,
+  findOverlapping,
+  computeSpatialRelations,
+  type ProximityQuery,
+  type ProximityResult,
+} from './proximity';
+
+export {
+  createEventStream,
+  type EventStream,
+  type EventStreamEntry,
+  type EventStreamOptions,
+} from './event-stream';
