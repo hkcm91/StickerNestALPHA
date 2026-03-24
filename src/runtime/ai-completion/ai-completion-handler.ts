@@ -52,27 +52,62 @@ function checkAiRateLimit(instanceId: string): boolean {
 }
 
 // ---------------------------------------------------------------------------
-// Edge function helpers
+// Dev proxy vs edge function routing
 // ---------------------------------------------------------------------------
 
-async function getAuthHeaders(): Promise<Record<string, string> | null> {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) return null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const isDev = (import.meta as any).env?.DEV ?? false;
 
-  return {
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${session.access_token}`,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    apikey: (import.meta as any).env?.VITE_SUPABASE_ANON_KEY ?? '',
-  };
-}
+/**
+ * In dev mode, route AI requests to the local vite proxy at /api/ai/generate.
+ * In production, route to the Supabase edge function.
+ */
+function getAiEndpointUrl(): string {
+  if (isDev) return '/api/ai/generate';
 
-function getEdgeFunctionUrl(): string {
   const supabaseUrl = (supabase as unknown as { supabaseUrl?: string }).supabaseUrl
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ?? (import.meta as any).env?.VITE_SUPABASE_URL
     ?? '';
   return `${supabaseUrl}/functions/v1/ai-widget-generate`;
+}
+
+async function getRequestHeaders(): Promise<Record<string, string>> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+
+  // In production, add auth headers for the edge function
+  if (!isDev) {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      headers.Authorization = `Bearer ${session.access_token}`;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      headers.apikey = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY ?? '';
+    }
+  }
+
+  return headers;
+}
+
+/**
+ * Resolve provider and model from the requested model ID.
+ * Model IDs like 'replicate/kimi-k2.5' map to provider='replicate', model='moonshotai/kimi-k2.5'.
+ */
+function resolveProviderAndModel(modelId?: string): { provider: string; model: string } {
+  if (!modelId) return { provider: 'anthropic', model: 'claude-sonnet-4-20250514' };
+
+  if (modelId.startsWith('replicate/')) {
+    // Map known model IDs to Replicate model paths
+    const modelMap: Record<string, string> = {
+      'replicate/kimi-k2.5': 'moonshotai/kimi-k2.5',
+      'replicate/llama-4-maverick': 'meta/llama-4-maverick-instruct',
+      'replicate/qwen3-235b': 'qwen/qwen3-235b-a22b-instruct-2507',
+    };
+    return { provider: 'replicate', model: modelMap[modelId] ?? modelId.replace('replicate/', '') };
+  }
+
+  return { provider: 'anthropic', model: modelId };
 }
 
 // ---------------------------------------------------------------------------
@@ -152,33 +187,37 @@ async function handleComplete(
   const { instanceId, bridge } = ctx;
 
   try {
-    const headers = await getAuthHeaders();
-    if (!headers) {
-      bridge.send({ type: 'AI_RESPONSE', requestId: message.requestId, text: '', error: 'Not authenticated' });
-      return;
-    }
+    const headers = await getRequestHeaders();
+    const { provider, model } = resolveProviderAndModel(message.model);
+    const url = getAiEndpointUrl();
 
-    const response = await supabase.functions.invoke('ai-widget-generate', {
-      body: {
-        provider: 'anthropic',
-        model: message.model ?? 'claude-sonnet-4-20250514',
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        provider,
+        model,
         prompt: buildPrompt(message.prompt, message.systemPrompt),
+        systemPrompt: message.systemPrompt,
         type: 'ai-completion',
         maxTokens: message.maxTokens,
-      },
-      headers: { Authorization: headers.Authorization },
+      }),
     });
 
-    if (response.error) {
-      const errorMsg = response.error.message ?? 'Edge function error';
+    if (!response.ok) {
+      let errorMsg = `AI request failed (${response.status})`;
+      try {
+        const errorBody = await response.json();
+        if ((errorBody as { error?: string })?.error) errorMsg = (errorBody as { error: string }).error;
+      } catch { /* not JSON */ }
       bridge.send({ type: 'AI_RESPONSE', requestId: message.requestId, text: '', error: errorMsg });
       bus.emit('ai.error', { instanceId, reason: 'completion_failed', error: errorMsg });
       return;
     }
 
-    const body = response.data as { success: boolean; text?: string; html?: string; error?: string } | null;
-    if (!body || !body.success) {
-      bridge.send({ type: 'AI_RESPONSE', requestId: message.requestId, text: '', error: body?.error ?? 'Empty response' });
+    const body = await response.json() as { success?: boolean; text?: string; html?: string; error?: string };
+    if (body.error) {
+      bridge.send({ type: 'AI_RESPONSE', requestId: message.requestId, text: '', error: body.error });
       return;
     }
 
@@ -203,84 +242,51 @@ async function handleStream(
   const { instanceId, bridge } = ctx;
 
   try {
-    const headers = await getAuthHeaders();
-    if (!headers) {
-      bridge.send({ type: 'AI_CHUNK', requestId: message.requestId, chunk: '', done: true });
-      bridge.send({ type: 'AI_RESPONSE', requestId: message.requestId, text: '', error: 'Not authenticated' });
-      return;
-    }
+    const headers = await getRequestHeaders();
+    const { provider, model } = resolveProviderAndModel(message.model);
+    const url = getAiEndpointUrl();
 
-    const functionsUrl = getEdgeFunctionUrl();
-
-    const res = await fetch(functionsUrl, {
+    // For the local dev proxy, streaming is not supported — fall back to
+    // a non-streaming request and send the full response as a single chunk.
+    const res = await fetch(url, {
       method: 'POST',
       headers,
       body: JSON.stringify({
-        provider: 'anthropic',
-        model: message.model ?? 'claude-sonnet-4-20250514',
+        provider,
+        model,
         prompt: buildPrompt(message.prompt, message.systemPrompt),
+        systemPrompt: message.systemPrompt,
         type: 'ai-completion',
-        stream: true,
         maxTokens: message.maxTokens,
       }),
     });
 
     if (!res.ok) {
-      let errorMsg = `Edge function error (${res.status})`;
+      let errorMsg = `AI request failed (${res.status})`;
       try {
         const errorBody = await res.json();
-        if (errorBody?.error) errorMsg = errorBody.error;
-      } catch {
-        // Not JSON
-      }
+        if ((errorBody as { error?: string })?.error) errorMsg = (errorBody as { error: string }).error;
+      } catch { /* not JSON */ }
       bridge.send({ type: 'AI_CHUNK', requestId: message.requestId, chunk: '', done: true });
       bridge.send({ type: 'AI_RESPONSE', requestId: message.requestId, text: '', error: errorMsg });
       return;
     }
 
-    if (!res.body) {
+    const body = await res.json() as { success?: boolean; text?: string; html?: string; error?: string };
+    if (body.error) {
       bridge.send({ type: 'AI_CHUNK', requestId: message.requestId, chunk: '', done: true });
-      bridge.send({ type: 'AI_RESPONSE', requestId: message.requestId, text: '', error: 'No response body' });
+      bridge.send({ type: 'AI_RESPONSE', requestId: message.requestId, text: '', error: body.error });
       return;
     }
 
-    // Read SSE stream
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let sseBuffer = '';
+    const text = body.text ?? body.html ?? '';
 
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      sseBuffer += decoder.decode(value, { stream: true });
-
-      // Process complete SSE lines
-      const lines = sseBuffer.split('\n');
-      sseBuffer = lines.pop() ?? '';
-
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          const data = line.slice(6);
-          if (data === '[DONE]') continue;
-
-          try {
-            const parsed = JSON.parse(data);
-            const chunk = parsed.token ?? parsed.text ?? parsed.chunk ?? '';
-            if (chunk) {
-              bridge.send({ type: 'AI_CHUNK', requestId: message.requestId, chunk, done: false });
-            }
-          } catch {
-            // Non-JSON SSE data — treat as raw text chunk
-            if (data.trim()) {
-              bridge.send({ type: 'AI_CHUNK', requestId: message.requestId, chunk: data, done: false });
-            }
-          }
-        }
-      }
+    // Simulate streaming by sending the response in chunks
+    const chunkSize = 20;
+    for (let i = 0; i < text.length; i += chunkSize) {
+      bridge.send({ type: 'AI_CHUNK', requestId: message.requestId, chunk: text.slice(i, i + chunkSize), done: false });
     }
 
-    // Signal stream end
     bridge.send({ type: 'AI_CHUNK', requestId: message.requestId, chunk: '', done: true });
     bus.emit('ai.completion.completed', { instanceId, model: message.model, streamed: true });
   } catch (err: unknown) {

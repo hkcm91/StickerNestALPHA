@@ -29,14 +29,20 @@ vi.mock('../../kernel/supabase/client', () => ({
         data: { session: { access_token: 'test-token' } },
       }),
     },
-    functions: {
-      invoke: vi.fn().mockResolvedValue({
-        data: { success: true, text: 'Hello from AI' },
-        error: null,
-      }),
-    },
   },
 }));
+
+// Mock fetch for AI proxy requests
+const mockFetch = vi.fn();
+vi.stubGlobal('fetch', mockFetch);
+
+function mockFetchResponse(body: Record<string, unknown>, ok = true) {
+  mockFetch.mockResolvedValueOnce({
+    ok,
+    status: ok ? 200 : 500,
+    json: () => Promise.resolve(body),
+  });
+}
 
 function createMockBridge(): WidgetBridge & { sentMessages: unknown[] } {
   const sentMessages: unknown[] = [];
@@ -84,6 +90,7 @@ describe('AI Completion Handler', () => {
     for (const key of Object.keys(ws.registry)) {
       ws.unregisterWidget(key);
     }
+    mockFetch.mockReset();
   });
 
   describe('permission enforcement', () => {
@@ -161,13 +168,14 @@ describe('AI Completion Handler', () => {
     it('handles AI_COMPLETE with ai permission', async () => {
       const bridge = createMockBridge();
       registerWidgetWithPermissions('test-widget', ['ai']);
+      mockFetchResponse({ success: true, text: 'Hello from AI' });
 
       handleAiCompletionMessage(
         { type: 'AI_COMPLETE', requestId: 'r1', prompt: 'say hello' } as WidgetMessage,
         { widgetId: 'test-widget', instanceId: 'complete-inst', bridge },
       );
 
-      // Wait for async edge function call
+      // Wait for async fetch call
       await vi.waitFor(() => {
         expect(bridge.sentMessages).toHaveLength(1);
       });
