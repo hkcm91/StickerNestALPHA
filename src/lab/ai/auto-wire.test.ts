@@ -163,6 +163,88 @@ describe('autoWireWidget', () => {
     expect(api.addedEdges).toHaveLength(0);
   });
 
+  it('wires synonym-matched ports (changed ↔ updated)', () => {
+    const newManifest = createManifest({
+      name: 'Counter',
+      events: {
+        emits: [{ name: 'countChanged' }],
+        subscribes: [],
+      },
+    });
+
+    const selected = createWidget({
+      name: 'Display',
+      portContracts: {
+        emits: [],
+        subscribes: [{ name: 'countUpdated' }],
+      },
+    });
+
+    const api = createGraphAPI([
+      { id: 'node-0', label: 'Counter' },
+      { id: 'node-1', label: 'Display', widgetId: 'target-1' },
+    ]);
+
+    autoWireWidget('gen-1', newManifest, [selected], api, []);
+
+    // Synonym match: changed ↔ updated → score 0.7 (≥ default minScore 0.7)
+    expect(api.addedEdges).toHaveLength(1);
+  });
+
+  it('wires normalized-matched ports (camelCase ↔ kebab-case)', () => {
+    const newManifest = createManifest({
+      name: 'Widget',
+      events: {
+        emits: [{ name: 'itemCreated' }],
+        subscribes: [],
+      },
+    });
+
+    const selected = createWidget({
+      name: 'List',
+      portContracts: {
+        emits: [],
+        subscribes: [{ name: 'item-created' }],
+      },
+    });
+
+    const api = createGraphAPI([
+      { id: 'node-0', label: 'Widget' },
+      { id: 'node-1', label: 'List', widgetId: 'target-1' },
+    ]);
+
+    autoWireWidget('gen-1', newManifest, [selected], api, []);
+
+    expect(api.addedEdges).toHaveLength(1);
+  });
+
+  it('respects minScore option', () => {
+    const newManifest = createManifest({
+      name: 'Counter',
+      events: {
+        emits: [{ name: 'countChanged' }],
+        subscribes: [],
+      },
+    });
+
+    const selected = createWidget({
+      name: 'Display',
+      portContracts: {
+        emits: [],
+        subscribes: [{ name: 'countUpdated' }],
+      },
+    });
+
+    const api = createGraphAPI([
+      { id: 'node-0', label: 'Counter' },
+      { id: 'node-1', label: 'Display', widgetId: 'target-1' },
+    ]);
+
+    // Synonym score is 0.7 — setting minScore to 0.8 should exclude it
+    autoWireWidget('gen-1', newManifest, [selected], api, [], { minScore: 0.8 });
+    expect(api.addedEdges).toHaveLength(0);
+  });
+
   it('adds selected widget from registry if not in graph', () => {
     const newManifest = createManifest({
       name: 'Timer',

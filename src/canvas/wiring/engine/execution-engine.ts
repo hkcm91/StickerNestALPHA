@@ -127,11 +127,126 @@ export function createExecutionEngine(graph: PipelineGraph): ExecutionEngine {
         );
         break;
       }
+
+      case 'switch': {
+        const conditions = node.config?.conditions as Array<{ portId: string; expression: string }> | undefined;
+        if (conditions && payload && typeof payload === 'object') {
+          let matched = false;
+          for (const cond of conditions) {
+            const val = (payload as Record<string, unknown>)[cond.expression];
+            if (val) {
+              // Forward to the specific output port for this condition
+              const condEdges = edges.filter(
+                (e) => e.sourceNodeId === node.id && e.sourcePortId === cond.portId,
+              );
+              for (const edge of condEdges) {
+                const targetNode = graph.getNode(edge.targetNodeId);
+                if (targetNode) processNode(targetNode, edge.targetPortId, payload);
+              }
+              matched = true;
+              break;
+            }
+          }
+          // Fallthrough: forward to 'default' output port if no condition matched
+          if (!matched) {
+            const defaultEdges = edges.filter(
+              (e) => e.sourceNodeId === node.id && e.sourcePortId === 'default',
+            );
+            for (const edge of defaultEdges) {
+              const targetNode = graph.getNode(edge.targetNodeId);
+              if (targetNode) processNode(targetNode, edge.targetPortId, payload);
+            }
+          }
+        } else {
+          forwardFromNode(node.id, payload, edges);
+        }
+        break;
+      }
+
+      case 'accumulate': {
+        const nodeId = node.id;
+        const count = (node.config?.count as number) ?? 0;
+        const windowMs = (node.config?.windowMs as number) ?? 0;
+        const mode = (node.config?.mode as string) ?? 'count';
+
+        if (!accumulateBuffers.has(nodeId)) {
+          accumulateBuffers.set(nodeId, []);
+        }
+        const buffer = accumulateBuffers.get(nodeId)!;
+        buffer.push(payload);
+
+        const shouldFlush =
+          (mode === 'count' && count > 0 && buffer.length >= count) ||
+          (mode === 'both' && count > 0 && buffer.length >= count);
+
+        if (shouldFlush) {
+          const batch = buffer.splice(0);
+          forwardFromNode(nodeId, batch, edges);
+          // Clear any pending timer
+          if (accumulateTimers.has(nodeId)) {
+            clearTimeout(accumulateTimers.get(nodeId)!);
+            accumulateTimers.delete(nodeId);
+          }
+        } else if ((mode === 'time' || mode === 'both') && windowMs > 0 && !accumulateTimers.has(nodeId)) {
+          accumulateTimers.set(
+            nodeId,
+            setTimeout(() => {
+              accumulateTimers.delete(nodeId);
+              const buf = accumulateBuffers.get(nodeId);
+              if (buf && buf.length > 0) {
+                const batch = buf.splice(0);
+                forwardFromNode(nodeId, batch, edges);
+              }
+            }, windowMs) as unknown as number,
+          );
+        }
+        break;
+      }
+
+      case 'ai-transform': {
+        const prompt = node.config?.prompt as string | undefined;
+        const nodeId = node.id;
+        if (!prompt) {
+          forwardFromNode(nodeId, payload, edges);
+          break;
+        }
+
+        // Rate limiting: max 10 calls/minute per node
+        const now = Date.now();
+        if (!aiTransformCallLog.has(nodeId)) {
+          aiTransformCallLog.set(nodeId, []);
+        }
+        const callLog = aiTransformCallLog.get(nodeId)!;
+        // Prune entries older than 60s
+        const cutoff = now - 60_000;
+        while (callLog.length > 0 && callLog[0] < cutoff) callLog.shift();
+
+        if (callLog.length >= 10) {
+          // Rate limited — emit error and drop
+          bus.emit('canvas.pipeline.error', {
+            nodeId,
+            error: 'ai-transform rate limit exceeded (10/min)',
+          });
+          break;
+        }
+        callLog.push(now);
+
+        // Async: emit to a handler that will process and forward
+        bus.emit('canvas.pipeline.ai-transform.requested', {
+          nodeId,
+          prompt,
+          payload,
+        });
+        break;
+      }
     }
   }
 
   const throttleTimestamps = new Map<string, number>();
   const debounceTimers = new Map<string, number>();
+  const accumulateBuffers = new Map<string, unknown[]>();
+  const accumulateTimers = new Map<string, number>();
+  const aiTransformCallLog = new Map<string, number[]>();
 
   function forwardFromNode(nodeId: string, payload: unknown, edges: ReturnType<PipelineGraph['getAllEdges']>): void {
     const node = graph.getNode(nodeId);
@@ -169,6 +284,12 @@ export function createExecutionEngine(graph: PipelineGraph): ExecutionEngine {
         clearTimeout(timer);
       }
       debounceTimers.clear();
+      accumulateBuffers.clear();
+      for (const timer of accumulateTimers.values()) {
+        clearTimeout(timer);
+      }
+      accumulateTimers.clear();
+      aiTransformCallLog.clear();
     },
 
     get isRunning() {
