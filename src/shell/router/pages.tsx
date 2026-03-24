@@ -79,6 +79,8 @@ const BUILT_IN_WIDGET_HTML_KEY_BY_WIDGET_ID: Record<string, string> = {
   'sn.builtin.creator-dashboard': 'wgt-creator-dashboard',
   'sn.builtin.xc-broadcaster': 'wgt-xc-broadcaster',
   'sn.builtin.xc-listener': 'wgt-xc-listener',
+  'sn.builtin.data-table': 'wgt-data-table',
+  'sn.builtin.entity-spawner': 'wgt-entity-spawner',
   // Connection invite test widgets
   'live-chat-v1': 'wgt-live-chat',
   'price-ticker-v2': 'wgt-price-ticker',

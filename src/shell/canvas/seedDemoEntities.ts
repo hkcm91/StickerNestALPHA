@@ -878,6 +878,10 @@ const DEMO_PONG_ID = 'ddd00000-0000-4000-a000-00000000000c';
 const DEMO_PONG_INST = 'ddd00000-0000-4000-a000-100000000006';
 const DEMO_BS_ID = 'ddd00000-0000-4000-a000-00000000000b';
 const DEMO_BS_INST = 'ddd00000-0000-4000-a000-100000000005';
+const DEMO_DATA_TABLE_ID = 'ddd00000-0000-4000-a000-00000000000d';
+const DEMO_DATA_TABLE_INST = 'ddd00000-0000-4000-a000-100000000007';
+const DEMO_ENTITY_SPAWNER_ID = 'ddd00000-0000-4000-a000-00000000000e';
+const DEMO_ENTITY_SPAWNER_INST = 'ddd00000-0000-4000-a000-100000000008';
 const DEMO_CHILD_ENTITY_IDS = [
   DEMO_TEXT_ID,
   DEMO_STICKER_ID,
@@ -1258,6 +1262,64 @@ export function seedDemoEntities(): void {
       name: 'Battleship',
       widgetId: 'wgt-battleship',
       widgetInstanceId: DEMO_BS_INST,
+      config: {},
+    } as CanvasEntity,
+
+    // --- Data Table widget (DataSource SDK test) ---
+    {
+      id: DEMO_DATA_TABLE_ID,
+      type: 'widget',
+      canvasId: DEMO_CANVAS_ID,
+      transform: {
+        position: { x: 1100, y: 80 },
+        size: { width: 380, height: 360 },
+        rotation: 0,
+        scale: 1,
+      },
+      zIndex: 25,
+      visible: true,
+      canvasVisibility: 'both' as const,
+      locked: false,
+      flipH: false,
+      flipV: false,
+      opacity: 1,
+      createdAt: now,
+      updatedAt: now,
+      createdBy: DEMO_USER_ID,
+      borderRadius: 8,
+      syncTransform2d3d: true,
+      name: 'Data Table',
+      widgetId: 'sn.builtin.data-table',
+      widgetInstanceId: DEMO_DATA_TABLE_INST,
+      config: {},
+    } as CanvasEntity,
+
+    // --- Entity Spawner widget (widget→entity creation test) ---
+    {
+      id: DEMO_ENTITY_SPAWNER_ID,
+      type: 'widget',
+      canvasId: DEMO_CANVAS_ID,
+      transform: {
+        position: { x: 1100, y: 480 },
+        size: { width: 280, height: 380 },
+        rotation: 0,
+        scale: 1,
+      },
+      zIndex: 26,
+      visible: true,
+      canvasVisibility: 'both' as const,
+      locked: false,
+      flipH: false,
+      flipV: false,
+      opacity: 1,
+      createdAt: now,
+      updatedAt: now,
+      createdBy: DEMO_USER_ID,
+      borderRadius: 8,
+      syncTransform2d3d: true,
+      name: 'Entity Spawner',
+      widgetId: 'sn.builtin.entity-spawner',
+      widgetInstanceId: DEMO_ENTITY_SPAWNER_INST,
       config: {},
     } as CanvasEntity,
   ];

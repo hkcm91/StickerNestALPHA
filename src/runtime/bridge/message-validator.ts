@@ -52,6 +52,16 @@ const WidgetMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('CROSS_CANVAS_EMIT'), channel: z.string(), payload: z.unknown() }),
   z.object({ type: z.literal('CROSS_CANVAS_SUBSCRIBE'), channel: z.string() }),
   z.object({ type: z.literal('CROSS_CANVAS_UNSUBSCRIBE'), channel: z.string() }),
+  // DataSource messages
+  z.object({ type: z.literal('DS_CREATE'), requestId: z.string(), dsType: z.string(), scope: z.string(), schema: z.record(z.string(), z.unknown()).optional(), metadata: z.record(z.string(), z.unknown()).optional() }),
+  z.object({ type: z.literal('DS_READ'), requestId: z.string(), dataSourceId: z.string() }),
+  z.object({ type: z.literal('DS_UPDATE'), requestId: z.string(), dataSourceId: z.string(), updates: z.record(z.string(), z.unknown()), lastSeenRevision: z.number().optional() }),
+  z.object({ type: z.literal('DS_DELETE'), requestId: z.string(), dataSourceId: z.string() }),
+  z.object({ type: z.literal('DS_LIST'), requestId: z.string(), scope: z.string().optional(), dsType: z.string().optional() }),
+  z.object({ type: z.literal('DS_TABLE_GET_ROWS'), requestId: z.string(), dataSourceId: z.string(), options: z.record(z.string(), z.unknown()).optional() }),
+  z.object({ type: z.literal('DS_TABLE_ADD_ROW'), requestId: z.string(), dataSourceId: z.string(), row: z.record(z.string(), z.unknown()) }),
+  z.object({ type: z.literal('DS_TABLE_UPDATE_ROW'), requestId: z.string(), dataSourceId: z.string(), rowId: z.string(), updates: z.record(z.string(), z.unknown()), lastSeenRevision: z.number().optional() }),
+  z.object({ type: z.literal('DS_TABLE_DELETE_ROW'), requestId: z.string(), dataSourceId: z.string(), rowId: z.string() }),
 ]);
 
 // ---------------------------------------------------------------------------
@@ -79,6 +89,7 @@ const HostMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('STATE_REJECTED'), key: z.string(), reason: z.string() }),
   z.object({ type: z.literal('INTEGRATION_RESPONSE'), requestId: z.string(), result: z.unknown(), error: z.string().optional() }),
   z.object({ type: z.literal('CROSS_CANVAS_EVENT'), channel: z.string(), payload: z.unknown() }),
+  z.object({ type: z.literal('DS_RESPONSE'), requestId: z.string(), result: z.unknown(), error: z.string().optional() }),
   z.object({ type: z.literal('DESTROY') }),
 ]);
 

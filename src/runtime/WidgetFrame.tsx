@@ -17,6 +17,7 @@ import { useWidgetStore } from '../kernel/stores/widget/widget.store';
 
 import { createWidgetBridge } from './bridge/bridge';
 import type { WidgetBridge } from './bridge/bridge';
+import { handleDataSourceMessage } from './bridge/datasource-handler';
 import type { ThemeTokens } from './bridge/message-types';
 import { getSharedCrossCanvasRouter, isValidChannelName } from './cross-canvas/cross-canvas-router';
 import type { CrossCanvasRouter } from './cross-canvas/cross-canvas-router';
@@ -423,6 +424,11 @@ const WidgetIframe: React.FC<WidgetFrameProps> = (props) => {
           });
           break;
         }
+
+        default:
+          // Delegate DataSource messages to the dedicated handler
+          handleDataSourceMessage(message, { widgetId, instanceId, bridge });
+          break;
       }
     });
 

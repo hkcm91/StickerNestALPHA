@@ -4325,4 +4325,274 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
       })();
     </script>
   `,
+
+  'wgt-data-table': `
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: var(--sn-font-family, system-ui); color: var(--sn-text, #1a1a2e); background: var(--sn-surface, #fff); height: 100vh; display: flex; flex-direction: column; }
+      .header { padding: 8px 12px; background: var(--sn-accent, #6366f1); color: #fff; display: flex; justify-content: space-between; align-items: center; }
+      .header h3 { font-size: 14px; font-weight: 600; }
+      .header button { background: rgba(255,255,255,0.2); border: none; color: #fff; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+      .header button:hover { background: rgba(255,255,255,0.3); }
+      .content { flex: 1; overflow: auto; padding: 8px; }
+      table { width: 100%; border-collapse: collapse; font-size: 13px; }
+      th { text-align: left; padding: 6px 8px; border-bottom: 2px solid var(--sn-border, #e2e8f0); font-weight: 600; font-size: 11px; text-transform: uppercase; color: var(--sn-text-muted, #64748b); }
+      td { padding: 6px 8px; border-bottom: 1px solid var(--sn-border, #e2e8f0); }
+      .empty { text-align: center; padding: 24px; color: var(--sn-text-muted, #94a3b8); }
+      .status { padding: 4px 12px; font-size: 11px; color: var(--sn-text-muted, #94a3b8); border-top: 1px solid var(--sn-border, #e2e8f0); }
+      .form { padding: 8px; display: flex; gap: 6px; border-top: 1px solid var(--sn-border, #e2e8f0); }
+      .form input { flex: 1; padding: 4px 8px; border: 1px solid var(--sn-border, #e2e8f0); border-radius: 4px; font-size: 12px; }
+      .form button { padding: 4px 12px; background: var(--sn-accent, #6366f1); color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; }
+    </style>
+    <div class="header">
+      <h3>Data Table</h3>
+      <button id="createBtn">Create Table</button>
+    </div>
+    <div class="content" id="content">
+      <div class="empty" id="emptyState">Click "Create Table" to start</div>
+      <table id="dataTable" style="display:none">
+        <thead><tr><th>ID</th><th>Name</th><th>Value</th><th>Created</th></tr></thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+    <div class="form" id="addForm" style="display:none">
+      <input id="nameInput" placeholder="Name" />
+      <input id="valueInput" placeholder="Value" type="number" />
+      <button id="addBtn">Add Row</button>
+    </div>
+    <div class="status" id="status">Ready</div>
+    <script>
+      (function() {
+        var dsId = null;
+        var rowCount = 0;
+
+        StickerNest.register({
+          id: 'sn.builtin.data-table',
+          name: 'Data Table',
+          version: '1.0.0',
+          permissions: ['datasource', 'datasource-write'],
+          events: { emits: [{ name: 'data-table.row.added', description: 'A row was added' }], subscribes: [] }
+        });
+
+        function setStatus(msg) {
+          document.getElementById('status').textContent = msg;
+        }
+
+        function renderRows(rows) {
+          var tbody = document.getElementById('tableBody');
+          tbody.innerHTML = '';
+          if (!rows || rows.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#94a3b8">No rows yet. Add one below.</td></tr>';
+            return;
+          }
+          for (var i = 0; i < rows.length; i++) {
+            var r = rows[i];
+            var cells = r.cells || r;
+            var tr = document.createElement('tr');
+            tr.innerHTML = '<td>' + (r.id || i) + '</td><td>' + (cells.name || '-') + '</td><td>' + (cells.value || 0) + '</td><td>' + (cells.created || '-') + '</td>';
+            tbody.appendChild(tr);
+          }
+          rowCount = rows.length;
+        }
+
+        document.getElementById('createBtn').addEventListener('click', function() {
+          setStatus('Creating DataSource...');
+          StickerNest.datasource.create('table', 'canvas', {
+            schema: { columns: [
+              { id: 'name', name: 'Name', type: 'text' },
+              { id: 'value', name: 'Value', type: 'number' },
+              { id: 'created', name: 'Created', type: 'text' }
+            ]},
+            metadata: { name: 'Widget Test Table' }
+          }).then(function(ds) {
+            dsId = ds.id;
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('dataTable').style.display = '';
+            document.getElementById('addForm').style.display = '';
+            document.getElementById('createBtn').textContent = 'Refresh';
+            setStatus('Table created: ' + dsId);
+            renderRows([]);
+            StickerNest.setState('dsId', dsId);
+          }).catch(function(err) {
+            setStatus('Error: ' + err.message);
+          });
+        });
+
+        document.getElementById('addBtn').addEventListener('click', function() {
+          if (!dsId) { setStatus('Create a table first'); return; }
+          var name = document.getElementById('nameInput').value || 'Item ' + (rowCount + 1);
+          var value = parseInt(document.getElementById('valueInput').value) || 0;
+          setStatus('Adding row...');
+          StickerNest.datasource.table.addRow(dsId, {
+            name: name,
+            value: value,
+            created: new Date().toISOString().slice(0, 19)
+          }).then(function(row) {
+            setStatus('Row added: ' + (row.id || 'ok'));
+            document.getElementById('nameInput').value = '';
+            document.getElementById('valueInput').value = '';
+            StickerNest.emit('data-table.row.added', { dsId: dsId, row: row });
+            return StickerNest.datasource.table.getRows(dsId);
+          }).then(function(result) {
+            renderRows(result.rows || result);
+          }).catch(function(err) {
+            setStatus('Error: ' + err.message);
+          });
+        });
+
+        // Restore dsId from previous session
+        StickerNest.getState('dsId').then(function(savedId) {
+          if (savedId) {
+            dsId = savedId;
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('dataTable').style.display = '';
+            document.getElementById('addForm').style.display = '';
+            document.getElementById('createBtn').textContent = 'Refresh';
+            setStatus('Restored table: ' + dsId);
+            StickerNest.datasource.table.getRows(dsId).then(function(result) {
+              renderRows(result.rows || result);
+            }).catch(function() { renderRows([]); });
+          }
+        });
+
+        StickerNest.ready();
+      })();
+    </script>
+  `,
+
+  'wgt-entity-spawner': `
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: var(--sn-font-family, system-ui); color: var(--sn-text, #1a1a2e); background: var(--sn-surface, #fff); height: 100vh; display: flex; flex-direction: column; }
+      .header { padding: 8px 12px; background: #10b981; color: #fff; font-size: 14px; font-weight: 600; }
+      .content { flex: 1; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+      .field { display: flex; flex-direction: column; gap: 2px; }
+      .field label { font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--sn-text-muted, #64748b); }
+      .field input, .field select { padding: 6px 8px; border: 1px solid var(--sn-border, #e2e8f0); border-radius: 4px; font-size: 13px; }
+      .actions { display: flex; gap: 6px; }
+      .actions button { flex: 1; padding: 8px; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; }
+      .spawn-btn { background: #10b981; color: #fff; }
+      .spawn-btn:hover { background: #059669; }
+      .batch-btn { background: #6366f1; color: #fff; }
+      .batch-btn:hover { background: #4f46e5; }
+      .log { flex: 1; overflow: auto; font-size: 11px; color: var(--sn-text-muted, #64748b); padding: 8px; background: var(--sn-bg, #f1f5f9); border-radius: 4px; font-family: monospace; }
+      .log div { padding: 1px 0; }
+      .status { padding: 4px 12px; font-size: 11px; color: var(--sn-text-muted, #94a3b8); border-top: 1px solid var(--sn-border, #e2e8f0); }
+    </style>
+    <div class="header">Entity Spawner</div>
+    <div class="content">
+      <div class="field">
+        <label>Entity Type</label>
+        <select id="entityType">
+          <option value="sticker">Sticker</option>
+          <option value="text">Text</option>
+          <option value="shape">Shape</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>X Position</label>
+        <input id="posX" type="number" value="200" />
+      </div>
+      <div class="field">
+        <label>Y Position</label>
+        <input id="posY" type="number" value="200" />
+      </div>
+      <div class="actions">
+        <button class="spawn-btn" id="spawnBtn">Spawn Entity</button>
+        <button class="batch-btn" id="batchBtn">Spawn 5</button>
+      </div>
+      <div class="log" id="log"></div>
+    </div>
+    <div class="status" id="status">Ready — entities appear on canvas</div>
+    <script>
+      (function() {
+        var spawnCount = 0;
+        var COLORS = ['#ef4444','#f59e0b','#10b981','#3b82f6','#8b5cf6','#ec4899'];
+
+        StickerNest.register({
+          id: 'sn.builtin.entity-spawner',
+          name: 'Entity Spawner',
+          version: '1.0.0',
+          permissions: [],
+          events: {
+            emits: [{ name: 'canvas.entity.created', description: 'Creates a canvas entity' }],
+            subscribes: []
+          }
+        });
+
+        function log(msg) {
+          var el = document.getElementById('log');
+          var d = document.createElement('div');
+          d.textContent = new Date().toLocaleTimeString() + ' ' + msg;
+          el.appendChild(d);
+          el.scrollTop = el.scrollHeight;
+        }
+
+        function spawnEntity() {
+          var type = document.getElementById('entityType').value;
+          var x = parseInt(document.getElementById('posX').value) || 0;
+          var y = parseInt(document.getElementById('posY').value) || 0;
+          var offset = spawnCount * 30;
+          spawnCount++;
+
+          var entity;
+          if (type === 'sticker') {
+            entity = {
+              type: 'sticker',
+              transform: { position: { x: x + offset, y: y + offset }, size: { width: 80, height: 80 }, rotation: 0, scale: 1 },
+              zIndex: 100 + spawnCount,
+              visible: true,
+              locked: false,
+              assetUrl: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80"><rect width="80" height="80" rx="12" fill="' + COLORS[spawnCount % COLORS.length] + '"/><text x="40" y="48" text-anchor="middle" fill="#fff" font-size="28" font-family="system-ui">' + spawnCount + '</text></svg>'),
+              mediaType: 'image',
+              name: 'Spawned Sticker #' + spawnCount
+            };
+          } else if (type === 'text') {
+            entity = {
+              type: 'text',
+              transform: { position: { x: x + offset, y: y + offset }, size: { width: 200, height: 40 }, rotation: 0, scale: 1 },
+              zIndex: 100 + spawnCount,
+              visible: true,
+              locked: false,
+              content: 'Spawned text #' + spawnCount,
+              fontFamily: 'system-ui',
+              fontSize: 16,
+              fontWeight: 'normal',
+              color: COLORS[spawnCount % COLORS.length],
+              textAlign: 'left',
+              name: 'Spawned Text #' + spawnCount
+            };
+          } else {
+            entity = {
+              type: 'shape',
+              transform: { position: { x: x + offset, y: y + offset }, size: { width: 100, height: 100 }, rotation: 0, scale: 1 },
+              zIndex: 100 + spawnCount,
+              visible: true,
+              locked: false,
+              shapeType: 'ellipse',
+              fill: COLORS[spawnCount % COLORS.length],
+              stroke: null,
+              strokeWidth: 0,
+              cornerRadius: 0,
+              name: 'Spawned Shape #' + spawnCount
+            };
+          }
+
+          StickerNest.emit('canvas.entity.created', entity);
+          log('Spawned ' + type + ' at (' + (x + offset) + ',' + (y + offset) + ')');
+          document.getElementById('status').textContent = 'Spawned ' + spawnCount + ' entities';
+        }
+
+        document.getElementById('spawnBtn').addEventListener('click', spawnEntity);
+
+        document.getElementById('batchBtn').addEventListener('click', function() {
+          for (var i = 0; i < 5; i++) {
+            spawnEntity();
+          }
+        });
+
+        StickerNest.ready();
+      })();
+    </script>
+  `,
 };
