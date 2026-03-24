@@ -1,11 +1,11 @@
 # StickerNest V5 — Master TODO
 
-> Updated 2026-03-19. Organized by build order (layer dependencies) then priority.
+> Updated 2026-03-23. Organized by build order (layer dependencies) then priority.
 > Build order: L0 Kernel → L1 Social → L3 Runtime → L2 Lab → L4A/4B Canvas/Spatial → L5 Marketplace → L6 Shell
 
 ---
 
-## COMPLETED ✓
+## COMPLETED ✅
 
 ### SaaS Billing & Subscriptions (MOSTLY COMPLETE)
 - [x] Stripe edge functions (checkout, webhook, portal, cancel-subscription)
@@ -30,22 +30,22 @@
 
 ## BUILD PHASE 1 — Kernel + Social Foundation (L0, L1)
 
-### 1A. User Search & Social Graph (`src/kernel/social-graph/`)
+### 1A. User Search & Social Graph (`src/kernel/social-graph/`) ✅ COMPLETE
 > L0 — no layer dependencies. Foundation for friends, follows, messaging.
-- [ ] User search API (by username, display name, email)
-- [ ] User profile page (public canvases, bio, avatar)
-- [ ] Follow / unfollow system
-- [ ] Friend request / accept / decline system
-- [ ] Block / unblock users
-- [ ] User privacy settings (who can message, who can see canvases)
+- [x] User search API (by username, display name, email)
+- [x] User profile page (public canvases, bio, avatar)
+- [x] Follow / unfollow system
+- [x] Friend request / accept / decline system
+- [x] Block / unblock users
+- [x] User privacy settings (who can message, who can see canvases)
 
-### 1B. Messaging System (`src/social/messaging/` or `src/kernel/messaging/`)
+### 1B. Messaging System (`src/kernel/social-graph/messages.ts`) (MOSTLY COMPLETE)
 > L0/L1 — uses Supabase Realtime, social-graph for permissions.
-- [ ] Direct messages (1:1 between users)
-- [ ] Message persistence (Supabase table)
+- [x] Direct messages (1:1 between users)
+- [x] Message persistence (Supabase table)
 - [ ] Real-time message delivery via Realtime channel
-- [ ] Unread count tracking
-- [ ] Block enforcement (blocked users cannot message)
+- [x] Unread count tracking
+- [x] Block enforcement (blocked users cannot message)
 - [ ] Message UI component in shell
 
 ### 1C. Canvas Invites & Multi-User Canvas Types (`src/kernel/`, `src/social/`)
@@ -70,7 +70,7 @@
 - [ ] Event bus inspector panel shows which widgets subscribe to which events
 - [ ] Broadcast channel naming and management UI
 
-### 2B. Database ↔ Widget Integration
+### 2B. Database — Widget Integration
 > L3 Runtime — DataSource API must be accessible from widget SDK.
 - [ ] DataSource CRUD accessible via `StickerNest.integration('database')` in widgets
 - [ ] Table DataSource renders in widget (query, filter, sort)
@@ -180,7 +180,7 @@
 ### 5B. Widget & Canvas Embeds
 > L5/L6 — public distribution.
 - [ ] Widget embed codes (embed a single widget in external site)
-- [ ] Canvas embed route (`/embed/:slug` — iframe-friendly, stripped UI)
+- [ ] Canvas embed route (`/embed/:slug` → iframe-friendly, stripped UI)
 - [ ] Widget slugs — unique URL per published widget
 - [ ] Embed customization (theme, size, border)
 - [ ] oEmbed support for auto-embedding in platforms
