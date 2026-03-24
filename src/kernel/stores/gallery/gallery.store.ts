@@ -6,10 +6,11 @@
 import { create } from 'zustand';
 import { devtools, subscribeWithSelector } from 'zustand/middleware';
 
+import type { BusEvent } from '@sn/types';
+import { GalleryEvents, KernelEvents } from '@sn/types';
+
 import { bus } from '../../bus';
-import { GalleryEvents } from '../../schemas/bus-event';
 import { supabase } from '../../supabase/client';
-import { useAuthStore } from '../auth/auth.store';
 
 /** Database row type for gallery_assets table */
 interface GalleryRow {
@@ -54,6 +55,8 @@ export interface GalleryState {
   isLoading: boolean;
   error: string | null;
   isInitialized: boolean;
+  /** Current user ID, set via AUTH_STATE_CHANGED bus event */
+  currentUserId: string | null;
 }
 
 export interface GalleryActions {
@@ -76,6 +79,7 @@ const initialState: GalleryState = {
   isLoading: false,
   error: null,
   isInitialized: false,
+  currentUserId: null,
 };
 
 let galleryAssetsTableUnavailable = false;
@@ -124,8 +128,8 @@ export const useGalleryStore = create<GalleryStore>()(
       ...initialState,
 
       uploadAsset: async (file: File): Promise<GalleryAsset | null> => {
-        const user = useAuthStore.getState().user;
-        if (!user) {
+        const userId = get().currentUserId;
+        if (!userId) {
           set({ error: 'User must be signed in to upload photos.' });
           return null;
         }
@@ -136,7 +140,7 @@ export const useGalleryStore = create<GalleryStore>()(
           // Generate unique filename
           const fileExt = file.name.split('.').pop();
           const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
-          const storagePath = `gallery/${user.id}/${fileName}`;
+          const storagePath = `gallery/${userId}/${fileName}`;
 
           console.log(`[GalleryStore] Uploading ${file.name} to ${storagePath}...`);
 
@@ -154,7 +158,7 @@ export const useGalleryStore = create<GalleryStore>()(
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const { data: insertedRow, error: insertError } = (await (supabase.from('gallery_assets') as any)
             .insert({
-              owner_id: user.id,
+              owner_id: userId,
               name: file.name,
               storage_path: storagePath,
               file_type: file.type,
@@ -257,8 +261,8 @@ export const useGalleryStore = create<GalleryStore>()(
       },
 
       loadGallery: async () => {
-        const user = useAuthStore.getState().user;
-        if (!user) return;
+        const userId = get().currentUserId;
+        if (!userId) return;
 
         if (galleryAssetsTableUnavailable) {
           set({ assets: [], isLoading: false, error: null, isInitialized: true });
@@ -273,7 +277,7 @@ export const useGalleryStore = create<GalleryStore>()(
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const { data, error } = (await (supabase.from('gallery_assets') as any)
             .select('*')
-            .eq('owner_id', user.id)
+            .eq('owner_id', userId)
             .order('created_at', { ascending: false })
             .limit(100)) as { data: GalleryRow[] | null; error: { message: string } | null };
 
@@ -311,16 +315,17 @@ export const useGalleryStore = create<GalleryStore>()(
 
 /** Subscribe to gallery-related bus events for cross-store coordination */
 export function setupGalleryBusSubscriptions(): void {
-  // Re-load gallery when user changes
-  useAuthStore.subscribe(
-    (state) => state.user,
-    (user) => {
-      if (user) {
-        useGalleryStore.getState().loadGallery();
-      } else {
-        useGalleryStore.getState().reset();
-      }
-    },
-    { fireImmediately: true }
-  );
+  // React to auth state changes via bus (no direct store-to-store import)
+  bus.subscribe(KernelEvents.AUTH_STATE_CHANGED, (event: BusEvent) => {
+    const payload = event.payload as { user?: { id: string } | null } | null;
+    const user = payload?.user ?? null;
+
+    if (user) {
+      useGalleryStore.setState({ currentUserId: user.id });
+      useGalleryStore.getState().loadGallery();
+    } else {
+      useGalleryStore.setState({ currentUserId: null });
+      useGalleryStore.getState().reset();
+    }
+  });
 }
