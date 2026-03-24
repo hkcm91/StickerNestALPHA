@@ -541,6 +541,56 @@ StickerNest.ready();
     isBuiltIn: true,
     installedAt: new Date().toISOString(),
   },
+  {
+    widgetId: 'sn.builtin.data-table',
+    manifest: {
+      id: 'sn.builtin.data-table',
+      name: 'Data Table',
+      version: '1.0.0',
+      description: 'Test widget: creates and reads DataSources via the SDK',
+      author: { name: 'StickerNest', url: 'https://stickernest.com' },
+      license: 'MIT',
+      tags: ['data', 'test'],
+      category: 'data',
+      permissions: ['datasource', 'datasource-write'],
+      events: {
+        emits: [{ name: 'data-table.row.added', description: 'A row was added to the table' }],
+        subscribes: [],
+      },
+      config: { fields: [] },
+      size: { minWidth: 280, minHeight: 250, maxWidth: 600, maxHeight: 500, defaultWidth: 380, defaultHeight: 360, aspectLocked: false },
+      entry: 'inline',
+      spatialSupport: false,
+    },
+    htmlContent: '',
+    isBuiltIn: true,
+    installedAt: new Date().toISOString(),
+  },
+  {
+    widgetId: 'sn.builtin.entity-spawner',
+    manifest: {
+      id: 'sn.builtin.entity-spawner',
+      name: 'Entity Spawner',
+      version: '1.0.0',
+      description: 'Test widget: creates canvas entities (stickers, text, shapes) via the SDK',
+      author: { name: 'StickerNest', url: 'https://stickernest.com' },
+      license: 'MIT',
+      tags: ['canvas', 'test'],
+      category: 'utilities',
+      permissions: [],
+      events: {
+        emits: [{ name: 'canvas.entity.created', description: 'Creates a canvas entity' }],
+        subscribes: [],
+      },
+      config: { fields: [] },
+      size: { minWidth: 240, minHeight: 300, maxWidth: 400, maxHeight: 500, defaultWidth: 280, defaultHeight: 380, aspectLocked: false },
+      entry: 'inline',
+      spatialSupport: false,
+    },
+    htmlContent: '',
+    isBuiltIn: true,
+    installedAt: new Date().toISOString(),
+  },
 ];
 
 /** Map from registry widgetId to built-in-html key */
@@ -555,6 +605,8 @@ const WIDGET_HTML_KEY: Record<string, string> = {
   'sn.builtin.creator-dashboard': 'wgt-creator-dashboard',
   'sn.builtin.xc-broadcaster': 'wgt-xc-broadcaster',
   'sn.builtin.xc-listener': 'wgt-xc-listener',
+  'sn.builtin.data-table': 'wgt-data-table',
+  'sn.builtin.entity-spawner': 'wgt-entity-spawner',
 };
 
 /**
