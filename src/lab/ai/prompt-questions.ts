@@ -191,7 +191,7 @@ export function computeCompatibility(
 
   // Check if any port name appears in the prompt
   for (const port of allPorts) {
-    if (lower.includes(port.name.toLowerCase())) {
+    if (port.name && lower.includes(port.name.toLowerCase())) {
       return 'high';
     }
   }
