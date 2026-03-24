@@ -85,9 +85,17 @@ export {
   deleteReadNotifications,
 } from './notifications';
 
-// Canvas API (for profile pages)
-export { getUserPublicCanvases } from './canvases';
-export type { PublicCanvas } from './canvases';
+// Canvas API (public queries + multi-user member management)
+export {
+  getUserPublicCanvases,
+  addCanvasMember,
+  removeCanvasMember,
+  updateCanvasMemberRole,
+  getCanvasMembers,
+  getCanvasRole,
+  getSharedCanvases,
+} from './canvases';
+export type { PublicCanvas, CanvasMember, CanvasRole } from './canvases';
 
 // Block API
 export {
