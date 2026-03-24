@@ -14,6 +14,7 @@ import { CanvasEvents } from '@sn/types';
 import { bus } from '../../kernel/bus';
 import type { SceneGraph } from '../core';
 
+import { createAiTool } from './ai-tool';
 import { createDirectSelectTool } from './direct-select';
 import { createPathfinderTool } from './pathfinder-tool';
 import { createPenTool as createBrushTool } from './pen/brush-tool';
@@ -27,7 +28,7 @@ import { createShapeTool } from './shape';
 import { createTextTool } from './text';
 
 /** Tools that receive input via the bus bridge (L6 cannot import L4A-2 directly) */
-const BUS_BRIDGED_TOOLS = new Set(['pen', 'direct-select', 'pathfinder']);
+const BUS_BRIDGED_TOOLS = new Set(['pen', 'direct-select', 'pathfinder', 'ai']);
 
 export interface CanvasToolsContext {
   registry: ToolRegistry;
@@ -54,6 +55,7 @@ export function initCanvasTools(
   registry.register(createPenTool(getMode));
   registry.register(createDirectSelectTool(sceneGraph, getMode));
   registry.register(createPathfinderTool(sceneGraph, getMode));
+  registry.register(createAiTool());
 
   registry.activate('select');
 

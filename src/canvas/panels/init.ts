@@ -5,6 +5,8 @@
  * @layer L4A-4
  */
 
+import type { AiPanelController } from './ai-panel';
+import { createAiPanelController } from './ai-panel';
 import { createAssetPanelController } from './assets';
 import type { AssetPanelController } from './assets';
 import { createContextMenuController } from './context-menu';
@@ -23,6 +25,7 @@ import type { ToolbarController } from './toolbar';
 import { createToolbarController } from './toolbar';
 
 export interface CanvasPanelsContext {
+  aiPanel: AiPanelController;
   toolbar: ToolbarController;
   properties: PropertiesController;
   layers: LayersController;
@@ -39,6 +42,7 @@ export function initCanvasPanels(getZoom: () => number): CanvasPanelsContext {
   if (context) return context;
 
   context = {
+    aiPanel: createAiPanelController(),
     toolbar: createToolbarController(getZoom),
     properties: createPropertiesController(),
     layers: createLayersController(),
