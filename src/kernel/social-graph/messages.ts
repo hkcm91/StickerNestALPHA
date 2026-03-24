@@ -146,6 +146,71 @@ export async function getConversation(
 }
 
 /**
+ * Mark messages in a conversation as read.
+ * Marks all unread messages from `senderId` to `callerId` as read.
+ */
+export async function markAsRead(
+  senderId: string,
+  callerId: string,
+): Promise<SocialResult<{ count: number }>> {
+  if (senderId === callerId) {
+    return {
+      success: false,
+      error: { code: 'SELF_ACTION', message: 'Cannot mark own messages as read.' },
+    };
+  }
+
+  const { data, error } = (await supabase
+    .from('direct_messages')
+    .update({ is_read: true })
+    .eq('sender_id', senderId)
+    .eq('recipient_id', callerId)
+    .eq('is_read', false)
+    .select('id')) as QueryResult<Array<{ id: string }>>;
+
+  if (error) {
+    return {
+      success: false,
+      error: { code: 'UNKNOWN', message: error.message },
+    };
+  }
+
+  const count = data?.length ?? 0;
+
+  if (count > 0) {
+    bus.emit(SocialGraphEvents.MESSAGES_READ, {
+      senderId,
+      readerId: callerId,
+      count,
+    });
+  }
+
+  return { success: true, data: { count } };
+}
+
+/**
+ * Get the total count of unread messages for a user across all conversations.
+ */
+export async function getUnreadMessageCount(
+  userId: string,
+): Promise<SocialResult<number>> {
+  const { data, error, count } = (await supabase
+    .from('direct_messages')
+    .select('id', { count: 'exact', head: true })
+    .eq('recipient_id', userId)
+    .eq('is_read', false)) as QueryResult<unknown[]> & { count: number | null };
+
+  if (error) {
+    return {
+      success: false,
+      error: { code: 'UNKNOWN', message: error.message },
+    };
+  }
+
+  return { success: true, data: count ?? 0 };
+}
+
+/**
  * Check if messaging is allowed between two users (no blocks).
  */
 export async function canMessage(
