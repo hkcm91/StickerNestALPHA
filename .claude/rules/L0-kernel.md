@@ -88,7 +88,7 @@ Zod definitions — do not maintain them separately.
 
 ## Zustand Stores (`src/kernel/stores/`)
 
-Seven stores, no more, no fewer:
+Nine stores, one domain each:
 
 1. `authStore` — current user, session, auth status
 2. `workspaceStore` — workspace metadata, member list, workspace settings
@@ -97,6 +97,8 @@ Seven stores, no more, no fewer:
 5. `widgetStore` — widget registry, widget instance list
 6. `socialStore` — presence map, cursor positions (written by Layer 1 via bus events)
 7. `uiStore` — UI-level flags and modes
+8. `dockerStore` — Docker container widget state and child widget management
+9. `galleryStore` — gallery/collection browsing and display state
 
 `uiStore` MUST include:
 ```ts

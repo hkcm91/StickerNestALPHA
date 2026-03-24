@@ -117,7 +117,20 @@
       "Bash(winget install:*)",
       "Bash(winget search:*)",
       "Bash(claude --version:*)",
-      "Bash(git rm:*)"
+      "Bash(git rm:*)",
+      "Bash(npm list:*)",
+      "mcp__56a5e131-cc80-4a07-9f17-cabb7e33cb83__get_logs",
+      "WebFetch(domain:replicate.com)",
+      "mcp__stickernest-dev__user_create",
+      "mcp__stickernest-dev__user_list",
+      "mcp__stickernest-dev__bus_emit",
+      "mcp__stickernest-dev__bus_history",
+      "mcp__stickernest-dev__canvas_list_entities",
+      "mcp__stickernest-dev__widget_list",
+      "mcp__stickernest-dev__canvas_add_entity",
+      "mcp__stickernest-dev__docker_add_widget",
+      "mcp__stickernest-dev__docker_list",
+      "Bash(git branch:*)"
     ]
   }
 }
