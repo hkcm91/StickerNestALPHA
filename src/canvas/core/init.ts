@@ -51,6 +51,8 @@ export function initCanvasCore(): CanvasCoreContext {
     if (entity.borderRadius === undefined) entity.borderRadius = 0;
     if (entity.canvasVisibility === undefined) entity.canvasVisibility = 'both';
     if (entity.syncTransform2d3d === undefined) entity.syncTransform2d3d = true;
+    if (entity.visible === undefined) entity.visible = true;
+    if (entity.zIndex === undefined) entity.zIndex = sceneGraph.entityCount;
 
     // Widget entities need a widgetInstanceId for serialization
     if (entity.type === 'widget' && !entity.widgetInstanceId) {
