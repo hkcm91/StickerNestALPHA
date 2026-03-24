@@ -53,6 +53,20 @@ export interface StickerNestSDK {
   subscribeCrossCanvas(channel: string, handler: (payload: unknown) => void): void;
   /** Cross-canvas event unsubscription */
   unsubscribeCrossCanvas(channel: string): void;
+  /** DataSource API — persistent data access through host proxy */
+  datasource: {
+    create(dsType: string, scope: string, options?: { schema?: Record<string, unknown>; metadata?: Record<string, unknown> }): Promise<unknown>;
+    read(dataSourceId: string): Promise<unknown>;
+    update(dataSourceId: string, updates: Record<string, unknown>, lastSeenRevision?: number): Promise<unknown>;
+    delete(dataSourceId: string): Promise<void>;
+    list(options?: { scope?: string; type?: string }): Promise<unknown[]>;
+    table: {
+      getRows(dataSourceId: string, options?: Record<string, unknown>): Promise<unknown[]>;
+      addRow(dataSourceId: string, row: Record<string, unknown>): Promise<unknown>;
+      updateRow(dataSourceId: string, rowId: string, updates: Record<string, unknown>, lastSeenRevision?: number): Promise<unknown>;
+      deleteRow(dataSourceId: string, rowId: string): Promise<void>;
+    };
+  };
 }
 
 /**
@@ -187,6 +201,15 @@ export function generateSDKTemplate(): string {
           for (var cc = 0; cc < ccHandlers.length; cc++) {
             try { ccHandlers[cc](data.payload); } catch(e) { console.error('[StickerNest SDK] Cross-canvas handler error:', e); }
           }
+        }
+        break;
+
+      case 'DS_RESPONSE':
+        var dsKey = 'ds_' + data.requestId;
+        if (data.error) {
+          rejectPending(dsKey, new Error(data.error));
+        } else {
+          resolvePending(dsKey, data.result);
         }
         break;
 
@@ -327,6 +350,100 @@ export function generateSDKTemplate(): string {
     unsubscribeCrossCanvas: function(channel) {
       delete _crossCanvasHandlers[channel];
       postToHost({ type: 'CROSS_CANVAS_UNSUBSCRIBE', channel: channel });
+    },
+
+    /** DataSource API — persistent data access through host proxy */
+    datasource: {
+      create: function(dsType, scope, options) {
+        return new Promise(function(resolve, reject) {
+          var requestId = 'req_' + (++_requestCounter);
+          addPendingRequest('ds_' + requestId, resolve, reject);
+          postToHost({
+            type: 'DS_CREATE',
+            requestId: requestId,
+            dsType: dsType,
+            scope: scope,
+            schema: options && options.schema,
+            metadata: options && options.metadata
+          });
+        });
+      },
+      read: function(dataSourceId) {
+        return new Promise(function(resolve, reject) {
+          var requestId = 'req_' + (++_requestCounter);
+          addPendingRequest('ds_' + requestId, resolve, reject);
+          postToHost({ type: 'DS_READ', requestId: requestId, dataSourceId: dataSourceId });
+        });
+      },
+      update: function(dataSourceId, updates, lastSeenRevision) {
+        return new Promise(function(resolve, reject) {
+          var requestId = 'req_' + (++_requestCounter);
+          addPendingRequest('ds_' + requestId, resolve, reject);
+          postToHost({
+            type: 'DS_UPDATE',
+            requestId: requestId,
+            dataSourceId: dataSourceId,
+            updates: updates,
+            lastSeenRevision: lastSeenRevision
+          });
+        });
+      },
+      delete: function(dataSourceId) {
+        return new Promise(function(resolve, reject) {
+          var requestId = 'req_' + (++_requestCounter);
+          addPendingRequest('ds_' + requestId, resolve, reject);
+          postToHost({ type: 'DS_DELETE', requestId: requestId, dataSourceId: dataSourceId });
+        });
+      },
+      list: function(options) {
+        return new Promise(function(resolve, reject) {
+          var requestId = 'req_' + (++_requestCounter);
+          addPendingRequest('ds_' + requestId, resolve, reject);
+          postToHost({
+            type: 'DS_LIST',
+            requestId: requestId,
+            scope: options && options.scope,
+            dsType: options && options.type
+          });
+        });
+      },
+      table: {
+        getRows: function(dataSourceId, options) {
+          return new Promise(function(resolve, reject) {
+            var requestId = 'req_' + (++_requestCounter);
+            addPendingRequest('ds_' + requestId, resolve, reject);
+            postToHost({ type: 'DS_TABLE_GET_ROWS', requestId: requestId, dataSourceId: dataSourceId, options: options });
+          });
+        },
+        addRow: function(dataSourceId, row) {
+          return new Promise(function(resolve, reject) {
+            var requestId = 'req_' + (++_requestCounter);
+            addPendingRequest('ds_' + requestId, resolve, reject);
+            postToHost({ type: 'DS_TABLE_ADD_ROW', requestId: requestId, dataSourceId: dataSourceId, row: row });
+          });
+        },
+        updateRow: function(dataSourceId, rowId, updates, lastSeenRevision) {
+          return new Promise(function(resolve, reject) {
+            var requestId = 'req_' + (++_requestCounter);
+            addPendingRequest('ds_' + requestId, resolve, reject);
+            postToHost({
+              type: 'DS_TABLE_UPDATE_ROW',
+              requestId: requestId,
+              dataSourceId: dataSourceId,
+              rowId: rowId,
+              updates: updates,
+              lastSeenRevision: lastSeenRevision
+            });
+          });
+        },
+        deleteRow: function(dataSourceId, rowId) {
+          return new Promise(function(resolve, reject) {
+            var requestId = 'req_' + (++_requestCounter);
+            addPendingRequest('ds_' + requestId, resolve, reject);
+            postToHost({ type: 'DS_TABLE_DELETE_ROW', requestId: requestId, dataSourceId: dataSourceId, rowId: rowId });
+          });
+        }
+      }
     }
   };
 })();`;

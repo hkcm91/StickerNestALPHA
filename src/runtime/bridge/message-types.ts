@@ -36,6 +36,7 @@ export type HostMessage =
   | { type: 'STATE_REJECTED'; key: string; reason: string }
   | { type: 'INTEGRATION_RESPONSE'; requestId: string; result: unknown; error?: string }
   | { type: 'CROSS_CANVAS_EVENT'; channel: string; payload: unknown }
+  | { type: 'DS_RESPONSE'; requestId: string; result: unknown; error?: string }
   | { type: 'DESTROY' };
 
 /**
@@ -57,4 +58,13 @@ export type WidgetMessage =
   | { type: 'INTEGRATION_MUTATE'; requestId: string; name: string; params: unknown }
   | { type: 'CROSS_CANVAS_EMIT'; channel: string; payload: unknown }
   | { type: 'CROSS_CANVAS_SUBSCRIBE'; channel: string }
-  | { type: 'CROSS_CANVAS_UNSUBSCRIBE'; channel: string };
+  | { type: 'CROSS_CANVAS_UNSUBSCRIBE'; channel: string }
+  | { type: 'DS_CREATE'; requestId: string; dsType: string; scope: string; schema?: Record<string, unknown>; metadata?: Record<string, unknown> }
+  | { type: 'DS_READ'; requestId: string; dataSourceId: string }
+  | { type: 'DS_UPDATE'; requestId: string; dataSourceId: string; updates: Record<string, unknown>; lastSeenRevision?: number }
+  | { type: 'DS_DELETE'; requestId: string; dataSourceId: string }
+  | { type: 'DS_LIST'; requestId: string; scope?: string; dsType?: string }
+  | { type: 'DS_TABLE_GET_ROWS'; requestId: string; dataSourceId: string; options?: Record<string, unknown> }
+  | { type: 'DS_TABLE_ADD_ROW'; requestId: string; dataSourceId: string; row: Record<string, unknown> }
+  | { type: 'DS_TABLE_UPDATE_ROW'; requestId: string; dataSourceId: string; rowId: string; updates: Record<string, unknown>; lastSeenRevision?: number }
+  | { type: 'DS_TABLE_DELETE_ROW'; requestId: string; dataSourceId: string; rowId: string };

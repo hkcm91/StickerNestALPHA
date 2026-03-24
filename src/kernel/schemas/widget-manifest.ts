@@ -43,6 +43,10 @@ export const WidgetPermissionSchema = z.enum([
   'checkout',
   /** Access to auth APIs (signup/login) */
   'auth',
+  /** Read access to DataSource API */
+  'datasource',
+  /** Write access to DataSource API (requires 'datasource' as well) */
+  'datasource-write',
 ]);
 
 export type WidgetPermission = z.infer<typeof WidgetPermissionSchema>;
