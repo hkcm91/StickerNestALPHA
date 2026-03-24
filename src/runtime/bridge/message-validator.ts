@@ -62,6 +62,11 @@ const WidgetMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('DS_TABLE_ADD_ROW'), requestId: z.string(), dataSourceId: z.string(), row: z.record(z.string(), z.unknown()) }),
   z.object({ type: z.literal('DS_TABLE_UPDATE_ROW'), requestId: z.string(), dataSourceId: z.string(), rowId: z.string(), updates: z.record(z.string(), z.unknown()), lastSeenRevision: z.number().optional() }),
   z.object({ type: z.literal('DS_TABLE_DELETE_ROW'), requestId: z.string(), dataSourceId: z.string(), rowId: z.string() }),
+  // MCP messages
+  z.object({ type: z.literal('MCP_TOOL_CALL'), requestId: z.string(), serverName: z.string(), toolName: z.string(), args: z.record(z.string(), z.unknown()) }),
+  z.object({ type: z.literal('MCP_RESOURCE_READ'), requestId: z.string(), serverName: z.string(), uri: z.string() }),
+  z.object({ type: z.literal('MCP_LIST_TOOLS'), requestId: z.string(), serverName: z.string() }),
+  z.object({ type: z.literal('MCP_LIST_RESOURCES'), requestId: z.string(), serverName: z.string() }),
 ]);
 
 // ---------------------------------------------------------------------------
@@ -90,6 +95,7 @@ const HostMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('INTEGRATION_RESPONSE'), requestId: z.string(), result: z.unknown(), error: z.string().optional() }),
   z.object({ type: z.literal('CROSS_CANVAS_EVENT'), channel: z.string(), payload: z.unknown() }),
   z.object({ type: z.literal('DS_RESPONSE'), requestId: z.string(), result: z.unknown(), error: z.string().optional() }),
+  z.object({ type: z.literal('MCP_RESPONSE'), requestId: z.string(), result: z.unknown(), error: z.string().optional() }),
   z.object({ type: z.literal('DESTROY') }),
 ]);
 

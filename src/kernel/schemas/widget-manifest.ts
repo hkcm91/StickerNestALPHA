@@ -47,6 +47,8 @@ export const WidgetPermissionSchema = z.enum([
   'datasource',
   /** Write access to DataSource API (requires 'datasource' as well) */
   'datasource-write',
+  /** Access to MCP (Model Context Protocol) servers */
+  'mcp',
 ]);
 
 export type WidgetPermission = z.infer<typeof WidgetPermissionSchema>;

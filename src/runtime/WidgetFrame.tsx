@@ -25,6 +25,7 @@ import { getIntegrationProxy } from './integrations/singleton';
 import { WidgetErrorBoundary } from './lifecycle/error-boundary';
 import { createLifecycleManager } from './lifecycle/manager';
 import type { WidgetLifecycleManager } from './lifecycle/manager';
+import { handleMcpMessage } from './mcp/mcp-proxy';
 import { buildSrcdoc } from './sdk/sdk-builder';
 import { SANDBOX_POLICY } from './security/sandbox-policy';
 
@@ -426,8 +427,10 @@ const WidgetIframe: React.FC<WidgetFrameProps> = (props) => {
         }
 
         default:
-          // Delegate DataSource messages to the dedicated handler
-          handleDataSourceMessage(message, { widgetId, instanceId, bridge });
+          // Delegate to dedicated handlers (DataSource, MCP)
+          if (!handleDataSourceMessage(message, { widgetId, instanceId, bridge })) {
+            handleMcpMessage(message, { widgetId, instanceId, bridge });
+          }
           break;
       }
     });

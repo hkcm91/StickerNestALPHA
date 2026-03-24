@@ -698,6 +698,35 @@ export {
 } from "./widget-design-spec";
 
 // =============================================================================
+// MCP (Model Context Protocol) Schemas
+// =============================================================================
+export {
+  // Schemas
+  McpAuthTypeSchema,
+  McpServerConfigSchema,
+  McpToolDefinitionSchema,
+  McpToolCallSchema,
+  McpToolResultSchema,
+  McpResourceSchema,
+  McpResourceReadResultSchema,
+  // Types
+  type McpAuthType,
+  type McpServerConfig,
+  type McpToolDefinition,
+  type McpToolCall,
+  type McpToolResult,
+  type McpResource,
+  type McpResourceReadResult,
+  // JSON Schemas
+  McpServerConfigJSONSchema,
+  McpToolDefinitionJSONSchema,
+  McpToolCallJSONSchema,
+  McpToolResultJSONSchema,
+  McpResourceJSONSchema,
+  McpResourceReadResultJSONSchema,
+} from "./mcp";
+
+// =============================================================================
 // Theme Schemas
 // =============================================================================
 export {

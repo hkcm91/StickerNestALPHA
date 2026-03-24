@@ -53,6 +53,13 @@ export interface StickerNestSDK {
   subscribeCrossCanvas(channel: string, handler: (payload: unknown) => void): void;
   /** Cross-canvas event unsubscription */
   unsubscribeCrossCanvas(channel: string): void;
+  /** MCP (Model Context Protocol) server access through host proxy */
+  mcp(serverName: string): {
+    callTool(toolName: string, args?: Record<string, unknown>): Promise<unknown>;
+    readResource(uri: string): Promise<unknown>;
+    listTools(): Promise<unknown[]>;
+    listResources(): Promise<unknown[]>;
+  };
   /** DataSource API — persistent data access through host proxy */
   datasource: {
     create(dsType: string, scope: string, options?: { schema?: Record<string, unknown>; metadata?: Record<string, unknown> }): Promise<unknown>;
@@ -213,6 +220,15 @@ export function generateSDKTemplate(): string {
         }
         break;
 
+      case 'MCP_RESPONSE':
+        var mcpKey = 'mcp_' + data.requestId;
+        if (data.error) {
+          rejectPending(mcpKey, new Error(data.error));
+        } else {
+          resolvePending(mcpKey, data.result);
+        }
+        break;
+
       case 'DESTROY':
         _eventHandlers = {};
         _themeHandlers = [];
@@ -353,6 +369,58 @@ export function generateSDKTemplate(): string {
     },
 
     /** DataSource API — persistent data access through host proxy */
+    mcp: function(serverName) {
+      return {
+        callTool: function(toolName, args) {
+          return new Promise(function(resolve, reject) {
+            var requestId = 'req_' + (++_requestCounter);
+            addPendingRequest('mcp_' + requestId, resolve, reject);
+            postToHost({
+              type: 'MCP_TOOL_CALL',
+              requestId: requestId,
+              serverName: serverName,
+              toolName: toolName,
+              args: args || {}
+            });
+          });
+        },
+        readResource: function(uri) {
+          return new Promise(function(resolve, reject) {
+            var requestId = 'req_' + (++_requestCounter);
+            addPendingRequest('mcp_' + requestId, resolve, reject);
+            postToHost({
+              type: 'MCP_RESOURCE_READ',
+              requestId: requestId,
+              serverName: serverName,
+              uri: uri
+            });
+          });
+        },
+        listTools: function() {
+          return new Promise(function(resolve, reject) {
+            var requestId = 'req_' + (++_requestCounter);
+            addPendingRequest('mcp_' + requestId, resolve, reject);
+            postToHost({
+              type: 'MCP_LIST_TOOLS',
+              requestId: requestId,
+              serverName: serverName
+            });
+          });
+        },
+        listResources: function() {
+          return new Promise(function(resolve, reject) {
+            var requestId = 'req_' + (++_requestCounter);
+            addPendingRequest('mcp_' + requestId, resolve, reject);
+            postToHost({
+              type: 'MCP_LIST_RESOURCES',
+              requestId: requestId,
+              serverName: serverName
+            });
+          });
+        }
+      };
+    },
+
     datasource: {
       create: function(dsType, scope, options) {
         return new Promise(function(resolve, reject) {
