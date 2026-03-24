@@ -45,6 +45,16 @@ interface ShopItem {
   stock_count: number | null;
 }
 
+interface RefundRequest {
+  id: string;
+  buyer_id: string;
+  amount_cents: number;
+  currency: string;
+  created_at: string;
+  item_id: string | null;
+  metadata: Record<string, unknown> | null;
+}
+
 // ── Shared button style ──────────────────────────────────────────────────
 
 const btnStyle: React.CSSProperties = {
@@ -83,9 +93,11 @@ export const CreatorCommerceSection: React.FC = () => {
   const [account, setAccount] = useState<CreatorAccount | null>(null);
   const [tiers, setTiers] = useState<SubscriptionTier[]>([]);
   const [items, setItems] = useState<ShopItem[]>([]);
+  const [refundRequests, setRefundRequests] = useState<RefundRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [onboardLoading, setOnboardLoading] = useState(false);
   const [dashboardLoading, setDashboardLoading] = useState(false);
+  const [processingRefund, setProcessingRefund] = useState<string | null>(null);
 
   // Load creator account, tiers, and shop items
   useEffect(() => {
@@ -96,7 +108,7 @@ export const CreatorCommerceSection: React.FC = () => {
 
     async function load() {
       setLoading(true);
-      const [accountRes, tiersRes, itemsRes] = await Promise.all([
+      const [accountRes, tiersRes, itemsRes, refundsRes] = await Promise.all([
         supabase.from('creator_accounts').select('*').eq('user_id', user!.id).maybeSingle(),
         supabase
           .from('canvas_subscription_tiers')
@@ -106,11 +118,18 @@ export const CreatorCommerceSection: React.FC = () => {
           .from('shop_items')
           .select('*')
           .order('created_at', { ascending: false }),
+        supabase
+          .from('orders')
+          .select('*')
+          .eq('seller_id', user!.id)
+          .eq('status', 'refund_requested')
+          .order('created_at', { ascending: false }),
       ]);
 
       setAccount(accountRes.data as CreatorAccount | null);
       setTiers((tiersRes.data as SubscriptionTier[]) ?? []);
       setItems((itemsRes.data as ShopItem[]) ?? []);
+      setRefundRequests((refundsRes.data as RefundRequest[]) ?? []);
       setLoading(false);
     }
     load();
@@ -127,6 +146,22 @@ export const CreatorCommerceSection: React.FC = () => {
       // Fallback — show error
     } finally {
       setOnboardLoading(false);
+    }
+  }, []);
+
+  const handleRefund = useCallback(async (orderId: string, action: 'approve' | 'deny') => {
+    setProcessingRefund(orderId);
+    try {
+      const res = await supabase.functions.invoke('process-refund', {
+        body: { orderId, action },
+      });
+      if (!res.error && !(res.data as Record<string, unknown>)?.error) {
+        setRefundRequests((prev: RefundRequest[]) => prev.filter((r: RefundRequest) => r.id !== orderId));
+      }
+    } catch {
+      // Error handling — toast would go here
+    } finally {
+      setProcessingRefund(null);
     }
   }, []);
 
@@ -302,6 +337,67 @@ export const CreatorCommerceSection: React.FC = () => {
                   <span style={{ color: item.is_active ? '#22c55e' : 'var(--sn-text-muted, #6b7280)' }}>
                     {item.is_active ? 'Active' : 'Inactive'}
                   </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Pending Refunds */}
+      <div style={cardStyle}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <h3 style={{ margin: 0, fontSize: 15 }}>Pending Refunds</h3>
+          <span style={{ fontSize: 12, color: 'var(--sn-text-muted, #6b7280)' }}>
+            {refundRequests.length} request{refundRequests.length !== 1 ? 's' : ''}
+          </span>
+        </div>
+        {refundRequests.length === 0 ? (
+          <p style={{ fontSize: 13, color: 'var(--sn-text-muted, #6b7280)', margin: 0 }}>
+            No pending refund requests.
+          </p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {refundRequests.map((req) => (
+              <div
+                key={req.id}
+                data-testid={`refund-request-${req.id}`}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '8px 12px',
+                  border: '1px solid var(--sn-border, #e5e7eb)',
+                  borderRadius: 8,
+                  fontSize: 13,
+                }}
+              >
+                <div>
+                  <span style={{ fontWeight: 600 }}>
+                    {(req.amount_cents / 100).toLocaleString(undefined, {
+                      style: 'currency',
+                      currency: req.currency || 'usd',
+                    })}
+                  </span>
+                  <span style={{ marginLeft: 8, color: 'var(--sn-text-muted, #6b7280)', fontSize: 11 }}>
+                    {new Date(req.created_at).toLocaleDateString()}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button
+                    onClick={() => handleRefund(req.id, 'approve')}
+                    disabled={processingRefund === req.id}
+                    style={{ ...btnStyle, fontSize: 12, padding: '4px 10px' }}
+                  >
+                    Approve
+                  </button>
+                  <button
+                    onClick={() => handleRefund(req.id, 'deny')}
+                    disabled={processingRefund === req.id}
+                    style={{ ...btnOutlineStyle, fontSize: 12, padding: '4px 10px' }}
+                  >
+                    Deny
+                  </button>
                 </div>
               </div>
             ))}
