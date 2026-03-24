@@ -6,7 +6,9 @@
  */
 
 import type { BusEvent } from '@sn/types';
+import { CanvasEvents } from '@sn/types';
 
+import { executeAIActions } from '../../../kernel/ai/action-executor';
 import { bus } from '../../../kernel/bus';
 import type { PipelineGraph } from '../graph';
 
@@ -18,13 +20,25 @@ export interface ExecutionEngine {
   readonly isRunning: boolean;
 }
 
-export function createExecutionEngine(graph: PipelineGraph): ExecutionEngine {
+/**
+ * Callback for AI generation — injected by the host to keep HTTP concerns
+ * outside the engine. Returns the raw AI response text.
+ */
+export type AIGenerateHandler = (prompt: string, config: Record<string, unknown>) => Promise<string>;
+
+export interface ExecutionEngineOptions {
+  /** Handler for ai-generate nodes. If not provided, ai-generate nodes emit an error. */
+  onAIGenerate?: AIGenerateHandler;
+}
+
+export function createExecutionEngine(graph: PipelineGraph, options: ExecutionEngineOptions = {}): ExecutionEngine {
   let unsubscribe: (() => void) | null = null;
   let running = false;
 
   function routeEvent(event: BusEvent) {
     // Ignore events emitted by the engine itself to prevent infinite loops
     if (event.type === 'canvas.pipeline.routed') return;
+    if (event.type.startsWith('canvas.pipeline.ai.')) return;
 
     const nodes = graph.getAllNodes();
     const edges = graph.getAllEdges();
@@ -130,8 +144,105 @@ export function createExecutionEngine(graph: PipelineGraph): ExecutionEngine {
         break;
       }
 
+      // ─── AI Pipeline Nodes ──────────────────────────────────────────
+      // These are async — they do NOT block the event bus.
+
+      case 'ai-prompt': {
+        // Builds a prompt string from a template + incoming payload.
+        // config.promptTemplate: string with {{field}} placeholders
+        // Forwards: { prompt: string, ...originalPayload }
+        const template = (node.config?.promptTemplate as string) ?? '{{input}}';
+        const data = (payload && typeof payload === 'object') ? payload as Record<string, unknown> : { input: payload };
+        const prompt = template.replace(/\{\{(\w+)\}\}/g, (_, key: string) => {
+          const val = data[key];
+          return val != null ? String(val) : '';
+        });
+        forwardFromNode(node.id, { ...data, prompt }, edges);
+        break;
+      }
+
+      case 'ai-generate': {
+        // Calls the AI generation handler asynchronously.
+        // Input expects { prompt: string, ... }
+        // Forwards: { response: string, ...input }
+        const nodeId = node.id;
+        const prompt = (payload && typeof payload === 'object')
+          ? (payload as Record<string, unknown>).prompt as string ?? ''
+          : String(payload ?? '');
+        const config = node.config ?? {};
+
+        bus.emit(CanvasEvents.PIPELINE_AI_PROCESSING, { nodeId });
+
+        if (!options.onAIGenerate) {
+          bus.emit(CanvasEvents.PIPELINE_AI_ERROR, {
+            nodeId,
+            error: 'No AI generation handler configured',
+          });
+          break;
+        }
+
+        // Fire-and-forget async — does NOT block the bus
+        options.onAIGenerate(prompt, config).then(
+          (response) => {
+            if (!running) return; // Engine stopped while waiting
+            bus.emit(CanvasEvents.PIPELINE_AI_COMPLETED, { nodeId, response });
+            const currentEdges = graph.getAllEdges();
+            forwardFromNode(nodeId, { ...((payload && typeof payload === 'object') ? payload : {}), response }, currentEdges);
+          },
+          (err: unknown) => {
+            const message = err instanceof Error ? err.message : String(err);
+            bus.emit(CanvasEvents.PIPELINE_AI_ERROR, { nodeId, error: message });
+          },
+        );
+        break;
+      }
+
+      case 'ai-create-entity': {
+        // Parses AI response as action JSON and executes entity creation.
+        // Input expects { response: string, ... } or { actions: [...] }
+        const nodeId = node.id;
+        const data = (payload && typeof payload === 'object') ? payload as Record<string, unknown> : {};
+
+        let actions: Record<string, unknown>[];
+
+        if (Array.isArray(data.actions)) {
+          // Pre-parsed actions array
+          actions = data.actions as Record<string, unknown>[];
+        } else if (typeof data.response === 'string') {
+          // Parse JSON from AI response text
+          try {
+            const trimmed = (data.response as string).trim();
+            let json = trimmed;
+            const fenceMatch = trimmed.match(/```(?:json)?\s*\n([\s\S]*?)\n```/);
+            if (fenceMatch) json = fenceMatch[1].trim();
+            if (!json.startsWith('{') && !json.startsWith('[')) {
+              const objMatch = json.match(/(\{[\s\S]*\})/);
+              if (objMatch) json = objMatch[1];
+            }
+            const parsed = JSON.parse(json);
+            actions = Array.isArray(parsed.actions) ? parsed.actions : Array.isArray(parsed) ? parsed : [];
+          } catch {
+            bus.emit(CanvasEvents.PIPELINE_AI_ERROR, {
+              nodeId,
+              error: 'Failed to parse AI response as action JSON',
+            });
+            break;
+          }
+        } else {
+          bus.emit(CanvasEvents.PIPELINE_AI_ERROR, {
+            nodeId,
+            error: 'ai-create-entity requires { response: string } or { actions: [...] }',
+          });
+          break;
+        }
+
+        const result = executeAIActions(actions);
+        forwardFromNode(nodeId, { executionResult: result }, edges);
+        break;
+      }
+
       default: {
-        // Handle async node types (ai-generate, ai-action, http-request)
+        // Handle additional async node types (ai-action, http-request)
         if (isAsyncNode(node.type)) {
           void executeAsyncNode(node, payload, (nodeId, result) => {
             const currentEdges = graph.getAllEdges();

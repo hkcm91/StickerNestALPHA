@@ -41,6 +41,7 @@ export type HostMessage =
   | { type: 'AI_RESPONSE'; requestId: string; text: string; error?: string }
   | { type: 'AI_CHUNK'; requestId: string; chunk: string; done: boolean }
   | { type: 'CANVAS_WRITE_RESPONSE'; requestId: string; success: boolean; entityId?: string; error?: string }
+  | { type: 'ENTITY_RESPONSE'; requestId: string; result: unknown; error?: string }
   | { type: 'DESTROY' };
 
 /**
@@ -79,6 +80,6 @@ export type WidgetMessage =
   | { type: 'AI_COMPLETE'; requestId: string; prompt: string; systemPrompt?: string; model?: string; maxTokens?: number }
   | { type: 'AI_STREAM'; requestId: string; prompt: string; systemPrompt?: string; model?: string; maxTokens?: number }
   // Canvas entity write messages (requires 'canvas-write' permission)
-  | { type: 'CREATE_ENTITY'; requestId: string; entityType: string; name?: string; position: { x: number; y: number }; size?: { width: number; height: number }; properties?: Record<string, unknown> }
+  | { type: 'CREATE_ENTITY'; requestId: string; entityType?: string; entity?: unknown; name?: string; position?: { x: number; y: number }; size?: { width: number; height: number }; properties?: Record<string, unknown> }
   | { type: 'UPDATE_ENTITY'; requestId: string; entityId: string; updates: Record<string, unknown> }
   | { type: 'DELETE_ENTITY'; requestId: string; entityId: string };

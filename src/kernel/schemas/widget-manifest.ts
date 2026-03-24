@@ -49,7 +49,7 @@ export const WidgetPermissionSchema = z.enum([
   'datasource-write',
   /** Access to MCP (Model Context Protocol) servers */
   'mcp',
-  /** Write access to canvas entities (create, update, delete) */
+  /** Permission to create/modify/delete canvas entities */
   'canvas-write',
 ]);
 

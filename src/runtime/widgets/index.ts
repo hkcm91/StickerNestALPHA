@@ -13,6 +13,8 @@
 // Each built-in must use the same SDK interface as sandboxed widgets.
 // No privileged internal APIs — this ensures portability.
 
+export { AICanvasAgentWidget } from './ai-canvas-agent/ai-canvas-agent.widget';
+export { aiCanvasAgentManifest } from './ai-canvas-agent/ai-canvas-agent.widget';
 export { ImageGeneratorWidget } from './image-generator/image-generator.widget';
 export { imageGeneratorManifest } from './image-generator/image-generator.widget';
 export { KanbanWidget } from './kanban/kanban.widget';
