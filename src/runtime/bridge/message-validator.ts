@@ -62,8 +62,17 @@ const WidgetMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('DS_TABLE_ADD_ROW'), requestId: z.string(), dataSourceId: z.string(), row: z.record(z.string(), z.unknown()) }),
   z.object({ type: z.literal('DS_TABLE_UPDATE_ROW'), requestId: z.string(), dataSourceId: z.string(), rowId: z.string(), updates: z.record(z.string(), z.unknown()), lastSeenRevision: z.number().optional() }),
   z.object({ type: z.literal('DS_TABLE_DELETE_ROW'), requestId: z.string(), dataSourceId: z.string(), rowId: z.string() }),
-  // Canvas entity messages
-  z.object({ type: z.literal('CREATE_ENTITY'), requestId: z.string(), entity: z.unknown() }),
+  // MCP messages
+  z.object({ type: z.literal('MCP_TOOL_CALL'), requestId: z.string(), serverName: z.string(), toolName: z.string(), args: z.record(z.string(), z.unknown()) }),
+  z.object({ type: z.literal('MCP_RESOURCE_READ'), requestId: z.string(), serverName: z.string(), uri: z.string() }),
+  z.object({ type: z.literal('MCP_LIST_TOOLS'), requestId: z.string(), serverName: z.string() }),
+  z.object({ type: z.literal('MCP_LIST_RESOURCES'), requestId: z.string(), serverName: z.string() }),
+  // AI completion messages
+  z.object({ type: z.literal('AI_COMPLETE'), requestId: z.string(), prompt: z.string(), systemPrompt: z.string().optional(), model: z.string().optional(), maxTokens: z.number().optional() }),
+  z.object({ type: z.literal('AI_STREAM'), requestId: z.string(), prompt: z.string(), systemPrompt: z.string().optional(), model: z.string().optional(), maxTokens: z.number().optional() }),
+  // Canvas entity write messages
+  z.object({ type: z.literal('CREATE_ENTITY'), requestId: z.string(), entityType: z.string().optional(), entity: z.unknown().optional(), name: z.string().optional(), position: z.object({ x: z.number(), y: z.number() }).optional(), size: z.object({ width: z.number(), height: z.number() }).optional(), properties: z.record(z.string(), z.unknown()).optional() }),
+  z.object({ type: z.literal('UPDATE_ENTITY'), requestId: z.string(), entityId: z.string(), updates: z.record(z.string(), z.unknown()) }),
   z.object({ type: z.literal('DELETE_ENTITY'), requestId: z.string(), entityId: z.string() }),
 ]);
 
@@ -93,6 +102,10 @@ const HostMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('INTEGRATION_RESPONSE'), requestId: z.string(), result: z.unknown(), error: z.string().optional() }),
   z.object({ type: z.literal('CROSS_CANVAS_EVENT'), channel: z.string(), payload: z.unknown() }),
   z.object({ type: z.literal('DS_RESPONSE'), requestId: z.string(), result: z.unknown(), error: z.string().optional() }),
+  z.object({ type: z.literal('MCP_RESPONSE'), requestId: z.string(), result: z.unknown(), error: z.string().optional() }),
+  z.object({ type: z.literal('AI_RESPONSE'), requestId: z.string(), text: z.string(), error: z.string().optional() }),
+  z.object({ type: z.literal('AI_CHUNK'), requestId: z.string(), chunk: z.string(), done: z.boolean() }),
+  z.object({ type: z.literal('CANVAS_WRITE_RESPONSE'), requestId: z.string(), success: z.boolean(), entityId: z.string().optional(), error: z.string().optional() }),
   z.object({ type: z.literal('ENTITY_RESPONSE'), requestId: z.string(), result: z.unknown(), error: z.string().optional() }),
   z.object({ type: z.literal('DESTROY') }),
 ]);

@@ -12,6 +12,8 @@ import { executeAIActions } from '../../../kernel/ai/action-executor';
 import { bus } from '../../../kernel/bus';
 import type { PipelineGraph } from '../graph';
 
+import { isAsyncNode, executeAsyncNode, cancelAllAsyncNodes } from './async-nodes';
+
 export interface ExecutionEngine {
   start(): void;
   stop(): void;
@@ -238,6 +240,19 @@ export function createExecutionEngine(graph: PipelineGraph, options: ExecutionEn
         forwardFromNode(nodeId, { executionResult: result }, edges);
         break;
       }
+
+      default: {
+        // Handle additional async node types (ai-action, http-request)
+        if (isAsyncNode(node.type)) {
+          void executeAsyncNode(node, payload, (nodeId, result) => {
+            const currentEdges = graph.getAllEdges();
+            forwardFromNode(nodeId, result, currentEdges);
+          });
+          break;
+        }
+        // Unknown node type — ignore
+        break;
+      }
     }
   }
 
@@ -280,6 +295,7 @@ export function createExecutionEngine(graph: PipelineGraph, options: ExecutionEn
         clearTimeout(timer);
       }
       debounceTimers.clear();
+      cancelAllAsyncNodes();
     },
 
     get isRunning() {

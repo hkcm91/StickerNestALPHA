@@ -10,8 +10,98 @@
 
 import { z } from 'zod';
 
+import { CanvasEntityTypeSchema } from './canvas-entity';
+import { Point2DSchema, Size2DSchema } from './spatial';
+
 // ---------------------------------------------------------------------------
-// Individual action schemas
+// Generic AI Canvas Action Schemas (branch: HEAD)
+// ---------------------------------------------------------------------------
+
+/**
+ * Create a new entity on the canvas (generic).
+ */
+export const AICreateEntityActionSchema = z.object({
+  type: z.literal('create-entity'),
+  entityType: CanvasEntityTypeSchema,
+  name: z.string().optional(),
+  position: Point2DSchema,
+  size: Size2DSchema.optional(),
+  /** Type-specific properties (e.g., text content, sticker URL, widget ID) */
+  properties: z.record(z.string(), z.unknown()).optional(),
+});
+
+/**
+ * Update an existing entity's properties (generic).
+ */
+export const AIUpdateEntityActionSchema = z.object({
+  type: z.literal('update-entity'),
+  entityId: z.string().min(1),
+  updates: z.record(z.string(), z.unknown()),
+});
+
+/**
+ * Delete an entity from the canvas (generic).
+ */
+export const AIDeleteEntityActionSchema = z.object({
+  type: z.literal('delete-entity'),
+  entityId: z.string().min(1),
+});
+
+/**
+ * Move an entity to a new position (generic).
+ */
+export const AIMoveEntityActionSchema = z.object({
+  type: z.literal('move-entity'),
+  entityId: z.string().min(1),
+  position: Point2DSchema,
+});
+
+/**
+ * Emit an arbitrary bus event (gated by permission, generic).
+ */
+export const AIEmitEventActionSchema = z.object({
+  type: z.literal('emit-event'),
+  eventType: z.string().min(1),
+  payload: z.unknown(),
+});
+
+/**
+ * Discriminated union of all generic AI canvas actions (type-discriminated).
+ */
+export const AICanvasActionSchema = z.discriminatedUnion('type', [
+  AICreateEntityActionSchema,
+  AIUpdateEntityActionSchema,
+  AIDeleteEntityActionSchema,
+  AIMoveEntityActionSchema,
+  AIEmitEventActionSchema,
+]);
+
+export type AICanvasAction = z.infer<typeof AICanvasActionSchema>;
+export type AICreateEntityAction = z.infer<typeof AICreateEntityActionSchema>;
+export type AIUpdateEntityAction = z.infer<typeof AIUpdateEntityActionSchema>;
+export type AIDeleteEntityAction = z.infer<typeof AIDeleteEntityActionSchema>;
+export type AIMoveEntityAction = z.infer<typeof AIMoveEntityActionSchema>;
+export type AIEmitEventAction = z.infer<typeof AIEmitEventActionSchema>;
+
+/**
+ * Batch of generic AI actions with rate limiting metadata.
+ */
+export const AICanvasActionBatchSchema = z.object({
+  actions: z.array(AICanvasActionSchema).max(20, 'Maximum 20 actions per batch'),
+});
+
+export type AICanvasActionBatch = z.infer<typeof AICanvasActionBatchSchema>;
+
+/**
+ * Result of executing a batch of AI actions.
+ */
+export interface AIActionExecutionResult {
+  succeeded: number;
+  failed: Array<{ action: AICanvasAction; error: string }>;
+}
+
+// ---------------------------------------------------------------------------
+// Specific AI Action Schemas (origin/main — action-discriminated)
 // ---------------------------------------------------------------------------
 
 /** Create a sticker entity on the canvas */
@@ -57,22 +147,22 @@ export const AICreateShapeActionSchema = z.object({
   name: z.string().optional(),
 });
 
-/** Move an entity to a new position */
-export const AIMoveEntityActionSchema = z.object({
+/** Move an entity to a new position (specific) */
+export const AIMoveEntitySpecificActionSchema = z.object({
   action: z.literal('move_entity'),
   entityId: z.string().uuid(),
   position: z.object({ x: z.number(), y: z.number() }),
 });
 
-/** Update entity properties (transform, style, config) */
-export const AIUpdateEntityActionSchema = z.object({
+/** Update entity properties (specific) */
+export const AIUpdateEntitySpecificActionSchema = z.object({
   action: z.literal('update_entity'),
   entityId: z.string().uuid(),
   updates: z.record(z.string(), z.unknown()),
 });
 
-/** Delete an entity from the canvas */
-export const AIDeleteEntityActionSchema = z.object({
+/** Delete an entity from the canvas (specific) */
+export const AIDeleteEntitySpecificActionSchema = z.object({
   action: z.literal('delete_entity'),
   entityId: z.string().uuid(),
 });
@@ -85,15 +175,15 @@ export const AITriggerGenerationActionSchema = z.object({
   size: z.object({ width: z.number().positive(), height: z.number().positive() }).optional(),
 });
 
-/** Emit a bus event */
-export const AIEmitEventActionSchema = z.object({
+/** Emit a bus event (specific) */
+export const AIEmitEventSpecificActionSchema = z.object({
   action: z.literal('emit_event'),
   eventType: z.string().min(1),
   payload: z.unknown(),
 });
 
 // ---------------------------------------------------------------------------
-// Discriminated union of all AI actions
+// Discriminated union of all specific AI actions (action-discriminated)
 // ---------------------------------------------------------------------------
 
 export const AIActionSchema = z.discriminatedUnion('action', [
@@ -101,16 +191,16 @@ export const AIActionSchema = z.discriminatedUnion('action', [
   AICreateWidgetActionSchema,
   AICreateTextActionSchema,
   AICreateShapeActionSchema,
-  AIMoveEntityActionSchema,
-  AIUpdateEntityActionSchema,
-  AIDeleteEntityActionSchema,
+  AIMoveEntitySpecificActionSchema,
+  AIUpdateEntitySpecificActionSchema,
+  AIDeleteEntitySpecificActionSchema,
   AITriggerGenerationActionSchema,
-  AIEmitEventActionSchema,
+  AIEmitEventSpecificActionSchema,
 ]);
 
 export type AIAction = z.infer<typeof AIActionSchema>;
 
-/** A batch of AI actions to execute in order */
+/** A batch of specific AI actions to execute in order */
 export const AIActionBatchSchema = z.object({
   actions: z.array(AIActionSchema),
   /** Optional reasoning from the AI about why these actions were chosen */
@@ -193,6 +283,8 @@ export type AICanvasContext = z.infer<typeof AICanvasContextSchema>;
 // JSON Schema exports
 // ---------------------------------------------------------------------------
 
+export const AICanvasActionJSONSchema = AICanvasActionSchema.toJSONSchema();
+export const AICanvasActionBatchJSONSchema = AICanvasActionBatchSchema.toJSONSchema();
 export const AIActionJSONSchema = AIActionSchema.toJSONSchema();
 export const AIActionBatchJSONSchema = AIActionBatchSchema.toJSONSchema();
 export const AICanvasContextJSONSchema = AICanvasContextSchema.toJSONSchema();

@@ -53,9 +53,27 @@ export interface StickerNestSDK {
   subscribeCrossCanvas(channel: string, handler: (payload: unknown) => void): void;
   /** Cross-canvas event unsubscription */
   unsubscribeCrossCanvas(channel: string): void;
-  /** Create an entity on the canvas (requires canvas-write permission) */
+  /** AI completion API through host proxy (requires 'ai' permission) */
+  ai: {
+    complete(prompt: string, options?: { systemPrompt?: string; model?: string; maxTokens?: number }): Promise<string>;
+    stream(prompt: string, options?: { systemPrompt?: string; model?: string; maxTokens?: number }): Promise<AsyncIterable<string>>;
+  };
+  /** MCP (Model Context Protocol) server access through host proxy */
+  mcp(serverName: string): {
+    callTool(toolName: string, args?: Record<string, unknown>): Promise<unknown>;
+    readResource(uri: string): Promise<unknown>;
+    listTools(): Promise<unknown[]>;
+    listResources(): Promise<unknown[]>;
+  };
+  /** Canvas entity API (requires 'canvas-write' permission) */
+  canvas: {
+    createEntity(entityType: string, position: { x: number; y: number }, options?: { name?: string; size?: { width: number; height: number }; properties?: Record<string, unknown> }): Promise<{ entityId: string }>;
+    updateEntity(entityId: string, updates: Record<string, unknown>): Promise<{ entityId: string }>;
+    deleteEntity(entityId: string): Promise<{ entityId: string }>;
+  };
+  /** Create an entity on the canvas (requires canvas-write permission) — simple API */
   createEntity(entity: Record<string, unknown>): Promise<{ success: boolean; entityId?: string }>;
-  /** Delete an entity from the canvas (requires canvas-write permission) */
+  /** Delete an entity from the canvas (requires canvas-write permission) — simple API */
   deleteEntity(entityId: string): Promise<{ success: boolean; entityId?: string }>;
   /** DataSource API — persistent data access through host proxy */
   datasource: {
@@ -94,6 +112,7 @@ export function generateSDKTemplate(): string {
   var _themeHandlers = [];
   var _resizeHandlers = [];
   var _crossCanvasHandlers = {};
+  var _aiStreams = {};
   var _pendingRequests = {};
   var _requestCounter = 0;
   var REQUEST_TIMEOUT_MS = 10000;
@@ -208,12 +227,61 @@ export function generateSDKTemplate(): string {
         }
         break;
 
+      case 'CANVAS_WRITE_RESPONSE':
+        var canvasKey = 'canvas_' + data.requestId;
+        if (data.error) {
+          rejectPending(canvasKey, new Error(data.error));
+        } else {
+          resolvePending(canvasKey, { entityId: data.entityId });
+        }
+        break;
+
       case 'DS_RESPONSE':
         var dsKey = 'ds_' + data.requestId;
         if (data.error) {
           rejectPending(dsKey, new Error(data.error));
         } else {
           resolvePending(dsKey, data.result);
+        }
+        break;
+
+      case 'MCP_RESPONSE':
+        var mcpKey = 'mcp_' + data.requestId;
+        if (data.error) {
+          rejectPending(mcpKey, new Error(data.error));
+        } else {
+          resolvePending(mcpKey, data.result);
+        }
+        break;
+
+      case 'AI_RESPONSE':
+        var aiKey = 'ai_' + data.requestId;
+        if (data.error) {
+          rejectPending(aiKey, new Error(data.error));
+        } else {
+          resolvePending(aiKey, data.text);
+        }
+        break;
+
+      case 'AI_CHUNK':
+        var aiStreamKey = 'ai_stream_' + data.requestId;
+        var streamState = _aiStreams[data.requestId];
+        if (streamState) {
+          if (data.done) {
+            streamState.done = true;
+            if (streamState.resolve) {
+              streamState.resolve({ value: undefined, done: true });
+              streamState.resolve = null;
+            }
+            delete _aiStreams[data.requestId];
+          } else {
+            streamState.buffer.push(data.chunk);
+            if (streamState.resolve) {
+              var chunk = streamState.buffer.shift();
+              streamState.resolve({ value: chunk, done: false });
+              streamState.resolve = null;
+            }
+          }
         }
         break;
 
@@ -384,6 +452,148 @@ export function generateSDKTemplate(): string {
     },
 
     /** DataSource API — persistent data access through host proxy */
+    ai: {
+      complete: function(prompt, options) {
+        return new Promise(function(resolve, reject) {
+          var requestId = 'req_' + (++_requestCounter);
+          addPendingRequest('ai_' + requestId, resolve, reject);
+          postToHost({
+            type: 'AI_COMPLETE',
+            requestId: requestId,
+            prompt: prompt,
+            systemPrompt: options && options.systemPrompt,
+            model: options && options.model,
+            maxTokens: options && options.maxTokens
+          });
+        });
+      },
+      stream: function(prompt, options) {
+        var requestId = 'req_' + (++_requestCounter);
+        var streamState = { buffer: [], done: false, resolve: null };
+        _aiStreams[requestId] = streamState;
+
+        postToHost({
+          type: 'AI_STREAM',
+          requestId: requestId,
+          prompt: prompt,
+          systemPrompt: options && options.systemPrompt,
+          model: options && options.model,
+          maxTokens: options && options.maxTokens
+        });
+
+        var iterator = {};
+        iterator[Symbol.asyncIterator] = function() {
+          return {
+            next: function() {
+              if (streamState.buffer.length > 0) {
+                return Promise.resolve({ value: streamState.buffer.shift(), done: false });
+              }
+              if (streamState.done) {
+                return Promise.resolve({ value: undefined, done: true });
+              }
+              return new Promise(function(resolve) {
+                streamState.resolve = resolve;
+              });
+            }
+          };
+        };
+        return Promise.resolve(iterator);
+      }
+    },
+
+    mcp: function(serverName) {
+      return {
+        callTool: function(toolName, args) {
+          return new Promise(function(resolve, reject) {
+            var requestId = 'req_' + (++_requestCounter);
+            addPendingRequest('mcp_' + requestId, resolve, reject);
+            postToHost({
+              type: 'MCP_TOOL_CALL',
+              requestId: requestId,
+              serverName: serverName,
+              toolName: toolName,
+              args: args || {}
+            });
+          });
+        },
+        readResource: function(uri) {
+          return new Promise(function(resolve, reject) {
+            var requestId = 'req_' + (++_requestCounter);
+            addPendingRequest('mcp_' + requestId, resolve, reject);
+            postToHost({
+              type: 'MCP_RESOURCE_READ',
+              requestId: requestId,
+              serverName: serverName,
+              uri: uri
+            });
+          });
+        },
+        listTools: function() {
+          return new Promise(function(resolve, reject) {
+            var requestId = 'req_' + (++_requestCounter);
+            addPendingRequest('mcp_' + requestId, resolve, reject);
+            postToHost({
+              type: 'MCP_LIST_TOOLS',
+              requestId: requestId,
+              serverName: serverName
+            });
+          });
+        },
+        listResources: function() {
+          return new Promise(function(resolve, reject) {
+            var requestId = 'req_' + (++_requestCounter);
+            addPendingRequest('mcp_' + requestId, resolve, reject);
+            postToHost({
+              type: 'MCP_LIST_RESOURCES',
+              requestId: requestId,
+              serverName: serverName
+            });
+          });
+        }
+      };
+    },
+
+    canvas: {
+      createEntity: function(entityType, position, options) {
+        return new Promise(function(resolve, reject) {
+          var requestId = 'req_' + (++_requestCounter);
+          addPendingRequest('canvas_' + requestId, resolve, reject);
+          postToHost({
+            type: 'CREATE_ENTITY',
+            requestId: requestId,
+            entityType: entityType,
+            name: options && options.name,
+            position: position,
+            size: options && options.size,
+            properties: options && options.properties
+          });
+        });
+      },
+      updateEntity: function(entityId, updates) {
+        return new Promise(function(resolve, reject) {
+          var requestId = 'req_' + (++_requestCounter);
+          addPendingRequest('canvas_' + requestId, resolve, reject);
+          postToHost({
+            type: 'UPDATE_ENTITY',
+            requestId: requestId,
+            entityId: entityId,
+            updates: updates
+          });
+        });
+      },
+      deleteEntity: function(entityId) {
+        return new Promise(function(resolve, reject) {
+          var requestId = 'req_' + (++_requestCounter);
+          addPendingRequest('canvas_' + requestId, resolve, reject);
+          postToHost({
+            type: 'DELETE_ENTITY',
+            requestId: requestId,
+            entityId: entityId
+          });
+        });
+      }
+    },
+
     datasource: {
       create: function(dsType, scope, options) {
         return new Promise(function(resolve, reject) {

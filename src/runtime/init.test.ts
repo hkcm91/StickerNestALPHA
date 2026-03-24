@@ -110,8 +110,8 @@ describe('initRuntime', () => {
     initRuntime();
 
     const store = useWidgetStore.getState();
-    // 5 built-in widgets: sticky-note, clock, counter, image-viewer, markdown-note
-    expect(store.registerWidget).toHaveBeenCalledTimes(5);
+    // All built-in widgets (including commerce, cross-canvas, AI agent, etc.)
+    expect(store.registerWidget).toHaveBeenCalledTimes(22);
   });
 
   it('sets up bus subscriptions for widget events', () => {
@@ -140,7 +140,7 @@ describe('initRuntime', () => {
 
     // Built-in widgets should only be registered once
     const store = useWidgetStore.getState();
-    expect(store.registerWidget).toHaveBeenCalledTimes(5);
+    expect(store.registerWidget).toHaveBeenCalledTimes(22);
   });
 });
 
