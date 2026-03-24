@@ -430,6 +430,7 @@ export const SocialGraphEvents = {
 
   // Message events
   MESSAGE_SENT: 'kernel.socialgraph.message.sent',
+  MESSAGES_READ: 'kernel.socialgraph.messages.read',
 
   // Widget invite events
   WIDGET_INVITE_SENT: 'kernel.socialgraph.widgetInvite.sent',
