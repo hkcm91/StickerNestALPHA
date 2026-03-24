@@ -42,6 +42,10 @@ export const PipelineNodeTypeSchema = z.enum([
   'throttle',
   'debounce',
   'tap',
+  // Async node types
+  'ai-generate',
+  'ai-action',
+  'http-request',
 ]);
 
 export type PipelineNodeType = z.infer<typeof PipelineNodeTypeSchema>;

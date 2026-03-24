@@ -18,6 +18,7 @@ import { useWidgetStore } from '../kernel/stores/widget/widget.store';
 import { handleAiCompletionMessage } from './ai-completion/ai-completion-handler';
 import { createWidgetBridge } from './bridge/bridge';
 import type { WidgetBridge } from './bridge/bridge';
+import { handleCanvasWriteMessage } from './bridge/canvas-write-handler';
 import { handleDataSourceMessage } from './bridge/datasource-handler';
 import type { ThemeTokens } from './bridge/message-types';
 import { getSharedCrossCanvasRouter, isValidChannelName } from './cross-canvas/cross-canvas-router';
@@ -428,8 +429,9 @@ const WidgetIframe: React.FC<WidgetFrameProps> = (props) => {
         }
 
         default:
-          // Delegate to dedicated handlers (DataSource, MCP, AI)
-          if (!handleDataSourceMessage(message, { widgetId, instanceId, bridge })
+          // Delegate to dedicated handlers (Canvas Write, DataSource, MCP, AI)
+          if (!handleCanvasWriteMessage(message, { widgetId, instanceId, bridge })
+            && !handleDataSourceMessage(message, { widgetId, instanceId, bridge })
             && !handleMcpMessage(message, { widgetId, instanceId, bridge })) {
             handleAiCompletionMessage(message, { widgetId, instanceId, bridge });
           }

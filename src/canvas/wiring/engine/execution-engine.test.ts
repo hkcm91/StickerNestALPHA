@@ -86,4 +86,40 @@ describe('ExecutionEngine', () => {
     engine.stop();
     expect(engine.isRunning).toBe(false);
   });
+
+  it('routes through ai-generate async node', async () => {
+    const graph = createPipelineGraph();
+    graph.addNode(makeWidgetNode('A', [], [makePort('out', 'output')]));
+    graph.addNode({
+      id: 'AI', type: 'ai-generate' as PipelineNode['type'], position: { x: 0, y: 0 },
+      inputPorts: [makePort('in', 'input')],
+      outputPorts: [makePort('out', 'output')],
+    });
+    graph.addNode(makeWidgetNode('B', [makePort('in', 'input')], []));
+    graph.addEdge({ id: 'e1', sourceNodeId: 'A', sourcePortId: 'out', targetNodeId: 'AI', targetPortId: 'in' });
+    graph.addEdge({ id: 'e2', sourceNodeId: 'AI', sourcePortId: 'out', targetNodeId: 'B', targetPortId: 'in' });
+
+    const engine = createExecutionEngine(graph);
+    engine.start();
+
+    // Mock the AI request handler
+    bus.subscribe('pipeline.ai.request', (event: unknown) => {
+      const ev = event as { payload: { requestId: string } };
+      bus.emit(`pipeline.ai.response.${ev.payload.requestId}`, { text: 'AI generated text' });
+    });
+
+    const handler = vi.fn();
+    bus.subscribe('canvas.pipeline.routed', handler);
+
+    bus.emit('widget.output', { prompt: 'test' });
+
+    // Wait for async node to complete
+    await new Promise((r) => setTimeout(r, 50));
+
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(handler.mock.calls[0][0].payload.targetNodeId).toBe('B');
+    expect(handler.mock.calls[0][0].payload.payload).toBe('AI generated text');
+
+    engine.stop();
+  });
 });

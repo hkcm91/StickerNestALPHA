@@ -65,6 +65,12 @@ export interface StickerNestSDK {
     listTools(): Promise<unknown[]>;
     listResources(): Promise<unknown[]>;
   };
+  /** Canvas entity API (requires 'canvas-write' permission) */
+  canvas: {
+    createEntity(entityType: string, position: { x: number; y: number }, options?: { name?: string; size?: { width: number; height: number }; properties?: Record<string, unknown> }): Promise<{ entityId: string }>;
+    updateEntity(entityId: string, updates: Record<string, unknown>): Promise<{ entityId: string }>;
+    deleteEntity(entityId: string): Promise<{ entityId: string }>;
+  };
   /** DataSource API — persistent data access through host proxy */
   datasource: {
     create(dsType: string, scope: string, options?: { schema?: Record<string, unknown>; metadata?: Record<string, unknown> }): Promise<unknown>;
@@ -214,6 +220,15 @@ export function generateSDKTemplate(): string {
           for (var cc = 0; cc < ccHandlers.length; cc++) {
             try { ccHandlers[cc](data.payload); } catch(e) { console.error('[StickerNest SDK] Cross-canvas handler error:', e); }
           }
+        }
+        break;
+
+      case 'CANVAS_WRITE_RESPONSE':
+        var canvasKey = 'canvas_' + data.requestId;
+        if (data.error) {
+          rejectPending(canvasKey, new Error(data.error));
+        } else {
+          resolvePending(canvasKey, { entityId: data.entityId });
         }
         break;
 
@@ -505,6 +520,47 @@ export function generateSDKTemplate(): string {
           });
         }
       };
+    },
+
+    canvas: {
+      createEntity: function(entityType, position, options) {
+        return new Promise(function(resolve, reject) {
+          var requestId = 'req_' + (++_requestCounter);
+          addPendingRequest('canvas_' + requestId, resolve, reject);
+          postToHost({
+            type: 'CREATE_ENTITY',
+            requestId: requestId,
+            entityType: entityType,
+            name: options && options.name,
+            position: position,
+            size: options && options.size,
+            properties: options && options.properties
+          });
+        });
+      },
+      updateEntity: function(entityId, updates) {
+        return new Promise(function(resolve, reject) {
+          var requestId = 'req_' + (++_requestCounter);
+          addPendingRequest('canvas_' + requestId, resolve, reject);
+          postToHost({
+            type: 'UPDATE_ENTITY',
+            requestId: requestId,
+            entityId: entityId,
+            updates: updates
+          });
+        });
+      },
+      deleteEntity: function(entityId) {
+        return new Promise(function(resolve, reject) {
+          var requestId = 'req_' + (++_requestCounter);
+          addPendingRequest('canvas_' + requestId, resolve, reject);
+          postToHost({
+            type: 'DELETE_ENTITY',
+            requestId: requestId,
+            entityId: entityId
+          });
+        });
+      }
     },
 
     datasource: {

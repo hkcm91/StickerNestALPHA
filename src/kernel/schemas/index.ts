@@ -727,6 +727,32 @@ export {
 } from "./mcp";
 
 // =============================================================================
+// AI Canvas Action Schemas
+// =============================================================================
+export {
+  // Schemas
+  AICreateEntityActionSchema,
+  AIUpdateEntityActionSchema,
+  AIDeleteEntityActionSchema,
+  AIMoveEntityActionSchema,
+  AIEmitEventActionSchema,
+  AICanvasActionSchema,
+  AICanvasActionBatchSchema,
+  // Types
+  type AICanvasAction,
+  type AICreateEntityAction,
+  type AIUpdateEntityAction,
+  type AIDeleteEntityAction,
+  type AIMoveEntityAction,
+  type AIEmitEventAction,
+  type AICanvasActionBatch,
+  type AIActionExecutionResult,
+  // JSON Schemas
+  AICanvasActionJSONSchema,
+  AICanvasActionBatchJSONSchema,
+} from "./ai-action";
+
+// =============================================================================
 // Theme Schemas
 // =============================================================================
 export {
