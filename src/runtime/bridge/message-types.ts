@@ -37,6 +37,7 @@ export type HostMessage =
   | { type: 'INTEGRATION_RESPONSE'; requestId: string; result: unknown; error?: string }
   | { type: 'CROSS_CANVAS_EVENT'; channel: string; payload: unknown }
   | { type: 'DS_RESPONSE'; requestId: string; result: unknown; error?: string }
+  | { type: 'ENTITY_RESPONSE'; requestId: string; result: unknown; error?: string }
   | { type: 'DESTROY' };
 
 /**
@@ -67,4 +68,6 @@ export type WidgetMessage =
   | { type: 'DS_TABLE_GET_ROWS'; requestId: string; dataSourceId: string; options?: Record<string, unknown> }
   | { type: 'DS_TABLE_ADD_ROW'; requestId: string; dataSourceId: string; row: Record<string, unknown> }
   | { type: 'DS_TABLE_UPDATE_ROW'; requestId: string; dataSourceId: string; rowId: string; updates: Record<string, unknown>; lastSeenRevision?: number }
-  | { type: 'DS_TABLE_DELETE_ROW'; requestId: string; dataSourceId: string; rowId: string };
+  | { type: 'DS_TABLE_DELETE_ROW'; requestId: string; dataSourceId: string; rowId: string }
+  | { type: 'CREATE_ENTITY'; requestId: string; entity: unknown }
+  | { type: 'DELETE_ENTITY'; requestId: string; entityId: string };

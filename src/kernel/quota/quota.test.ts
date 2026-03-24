@@ -15,6 +15,7 @@ vi.mock('../supabase/client', () => ({
       getSession: vi.fn(),
     },
     from: vi.fn(),
+    rpc: vi.fn(),
     functions: {
       invoke: vi.fn(),
     },
@@ -26,6 +27,7 @@ import { supabase } from '../supabase/client';
 import { checkQuota, checkFeature } from './quota';
 
 const mockFrom = supabase.from as ReturnType<typeof vi.fn>;
+const mockRpc = (supabase as unknown as { rpc: ReturnType<typeof vi.fn> }).rpc;
 
 // Helper: build a chainable mock for supabase queries
 function buildChain(data: unknown, error: unknown = null, count?: number) {
@@ -269,8 +271,21 @@ describe('Quota Enforcement', () => {
       expect(result.upgradeTier).toBe('creator');
     });
 
-    it('returns storage_mb as 0 (placeholder)', async () => {
+    it('queries storage via get_user_storage_bytes RPC', async () => {
       setupMocks({ userTier: 'free' });
+      // 50 MB in bytes
+      mockRpc.mockResolvedValue({ data: 52428800, error: null });
+
+      const result = await checkQuota('user-1', 'storage_mb');
+      expect(result.current).toBe(50);
+      expect(result.allowed).toBe(true);
+      expect(result.limit).toBe(100);
+      expect(mockRpc).toHaveBeenCalledWith('get_user_storage_bytes', { target_user_id: 'user-1' });
+    });
+
+    it('returns 0 storage when RPC returns null', async () => {
+      setupMocks({ userTier: 'free' });
+      mockRpc.mockResolvedValue({ data: null, error: { message: 'not found' } });
 
       const result = await checkQuota('user-1', 'storage_mb');
       expect(result.current).toBe(0);

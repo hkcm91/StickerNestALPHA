@@ -47,6 +47,8 @@ export const WidgetPermissionSchema = z.enum([
   'datasource',
   /** Write access to DataSource API (requires 'datasource' as well) */
   'datasource-write',
+  /** Permission to create/modify/delete canvas entities */
+  'canvas-write',
 ]);
 
 export type WidgetPermission = z.infer<typeof WidgetPermissionSchema>;

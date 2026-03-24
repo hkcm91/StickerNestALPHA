@@ -62,6 +62,9 @@ const WidgetMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('DS_TABLE_ADD_ROW'), requestId: z.string(), dataSourceId: z.string(), row: z.record(z.string(), z.unknown()) }),
   z.object({ type: z.literal('DS_TABLE_UPDATE_ROW'), requestId: z.string(), dataSourceId: z.string(), rowId: z.string(), updates: z.record(z.string(), z.unknown()), lastSeenRevision: z.number().optional() }),
   z.object({ type: z.literal('DS_TABLE_DELETE_ROW'), requestId: z.string(), dataSourceId: z.string(), rowId: z.string() }),
+  // Canvas entity messages
+  z.object({ type: z.literal('CREATE_ENTITY'), requestId: z.string(), entity: z.unknown() }),
+  z.object({ type: z.literal('DELETE_ENTITY'), requestId: z.string(), entityId: z.string() }),
 ]);
 
 // ---------------------------------------------------------------------------
@@ -90,6 +93,7 @@ const HostMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('INTEGRATION_RESPONSE'), requestId: z.string(), result: z.unknown(), error: z.string().optional() }),
   z.object({ type: z.literal('CROSS_CANVAS_EVENT'), channel: z.string(), payload: z.unknown() }),
   z.object({ type: z.literal('DS_RESPONSE'), requestId: z.string(), result: z.unknown(), error: z.string().optional() }),
+  z.object({ type: z.literal('ENTITY_RESPONSE'), requestId: z.string(), result: z.unknown(), error: z.string().optional() }),
   z.object({ type: z.literal('DESTROY') }),
 ]);
 

@@ -144,14 +144,19 @@ export async function getUsageCounts(userId: string): Promise<{
   canvasCount: number;
   storageMb: number;
 }> {
-  const { count: canvasCount } = await supabase
-    .from('canvases')
-    .select('id', { count: 'exact', head: true })
-    .eq('owner_id', userId);
+  const [canvasResult, storageResult] = await Promise.all([
+    supabase
+      .from('canvases')
+      .select('id', { count: 'exact', head: true })
+      .eq('owner_id', userId),
+    supabase.rpc('get_user_storage_bytes', { target_user_id: userId }),
+  ]);
+
+  const storageBytes = (storageResult.data as number) ?? 0;
 
   return {
-    canvasCount: canvasCount ?? 0,
-    storageMb: 0, // Storage tracking not yet implemented
+    canvasCount: canvasResult.count ?? 0,
+    storageMb: Math.round(storageBytes / (1024 * 1024)),
   };
 }
 

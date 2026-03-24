@@ -719,3 +719,38 @@ export {
   FullThemeTokensJSONSchema,
   ThemeNameJSONSchema,
 } from "./theme";
+
+// =============================================================================
+// AI Action Schemas
+// =============================================================================
+export {
+  // Individual Action Schemas
+  AICreateStickerActionSchema,
+  AICreateWidgetActionSchema,
+  AICreateTextActionSchema,
+  AICreateShapeActionSchema,
+  AIMoveEntityActionSchema,
+  AIUpdateEntityActionSchema,
+  AIDeleteEntityActionSchema,
+  AITriggerGenerationActionSchema,
+  AIEmitEventActionSchema,
+  // Discriminated Union
+  AIActionSchema,
+  AIActionBatchSchema,
+  // Context Schemas
+  AIEntitySnapshotSchema,
+  AISpatialRelationSchema,
+  AIViewportSnapshotSchema,
+  AICanvasContextSchema,
+  // Types
+  type AIAction,
+  type AIActionBatch,
+  type AIEntitySnapshot,
+  type AISpatialRelation,
+  type AIViewportSnapshot,
+  type AICanvasContext,
+  // JSON Schemas
+  AIActionJSONSchema,
+  AIActionBatchJSONSchema,
+  AICanvasContextJSONSchema,
+} from "./ai-action";

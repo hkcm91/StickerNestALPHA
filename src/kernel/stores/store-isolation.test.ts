@@ -12,7 +12,7 @@ import path from 'path';
 
 import { describe, expect, it } from 'vitest';
 
-const storeNames = ['auth', 'workspace', 'canvas', 'history', 'widget', 'social', 'ui'];
+const storeNames = ['auth', 'workspace', 'canvas', 'history', 'widget', 'social', 'ui', 'docker', 'gallery'];
 const storesDir = path.resolve(__dirname);
 
 describe('Store Isolation — L0 Gate Test', () => {
@@ -58,7 +58,7 @@ describe('Store Isolation — L0 Gate Test', () => {
     });
   }
 
-  it('all 7 stores exist', () => {
+  it('all 9 stores exist', () => {
     for (const storeName of storeNames) {
       const filePath = path.join(storesDir, storeName, `${storeName}.store.ts`);
       expect(fs.existsSync(filePath), `${storeName}.store.ts exists`).toBe(true);
@@ -79,6 +79,7 @@ describe('Store Isolation — L0 Gate Test', () => {
           importPath === '@sn/types' ||
           importPath.startsWith('@sn/types/') ||
           importPath === '../../bus' ||
+          importPath === '../../supabase/client' ||
           importPath === 'zustand' ||
           importPath === 'zustand/middleware' ||
           !importPath.startsWith('.'); // External packages are OK

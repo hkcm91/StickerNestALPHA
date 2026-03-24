@@ -46,7 +46,8 @@ interface CheckoutQueryParams {
   action:
   | 'tiers' | 'my_subscription' | 'shop_items' | 'my_orders' | 'download'
   | 'connect_status' | 'my_tiers' | 'my_items' | 'seller_orders'
-  | 'dashboard_stats' | 'recent_activity';
+  | 'dashboard_stats' | 'recent_activity'
+  | 'pending_refunds' | 'seller_events';
   canvasId?: string;
   orderId?: string;
   limit?: number;
@@ -71,6 +72,7 @@ interface CheckoutMutateParams {
   action:
   | 'subscribe' | 'buy'
   | 'cancel_subscription' | 'customer_portal' | 'request_refund'
+  | 'approve_refund' | 'deny_refund'
   | 'connect_onboard' | 'connect_dashboard'
   | 'create_tier' | 'update_tier' | 'delete_tier'
   | 'create_item' | 'update_item' | 'delete_item';
@@ -294,6 +296,34 @@ async function handleCheckoutQuery(
       return withNonce(data ?? []);
     }
 
+    case 'pending_refunds': {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return withNonce({ data: [], total: 0, hasMore: false });
+      const limit = clampLimit(params.limit);
+      const offset = clampOffset(params.offset);
+      const { data, count } = await supabase
+        .from('orders')
+        .select('*', { count: 'exact' })
+        .eq('seller_id', user.id)
+        .eq('status', 'refund_requested')
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1);
+      return withNonce({ data: data ?? [], total: count ?? 0, hasMore: (count ?? 0) > offset + limit });
+    }
+
+    case 'seller_events': {
+      if (!canvasId) return withNonce({ data: [], total: 0, hasMore: false });
+      const limit = clampLimit(params.limit);
+      const offset = clampOffset(params.offset);
+      const { data, count } = await supabase
+        .from('seller_events')
+        .select('*', { count: 'exact' })
+        .eq('canvas_id', canvasId)
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1);
+      return withNonce({ data: data ?? [], total: count ?? 0, hasMore: (count ?? 0) > offset + limit });
+    }
+
     default:
       throw new Error(`Unknown checkout query action: ${(params as { action: string }).action}`);
   }
@@ -388,6 +418,28 @@ async function handleCheckoutMutate(
         body: { orderId: params.orderId },
       });
 
+      if (resp.error) return { error: resp.error.message };
+      const body = resp.data as Record<string, unknown> | null;
+      if (body?.error) return { error: String(body.error) };
+      return { success: true };
+    }
+
+    case 'approve_refund': {
+      if (!params.orderId) return { error: 'orderId required' };
+      const resp = await supabase.functions.invoke('process-refund', {
+        body: { orderId: params.orderId, action: 'approve' },
+      });
+      if (resp.error) return { error: resp.error.message };
+      const body = resp.data as Record<string, unknown> | null;
+      if (body?.error) return { error: String(body.error) };
+      return { success: true };
+    }
+
+    case 'deny_refund': {
+      if (!params.orderId) return { error: 'orderId required' };
+      const resp = await supabase.functions.invoke('process-refund', {
+        body: { orderId: params.orderId, action: 'deny', reason: params.data?.reason },
+      });
       if (resp.error) return { error: resp.error.message };
       const body = resp.data as Record<string, unknown> | null;
       if (body?.error) return { error: String(body.error) };

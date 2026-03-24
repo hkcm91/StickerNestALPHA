@@ -120,6 +120,11 @@ export const CanvasEvents = {
   /** Entity platform-specific transform was updated */
   ENTITY_PLATFORM_TRANSFORM_UPDATED: 'canvas.entity.platformTransform.updated',
 
+  // AI pipeline node lifecycle events
+  PIPELINE_AI_PROCESSING: 'canvas.pipeline.ai.processing',
+  PIPELINE_AI_COMPLETED: 'canvas.pipeline.ai.completed',
+  PIPELINE_AI_ERROR: 'canvas.pipeline.ai.error',
+
   // Tool input bridge – shell forwards pointer/key events to L4A-2 tools via bus
   TOOL_INPUT_DOWN: 'canvas.tool.input.down',
   TOOL_INPUT_MOVE: 'canvas.tool.input.move',
