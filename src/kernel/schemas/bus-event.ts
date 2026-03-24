@@ -35,7 +35,7 @@ export const BusEventSchema = z.object({
   spatial: SpatialContextSchema.optional(),
   /**
    * Event creation timestamp (milliseconds since epoch).
-   * Optional — populated by the bus implementation.
+   * Optional – populated by the bus implementation.
    */
   timestamp: z.number().optional(),
 });
@@ -120,7 +120,7 @@ export const CanvasEvents = {
   /** Entity platform-specific transform was updated */
   ENTITY_PLATFORM_TRANSFORM_UPDATED: 'canvas.entity.platformTransform.updated',
 
-  // Tool input bridge — shell forwards pointer/key events to L4A-2 tools via bus
+  // Tool input bridge – shell forwards pointer/key events to L4A-2 tools via bus
   TOOL_INPUT_DOWN: 'canvas.tool.input.down',
   TOOL_INPUT_MOVE: 'canvas.tool.input.move',
   TOOL_INPUT_UP: 'canvas.tool.input.up',
@@ -437,6 +437,11 @@ export const SocialGraphEvents = {
   WIDGET_INVITE_ACCEPTED: 'kernel.socialgraph.widgetInvite.accepted',
   WIDGET_INVITE_DECLINED: 'kernel.socialgraph.widgetInvite.declined',
   WIDGET_BROADCAST_SENT: 'kernel.socialgraph.widgetBroadcast.sent',
+
+  // Canvas member events
+  CANVAS_MEMBER_ADDED: 'kernel.socialgraph.canvasMember.added',
+  CANVAS_MEMBER_REMOVED: 'kernel.socialgraph.canvasMember.removed',
+  CANVAS_MEMBER_ROLE_CHANGED: 'kernel.socialgraph.canvasMember.roleChanged',
 } as const;
 
 /**
