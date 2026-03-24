@@ -97,12 +97,12 @@ export const ImageGeneratorWidget: React.FC<any> = ({ instanceId }) => {
         setState('lastModel', model);
 
         // Generate entity on canvas
-        const entityId = `img-ai-${Date.now()}`;
+        const entityId = crypto.randomUUID();
         emit(CanvasEvents.ENTITY_CREATED, {
           id: entityId,
           type: 'sticker',
           assetUrl: imageUrl,
-          assetType: 'image',
+          assetType: 'image' as const,
           name: `AI: ${prompt.slice(0, 20)}...`,
           altText: prompt,
           transform: {
