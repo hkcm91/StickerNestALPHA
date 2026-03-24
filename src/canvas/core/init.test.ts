@@ -94,4 +94,68 @@ describe('Canvas Core Init', () => {
     const regions = ctx.dirtyTracker.getDirtyRegions();
     expect(regions.length).toBeGreaterThan(0);
   });
+
+  // Widget-namespaced event tests (sandboxed widgets emit via toBusEventType)
+  describe('widget-namespaced entity events', () => {
+    it('adds entity on widget.canvas.entity.created bus event', () => {
+      const ctx = initCanvasCore();
+      const entity = makeEntity('w1', 50, 50, 200, 200, 5);
+      bus.emit(`widget.${CanvasEvents.ENTITY_CREATED}`, entity);
+      expect(ctx.sceneGraph.getEntity('w1')).toBeDefined();
+      expect(ctx.sceneGraph.entityCount).toBe(1);
+    });
+
+    it('updates entity on widget.canvas.entity.updated bus event', () => {
+      const ctx = initCanvasCore();
+      const entity = makeEntity('w1', 50, 50, 200, 200, 5);
+      bus.emit(CanvasEvents.ENTITY_CREATED, entity);
+      bus.emit(`widget.${CanvasEvents.ENTITY_UPDATED}`, { id: 'w1', updates: { locked: true } });
+      expect(ctx.sceneGraph.getEntity('w1')!.locked).toBe(true);
+    });
+
+    it('removes entity on widget.canvas.entity.deleted bus event', () => {
+      const ctx = initCanvasCore();
+      const entity = makeEntity('w1', 50, 50, 200, 200, 5);
+      bus.emit(CanvasEvents.ENTITY_CREATED, entity);
+      bus.emit(`widget.${CanvasEvents.ENTITY_DELETED}`, { id: 'w1' });
+      expect(ctx.sceneGraph.getEntity('w1')).toBeUndefined();
+      expect(ctx.sceneGraph.entityCount).toBe(0);
+    });
+
+    it('fills default fields for widget-created entities missing base fields', () => {
+      const ctx = initCanvasCore();
+      // Emit a minimal sticker entity without optional base fields
+      bus.emit(`widget.${CanvasEvents.ENTITY_CREATED}`, {
+        type: 'sticker',
+        transform: { position: { x: 100, y: 100 }, size: { width: 64, height: 64 }, rotation: 0, scale: 1 },
+        zIndex: 0,
+        visible: true,
+        locked: false,
+        assetUrl: 'https://example.com/image.png',
+        mediaType: 'image',
+      });
+      expect(ctx.sceneGraph.entityCount).toBe(1);
+      const entities = ctx.sceneGraph.getAllEntities();
+      const created = entities[0];
+      expect(created.id).toBeDefined();
+      expect(created.canvasId).toBe('default');
+      expect(created.createdAt).toBeDefined();
+      expect(created.opacity).toBe(1);
+    });
+
+    it('assigns widgetInstanceId for widget-type entities created via widget events', () => {
+      const ctx = initCanvasCore();
+      bus.emit(`widget.${CanvasEvents.ENTITY_CREATED}`, {
+        type: 'widget',
+        transform: { position: { x: 0, y: 0 }, size: { width: 300, height: 200 }, rotation: 0, scale: 1 },
+        zIndex: 1,
+        visible: true,
+        locked: false,
+        widgetId: 'test-widget',
+        scalingMode: 'responsive',
+      });
+      const entities = ctx.sceneGraph.getAllEntities();
+      expect((entities[0] as Record<string, unknown>).widgetInstanceId).toBeDefined();
+    });
+  });
 });
