@@ -79,7 +79,7 @@ export {
   createNotification,
   getNotifications,
   getUnreadCount,
-  markAsRead,
+  markAsRead as markNotificationAsRead,
   markAllAsRead,
   deleteNotification,
   deleteReadNotifications,
@@ -102,6 +102,8 @@ export {
   sendMessage,
   getConversation,
   canMessage,
+  markAsRead,
+  getUnreadMessageCount,
 } from './messages';
 export type { DirectMessage } from './messages';
 
