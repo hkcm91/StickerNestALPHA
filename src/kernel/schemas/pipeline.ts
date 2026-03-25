@@ -42,6 +42,9 @@ export const PipelineNodeTypeSchema = z.enum([
   'throttle',
   'debounce',
   'tap',
+  'switch',
+  'accumulate',
+  'ai-transform',
   // AI pipeline nodes — async transforms that call external AI services
   'ai-prompt',
   'ai-generate',

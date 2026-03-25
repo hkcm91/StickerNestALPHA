@@ -268,6 +268,41 @@ export {
 } from "./pipeline";
 
 // =============================================================================
+// Pipeline Intelligence (Port Matching & Templates)
+// =============================================================================
+export {
+  // Port Matcher
+  matchPorts,
+  findCompatiblePorts,
+  findAllConnections,
+  tokenize,
+  type PortLike,
+  type PortMatchResult,
+  type MatchType,
+  type RankedMatch,
+  type NodeWithPorts,
+  type SuggestedConnection,
+} from "../pipeline/port-matcher";
+
+export {
+  // Synonym Table
+  SYNONYM_GROUPS,
+  getSynonymIndex,
+  areSynonyms,
+} from "../pipeline/synonym-table";
+
+export {
+  // Pipeline Templates
+  PIPELINE_TEMPLATES,
+  getTemplate,
+  getTemplatesByCategory,
+  searchTemplates,
+  type PipelineTemplate,
+  type TemplateSlot,
+  type PipelineTemplateCategory,
+} from "../pipeline/templates";
+
+// =============================================================================
 // Social Graph Schemas
 // =============================================================================
 export {
