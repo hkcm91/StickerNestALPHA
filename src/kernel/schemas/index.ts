@@ -733,6 +733,35 @@ export {
 } from "./widget-design-spec";
 
 // =============================================================================
+// MCP (Model Context Protocol) Schemas
+// =============================================================================
+export {
+  // Schemas
+  McpAuthTypeSchema,
+  McpServerConfigSchema,
+  McpToolDefinitionSchema,
+  McpToolCallSchema,
+  McpToolResultSchema,
+  McpResourceSchema,
+  McpResourceReadResultSchema,
+  // Types
+  type McpAuthType,
+  type McpServerConfig,
+  type McpToolDefinition,
+  type McpToolCall,
+  type McpToolResult,
+  type McpResource,
+  type McpResourceReadResult,
+  // JSON Schemas
+  McpServerConfigJSONSchema,
+  McpToolDefinitionJSONSchema,
+  McpToolCallJSONSchema,
+  McpToolResultJSONSchema,
+  McpResourceJSONSchema,
+  McpResourceReadResultJSONSchema,
+} from "./mcp";
+
+// =============================================================================
 // Theme Schemas
 // =============================================================================
 export {
@@ -754,3 +783,53 @@ export {
   FullThemeTokensJSONSchema,
   ThemeNameJSONSchema,
 } from "./theme";
+
+// =============================================================================
+// AI Action Schemas
+// =============================================================================
+export {
+  // Generic Action Schemas
+  AICreateEntityActionSchema,
+  AIUpdateEntityActionSchema,
+  AIDeleteEntityActionSchema,
+  AIMoveEntityActionSchema,
+  AIEmitEventActionSchema,
+  AICanvasActionSchema,
+  AICanvasActionBatchSchema,
+  // Specific Action Schemas
+  AICreateStickerActionSchema,
+  AICreateWidgetActionSchema,
+  AICreateTextActionSchema,
+  AICreateShapeActionSchema,
+  AITriggerGenerationActionSchema,
+  // Discriminated Union (specific)
+  AIActionSchema,
+  AIActionBatchSchema,
+  // Context Schemas
+  AIEntitySnapshotSchema,
+  AISpatialRelationSchema,
+  AIViewportSnapshotSchema,
+  AICanvasContextSchema,
+  // Generic Types
+  type AICanvasAction,
+  type AICreateEntityAction,
+  type AIUpdateEntityAction,
+  type AIDeleteEntityAction,
+  type AIMoveEntityAction,
+  type AIEmitEventAction,
+  type AICanvasActionBatch,
+  type AIActionExecutionResult,
+  // Specific Types
+  type AIAction,
+  type AIActionBatch,
+  type AIEntitySnapshot,
+  type AISpatialRelation,
+  type AIViewportSnapshot,
+  type AICanvasContext,
+  // JSON Schemas
+  AICanvasActionJSONSchema,
+  AICanvasActionBatchJSONSchema,
+  AIActionJSONSchema,
+  AIActionBatchJSONSchema,
+  AICanvasContextJSONSchema,
+} from "./ai-action";

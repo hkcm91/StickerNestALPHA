@@ -29,7 +29,7 @@ import { createIframePool, DEFAULT_WARMUP_COUNT } from './pool/iframe-pool';
 import type { IframePool } from './pool/iframe-pool';
 import { createRateLimiter } from './security/rate-limiter';
 import type { RateLimiter } from './security/rate-limiter';
-import { imageGeneratorManifest, kanbanManifest, todoListManifest } from './widgets';
+import { aiAgentManifest, imageGeneratorManifest, kanbanManifest, todoListManifest } from './widgets';
 import { BUILT_IN_WIDGET_HTML } from './widgets/built-in-html';
 
 let initialized = false;
@@ -58,6 +58,13 @@ const BUILTIN_WIDGETS: WidgetRegistryEntry[] = [
   {
     widgetId: 'sn.builtin.todo-list',
     manifest: todoListManifest,
+    htmlContent: '', // Not used for inline widgets
+    isBuiltIn: true,
+    installedAt: new Date().toISOString(),
+  },
+  {
+    widgetId: 'sn.builtin.ai-agent',
+    manifest: aiAgentManifest,
     htmlContent: '', // Not used for inline widgets
     isBuiltIn: true,
     installedAt: new Date().toISOString(),

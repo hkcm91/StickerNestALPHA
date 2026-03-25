@@ -15,6 +15,7 @@ vi.mock('../supabase/client', () => ({
       getSession: vi.fn(),
     },
     from: vi.fn(),
+    rpc: vi.fn(),
     functions: {
       invoke: vi.fn(),
     },
@@ -26,6 +27,7 @@ import { supabase } from '../supabase/client';
 import {
   getSubscription,
   getTierQuota,
+  getUsageCounts,
   createCheckoutSession,
   createPortalSession,
 } from './billing-api';
@@ -33,6 +35,7 @@ import {
 const mockGetUser = supabase.auth.getUser as ReturnType<typeof vi.fn>;
 const mockGetSession = supabase.auth.getSession as ReturnType<typeof vi.fn>;
 const mockFrom = supabase.from as ReturnType<typeof vi.fn>;
+const mockRpc = (supabase as unknown as { rpc: ReturnType<typeof vi.fn> }).rpc;
 const mockInvoke = supabase.functions.invoke as ReturnType<typeof vi.fn>;
 
 function mockQuery(data: unknown, error: unknown = null) {
@@ -246,6 +249,49 @@ describe('Billing API', () => {
       await expect(createCheckoutSession('creator')).rejects.toThrow(
         'No checkout URL returned',
       );
+    });
+  });
+
+  describe('getUsageCounts', () => {
+    it('returns canvas count and storage MB from RPC', async () => {
+      mockFrom.mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockResolvedValue({ count: 5, error: null }),
+        }),
+      });
+      // 100 MB in bytes
+      mockRpc.mockResolvedValue({ data: 104857600, error: null });
+
+      const result = await getUsageCounts('user-1');
+      expect(result.canvasCount).toBe(5);
+      expect(result.storageMb).toBe(100);
+      expect(mockRpc).toHaveBeenCalledWith('get_user_storage_bytes', { target_user_id: 'user-1' });
+    });
+
+    it('returns 0 storage when RPC returns null', async () => {
+      mockFrom.mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockResolvedValue({ count: 2, error: null }),
+        }),
+      });
+      mockRpc.mockResolvedValue({ data: null, error: { message: 'error' } });
+
+      const result = await getUsageCounts('user-1');
+      expect(result.canvasCount).toBe(2);
+      expect(result.storageMb).toBe(0);
+    });
+
+    it('rounds storage bytes to nearest MB', async () => {
+      mockFrom.mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockResolvedValue({ count: 1, error: null }),
+        }),
+      });
+      // 1.5 MB in bytes
+      mockRpc.mockResolvedValue({ data: 1572864, error: null });
+
+      const result = await getUsageCounts('user-1');
+      expect(result.storageMb).toBe(2); // Math.round(1.5) = 2
     });
   });
 

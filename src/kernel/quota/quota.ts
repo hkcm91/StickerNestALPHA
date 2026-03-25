@@ -135,9 +135,9 @@ async function getCurrentUsage(
       return count ?? 0;
     }
     case 'storage_mb': {
-      // Storage tracking would query a storage_usage aggregate
-      // For now, return 0 — will be refined when storage tracking is implemented
-      return 0;
+      const { data } = await supabase.rpc('get_user_storage_bytes', { target_user_id: userId });
+      const bytes = (data as number) ?? 0;
+      return Math.round(bytes / (1024 * 1024));
     }
     case 'widgets_per_canvas': {
       if (!canvasId) return 0;

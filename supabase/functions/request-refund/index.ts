@@ -97,10 +97,16 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ error: "Order already refunded" }, 400);
     }
 
+    // Save the current status so it can be restored if the refund is denied
+    const previousStatus = order.status;
+
     // Mark the order as refund_requested — seller will review and approve
     await db
       .from("orders")
-      .update({ status: "refund_requested" })
+      .update({
+        status: "refund_requested",
+        metadata: { ...(order.metadata ?? {}), previous_status: previousStatus },
+      })
       .eq("id", orderId);
 
     return jsonResponse({ success: true });

@@ -15,9 +15,12 @@ import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { bus } from '../kernel/bus';
 import { useWidgetStore } from '../kernel/stores/widget/widget.store';
 
+import { handleAiCompletionMessage } from './ai-completion/ai-completion-handler';
 import { createWidgetBridge } from './bridge/bridge';
 import type { WidgetBridge } from './bridge/bridge';
+import { handleCanvasWriteMessage } from './bridge/canvas-write-handler';
 import { handleDataSourceMessage } from './bridge/datasource-handler';
+import { handleEntityMessage } from './bridge/entity-handler';
 import type { ThemeTokens } from './bridge/message-types';
 import { getSharedCrossCanvasRouter, isValidChannelName } from './cross-canvas/cross-canvas-router';
 import type { CrossCanvasRouter } from './cross-canvas/cross-canvas-router';
@@ -25,6 +28,7 @@ import { getIntegrationProxy } from './integrations/singleton';
 import { WidgetErrorBoundary } from './lifecycle/error-boundary';
 import { createLifecycleManager } from './lifecycle/manager';
 import type { WidgetLifecycleManager } from './lifecycle/manager';
+import { handleMcpMessage } from './mcp/mcp-proxy';
 import { buildSrcdoc } from './sdk/sdk-builder';
 import { SANDBOX_POLICY } from './security/sandbox-policy';
 
@@ -426,8 +430,13 @@ const WidgetIframe: React.FC<WidgetFrameProps> = (props) => {
         }
 
         default:
-          // Delegate DataSource messages to the dedicated handler
-          handleDataSourceMessage(message, { widgetId, instanceId, bridge });
+          // Delegate to dedicated handlers (Canvas Write, Entity, DataSource, MCP, AI)
+          if (!handleCanvasWriteMessage(message, { widgetId, instanceId, bridge })
+            && !handleEntityMessage(message, { widgetId, instanceId, bridge })
+            && !handleDataSourceMessage(message, { widgetId, instanceId, bridge })
+            && !handleMcpMessage(message, { widgetId, instanceId, bridge })) {
+            handleAiCompletionMessage(message, { widgetId, instanceId, bridge });
+          }
           break;
       }
     });

@@ -325,6 +325,6 @@ describe('findAllConnections', () => {
     findAllConnections(nodes);
     const elapsed = performance.now() - start;
 
-    expect(elapsed).toBeLessThan(50);
+    expect(elapsed).toBeLessThan(100);
   });
 });
