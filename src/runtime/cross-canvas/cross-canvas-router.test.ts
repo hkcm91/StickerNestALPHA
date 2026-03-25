@@ -467,8 +467,8 @@ describe('CrossCanvasRouter', () => {
       const channel = mockChannels.get('crosscanvas:ch')!;
       expect(channel.send).not.toHaveBeenCalled();
 
-      // Now connect
-      connectCb?.('SUBSCRIBED');
+      // Now connect — use non-null assertion; closure assignment is invisible to TS control flow
+      connectCb!('SUBSCRIBED');
       expect(channel.send).toHaveBeenCalledTimes(1);
 
       queueRouter.destroy();

@@ -84,6 +84,7 @@ export const todoListManifest: WidgetManifest = {
   config: { fields: [] },
   spatialSupport: false,
   entry: 'inline',
+  crossCanvasChannels: [],
   events: {
     emits: [
       { name: TODO_EVENTS.emits.READY },

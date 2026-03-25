@@ -71,6 +71,8 @@ function mockSceneGraph(entities = [ENTITY_A, ENTITY_B]) {
     queryRegion: vi.fn().mockReturnValue([]),
     queryPoint: vi.fn().mockReturnValue([]),
     clear: vi.fn(),
+    entityCount: entities.length,
+    spatialIndex: null as unknown as NonNullable<CanvasShortcutDeps['sceneGraph']>['spatialIndex'],
   };
 }
 

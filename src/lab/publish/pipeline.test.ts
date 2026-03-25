@@ -25,6 +25,7 @@ function makeManifest(): WidgetManifest {
     size: { defaultWidth: 200, defaultHeight: 150, aspectLocked: false },
     entry: 'index.html',
     spatialSupport: false,
+    crossCanvasChannels: [],
   };
 }
 

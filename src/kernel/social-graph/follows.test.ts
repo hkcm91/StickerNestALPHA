@@ -118,7 +118,7 @@ describe('Follows API', () => {
       };
 
       let callCount = 0;
-      mockFromFn.mockImplementation((table: string) => {
+      (mockFromFn as any).mockImplementation((table: string) => {
         callCount++;
 
         if (callCount === 1) {
@@ -215,7 +215,7 @@ describe('Follows API', () => {
       };
 
       let callCount = 0;
-      mockFromFn.mockImplementation((table: string) => {
+      (mockFromFn as any).mockImplementation((table: string) => {
         callCount++;
 
         if (callCount === 1) {
@@ -283,7 +283,7 @@ describe('Follows API', () => {
       const unsub = bus.subscribe(SocialGraphEvents.FOLLOW_DELETED, handler);
 
       let callCount = 0;
-      mockFromFn.mockImplementation(() => {
+      (mockFromFn as any).mockImplementation(() => {
         callCount++;
         if (callCount === 1) {
           // Find existing follow
@@ -341,7 +341,7 @@ describe('Follows API', () => {
       const acceptedRow = { ...pendingRow, status: 'active' };
 
       let callCount = 0;
-      mockFromFn.mockImplementation(() => {
+      (mockFromFn as any).mockImplementation(() => {
         callCount++;
         if (callCount === 1) {
           // Find pending follow
@@ -396,7 +396,7 @@ describe('Follows API', () => {
       const unsub = bus.subscribe(SocialGraphEvents.FOLLOW_REJECTED, handler);
 
       let callCount = 0;
-      mockFromFn.mockImplementation(() => {
+      (mockFromFn as any).mockImplementation(() => {
         callCount++;
         if (callCount === 1) {
           // Find pending follow

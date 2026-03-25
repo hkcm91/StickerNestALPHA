@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 
 import type { BoundingBox2D } from '@sn/types';
 
-import { canvasToScreen, screenToCanvas } from './viewport';
+import { canvasToScreen } from './viewport';
 import {
   computeZoomToFit,
   computeCenterOnEntity,

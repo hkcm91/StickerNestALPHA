@@ -205,14 +205,14 @@ const SceneNodeBody: React.FC<{ data: SceneNodeData }> = ({ data }) => {
     case 'sticker':
       return (
         <div>
-          {data.config.assetType && (
+          {data.config.assetType ? (
             <div style={monoStyle}>{String(data.config.assetType)}</div>
-          )}
-          {data.config.clickAction && (
+          ) : null}
+          {data.config.clickAction ? (
             <div style={monoStyle}>
               action: {String((data.config.clickAction as Record<string, unknown>)?.type ?? 'none')}
             </div>
-          )}
+          ) : null}
         </div>
       );
 
@@ -222,9 +222,9 @@ const SceneNodeBody: React.FC<{ data: SceneNodeData }> = ({ data }) => {
           <div style={monoStyle}>
             {data.children?.length ?? 0} children
           </div>
-          {data.config.layout && (
+          {data.config.layout ? (
             <div style={monoStyle}>layout: {String(data.config.layout)}</div>
-          )}
+          ) : null}
         </div>
       );
 

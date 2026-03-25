@@ -70,7 +70,7 @@ describe('entityTransformStyle', () => {
 
     const style = entityTransformStyle(entity);
 
-    expect(style.transform).toBe('rotate(45deg) scale(1.5)');
+    expect(style.transform).toBe('rotate(45deg) scale(1.5, 1.5)');
     expect(style.transformOrigin).toBe('center center');
   });
 

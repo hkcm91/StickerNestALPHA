@@ -40,6 +40,7 @@ export const pathfinderManifest: WidgetManifest = {
     aspectLocked: false,
   },
   spatialSupport: false,
+  crossCanvasChannels: [],
   events: {
     emits: Object.values(PATHFINDER_EVENTS.emits).map(name => ({ name })),
     subscribes: Object.values(PATHFINDER_EVENTS.subscribes).map(name => ({ name })),

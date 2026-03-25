@@ -53,7 +53,7 @@ export function handleCrossCanvasEdgeRequest(event: BusEvent): CrossCanvasEdgeRe
   }
 
   // Derive the channel name the target widget should subscribe to
-  const _channel = derivePipelineChannelName(
+  derivePipelineChannelName(
     payload.sourceCanvasId,
     payload.sourceWidgetInstanceId,
     payload.sourcePortId,
