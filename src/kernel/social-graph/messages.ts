@@ -194,7 +194,7 @@ export async function markAsRead(
 export async function getUnreadMessageCount(
   userId: string,
 ): Promise<SocialResult<number>> {
-  const { data, error, count } = (await supabase
+  const { error, count } = (await supabase
     .from('direct_messages')
     .select('id', { count: 'exact', head: true })
     .eq('recipient_id', userId)

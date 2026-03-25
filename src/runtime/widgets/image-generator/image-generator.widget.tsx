@@ -40,6 +40,7 @@ export const imageGeneratorManifest: WidgetManifest = {
   config: { fields: [] },
   spatialSupport: false,
   entry: 'inline',
+  crossCanvasChannels: [],
   events: {
     emits: [
       { name: 'widget.image-generator.ready' },

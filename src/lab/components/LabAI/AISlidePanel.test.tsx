@@ -24,6 +24,11 @@ function createMockGenerator(overrides: Partial<AIGenerator> = {}): AIGenerator 
       isValid: true,
       errors: [],
     }),
+    generateStream: vi.fn().mockResolvedValue({
+      html: '<div>Test</div><script>true</script>',
+      isValid: true,
+      errors: [],
+    }),
     explain: vi.fn().mockResolvedValue({ text: 'Explanation', error: null }),
     isGenerating: vi.fn().mockReturnValue(false),
     cancel: vi.fn(),

@@ -107,10 +107,6 @@ function setupInsertSuccess(row: Record<string, unknown> = fakeInviteRow) {
   });
 }
 
-function _setupSelectSuccess(row: Record<string, unknown> = fakeInviteRow) {
-  mockChain.single.mockResolvedValueOnce({ data: row, error: null });
-}
-
 function setupUpdateSuccess(row: Record<string, unknown>) {
   mockChain.update.mockReturnValueOnce({
     eq: vi.fn().mockReturnValue({

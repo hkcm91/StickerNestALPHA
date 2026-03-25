@@ -49,7 +49,6 @@ export const DockerLayer: React.FC<DockerLayerProps> = ({ renderWidget }) => {
   const removeTab = useDockerStore((s) => s.removeTab);
   const setActiveTab = useDockerStore((s) => s.setActiveTab);
   const renameTab = useDockerStore((s) => s.renameTab);
-  const _reorderTabs = useDockerStore((s) => s.reorderTabs);
   const addDocker = useDockerStore((s) => s.addDocker);
   const addWidgetToTab = useDockerStore((s) => s.addWidgetToTab);
   const resizeWidgetInTab = useDockerStore((s) => s.resizeWidgetInTab);

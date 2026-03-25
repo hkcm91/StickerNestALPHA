@@ -9,6 +9,10 @@ function mockGenerator(html: string, valid = true): AIGenerator {
     async generate() {
       return { html, isValid: valid, errors: valid ? [] : ['invalid'] };
     },
+    async generateStream(_prompt: string, onChunk: (partialHtml: string) => void) {
+      onChunk(html);
+      return { html, isValid: valid, errors: valid ? [] : ['invalid'] };
+    },
     async explain() { return { text: '', error: null }; },
     isGenerating() { return false; },
     cancel() {},

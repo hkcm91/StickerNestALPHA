@@ -59,6 +59,8 @@ vi.mock('../kernel/stores/widget/widget.store', () => ({
           },
         },
         instances: {},
+        addInstance: vi.fn(),
+        registerWidget: vi.fn(),
         updateInstanceState: vi.fn(),
       })),
     },
@@ -1012,7 +1014,7 @@ describe('WidgetFrame', () => {
       const callback = mockRouter.subscribe.mock.calls[0][1];
 
       // Invoke the callback as if a cross-canvas event arrived
-      callback({ data: 42 });
+      (callback as (payload: unknown) => void)({ data: 42 });
 
       expect(mockBridge.send).toHaveBeenCalledWith({
         type: 'CROSS_CANVAS_EVENT',

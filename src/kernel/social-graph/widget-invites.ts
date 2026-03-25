@@ -115,7 +115,7 @@ export async function sendWidgetInvite(
       target_port_id: payload.targetPortId ?? null,
       source_canvas_id: payload.sourceCanvasId ?? null,
       source_widget_instance_id: payload.sourceWidgetInstanceId ?? null,
-    })
+    } as any)
     .select()
     .single()) as QueryResult<Record<string, unknown>>;
 
@@ -217,7 +217,7 @@ export async function broadcastWidget(
 
   const { data: inserted, error } = (await supabase
     .from('widget_invites')
-    .insert(inviteRows)
+    .insert(inviteRows as any)
     .select()) as QueryResult<Record<string, unknown>[]>;
 
   if (error || !inserted) {
@@ -289,8 +289,8 @@ export async function acceptWidgetInvite(
     };
   }
 
-  const { data, error } = (await supabase
-    .from('widget_invites')
+  const { data, error } = (await (supabase
+    .from('widget_invites') as any)
     .update({ status: 'accepted', target_canvas_id: targetCanvasId })
     .eq('id', inviteId)
     .select()
@@ -344,8 +344,8 @@ export async function declineWidgetInvite(
     };
   }
 
-  const { data, error } = (await supabase
-    .from('widget_invites')
+  const { data, error } = (await (supabase
+    .from('widget_invites') as any)
     .update({ status: 'declined' })
     .eq('id', inviteId)
     .select()

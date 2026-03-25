@@ -154,6 +154,7 @@ export function createIntegrationProxy(options?: {
   const proxy: IntegrationProxy = {
     register(name: string, handler: IntegrationHandler) {
       handlers.set(name, handler);
+      invalidateByPrefix(name + ':');
     },
 
     unregister(name: string) {

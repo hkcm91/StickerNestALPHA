@@ -5,7 +5,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-import { SocialGraphEvents, UpdateProfileInputSchema } from '@sn/types';
+import { SocialGraphEvents } from '@sn/types';
 
 import { bus } from '../bus';
 
@@ -145,7 +145,7 @@ describe('Profiles API', () => {
           single: vi.fn().mockResolvedValue({ data: profileRow, error: null }),
         }),
       };
-      mockFromFn.mockImplementation((table: string) => {
+      (mockFromFn as any).mockImplementation((table: string) => {
         if (table === 'user_profiles') {
           // First call is the username check, second is the insert
           const callCount = mockFromFn.mock.calls.length;

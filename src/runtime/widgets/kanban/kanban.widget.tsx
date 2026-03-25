@@ -102,6 +102,7 @@ export const kanbanManifest: WidgetManifest = {
   config: { fields: [] },
   spatialSupport: false,
   entry: 'inline',
+  crossCanvasChannels: [],
   events: {
     emits: [
       { name: KANBAN_EVENTS.emits.READY },

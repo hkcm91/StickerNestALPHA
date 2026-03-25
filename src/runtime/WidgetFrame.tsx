@@ -13,6 +13,7 @@
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 
 import { bus } from '../kernel/bus';
+import type { WidgetPermission, EventPort } from '../kernel/schemas';
 import { useWidgetStore } from '../kernel/stores/widget/widget.store';
 
 import { createWidgetBridge } from './bridge/bridge';
@@ -170,8 +171,8 @@ const WidgetIframe: React.FC<WidgetFrameProps> = (props) => {
           // Store widget manifest in registry so permissions (e.g. cross-canvas) are available
           const manifest = message.manifest as Record<string, unknown> | null;
           if (manifest) {
-            const permissions = (Array.isArray(manifest.permissions) ? manifest.permissions : []) as string[];
-            const events = (manifest.events && typeof manifest.events === 'object' ? manifest.events : {}) as Record<string, unknown>;
+            const permissions = (Array.isArray(manifest.permissions) ? manifest.permissions : []) as WidgetPermission[];
+            const events = (manifest.events && typeof manifest.events === 'object' ? manifest.events : { emits: [], subscribes: [] }) as { emits: EventPort[]; subscribes: EventPort[] };
             console.debug(`[WidgetFrame][${instanceId}] REGISTER: widgetId=${widgetId}, permissions=${JSON.stringify(permissions)}`);
             const ws = useWidgetStore.getState();
             if (!ws.registry[widgetId]) {
@@ -181,8 +182,16 @@ const WidgetIframe: React.FC<WidgetFrameProps> = (props) => {
                   id: (manifest.id as string) ?? widgetId,
                   name: (manifest.name as string) ?? widgetId,
                   version: (manifest.version as string) ?? '1.0.0',
+                  license: ((manifest.license as string) ?? 'MIT') as 'MIT',
+                  tags: (Array.isArray(manifest.tags) ? manifest.tags : []) as string[],
+                  category: ((manifest.category as string) ?? 'other') as 'other',
                   permissions,
                   events,
+                  config: { fields: [] },
+                  size: { defaultWidth: 300, defaultHeight: 200, aspectLocked: false },
+                  entry: 'index.html',
+                  crossCanvasChannels: [],
+                  spatialSupport: false,
                 },
                 htmlContent: '',
                 isBuiltIn: true,

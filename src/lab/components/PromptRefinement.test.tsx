@@ -107,7 +107,7 @@ describe('PromptRefinement', () => {
     fireEvent.click(screen.getByText('Generate'));
     expect(props.onGenerate).toHaveBeenCalledTimes(1);
 
-    const enrichedPrompt = props.onGenerate.mock.calls[0][0] as string;
+    const enrichedPrompt = (props.onGenerate as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
     expect(enrichedPrompt).toContain('A weather widget');
   });
 

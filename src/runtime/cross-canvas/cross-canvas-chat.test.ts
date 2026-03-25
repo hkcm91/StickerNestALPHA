@@ -15,7 +15,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { createCrossCanvasRouter } from './cross-canvas-router';
-import type { CrossCanvasRouter, CrossCanvasEnvelope } from './cross-canvas-router';
+import type { CrossCanvasRouter } from './cross-canvas-router';
 
 /**
  * Creates a pair of routers that share the same userId (simulating the same

@@ -319,6 +319,7 @@ describe('Widget Manifest Schemas', () => {
         entry: 'clock.html',
         spatialSupport: true,
         minPlatformVersion: '5.0.0',
+        crossCanvasChannels: [],
       };
       const result = WidgetManifestSchema.safeParse(input);
 

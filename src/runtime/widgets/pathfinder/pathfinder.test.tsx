@@ -59,7 +59,8 @@ describe('Pathfinder Widget', () => {
       render(<PathfinderWidget {...defaultProps} />);
 
       await waitFor(() => {
-        expect(screen.getByText('Pathfinder')).toBeInTheDocument();
+        expect(screen.getByText('Shape Modes')).toBeInTheDocument();
+        expect(screen.getByText('Pathfinders')).toBeInTheDocument();
       });
     });
 
@@ -67,8 +68,8 @@ describe('Pathfinder Widget', () => {
       render(<PathfinderWidget {...defaultProps} />);
 
       await waitFor(() => {
-        expect(screen.getByTitle('Union')).toBeInTheDocument();
-        expect(screen.getByTitle('Subtract')).toBeInTheDocument();
+        expect(screen.getByTitle('Unite (Alt for Compound)')).toBeInTheDocument();
+        expect(screen.getByTitle('Minus Front')).toBeInTheDocument();
         expect(screen.getByTitle('Intersect')).toBeInTheDocument();
         expect(screen.getByTitle('Exclude')).toBeInTheDocument();
         expect(screen.getByTitle('Divide')).toBeInTheDocument();
@@ -85,8 +86,9 @@ describe('Pathfinder Widget', () => {
     });
 
     it('should declare emit events', () => {
-      expect(pathfinderManifest.events.emits).toContain(PATHFINDER_EVENTS.emits.READY);
-      expect(pathfinderManifest.events.emits).toContain(PATHFINDER_EVENTS.emits.UNION);
+      const emitNames = pathfinderManifest.events.emits.map((e: any) => e.name);
+      expect(emitNames).toContain(PATHFINDER_EVENTS.emits.READY);
+      expect(emitNames).toContain(PATHFINDER_EVENTS.emits.UNION);
     });
   });
 });

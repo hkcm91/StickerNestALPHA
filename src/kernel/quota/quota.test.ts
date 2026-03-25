@@ -27,33 +27,6 @@ import { checkQuota, checkFeature } from './quota';
 
 const mockFrom = supabase.from as ReturnType<typeof vi.fn>;
 
-// Helper: build a chainable mock for supabase queries
-function buildChain(data: unknown, error: unknown = null, count?: number) {
-  const terminal = {
-    single: vi.fn().mockResolvedValue({ data, error }),
-    maybeSingle: vi.fn().mockResolvedValue({ data, error }),
-  };
-
-  // For count queries (head: true), resolve with { count }
-  const selectFn = vi.fn().mockImplementation((_cols?: string, opts?: { count?: string; head?: boolean }) => {
-    if (opts?.head) {
-      return {
-        eq: vi.fn().mockReturnValue({
-          eq: vi.fn().mockResolvedValue({ count: count ?? 0, error: null }),
-          then: undefined,
-          ...({ count: count ?? 0, error: null }),
-        }),
-        ...({ count: count ?? 0, error: null }),
-      };
-    }
-    return {
-      eq: vi.fn().mockReturnValue(terminal),
-    };
-  });
-
-  return { select: selectFn };
-}
-
 // Simpler approach: mock `from` per table name
 function setupMocks(opts: {
   userTier?: string;

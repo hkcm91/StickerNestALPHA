@@ -117,7 +117,7 @@ export const WidgetInviteCard: React.FC<WidgetInviteCardProps> = ({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: palette.textInverse,
+                color: palette.bg,
                 fontSize: '14px',
                 fontWeight: 600,
               }}
@@ -140,7 +140,7 @@ export const WidgetInviteCard: React.FC<WidgetInviteCardProps> = ({
               padding: '3px 8px',
               borderRadius: '4px',
               background: invite.mode === 'pipeline' ? palette.violet : palette.opal,
-              color: palette.textInverse,
+              color: palette.bg,
             }}
           >
             {modeBadge}
@@ -164,7 +164,7 @@ export const WidgetInviteCard: React.FC<WidgetInviteCardProps> = ({
               borderRadius: '6px',
               border: 'none',
               background: palette.opal,
-              color: palette.textInverse,
+              color: palette.bg,
               fontWeight: 600,
               fontSize: '13px',
               cursor: status === 'idle' ? 'pointer' : 'default',
