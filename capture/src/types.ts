@@ -144,7 +144,14 @@ export const CaptureStepSchema = z.object({
   /** The browser action to perform */
   action: ActionSchema,
   /** What to capture after the action */
-  capture: CaptureConfigSchema.default({}),
+  capture: CaptureConfigSchema.default({
+    screenshot: true,
+    video: false,
+    gif: false,
+    gifDuration: 3000,
+    gifFps: 10,
+    settleDelay: 500,
+  }),
   /** Narration script text for this step (used by Stage 2 video composition) */
   narration: z.string().optional(),
 });
@@ -175,11 +182,15 @@ export const CaptureScriptSchema = z.object({
           width: z.number().int().min(320).max(3840).default(1920),
           height: z.number().int().min(240).max(2160).default(1080),
         })
-        .default({}),
+        .default({ width: 1920, height: 1080 }),
       /** Device scale factor */
       deviceScaleFactor: z.number().min(1).max(3).default(2),
     })
-    .default({}),
+    .default({
+      baseUrl: 'http://localhost:5173/StickerNest5.0/',
+      viewport: { width: 1920, height: 1080 },
+      deviceScaleFactor: 2,
+    }),
   /** Setup steps — executed before demo, no captures taken */
   setup: z.array(CaptureStepSchema).default([]),
   /** Demo steps — the actual demonstration with captures */

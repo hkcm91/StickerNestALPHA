@@ -14,9 +14,9 @@ import React, { useState, useCallback, useRef } from 'react';
 
 import type { WidgetManifest } from '@sn/types';
 
-import { getCanvasCoreContext } from '../../../canvas/core';
 import { executeAIActions } from '../../../kernel/ai/action-executor';
 import { buildCanvasAIContext } from '../../../kernel/ai/canvas-context';
+import { getCanvasEntities } from '../../../kernel/ai/entity-provider';
 import { buildAIPrompt, parseAIResponse } from '../../../kernel/ai/prompt-builder';
 import { supabase } from '../../../kernel/supabase';
 import { useEmit, useSubscribe, useWidgetState } from '../../hooks';
@@ -120,9 +120,8 @@ export const AICanvasAgentWidget: React.FC<{ instanceId: string }> = ({ instance
     emit('widget.ai-canvas-agent.command.started', { command: trimmed });
 
     try {
-      // Build canvas context snapshot with current entities
-      const coreCtx = getCanvasCoreContext();
-      const entities = coreCtx?.sceneGraph.getEntitiesByZOrder() ?? [];
+      // Build canvas context snapshot with current entities (via kernel entity provider)
+      const entities = getCanvasEntities();
       const context = buildCanvasAIContext({
         entities,
         viewport: { x: 0, y: 0, zoom: 1, screenWidth: 1920, screenHeight: 1080 },

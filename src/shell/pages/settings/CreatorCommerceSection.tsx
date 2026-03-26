@@ -129,7 +129,7 @@ export const CreatorCommerceSection: React.FC = () => {
       setAccount(accountRes.data as CreatorAccount | null);
       setTiers((tiersRes.data as SubscriptionTier[]) ?? []);
       setItems((itemsRes.data as ShopItem[]) ?? []);
-      setRefundRequests((refundsRes.data as RefundRequest[]) ?? []);
+      setRefundRequests((refundsRes.data as unknown as RefundRequest[]) ?? []);
       setLoading(false);
     }
     load();

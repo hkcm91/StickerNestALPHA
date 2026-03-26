@@ -1529,7 +1529,12 @@ export interface Database {
 
     Views: Record<string, never>;
 
-    Functions: Record<string, never>;
+    Functions: {
+      get_user_storage_bytes: {
+        Args: { target_user_id: string };
+        Returns: number;
+      };
+    };
 
     Enums: {
       user_tier: 'free' | 'creator' | 'pro' | 'enterprise';
