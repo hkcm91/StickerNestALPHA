@@ -70,6 +70,7 @@ function mockGalleryRow(overrides: Record<string, unknown> = {}) {
 
 describe('Gallery Store', () => {
   beforeEach(() => {
+    vi.restoreAllMocks();
     vi.clearAllMocks();
     useGalleryStore.getState().reset();
     useGalleryStore.setState({ currentUserId: 'user-1' });

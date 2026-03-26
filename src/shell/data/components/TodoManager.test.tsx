@@ -14,18 +14,16 @@ import { useUIStore } from '../../../kernel/stores/ui/ui.store';
 
 import { TodoManager } from './TodoManager';
 
-// Build a chainable Supabase query mock
+// Build a chainable Supabase query mock that is also thenable.
+// Every method returns the chain itself, and `.then` resolves with the result.
 function mockChain(resolveValue: any) {
   const chain: any = {};
   const methods = ['from', 'select', 'insert', 'update', 'delete', 'eq', 'order'];
   methods.forEach((m) => {
     chain[m] = vi.fn(() => chain);
   });
-  // Terminal — returns the promise
-  chain.order = vi.fn(() => Promise.resolve(resolveValue));
-  chain.eq = vi.fn(() => chain);
-  // Make select terminal too by storing resolveValue
-  chain.then = (fn: any) => Promise.resolve(resolveValue).then(fn);
+  // Make chain thenable so `await supabase.from(...).select(...).eq(...).order(...).order(...)` works
+  chain.then = (resolve: any, reject?: any) => Promise.resolve(resolveValue).then(resolve, reject);
   return chain;
 }
 
