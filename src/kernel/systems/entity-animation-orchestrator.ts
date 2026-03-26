@@ -25,6 +25,7 @@ import type {
   EasingName,
 } from '../schemas/entity-animation';
 import { useAnimationOverlayStore } from '../stores/canvas/animation-overlay.store';
+import { useTimelineStore } from '../stores/timeline/timeline.store';
 import type { TickSystem, TickContext } from '../world/tick-loop';
 
 
@@ -391,6 +392,16 @@ export function createEntityAnimationOrchestrator(
     triggerAnimation(entityId: string, bindingId: string): void {
       const reg = entities.get(entityId);
       if (!reg || !reg.config.enabled) return;
+
+      // Skip trigger animations for entities controlled by the timeline
+      const timelineState = useTimelineStore.getState();
+      if (timelineState.isTimelineMode) {
+        const hasTimelineClip = timelineState.clips.some(
+          (c: { entityId: string; disabled: boolean }) =>
+            c.entityId === entityId && !c.disabled,
+        );
+        if (hasTimelineClip) return;
+      }
 
       const binding = reg.config.bindings.find((b: { id: string }) => b.id === bindingId);
       if (!binding || !binding.enabled) return;

@@ -41,6 +41,10 @@ export type { MinimapController, MinimapState, MinimapEntity, MinimapViewport } 
 export { createAnimationPanelController } from './animation';
 export type { AnimationPanelController } from './animation';
 
+// Timeline
+export { createTimelinePanelController } from './timeline';
+export type { TimelinePanelController } from './timeline';
+
 // Init
 export { initCanvasPanels, teardownCanvasPanels, isCanvasPanelsInitialized, getCanvasPanelsContext } from './init';
 export type { CanvasPanelsContext } from './init';

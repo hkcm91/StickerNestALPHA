@@ -176,6 +176,7 @@ export const AnimationTriggerTypeSchema = z.enum([
   'timer',            // Fixed delay after entity load
   'bus-event',        // A specific bus event is emitted
   'state-change',     // Entity transitions to a named state
+  'timeline',         // Timeline playhead reaches a specific time
 ]);
 
 export type AnimationTriggerType = z.infer<typeof AnimationTriggerTypeSchema>;

@@ -491,6 +491,59 @@ export const DockerEvents = {
 } as const;
 
 /**
+ * Event type constants for Timeline / Video Production system
+ * Timeline events are emitted when timeline state changes.
+ */
+export const TimelineEvents = {
+  // Transport
+  PLAY: 'timeline.transport.play',
+  PAUSE: 'timeline.transport.pause',
+  STOP: 'timeline.transport.stop',
+  SEEK: 'timeline.transport.seek',
+  PLAYHEAD_MOVED: 'timeline.playhead.moved',
+  PLAYBACK_RATE_CHANGED: 'timeline.playbackRate.changed',
+
+  // Track CRUD
+  TRACK_ADDED: 'timeline.track.added',
+  TRACK_REMOVED: 'timeline.track.removed',
+  TRACK_UPDATED: 'timeline.track.updated',
+
+  // Clip CRUD
+  CLIP_ADDED: 'timeline.clip.added',
+  CLIP_REMOVED: 'timeline.clip.removed',
+  CLIP_MOVED: 'timeline.clip.moved',
+  CLIP_TRIMMED: 'timeline.clip.trimmed',
+  CLIP_SPLIT: 'timeline.clip.split',
+  CLIP_PROPERTY_CHANGED: 'timeline.clip.property.changed',
+
+  // Keyframes
+  KEYFRAME_ADDED: 'timeline.keyframe.added',
+  KEYFRAME_REMOVED: 'timeline.keyframe.removed',
+  KEYFRAME_MOVED: 'timeline.keyframe.moved',
+  KEYFRAME_VALUE_CHANGED: 'timeline.keyframe.value.changed',
+
+  // Composition
+  COMPOSITION_CHANGED: 'timeline.composition.changed',
+  LOOP_REGION_CHANGED: 'timeline.loopRegion.changed',
+  MARKER_ADDED: 'timeline.marker.added',
+  MARKER_REMOVED: 'timeline.marker.removed',
+
+  // Mode
+  TIMELINE_MODE_ENTERED: 'timeline.mode.entered',
+  TIMELINE_MODE_EXITED: 'timeline.mode.exited',
+
+  // Render/Export
+  RENDER_REQUESTED: 'timeline.render.requested',
+  RENDER_PROGRESS: 'timeline.render.progress',
+  RENDER_COMPLETED: 'timeline.render.completed',
+  RENDER_FAILED: 'timeline.render.failed',
+
+  // Audio
+  AUDIO_VOLUME_CHANGED: 'timeline.audio.volume.changed',
+  AUDIO_WAVEFORM_READY: 'timeline.audio.waveform.ready',
+} as const;
+
+/**
  * JSON Schema export for external validation
  */
 export const BusEventJSONSchema = BusEventSchema.toJSONSchema();

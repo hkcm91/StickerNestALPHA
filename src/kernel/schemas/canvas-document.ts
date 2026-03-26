@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { CanvasEntitySchema } from './canvas-entity';
 import { SpatialModeSchema } from './spatial';
 import { ThemeNameSchema } from './theme';
+import { TimelineDataSchema } from './timeline';
 
 // =============================================================================
 // Background Specification (Discriminated Union)
@@ -186,7 +187,7 @@ export type CanvasDocumentMeta = z.infer<typeof CanvasDocumentMetaSchema>;
 /**
  * Current document version for migrations
  */
-export const CANVAS_DOCUMENT_VERSION = 1;
+export const CANVAS_DOCUMENT_VERSION = 2;
 
 /**
  * Canvas Document - the complete serialized state of a canvas
@@ -235,6 +236,8 @@ export const CanvasDocumentSchema = z.object({
   canvasPosition: CanvasPositionConfigSchema.optional(),
   /** Per-canvas theme override — falls back to global uiStore.theme when not set */
   theme: ThemeNameSchema.optional(),
+  /** Timeline/video production data — present when canvas is in timeline mode */
+  timelineData: TimelineDataSchema.optional(),
 });
 
 export type CanvasDocument = z.infer<typeof CanvasDocumentSchema>;

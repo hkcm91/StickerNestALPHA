@@ -40,3 +40,13 @@ export {
   createEntityAnimationOrchestrator,
   type IEntityAnimationOrchestrator,
 } from './entity-animation-orchestrator';
+
+export {
+  createTimelineSystem,
+  type ITimelineSystem,
+} from './timeline-system';
+
+export {
+  createAudioEngineSystem,
+  type IAudioEngineSystem,
+} from './audio-engine-system';

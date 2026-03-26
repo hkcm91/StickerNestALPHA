@@ -23,6 +23,7 @@ import { ShapeRenderer } from "./ShapeRenderer";
 import { StickerRenderer } from "./StickerRenderer";
 import { SvgRenderer } from "./SvgRenderer";
 import { TextRenderer } from "./TextRenderer";
+import { VideoRenderer } from "./VideoRenderer";
 import { WidgetRenderer } from "./WidgetRenderer";
 
 export interface EntityRendererProps {
@@ -152,6 +153,16 @@ export const EntityRenderer: React.FC<EntityRendererProps> = ({
 
     case "object3d":
       rendered = <Object3DRenderer entity={resolvedEntity as typeof entity} />;
+      break;
+
+    case "video":
+      rendered = (
+        <VideoRenderer
+          entity={resolvedEntity as typeof entity}
+          isSelected={isSelected}
+          interactionMode={interactionMode}
+        />
+      );
       break;
 
     default: {
