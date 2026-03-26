@@ -849,6 +849,22 @@ export {
   RenderJobJSONSchema,
 } from './video-project';
 
+export {
+  // Schemas
+  ExportFormatSchema,
+  ClientExportConfigSchema,
+  // Constants
+  FORMAT_SPECS,
+  // Types
+  type ExportFormat,
+  type FormatSpec,
+  type ClientExportConfig,
+  type ExportProgress,
+  // JSON Schemas
+  ExportFormatJSONSchema,
+  ClientExportConfigJSONSchema,
+} from './export-config';
+
 // =============================================================================
 // Entity Animation Schemas
 // =============================================================================
