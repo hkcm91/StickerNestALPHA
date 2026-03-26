@@ -16,8 +16,11 @@ import { ProfilePage } from './ProfilePage';
 // ---------------------------------------------------------------------------
 
 vi.mock('../../kernel/social-graph', () => ({
+  getProfile: vi.fn(),
   getProfileByUsername: vi.fn(),
   getUserPublicCanvases: vi.fn(),
+  getUserCanvases: vi.fn(),
+  getSharedCanvases: vi.fn(),
   followUser: vi.fn(),
   unfollowUser: vi.fn(),
   isFollowing: vi.fn(),
@@ -25,11 +28,15 @@ vi.mock('../../kernel/social-graph', () => ({
   blockUser: vi.fn(),
   unblockUser: vi.fn(),
   canMessage: vi.fn(),
+  deriveCanvasCategory: vi.fn().mockReturnValue('public'),
 }));
 
 import {
+  getProfile,
   getProfileByUsername,
   getUserPublicCanvases,
+  getUserCanvases,
+  getSharedCanvases,
   followUser,
   unfollowUser,
   isFollowing,
@@ -117,8 +124,11 @@ describe('ProfilePage', () => {
     vi.clearAllMocks();
 
     // Default successful responses
+    (getProfile as Mock).mockResolvedValue({ success: true, data: MOCK_PROFILE });
     (getProfileByUsername as Mock).mockResolvedValue({ success: true, data: MOCK_PROFILE });
     (getUserPublicCanvases as Mock).mockResolvedValue({ success: true, data: MOCK_CANVASES });
+    (getUserCanvases as Mock).mockResolvedValue({ success: true, data: { items: [], hasMore: false } });
+    (getSharedCanvases as Mock).mockResolvedValue({ success: true, data: { items: [], hasMore: false } });
     (isFollowing as Mock).mockResolvedValue(false);
     (isBlocked as Mock).mockResolvedValue(false);
     (canMessage as Mock).mockResolvedValue(true);
@@ -177,10 +187,9 @@ describe('ProfilePage', () => {
     renderProfile('bob');
 
     await waitFor(() => {
-      expect(screen.getByTestId('canvases-heading')).toBeTruthy();
+      expect(screen.getByTestId('gallery-heading')).toBeTruthy();
     });
 
-    expect(screen.getByTestId('canvases-grid')).toBeTruthy();
     expect(screen.getByText('My Canvas')).toBeTruthy();
   });
 

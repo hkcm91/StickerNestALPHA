@@ -88,14 +88,18 @@ export {
 // Canvas API (public queries + multi-user member management)
 export {
   getUserPublicCanvases,
+  getUserCanvases,
   addCanvasMember,
   removeCanvasMember,
   updateCanvasMemberRole,
   getCanvasMembers,
   getCanvasRole,
   getSharedCanvases,
+  updateCanvasTags,
+  updateCanvasThumbnail,
+  deriveCanvasCategory,
 } from './canvases';
-export type { PublicCanvas, CanvasMember, CanvasRole } from './canvases';
+export type { PublicCanvas, CanvasMember, CanvasRole, CanvasCategory } from './canvases';
 
 // Block API
 export {

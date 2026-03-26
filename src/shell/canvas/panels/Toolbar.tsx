@@ -78,6 +78,8 @@ export interface ToolbarProps {
   canvasPosition?: CanvasPositionConfig;
   /** Currently selected entity IDs */
   selectedIds?: Set<string>;
+  /** Callback for capturing a thumbnail of the canvas */
+  onCaptureThumbnail?: () => void;
 }
 
 const DOCKER_LIBRARY_NAME = 'Docker Library';
@@ -219,6 +221,13 @@ const LibraryIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
     <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+  </svg>
+);
+
+const CameraIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+    <circle cx="12" cy="13" r="4" />
   </svg>
 );
 
@@ -386,6 +395,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   borderRadius,
   canvasPosition,
   selectedIds = new Set(),
+  onCaptureThumbnail,
 }) => {
   const activeTool = useUIStore((s) => (s.activeTool === 'move' ? 'select' : s.activeTool));
   const mode = useUIStore((s) => s.canvasInteractionMode);
@@ -567,6 +577,10 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   const handleFullscreenPreview = useCallback(() => {
     setFullscreenPreview(true);
   }, [setFullscreenPreview]);
+
+  const handleCaptureThumbnail = useCallback(() => {
+    onCaptureThumbnail?.();
+  }, [onCaptureThumbnail]);
 
   // ── Alignment / Grouping ───────────────────────────────────────
 
@@ -823,6 +837,23 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           </button>
           <button data-testid="zoom-in" onClick={handleZoomIn} title="Zoom in" style={smallBtnBase}>+</button>
         </div>
+
+        <Divider />
+
+        {/* Thumbnail capture */}
+        {isEditMode && (
+          <>
+            <Divider />
+            <button
+              data-testid="capture-thumbnail"
+              onClick={handleCaptureThumbnail}
+              title="Capture Thumbnail"
+              style={smallBtnBase}
+            >
+              <CameraIcon />
+            </button>
+          </>
+        )}
 
         <Divider />
 

@@ -6,7 +6,7 @@
  */
 
 import React, { Suspense, useEffect } from 'react';
-import { Routes, Route, Link, useLocation } from 'react-router-dom';
+import { Routes, Route, Link, Navigate, useLocation } from 'react-router-dom';
 
 import { ShellEvents } from '@sn/types';
 
@@ -24,7 +24,6 @@ import { themeVar } from '../theme/theme-vars';
 import {
   DashboardPage,
   LoginPage,
-  CanvasGalleryPage,
   NewCanvasPage,
   CanvasPage,
   MarketplacePage,
@@ -316,7 +315,7 @@ export const AppRouter: React.FC = () => {
 
       <Route path="/profile/:username" element={<ProfilePage />} />
 
-      <Route path="/canvas" element={<CanvasGalleryPage />} />
+      <Route path="/canvas" element={<Navigate to="/profile/me" replace />} />
       <Route path="/canvas/new" element={<NewCanvasPage />} />
       <Route path="/canvas/:canvasSlug" element={<CanvasPage />} />
 

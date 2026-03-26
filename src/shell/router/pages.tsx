@@ -42,6 +42,7 @@ import type { LocalCanvasSummary } from '../canvas';
 import { HistoryPanel } from '../canvas/panels';
 import type { CanvasPositionConfig } from '../canvas/panels/CanvasSettingsDropdown';
 import { seedDemoEntities, seedCommerceCanvas, seedClaudeLabCanvas } from '../canvas/seedDemoEntities';
+import { captureAndUploadThumbnail } from '../canvas/utils/thumbnail-capture';
 import { StickerSettingsModal, LoginForm } from '../components';
 import { GhostWidgetOverlay } from '../components/GhostWidgetOverlay';
 import type { StickerSettings } from '../components/StickerSettingsModal';
@@ -475,6 +476,7 @@ export const CanvasPage: React.FC = () => {
 
   // Sticker settings modal state (works for stickers and non-sticker conversion)
   const [entityToEditAsSticker, setEntityToEditAsSticker] = useState<CanvasEntity | null>(null);
+  const canvasViewportRef = useRef<HTMLDivElement>(null);
 
   // Canvas settings state — wired to CanvasSettingsDropdown events
   const [viewportConfig, setViewportConfig] = useState<ViewportConfig>({
@@ -1168,8 +1170,31 @@ export const CanvasPage: React.FC = () => {
     }
   }, [canvasSummary]);
 
+  const handleCaptureThumbnail = useCallback(async () => {
+    const el = canvasViewportRef.current;
+    if (!el || !canvasSummary) return;
+    try {
+      const url = await captureAndUploadThumbnail(el, canvasSummary.id);
+      useCanvasStore.getState().setCanvasThumbnail(url);
+    } catch {
+      // Thumbnail capture is best-effort; don't block the user
+    }
+  }, [canvasSummary]);
+
+  // Auto-capture thumbnail on save (debounced, best-effort)
+  const lastManualCaptureRef = useRef(0);
+  useEffect(() => {
+    const unsub = bus.subscribe(CanvasDocumentEvents.SAVED, () => {
+      // Skip auto-capture if a manual capture happened within the last 60s
+      if (Date.now() - lastManualCaptureRef.current < 60_000) return;
+      handleCaptureThumbnail();
+    });
+    return unsub;
+  }, [handleCaptureThumbnail]);
+
   return (
     <div
+      ref={canvasViewportRef}
       data-testid="page-canvas"
       data-mode={mode}
       style={{
@@ -1192,6 +1217,7 @@ export const CanvasPage: React.FC = () => {
             borderRadius={typeof borderRadius === 'number' ? borderRadius : borderRadius.topLeft}
             canvasPosition={canvasPosition}
             selectedIds={selectedIds}
+            onCaptureThumbnail={handleCaptureThumbnail}
           />
         }
         renderDockerWidget={renderDockerWidget}

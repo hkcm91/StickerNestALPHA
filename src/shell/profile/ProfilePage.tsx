@@ -1,15 +1,16 @@
 /**
- * User Profile Page
+ * Unified Profile + Canvas Gallery Page
  *
- * Displays user profile information, public/shared canvases,
- * and social actions (follow/unfollow, block, message).
+ * Displays user profile information and canvas gallery.
+ * - Own profile: full canvas management (all types, CRUD, filters, tags)
+ * - Other user: public canvases only with social actions
  *
  * @module shell/profile
  * @layer L6
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import type { UserProfile } from '@sn/types';
 
@@ -17,6 +18,8 @@ import {
   getProfile,
   getProfileByUsername,
   getUserPublicCanvases,
+  getUserCanvases,
+  getSharedCanvases,
   followUser,
   unfollowUser,
   isFollowing as checkIsFollowing,
@@ -28,6 +31,7 @@ import {
 import type { PublicCanvas } from '../../kernel/social-graph';
 import { useAuthStore } from '../../kernel/stores/auth/auth.store';
 
+import { CanvasGallerySection } from './CanvasGallerySection';
 import { FollowersPanel } from './FollowersPanel';
 
 // ---------------------------------------------------------------------------
@@ -96,50 +100,6 @@ const StatItem: React.FC<{
   </div>
 );
 
-const CanvasCard: React.FC<{ canvas: PublicCanvas }> = ({ canvas }) => (
-  <Link
-    to={canvas.slug ? `/canvas/${canvas.slug}` : `/canvas/${canvas.id}`}
-    data-testid="canvas-card"
-    style={{
-      display: 'block',
-      background: 'var(--sn-surface, #f9fafb)',
-      border: '1px solid var(--sn-border, #e5e7eb)',
-      borderRadius: 'var(--sn-radius, 8px)',
-      padding: 16,
-      textDecoration: 'none',
-      color: 'inherit',
-      transition: 'box-shadow 0.15s',
-    }}
-  >
-    {canvas.thumbnailUrl && (
-      <div
-        style={{
-          height: 120,
-          background: `url(${canvas.thumbnailUrl}) center/cover no-repeat`,
-          borderRadius: 4,
-          marginBottom: 12,
-        }}
-      />
-    )}
-    <div style={{ fontWeight: 600, color: 'var(--sn-text, #111827)', marginBottom: 4 }}>
-      {canvas.name}
-    </div>
-    {canvas.description && (
-      <div
-        style={{
-          fontSize: 13,
-          color: 'var(--sn-text-muted, #6b7280)',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-        }}
-      >
-        {canvas.description}
-      </div>
-    )}
-  </Link>
-);
-
 // ---------------------------------------------------------------------------
 // Action Button styles
 // ---------------------------------------------------------------------------
@@ -182,9 +142,11 @@ const dangerBtn: React.CSSProperties = {
 export const ProfilePage: React.FC = () => {
   const { username } = useParams<{ username: string }>();
   const currentUser = useAuthStore((s) => s.user);
+  const navigate = useNavigate();
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [canvases, setCanvases] = useState<PublicCanvas[]>([]);
+  const [ownedCanvases, setOwnedCanvases] = useState<PublicCanvas[]>([]);
+  const [sharedCanvases, setSharedCanvases] = useState<PublicCanvas[]>([]);
   const [following, setFollowing] = useState(false);
   const [blocked, setBlocked] = useState(false);
   const [messagingAllowed, setMessagingAllowed] = useState(false);
@@ -222,10 +184,26 @@ export const ProfilePage: React.FC = () => {
       const p = profileResult.data;
       setProfile(p);
 
-      // Fetch public canvases
-      const canvasResult = await getUserPublicCanvases(p.userId);
-      if (!cancelled && canvasResult.success) {
-        setCanvases(canvasResult.data.items);
+      // Fetch canvases based on whether this is the user's own profile
+      const isOwn = currentUser?.id != null && p.userId === currentUser.id;
+
+      if (isOwn) {
+        // Own profile: fetch ALL owned canvases + shared canvases
+        const [ownResult, sharedResult] = await Promise.all([
+          getUserCanvases(p.userId, currentUser!.id, { limit: 100 }),
+          getSharedCanvases(p.userId, { limit: 100 }),
+        ]);
+        if (!cancelled) {
+          if (ownResult.success) setOwnedCanvases(ownResult.data.items);
+          if (sharedResult.success) setSharedCanvases(sharedResult.data.items);
+        }
+      } else {
+        // Other user: only public canvases
+        const canvasResult = await getUserPublicCanvases(p.userId);
+        if (!cancelled && canvasResult.success) {
+          setOwnedCanvases(canvasResult.data.items);
+          setSharedCanvases([]);
+        }
       }
 
       // Check relationship status (only if viewing another user's profile)
@@ -299,6 +277,21 @@ export const ProfilePage: React.FC = () => {
     setActionLoading(false);
   }, [currentUser?.id, profile]);
 
+  // Canvas CRUD handlers
+  const handleCreateCanvas = useCallback(() => {
+    navigate('/canvas/new');
+  }, [navigate]);
+
+  const handleDeleteCanvas = useCallback((canvas: PublicCanvas) => {
+    if (!window.confirm(`Delete "${canvas.name}"? This cannot be undone.`)) return;
+    setOwnedCanvases((prev) => prev.filter((c) => c.id !== canvas.id));
+  }, []);
+
+  const handleDuplicateCanvas = useCallback((canvas: PublicCanvas) => {
+    // Navigate to the canvas to duplicate (actual duplication handled by canvas layer)
+    navigate(`/canvas/${canvas.slug ?? canvas.id}`);
+  }, [navigate]);
+
   // Loading state
   if (loading) {
     return (
@@ -327,11 +320,13 @@ export const ProfilePage: React.FC = () => {
     <div
       data-testid="page-profile"
       style={{
-        maxWidth: 800,
+        maxWidth: 960,
         margin: '0 auto',
         fontFamily: 'var(--sn-font-family, system-ui)',
         color: 'var(--sn-text, #111827)',
         paddingBottom: 40,
+        overflowY: 'auto',
+        height: '100%',
       }}
     >
       {/* Banner */}
@@ -505,6 +500,7 @@ export const ProfilePage: React.FC = () => {
             onClick={() => setFollowersPanel('following')}
           />
           <StatItem label="Posts" value={profile.postCount} />
+          <StatItem label="Canvases" value={ownedCanvases.length} />
         </div>
       </div>
 
@@ -517,46 +513,15 @@ export const ProfilePage: React.FC = () => {
         />
       )}
 
-      {/* Public canvases section */}
-      <div
-        style={{
-          padding: '24px',
-          background: 'var(--sn-surface, #f9fafb)',
-          borderLeft: '1px solid var(--sn-border, #e5e7eb)',
-          borderRight: '1px solid var(--sn-border, #e5e7eb)',
-          borderBottom: '1px solid var(--sn-border, #e5e7eb)',
-          borderRadius: '0 0 var(--sn-radius, 8px) var(--sn-radius, 8px)',
-        }}
-      >
-        <h2
-          data-testid="canvases-heading"
-          style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 600 }}
-        >
-          Public Canvases
-        </h2>
-
-        {canvases.length === 0 ? (
-          <p
-            data-testid="no-canvases"
-            style={{ color: 'var(--sn-text-muted, #6b7280)' }}
-          >
-            No public canvases yet.
-          </p>
-        ) : (
-          <div
-            data-testid="canvases-grid"
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
-              gap: 16,
-            }}
-          >
-            {canvases.map((c) => (
-              <CanvasCard key={c.id} canvas={c} />
-            ))}
-          </div>
-        )}
-      </div>
+      {/* Canvas Gallery Section */}
+      <CanvasGallerySection
+        ownedCanvases={ownedCanvases}
+        sharedCanvases={sharedCanvases}
+        isOwnProfile={isOwnProfile}
+        onCreateCanvas={handleCreateCanvas}
+        onDeleteCanvas={handleDeleteCanvas}
+        onDuplicateCanvas={handleDuplicateCanvas}
+      />
     </div>
   );
 };
