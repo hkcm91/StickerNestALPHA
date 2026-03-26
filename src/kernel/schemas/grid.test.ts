@@ -67,7 +67,7 @@ describe('GridConfigSchema', () => {
       projection: 'hexagonal',
     });
     expect(config.projection).toBe('hexagonal');
-    expect(config.enabled).toBe(true); // default
+    expect(config.enabled).toBe(false); // default
   });
 
   it('defaults gridLineStyle to line', () => {
@@ -98,5 +98,20 @@ describe('GridConfigSchema', () => {
   it('rejects gridLineOpacity out of range', () => {
     expect(() => GridConfigSchema.parse({ gridLineOpacity: 1.5 })).toThrow();
     expect(() => GridConfigSchema.parse({ gridLineOpacity: -0.1 })).toThrow();
+  });
+
+  it('defaults dotSize to 1.5', () => {
+    const config = GridConfigSchema.parse({});
+    expect(config.dotSize).toBe(1.5);
+  });
+
+  it('accepts custom dotSize', () => {
+    const config = GridConfigSchema.parse({ dotSize: 3 });
+    expect(config.dotSize).toBe(3);
+  });
+
+  it('rejects non-positive dotSize', () => {
+    expect(() => GridConfigSchema.parse({ dotSize: 0 })).toThrow();
+    expect(() => GridConfigSchema.parse({ dotSize: -1 })).toThrow();
   });
 });
