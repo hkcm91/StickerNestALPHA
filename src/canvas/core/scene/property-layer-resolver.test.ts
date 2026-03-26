@@ -2,7 +2,11 @@ import { describe, it, expect } from 'vitest';
 
 import type { CanvasEntity, PropertyLayer } from '@sn/types';
 
-import { resolveEntityProperties, hasActivePropertyLayers } from './property-layer-resolver';
+import {
+  resolveEntityProperties,
+  hasActivePropertyLayers,
+  getInvalidPropertyKeys,
+} from './property-layer-resolver';
 
 const UUID = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
 
@@ -144,5 +148,35 @@ describe('hasActivePropertyLayers', () => {
       ],
     } as Partial<CanvasEntity>);
     expect(hasActivePropertyLayers(entity)).toBe(true);
+  });
+});
+
+describe('getInvalidPropertyKeys', () => {
+  it('returns empty array for valid base entity keys', () => {
+    const invalid = getInvalidPropertyKeys('shape', ['opacity', 'visible', 'locked', 'borderRadius']);
+    expect(invalid).toEqual([]);
+  });
+
+  it('returns empty array for valid type-specific keys', () => {
+    const invalid = getInvalidPropertyKeys('shape', ['fill', 'stroke', 'strokeWidth', 'cornerRadius']);
+    expect(invalid).toEqual([]);
+  });
+
+  it('returns invalid keys that do not exist on entity type', () => {
+    const invalid = getInvalidPropertyKeys('shape', ['opacity', 'nonexistentProp', 'anotherFake']);
+    expect(invalid).toEqual(['nonexistentProp', 'anotherFake']);
+  });
+
+  it('detects keys valid for one entity type but not another', () => {
+    // 'fontFamily' exists on text but not shape
+    const invalidOnShape = getInvalidPropertyKeys('shape', ['fontFamily']);
+    expect(invalidOnShape).toEqual(['fontFamily']);
+
+    const invalidOnText = getInvalidPropertyKeys('text', ['fontFamily']);
+    expect(invalidOnText).toEqual([]);
+  });
+
+  it('returns empty array for empty input', () => {
+    expect(getInvalidPropertyKeys('shape', [])).toEqual([]);
   });
 });

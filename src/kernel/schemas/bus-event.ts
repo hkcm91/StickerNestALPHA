@@ -164,6 +164,8 @@ export const CanvasEvents = {
   PROPERTY_LAYER_TOGGLED: 'canvas.entity.propertyLayer.toggled',
   /** Request to open/focus the widget that created a property layer. Payload: { entityId, layerId } */
   PROPERTY_LAYER_ALTER: 'canvas.entity.propertyLayer.alter',
+  /** Batch-replace all property layers on an entity. Payload: { entityId, layers: PropertyLayer[], previousLayers?: PropertyLayer[] } */
+  PROPERTY_LAYER_BATCH_UPDATED: 'canvas.entity.propertyLayer.batchUpdated',
 } as const;
 
 /**
