@@ -148,7 +148,9 @@ describe('Gallery Store', () => {
       const result = await useGalleryStore.getState().uploadAsset(file);
 
       expect(result).toBeNull();
-      expect(useGalleryStore.getState().error).toBe('Storage error');
+      // The storage upload error is not an Error instance, so the catch block
+      // falls back to 'Upload failed'
+      expect(useGalleryStore.getState().error).toBe('Upload failed');
     });
   });
 

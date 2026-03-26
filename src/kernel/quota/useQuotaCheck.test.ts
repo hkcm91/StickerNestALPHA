@@ -3,6 +3,8 @@
  *
  * @module kernel/quota
  * @layer L0
+ *
+ * @vitest-environment happy-dom
  */
 
 import { renderHook, act } from '@testing-library/react';
