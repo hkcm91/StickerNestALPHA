@@ -1546,8 +1546,149 @@ const MyPurchasesSectionLazy = React.lazy(() =>
 
 export const InvitePage: React.FC = () => {
   const { token } = useParams<{ token: string }>();
+  const navigate = useNavigate();
+  const isAuthenticated = useAuthStore(selectIsAuthenticated);
+  const [invite, setInvite] = useState<{
+    canvasName?: string;
+    inviterName?: string;
+    role: string;
+    status: string;
+    expiresAt: string;
+  } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [accepting, setAccepting] = useState(false);
+
+  useEffect(() => {
+    if (!token) return;
+    import('../../kernel/social-graph/canvas-invites').then(({ getInviteByToken }) => {
+      getInviteByToken(token).then((result) => {
+        if (!result) {
+          setError('This invite link is invalid or has been revoked.');
+          return;
+        }
+        if (result.status !== 'pending') {
+          setError(`This invite has already been ${result.status}.`);
+          return;
+        }
+        if (new Date(result.expiresAt) < new Date()) {
+          setError('This invite has expired.');
+          return;
+        }
+        setInvite({
+          canvasName: result.canvasName,
+          inviterName: result.inviterName,
+          role: result.role,
+          status: result.status,
+          expiresAt: result.expiresAt,
+        });
+      });
+    });
+  }, [token]);
+
+  const handleAccept = useCallback(async () => {
+    if (!token) return;
+    const userId = useAuthStore.getState().user?.id;
+    if (!userId) return;
+
+    setAccepting(true);
+    try {
+      const { acceptInvite } = await import('../../kernel/social-graph/canvas-invites');
+      const { canvasId } = await acceptInvite(token, userId);
+      navigate(`/canvas/${canvasId}`, { replace: true });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to accept invite');
+      setAccepting(false);
+    }
+  }, [token, navigate]);
+
+  if (error) {
+    return (
+      <div data-testid="page-invite" style={{ ...appPageStyle, textAlign: 'center' as const, paddingTop: 80 }}>
+        <h2 style={{ marginBottom: 12 }}>Invite Error</h2>
+        <p style={{ color: 'var(--sn-text-muted, #6b7280)', marginBottom: 24 }}>{error}</p>
+        <Link to="/" style={{ color: 'var(--sn-accent, #6366f1)' }}>Go to Dashboard</Link>
+      </div>
+    );
+  }
+
+  if (!invite) {
+    return (
+      <div data-testid="page-invite" style={appPageStyle}>
+        <p>Loading invite...</p>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div data-testid="page-invite" style={{ ...appPageStyle, textAlign: 'center' as const, paddingTop: 80 }}>
+        <h2 style={{ marginBottom: 12 }}>Canvas Invitation</h2>
+        <p style={{ marginBottom: 8 }}>
+          {invite.inviterName ? `${invite.inviterName} invited you` : 'You have been invited'} to join
+          {invite.canvasName ? ` "${invite.canvasName}"` : ' a canvas'} as a <strong>{invite.role}</strong>.
+        </p>
+        <p style={{ color: 'var(--sn-text-muted, #6b7280)', marginBottom: 24 }}>
+          Please sign in to accept this invitation.
+        </p>
+        <Link
+          to={`/login?redirect=/invite/${token}`}
+          style={{
+            display: 'inline-block',
+            padding: '10px 24px',
+            background: 'var(--sn-accent, #6366f1)',
+            color: '#fff',
+            borderRadius: 'var(--sn-radius, 8px)',
+            textDecoration: 'none',
+            fontWeight: 600,
+          }}
+        >
+          Sign In
+        </Link>
+      </div>
+    );
+  }
+
   return (
-    <div data-testid="page-invite" style={appPageStyle}><h1>Accept Invite</h1><p>Token: {token}</p></div>
+    <div data-testid="page-invite" style={{ ...appPageStyle, textAlign: 'center' as const, paddingTop: 80 }}>
+      <h2 style={{ marginBottom: 12 }}>Canvas Invitation</h2>
+      <p style={{ marginBottom: 8 }}>
+        {invite.inviterName ? `${invite.inviterName} invited you` : 'You have been invited'} to join
+        {invite.canvasName ? ` "${invite.canvasName}"` : ' a canvas'} as a <strong>{invite.role}</strong>.
+      </p>
+      <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 24 }}>
+        <button
+          data-testid="invite-accept"
+          onClick={handleAccept}
+          disabled={accepting}
+          style={{
+            padding: '10px 24px',
+            background: 'var(--sn-accent, #6366f1)',
+            color: '#fff',
+            border: 'none',
+            borderRadius: 'var(--sn-radius, 8px)',
+            cursor: accepting ? 'not-allowed' : 'pointer',
+            fontWeight: 600,
+            fontSize: 14,
+          }}
+        >
+          {accepting ? 'Joining...' : 'Accept Invitation'}
+        </button>
+        <button
+          data-testid="invite-decline"
+          onClick={() => navigate('/', { replace: true })}
+          style={{
+            padding: '10px 24px',
+            background: 'transparent',
+            border: '1px solid var(--sn-border, #e5e7eb)',
+            borderRadius: 'var(--sn-radius, 8px)',
+            cursor: 'pointer',
+            fontSize: 14,
+          }}
+        >
+          Decline
+        </button>
+      </div>
+    </div>
   );
 };
 
