@@ -224,4 +224,10 @@ export function setupUIBusSubscriptions(): void {
       useUIStore.getState().setPendingToolData(Object.keys(rest).length > 0 ? rest : null);
     }
   });
+
+  // Spatial mode toggle — switch between 2D and 3D
+  bus.subscribe(ShellEvents.SPATIAL_TOGGLE_3D, () => {
+    const current = useUIStore.getState().spatialMode;
+    useUIStore.getState().setSpatialMode(current === '2d' ? '3d' : '2d');
+  });
 }

@@ -179,6 +179,9 @@ export const CrossCanvasEvents = {
 export const ShellEvents = {
   THEME_CHANGED: 'shell.theme.changed',
   ROUTE_CHANGED: 'shell.route.changed',
+  SPATIAL_TOGGLE_3D: 'shell.spatial.toggle3d',
+  SPATIAL_ENTER_VR: 'shell.spatial.enterVR',
+  SPATIAL_ENTER_AR: 'shell.spatial.enterAR',
 } as const;
 
 /**

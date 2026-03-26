@@ -556,63 +556,6 @@ describe('useCanvasShortcuts (production)', () => {
     expect(deps.setTool).not.toHaveBeenCalled();
   });
 
-  // ---- Spatial mode shortcuts ----
-
-  it('toggles spatialMode from 2d to 3d on Shift+3', () => {
-    const setSpatialMode = vi.fn();
-    const deps = makeDeps({ spatialMode: '2d', setSpatialMode });
-    const { result } = renderHook(() => useCanvasShortcuts(deps));
-
-    const e = makeKeyEvent({ key: '#', shiftKey: true });
-    result.current.onKeyDown(e);
-
-    expect(e.preventDefault).toHaveBeenCalled();
-    expect(setSpatialMode).toHaveBeenCalledWith('3d');
-  });
-
-  it('toggles spatialMode from 3d to 2d on Shift+3', () => {
-    const setSpatialMode = vi.fn();
-    const deps = makeDeps({ spatialMode: '3d', setSpatialMode });
-    const { result } = renderHook(() => useCanvasShortcuts(deps));
-
-    const e = makeKeyEvent({ key: '#', shiftKey: true });
-    result.current.onKeyDown(e);
-
-    expect(e.preventDefault).toHaveBeenCalled();
-    expect(setSpatialMode).toHaveBeenCalledWith('2d');
-  });
-
-  it('does not toggle spatialMode without setSpatialMode', () => {
-    const deps = makeDeps({ spatialMode: '2d' });
-    const { result } = renderHook(() => useCanvasShortcuts(deps));
-
-    const e = makeKeyEvent({ key: '#', shiftKey: true });
-    result.current.onKeyDown(e);
-
-    expect(e.preventDefault).not.toHaveBeenCalled();
-  });
-
-  it('enters VR on Shift+V when in 3d mode', () => {
-    const setSpatialMode = vi.fn();
-    const deps = makeDeps({ spatialMode: '3d', setSpatialMode });
-    const { result } = renderHook(() => useCanvasShortcuts(deps));
-
-    const e = makeKeyEvent({ key: 'V', shiftKey: true });
-    result.current.onKeyDown(e);
-
-    expect(e.preventDefault).toHaveBeenCalled();
-    expect(setSpatialMode).toHaveBeenCalledWith('vr');
-  });
-
-  it('does NOT enter VR on Shift+V when in 2d mode', () => {
-    const setSpatialMode = vi.fn();
-    const deps = makeDeps({ spatialMode: '2d', setSpatialMode });
-    const { result } = renderHook(() => useCanvasShortcuts(deps));
-
-    const e = makeKeyEvent({ key: 'V', shiftKey: true });
-    result.current.onKeyDown(e);
-
-    expect(e.preventDefault).not.toHaveBeenCalled();
-    expect(setSpatialMode).not.toHaveBeenCalled();
-  });
+  // Spatial mode shortcuts (Shift+3, Shift+V) are now handled by the global
+  // shortcut registry in src/shell/shortcuts/shortcut-registry.ts, not this hook.
 });

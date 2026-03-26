@@ -206,8 +206,6 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
     setTool,
     viewportStore,
     lastCursorScreen,
-    spatialMode,
-    setSpatialMode,
   });
 
   // Handle container resize

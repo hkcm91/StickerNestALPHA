@@ -16,7 +16,9 @@ import { XR } from "@react-three/xr";
 import React, { useCallback, useEffect, useState } from "react";
 
 import type { CanvasEntity, SpatialMode } from "@sn/types";
+import { ShellEvents } from "@sn/types";
 
+import { bus } from "../../kernel/bus";
 import type { ThemeTokens } from "../../runtime/bridge/message-types";
 import { SpatialScene } from "../../spatial/components";
 import { SpatialEntity, WidgetInSpace } from "../../spatial/entities";
@@ -64,6 +66,22 @@ export const SpatialCanvasLayer: React.FC<SpatialCanvasLayerProps> = ({
   const handleEnterVR = useCallback(() => {
     setSpatialMode("vr");
     enterXR("immersive-vr");
+  }, [setSpatialMode]);
+
+  // Subscribe to bus events so toolbar/registry shortcuts can trigger VR/AR entry
+  useEffect(() => {
+    const unsubVR = bus.subscribe(ShellEvents.SPATIAL_ENTER_VR, () => {
+      setSpatialMode("vr");
+      enterXR("immersive-vr");
+    });
+    const unsubAR = bus.subscribe(ShellEvents.SPATIAL_ENTER_AR, () => {
+      setSpatialMode("ar");
+      enterXR("immersive-ar");
+    });
+    return () => {
+      unsubVR();
+      unsubAR();
+    };
   }, [setSpatialMode]);
 
   return (

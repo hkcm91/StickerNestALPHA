@@ -80,6 +80,8 @@ vi.mock('../../spatial/session', () => ({
 }));
 
 // Import AFTER mocks
+import { bus } from '../../kernel/bus';
+
 import { SpatialCanvasLayer } from './SpatialCanvasLayer';
 
 // ---------------------------------------------------------------------------
@@ -262,5 +264,43 @@ describe('SpatialCanvasLayer', () => {
     );
 
     expect(queryByTestId('enter-vr-button')).toBeNull();
+  });
+
+  it('subscribes to shell.spatial.enterVR bus event and calls enterXR', async () => {
+    const { enterXR } = await import('../../spatial/session');
+    const setSpatialMode = vi.fn();
+
+    render(
+      <SpatialCanvasLayer
+        entities={[]}
+        selectedIds={new Set()}
+        spatialMode="3d"
+        setSpatialMode={setSpatialMode}
+      />,
+    );
+
+    bus.emit('shell.spatial.enterVR', {});
+
+    expect(setSpatialMode).toHaveBeenCalledWith('vr');
+    expect(enterXR).toHaveBeenCalledWith('immersive-vr');
+  });
+
+  it('subscribes to shell.spatial.enterAR bus event and calls enterXR', async () => {
+    const { enterXR } = await import('../../spatial/session');
+    const setSpatialMode = vi.fn();
+
+    render(
+      <SpatialCanvasLayer
+        entities={[]}
+        selectedIds={new Set()}
+        spatialMode="3d"
+        setSpatialMode={setSpatialMode}
+      />,
+    );
+
+    bus.emit('shell.spatial.enterAR', {});
+
+    expect(setSpatialMode).toHaveBeenCalledWith('ar');
+    expect(enterXR).toHaveBeenCalledWith('immersive-ar');
   });
 });
