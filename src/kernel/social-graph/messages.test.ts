@@ -9,6 +9,7 @@ import { SocialGraphEvents } from '@sn/types';
 
 import { bus } from '../bus';
 
+import { isBlockedEitherWay } from './blocks';
 import { sendMessage, canMessage, markAsRead, getUnreadMessageCount, getConversationList } from './messages';
 
 // ---------------------------------------------------------------------------
@@ -18,8 +19,6 @@ import { sendMessage, canMessage, markAsRead, getUnreadMessageCount, getConversa
 vi.mock('./blocks', () => ({
   isBlockedEitherWay: vi.fn(),
 }));
-
-import { isBlockedEitherWay } from './blocks';
 
 // ---------------------------------------------------------------------------
 // Mock Supabase using vi.hoisted for shared refs
@@ -136,7 +135,7 @@ describe('Messages API', () => {
         expect(result.data.isRead).toBe(false);
       }
       expect(handler).toHaveBeenCalledWith(
-        expect.objectContaining({ message: expect.any(Object) }),
+        expect.objectContaining({ payload: expect.objectContaining({ message: expect.any(Object) }) }),
       );
 
       unsub();
@@ -200,9 +199,11 @@ describe('Messages API', () => {
       }
       expect(handler).toHaveBeenCalledWith(
         expect.objectContaining({
-          senderId: 'user-2',
-          readerId: 'user-1',
-          count: 2,
+          payload: expect.objectContaining({
+            senderId: 'user-2',
+            readerId: 'user-1',
+            count: 2,
+          }),
         }),
       );
 
@@ -264,7 +265,13 @@ describe('Messages API', () => {
 
   describe('getUnreadMessageCount', () => {
     it('returns unread count', async () => {
-      mockChain.eq.mockResolvedValueOnce({ data: null, error: null, count: 5 });
+      mockFromFn.mockImplementation(() => ({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            eq: vi.fn().mockResolvedValue({ data: null, error: null, count: 5 }),
+          }),
+        }),
+      }));
 
       const result = await getUnreadMessageCount('user-1');
       expect(result.success).toBe(true);
@@ -274,7 +281,13 @@ describe('Messages API', () => {
     });
 
     it('returns 0 when no unread messages', async () => {
-      mockChain.eq.mockResolvedValueOnce({ data: null, error: null, count: 0 });
+      mockFromFn.mockImplementation(() => ({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            eq: vi.fn().mockResolvedValue({ data: null, error: null, count: 0 }),
+          }),
+        }),
+      }));
 
       const result = await getUnreadMessageCount('user-1');
       expect(result.success).toBe(true);
@@ -284,7 +297,13 @@ describe('Messages API', () => {
     });
 
     it('returns error on database failure', async () => {
-      mockChain.eq.mockResolvedValueOnce({ data: null, error: { message: 'DB error' }, count: null });
+      mockFromFn.mockImplementation(() => ({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            eq: vi.fn().mockResolvedValue({ data: null, error: { message: 'DB error' }, count: null }),
+          }),
+        }),
+      }));
 
       const result = await getUnreadMessageCount('user-1');
       expect(result.success).toBe(false);

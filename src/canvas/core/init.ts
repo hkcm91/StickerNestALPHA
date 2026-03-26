@@ -8,6 +8,7 @@
 import type { CanvasEntity, BusEvent } from '@sn/types';
 import { CanvasEvents } from '@sn/types';
 
+import { registerEntityProvider, unregisterEntityProvider } from '../../kernel/ai/entity-provider';
 import { bus } from '../../kernel/bus';
 
 import { entityBounds } from './hittest';
@@ -33,6 +34,9 @@ export function initCanvasCore(): CanvasCoreContext {
   const renderLoop = createRenderLoop(dirtyTracker);
 
   context = { sceneGraph, dirtyTracker, renderLoop };
+
+  // Register entity provider so L0/L3 modules can access entities
+  registerEntityProvider(() => sceneGraph.getEntitiesByZOrder());
 
   // Handler for entity creation events
   const handleEntityCreated = (event: BusEvent<CanvasEntity>) => {
@@ -163,6 +167,7 @@ export function initCanvasCore(): CanvasCoreContext {
 
 export function teardownCanvasCore(): void {
   if (!context) return;
+  unregisterEntityProvider();
   context.renderLoop.stop();
   for (const unsub of unsubscribers) {
     unsub();

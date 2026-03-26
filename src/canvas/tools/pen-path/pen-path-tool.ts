@@ -119,8 +119,8 @@ export function createPenPathTool(
       opacity: 1,
       anchors: localAnchors,
       closed,
-      fill: closed ? 'rgba(99, 102, 241, 0.2)' : null,
-      stroke: '#6366f1',
+      fill: closed ? '#cccccc' : null,
+      stroke: '#000000',
       strokeWidth: 2,
       createdAt: now,
       updatedAt: now,
@@ -140,7 +140,7 @@ export function createPenPathTool(
   }
 
   // Handle commands from the widget
-  const unsubCmd = bus.subscribe(CanvasEvents.TOOL_COMMAND, (event: { payload: any }) => {
+  const unsubCmd = bus.subscribe(CanvasEvents.TOOL_COMMAND, (event: { payload: Record<string, unknown> }) => {
     if (event.payload.tool !== 'pen') return;
 
     switch (event.payload.action) {
@@ -337,7 +337,8 @@ export function createPenPathTool(
     },
 
     cancel() {
-      resetState();
+      if (anchors.length >= 2) commitPath(false);
+      else resetState();
     },
 
     getToolState(): PenToolState {

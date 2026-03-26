@@ -118,7 +118,7 @@ describe('Follows API', () => {
       };
 
       let callCount = 0;
-      (mockFromFn as any).mockImplementation((table: string) => {
+      (mockFromFn as ReturnType<typeof vi.fn>).mockImplementation((table: string) => {
         callCount++;
 
         if (callCount === 1) {
@@ -199,7 +199,7 @@ describe('Follows API', () => {
         expect(result.data.status).toBe('active');
       }
       expect(handler).toHaveBeenCalledWith(
-        expect.objectContaining({ follow: expect.any(Object), isPending: false }),
+        expect.objectContaining({ payload: expect.objectContaining({ follow: expect.any(Object), isPending: false }) }),
       );
 
       unsub();
@@ -215,7 +215,7 @@ describe('Follows API', () => {
       };
 
       let callCount = 0;
-      (mockFromFn as any).mockImplementation((table: string) => {
+      (mockFromFn as ReturnType<typeof vi.fn>).mockImplementation((table: string) => {
         callCount++;
 
         if (callCount === 1) {
@@ -283,7 +283,7 @@ describe('Follows API', () => {
       const unsub = bus.subscribe(SocialGraphEvents.FOLLOW_DELETED, handler);
 
       let callCount = 0;
-      (mockFromFn as any).mockImplementation(() => {
+      (mockFromFn as ReturnType<typeof vi.fn>).mockImplementation(() => {
         callCount++;
         if (callCount === 1) {
           // Find existing follow
@@ -308,7 +308,7 @@ describe('Follows API', () => {
       const result = await unfollowUser('user-2', 'user-1');
       expect(result.success).toBe(true);
       expect(handler).toHaveBeenCalledWith(
-        expect.objectContaining({ followerId: 'user-1', followingId: 'user-2' }),
+        expect.objectContaining({ payload: expect.objectContaining({ followerId: 'user-1', followingId: 'user-2' }) }),
       );
 
       unsub();
@@ -341,7 +341,7 @@ describe('Follows API', () => {
       const acceptedRow = { ...pendingRow, status: 'active' };
 
       let callCount = 0;
-      (mockFromFn as any).mockImplementation(() => {
+      (mockFromFn as ReturnType<typeof vi.fn>).mockImplementation(() => {
         callCount++;
         if (callCount === 1) {
           // Find pending follow
@@ -396,7 +396,7 @@ describe('Follows API', () => {
       const unsub = bus.subscribe(SocialGraphEvents.FOLLOW_REJECTED, handler);
 
       let callCount = 0;
-      (mockFromFn as any).mockImplementation(() => {
+      (mockFromFn as ReturnType<typeof vi.fn>).mockImplementation(() => {
         callCount++;
         if (callCount === 1) {
           // Find pending follow
@@ -428,7 +428,7 @@ describe('Follows API', () => {
       const result = await rejectFollowRequest('user-1', 'user-3');
       expect(result.success).toBe(true);
       expect(handler).toHaveBeenCalledWith(
-        expect.objectContaining({ followerId: 'user-1', followingId: 'user-3' }),
+        expect.objectContaining({ payload: expect.objectContaining({ followerId: 'user-1', followingId: 'user-3' }) }),
       );
 
       unsub();

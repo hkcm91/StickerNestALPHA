@@ -43,7 +43,7 @@ describe('Widget Hook Bus Integration', () => {
   describe('subscribe pattern (useSubscribe)', () => {
     it('subscribes to specific event types', () => {
       const handler = vi.fn();
-      const unsub = bus.subscribe('canvas.entity.selected', (event: any) => {
+      const unsub = bus.subscribe('canvas.entity.selected', (event: { payload: Record<string, unknown> }) => {
         handler(event.payload);
       });
 
@@ -73,6 +73,7 @@ describe('Widget Hook Bus Integration', () => {
       store.addInstance({
         instanceId,
         widgetId: 'sn.test',
+        canvasId: 'test-canvas',
         state: {},
         config: {},
       });

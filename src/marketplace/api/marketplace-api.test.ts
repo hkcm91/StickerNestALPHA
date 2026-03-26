@@ -100,7 +100,7 @@ describe('MarketplaceAPI', () => {
         count: 1,
       });
 
-      const result = await api.search({ page: 0, pageSize: 20, sortBy: 'newest' });
+      const result = await api.search({ page: 1, pageSize: 20, sortBy: 'newest' });
 
       expect(result.items).toHaveLength(1);
       expect(result.items[0].name).toBe('Test Widget');
@@ -240,7 +240,7 @@ describe('MarketplaceAPI', () => {
         tags: ['test'],
         category: 'utilities',
         license: 'MIT',
-      } as any;
+      } as unknown as import('@sn/types').WidgetManifest;
 
       const result = await api.publish('author1', '<div/>', manifest, null);
 
