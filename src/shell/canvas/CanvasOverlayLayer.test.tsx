@@ -18,9 +18,11 @@ vi.mock('../../canvas/core', () => ({
     dispose: vi.fn(),
   })),
   createGridRenderer: vi.fn(() => ({
+    setCanvas: vi.fn(),
     setConfig: vi.fn(),
     setViewport: vi.fn(),
     render: vi.fn(),
+    invalidate: vi.fn(),
   })),
   createGridCellStore: vi.fn(() => ({
     getCellEntities: vi.fn(() => []),

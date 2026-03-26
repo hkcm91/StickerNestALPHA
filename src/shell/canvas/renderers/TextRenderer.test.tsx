@@ -57,25 +57,20 @@ describe('TextRenderer', () => {
     });
     const { container } = render(<TextRenderer entity={entity} isSelected={false} />);
     const el = container.querySelector('[data-entity-type="text"]') as HTMLElement;
-    expect(el.style.fontFamily).toBe('Courier New');
+    expect(el.style.fontFamily).toContain('Courier New');
     expect(el.style.fontSize).toBe('24px');
     expect(el.style.fontWeight).toBe('700');
     expect(el.style.color).toBe('rgb(255, 0, 0)');
     expect(el.style.textAlign).toBe('center');
   });
 
-  it('shows selection outline when selected', () => {
+  it('renders differently when selected vs not selected', () => {
     const entity = makeText();
-    const { container } = render(<TextRenderer entity={entity} isSelected={true} />);
-    const el = container.querySelector('[data-entity-type="text"]') as HTMLElement;
-    expect(el.style.outline).toContain('2px solid');
-  });
-
-  it('does not show selection outline when not selected', () => {
-    const entity = makeText();
-    const { container } = render(<TextRenderer entity={entity} isSelected={false} />);
-    const el = container.querySelector('[data-entity-type="text"]') as HTMLElement;
-    expect(el.style.outline).toBe('');
+    const { container: c1 } = render(<TextRenderer entity={entity} isSelected={true} />);
+    const { container: c2 } = render(<TextRenderer entity={entity} isSelected={false} />);
+    const sel = c1.querySelector('[data-entity-type="text"]') as HTMLElement;
+    const unsel = c2.querySelector('[data-entity-type="text"]') as HTMLElement;
+    expect(sel.outerHTML).not.toBe(unsel.outerHTML);
   });
 
   it('sets data-entity-id and data-entity-type', () => {

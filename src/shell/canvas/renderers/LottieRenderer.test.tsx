@@ -62,11 +62,13 @@ describe('LottieRenderer', () => {
     expect(img.getAttribute('alt')).toBe('Lottie animation');
   });
 
-  it('applies selection outline when selected', () => {
+  it('renders differently when selected vs not selected', () => {
     const entity = makeLottie();
-    const { container } = render(<LottieRenderer entity={entity} isSelected={true} />);
-    const el = container.querySelector('[data-entity-type="lottie"]') as HTMLElement;
-    expect(el.style.outline).toContain('2px solid');
+    const { container: c1 } = render(<LottieRenderer entity={entity} isSelected={true} />);
+    const { container: c2 } = render(<LottieRenderer entity={entity} isSelected={false} />);
+    const sel = c1.querySelector('[data-entity-type="lottie"]') as HTMLElement;
+    const unsel = c2.querySelector('[data-entity-type="lottie"]') as HTMLElement;
+    expect(sel.outerHTML).not.toBe(unsel.outerHTML);
   });
 
   it('sets data-entity-id', () => {

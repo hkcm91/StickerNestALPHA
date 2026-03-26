@@ -4,25 +4,30 @@
  * @module shell/canvas/panels
  */
 
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 let mockMode = 'edit';
 
 vi.mock('../../../kernel/stores/ui/ui.store', () => ({
-  useUIStore: vi.fn((selector) => {
+  useUIStore: vi.fn((selectorOrUndefined?: any) => {
     const state: Record<string, unknown> = {
       canvasInteractionMode: mockMode,
     };
-    return selector(state);
+    if (typeof selectorOrUndefined === 'function') {
+      return selectorOrUndefined(state);
+    }
+    return state;
   }),
 }));
 
 vi.mock('../../../kernel/stores/gallery', () => ({
-  useGalleryStore: vi.fn((selector) => {
-    const state = { stickers: [], widgets: [] };
-    return selector(state);
-  }),
+  useGalleryStore: vi.fn(() => ({
+    assets: [],
+    uploadAsset: vi.fn(),
+    isLoading: false,
+    error: null,
+  })),
 }));
 
 vi.mock('../../../kernel/bus', () => ({
@@ -68,9 +73,12 @@ describe('AssetPanel', () => {
     expect(screen.getByTestId('asset-item-stk-heart')).toBeTruthy();
   });
 
-  it('shows widget assets', () => {
+  it('shows widget assets when Widgets tab is active', () => {
     render(<AssetPanel />);
-    // Default assets include Clock, Sticky Note widgets
+    // Switch to Widgets tab
+    const widgetsTab = screen.getByText('Widgets');
+    fireEvent.click(widgetsTab);
+    // Default widget assets should now be visible
     expect(screen.getByTestId('asset-item-wgt-clock')).toBeTruthy();
   });
 });

@@ -48,7 +48,15 @@ function setupMock(subscriptions: unknown[] = [], orders: unknown[] = []) {
         }),
       };
     }
-    return { select: () => ({ eq: () => ({ order: () => Promise.resolve({ data: [], error: null }) }) }) };
+    return {
+      select: () => ({
+        eq: () => ({
+          order: () => ({
+            limit: () => Promise.resolve({ data: [], error: null }),
+          }),
+        }),
+      }),
+    };
   });
 }
 
@@ -63,7 +71,9 @@ describe('MyPurchasesSection', () => {
     mockFrom.mockReturnValue({
       select: () => ({
         eq: () => ({
-          order: () => new Promise(() => {}),
+          order: () => ({
+            limit: () => new Promise(() => {}),
+          }),
         }),
       }),
     });

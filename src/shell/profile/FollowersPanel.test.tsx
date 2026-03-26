@@ -145,7 +145,7 @@ describe('FollowersPanel', () => {
     await waitFor(() => {
       expect(screen.getByTestId('user-row-bob')).toBeTruthy();
     });
-    const img = screen.getByAlt('Bob');
+    const img = screen.getByRole('img', { name: 'Bob' });
     expect(img).toBeTruthy();
     expect(img.getAttribute('src')).toBe('https://example.com/bob.jpg');
   });

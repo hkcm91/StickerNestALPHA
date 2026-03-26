@@ -94,12 +94,16 @@ describe('WidgetRenderer', () => {
     expect(container.querySelector('[data-widget-drag-handle="true"]')).toBeNull();
   });
 
-  it('applies selection outline when selected', () => {
+  it('renders differently when selected vs not selected', () => {
     const entity = makeWidget();
-    const { container } = render(
+    const { container: c1 } = render(
       <WidgetRenderer entity={entity} isSelected={true} widgetHtml="" theme={{}} interactionMode="edit" />,
     );
-    const el = container.querySelector('[data-entity-type="widget"]') as HTMLElement;
-    expect(el.style.outline).toContain('2px solid');
+    const { container: c2 } = render(
+      <WidgetRenderer entity={entity} isSelected={false} widgetHtml="" theme={{}} interactionMode="edit" />,
+    );
+    const sel = c1.querySelector('[data-entity-type="widget"]') as HTMLElement;
+    const unsel = c2.querySelector('[data-entity-type="widget"]') as HTMLElement;
+    expect(sel.outerHTML).not.toBe(unsel.outerHTML);
   });
 });

@@ -116,7 +116,7 @@ describe('CreatorCommerceSection', () => {
       expect(screen.getByTestId('creator-commerce-section')).toBeTruthy();
     });
     expect(screen.getByText('Stripe Connect')).toBeTruthy();
-    expect(screen.getByText(/Connect with Stripe|Connect your Stripe/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Connect with Stripe/ })).toBeTruthy();
   });
 
   it('shows connected status when Stripe is onboarded', async () => {
