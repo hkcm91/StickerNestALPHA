@@ -199,15 +199,12 @@ describe('Gallery Store', () => {
   describe('loadGallery', () => {
     it('loads assets from database and emits GALLERY_LOADED', async () => {
       const rows = [mockGalleryRow(), mockGalleryRow({ id: 'asset-2', name: 'cat.gif' })];
-      mockFrom.mockReturnValue({
-        select: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
-            order: vi.fn().mockReturnValue({
-              limit: vi.fn().mockResolvedValue({ data: rows, error: null }),
-            }),
-          }),
-        }),
-      });
+      // The code uses (supabase.from('gallery_assets') as any).select('*').eq(...).order(...).limit(100)
+      const limitMock = vi.fn().mockResolvedValue({ data: rows, error: null });
+      const orderMock = vi.fn().mockReturnValue({ limit: limitMock });
+      const eqMock = vi.fn().mockReturnValue({ order: orderMock });
+      const selectMock = vi.fn().mockReturnValue({ eq: eqMock });
+      mockFrom.mockReturnValue({ select: selectMock });
 
       const busHandler = vi.fn();
       bus.subscribe(GalleryEvents.GALLERY_LOADED, busHandler);
