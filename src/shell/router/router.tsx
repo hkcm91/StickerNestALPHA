@@ -5,17 +5,21 @@
  * @layer L6
  */
 
-import React, { Suspense, useEffect } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { Routes, Route, Link, Navigate, useLocation } from 'react-router-dom';
 
-import { ShellEvents } from '@sn/types';
+import type { BusEvent } from '@sn/types';
+import { ShellEvents, SocialGraphEvents } from '@sn/types';
 
 import { bus } from '../../kernel/bus';
+import { getUnreadMessageCount } from '../../kernel/social-graph';
+import { useAuthStore } from '../../kernel/stores/auth/auth.store';
 import { NotificationPanel } from '../components/NotificationPanel';
 import { NotionPermissionModal } from '../components/NotionPermissionModal';
 import { ToastContainer } from '../components/ToastContainer';
 import { DataManagerPage } from '../data';
 import { TestHarness } from '../dev';
+import { MessagingPage } from '../messaging';
 import { EmbedPage } from '../pages/EmbedPage';
 import { PricingPage } from '../pages/PricingPage';
 import { ProfilePage } from '../profile';
@@ -106,6 +110,13 @@ const NavLink: React.FC<{
   );
 };
 
+/** Message icon (speech bubble) */
+const MessageIcon: React.FC = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+  </svg>
+);
+
 /** Bell icon for notifications */
 const BellIcon: React.FC = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -146,7 +157,36 @@ const navIconBtnStyle: React.CSSProperties = {
 
 const GlobalNav: React.FC = () => {
   const [notifOpen, setNotifOpen] = React.useState(false);
+  const [unreadMsgCount, setUnreadMsgCount] = useState(0);
   const location = useLocation();
+  const authUser = useAuthStore((s) => s.user);
+
+  // Fetch unread message count and subscribe to updates
+  useEffect(() => {
+    if (!authUser?.id) { setUnreadMsgCount(0); return; }
+    let cancelled = false;
+
+    async function fetchCount() {
+      const result = await getUnreadMessageCount(authUser!.id);
+      if (!cancelled && result.success) setUnreadMsgCount(result.data);
+    }
+    fetchCount();
+
+    const unsubs = [
+      bus.subscribe(SocialGraphEvents.MESSAGE_SENT, (event: BusEvent) => {
+        const { message } = event.payload as { message: { recipientId: string } };
+        if (message.recipientId === authUser!.id) {
+          setUnreadMsgCount((c) => c + 1);
+        }
+      }),
+      bus.subscribe(SocialGraphEvents.MESSAGES_READ, (event: BusEvent) => {
+        const { count } = event.payload as { count: number };
+        setUnreadMsgCount((c) => Math.max(0, c - count));
+      }),
+    ];
+
+    return () => { cancelled = true; unsubs.forEach((u) => u()); };
+  }, [authUser?.id]);
 
   // DEV SEED: fire test notifications on first mount so the panel has data
   React.useEffect(() => {
@@ -236,6 +276,44 @@ const GlobalNav: React.FC = () => {
             <UserIcon />
           </Link>
 
+          <Link
+            to="/messages"
+            data-testid="nav-messages"
+            title="Messages"
+            style={{
+              ...navIconBtnStyle,
+              textDecoration: 'none',
+              color: location.pathname.startsWith('/messages') ? themeVar('--sn-text') : themeVar('--sn-text-soft'),
+              background: location.pathname.startsWith('/messages') ? themeVar('--sn-surface-raised') : 'transparent',
+              position: 'relative' as const,
+            }}
+          >
+            <MessageIcon />
+            {unreadMsgCount > 0 && (
+              <span
+                data-testid="unread-msg-badge"
+                style={{
+                  position: 'absolute',
+                  top: 2,
+                  right: 2,
+                  minWidth: 14,
+                  height: 14,
+                  borderRadius: 7,
+                  background: '#ef4444',
+                  color: '#fff',
+                  fontSize: 9,
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '0 3px',
+                }}
+              >
+                {unreadMsgCount > 9 ? '9+' : unreadMsgCount}
+              </span>
+            )}
+          </Link>
+
           <button
             data-testid="nav-notifications"
             onClick={() => setNotifOpen((p) => !p)}
@@ -314,6 +392,9 @@ export const AppRouter: React.FC = () => {
       />
 
       <Route path="/profile/:username" element={<ProfilePage />} />
+
+      <Route path="/messages" element={<AuthGuard><MessagingPage /></AuthGuard>} />
+      <Route path="/messages/:userId" element={<AuthGuard><MessagingPage /></AuthGuard>} />
 
       <Route path="/canvas" element={<Navigate to="/profile/me" replace />} />
       <Route path="/canvas/new" element={<NewCanvasPage />} />

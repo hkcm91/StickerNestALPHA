@@ -373,7 +373,12 @@ export const ProfilePage: React.FC = () => {
                   )}
 
                   {messagingAllowed && (
-                    <button data-testid="btn-message" style={secondaryBtn} disabled={actionLoading}>
+                    <button
+                      data-testid="btn-message"
+                      style={secondaryBtn}
+                      disabled={actionLoading}
+                      onClick={() => navigate(`/messages/${profile.userId}`)}
+                    >
                       Message
                     </button>
                   )}

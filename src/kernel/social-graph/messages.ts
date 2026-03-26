@@ -221,3 +221,94 @@ export async function canMessage(
   const blocked = await isBlockedEitherWay(userA, userB);
   return !blocked;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Conversation List
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface ConversationPreview {
+  otherUserId: string;
+  otherUserDisplayName: string;
+  otherUserAvatarUrl: string | null;
+  lastMessage: DirectMessage;
+  unreadCount: number;
+}
+
+/**
+ * Get all conversations for a user, with the latest message and unread count
+ * per conversation partner. Ordered by most recent message first.
+ */
+export async function getConversationList(
+  callerId: string,
+): Promise<SocialResult<ConversationPreview[]>> {
+  // Fetch all messages involving this user (limited to latest 500 to bound cost)
+  const { data: allMessages, error } = (await supabase
+    .from('direct_messages')
+    .select('*')
+    .or(`sender_id.eq.${callerId},recipient_id.eq.${callerId}`)
+    .order('created_at', { ascending: false })
+    .limit(500)) as QueryResult<Record<string, unknown>[]>;
+
+  if (error) {
+    return {
+      success: false,
+      error: { code: 'UNKNOWN', message: error.message },
+    };
+  }
+
+  if (!allMessages || allMessages.length === 0) {
+    return { success: true, data: [] };
+  }
+
+  // Group by conversation partner, keeping only the latest message per partner
+  const partnerMap = new Map<string, { lastMessage: DirectMessage; unreadCount: number }>();
+
+  for (const row of allMessages) {
+    const msg = mapMessageRow(row);
+    const partnerId = msg.senderId === callerId ? msg.recipientId : msg.senderId;
+
+    if (!partnerMap.has(partnerId)) {
+      partnerMap.set(partnerId, { lastMessage: msg, unreadCount: 0 });
+    }
+
+    // Count unread messages sent TO us by this partner
+    if (msg.recipientId === callerId && !msg.isRead) {
+      const entry = partnerMap.get(partnerId)!;
+      entry.unreadCount++;
+    }
+  }
+
+  // Fetch user profiles for all conversation partners
+  const partnerIds = Array.from(partnerMap.keys());
+  const { data: profiles } = (await supabase
+    .from('users')
+    .select('id, display_name, avatar_url')
+    .in('id', partnerIds)) as QueryResult<Array<{ id: string; display_name: string; avatar_url: string | null }>>;
+
+  const profileMap = new Map<string, { displayName: string; avatarUrl: string | null }>();
+  if (profiles) {
+    for (const p of profiles) {
+      profileMap.set(p.id, { displayName: p.display_name, avatarUrl: p.avatar_url });
+    }
+  }
+
+  // Build conversation previews
+  const previews: ConversationPreview[] = [];
+  for (const [partnerId, { lastMessage, unreadCount }] of partnerMap) {
+    const profile = profileMap.get(partnerId);
+    previews.push({
+      otherUserId: partnerId,
+      otherUserDisplayName: profile?.displayName ?? 'Unknown User',
+      otherUserAvatarUrl: profile?.avatarUrl ?? null,
+      lastMessage,
+      unreadCount,
+    });
+  }
+
+  // Sort by latest message (newest first)
+  previews.sort((a, b) =>
+    new Date(b.lastMessage.createdAt).getTime() - new Date(a.lastMessage.createdAt).getTime(),
+  );
+
+  return { success: true, data: previews };
+}

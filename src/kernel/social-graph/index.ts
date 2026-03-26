@@ -113,11 +113,12 @@ export {
 export {
   sendMessage,
   getConversation,
+  getConversationList,
   canMessage,
   markAsRead,
   getUnreadMessageCount,
 } from './messages';
-export type { DirectMessage } from './messages';
+export type { DirectMessage, ConversationPreview } from './messages';
 
 // Widget Invite API
 export {
