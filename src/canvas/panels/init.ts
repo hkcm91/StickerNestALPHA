@@ -7,6 +7,8 @@
 
 import type { AiPanelController } from './ai-panel';
 import { createAiPanelController } from './ai-panel';
+import type { AnimationPanelController } from './animation';
+import { createAnimationPanelController } from './animation';
 import { createAssetPanelController } from './assets';
 import type { AssetPanelController } from './assets';
 import { createContextMenuController } from './context-menu';
@@ -21,6 +23,8 @@ import type { PipelineInspectorController } from './pipeline-inspector';
 import { createPipelineInspectorController } from './pipeline-inspector';
 import type { PropertiesController } from './properties';
 import { createPropertiesController } from './properties';
+import { createTimelinePanelController } from './timeline';
+import type { TimelinePanelController } from './timeline';
 import type { ToolbarController } from './toolbar';
 import { createToolbarController } from './toolbar';
 
@@ -34,6 +38,8 @@ export interface CanvasPanelsContext {
   contextMenu: ContextMenuController;
   floatingBar: FloatingActionBarController;
   minimap: MinimapController;
+  animation: AnimationPanelController;
+  timeline: TimelinePanelController;
 }
 
 let context: CanvasPanelsContext | null = null;
@@ -51,6 +57,8 @@ export function initCanvasPanels(getZoom: () => number): CanvasPanelsContext {
     contextMenu: createContextMenuController(),
     floatingBar: createFloatingActionBarController(),
     minimap: createMinimapController(),
+    animation: createAnimationPanelController(),
+    timeline: createTimelinePanelController(),
   };
 
   return context;

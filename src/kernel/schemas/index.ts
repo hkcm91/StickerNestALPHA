@@ -87,6 +87,7 @@ export {
   BackgroundEvents,
   DockerEvents,
   CrossCanvasEvents,
+  TimelineEvents,
   // JSON Schemas
   BusEventJSONSchema,
 } from "./bus-event";
@@ -783,6 +784,117 @@ export {
   FullThemeTokensJSONSchema,
   ThemeNameJSONSchema,
 } from "./theme";
+
+// =============================================================================
+// Timeline / Video Production Schemas
+// =============================================================================
+export {
+  // Schemas
+  CompositionSettingsSchema,
+  TrackTypeSchema,
+  TimelineTrackSchema,
+  BlendModeSchema,
+  TimelineClipSchema,
+  TimelineKeyframeSchema,
+  TimelinePropertySchema,
+  PropertyTrackSchema,
+  TimelineMarkerSchema,
+  LoopRegionSchema,
+  TimelineDataSchema,
+  // Types
+  type CompositionSettings,
+  type TrackType,
+  type TimelineTrack,
+  type BlendMode,
+  type TimelineClip,
+  type TimelineKeyframe,
+  type TimelineProperty,
+  type PropertyTrack,
+  type TimelineMarker,
+  type LoopRegion,
+  type TimelineData,
+  // JSON Schemas
+  CompositionSettingsJSONSchema,
+  TimelineTrackJSONSchema,
+  TimelineClipJSONSchema,
+  TimelineKeyframeJSONSchema,
+  PropertyTrackJSONSchema,
+  TimelineMarkerJSONSchema,
+  TimelineDataJSONSchema,
+} from './timeline';
+
+export {
+  // Re-exported from canvas-entity (defined there to avoid circular imports)
+  VideoEntitySchema,
+  type VideoEntity,
+} from './canvas-entity';
+
+export {
+  VideoEntityJSONSchema,
+} from './video-entity';
+
+export {
+  // Schemas
+  VideoProjectStatusSchema,
+  VideoProjectSchema,
+  RenderJobStatusSchema,
+  RenderJobSchema,
+  // Types
+  type VideoProjectStatus,
+  type VideoProject,
+  type RenderJobStatus,
+  type RenderJob,
+  // JSON Schemas
+  VideoProjectJSONSchema,
+  RenderJobJSONSchema,
+} from './video-project';
+
+// =============================================================================
+// Entity Animation Schemas
+// =============================================================================
+export {
+  // Schemas
+  AnimatablePropertiesSchema,
+  EasingNameSchema,
+  AnimationKeyframeSchema,
+  AnimationFillModeSchema,
+  AnimationClipSchema,
+  AnimationTriggerTypeSchema,
+  AnimationTriggerSchema,
+  AnimationBindingSchema,
+  AnimationStateSchema,
+  EntityAnimationConfigSchema,
+  AnimationOverlaySchema,
+  // Types
+  type AnimatableProperties,
+  type EasingName,
+  type AnimationKeyframe,
+  type AnimationFillMode,
+  type AnimationClip,
+  type AnimationTriggerType,
+  type AnimationTrigger,
+  type AnimationBinding,
+  type AnimationState,
+  type EntityAnimationConfig,
+  type AnimationOverlay,
+  // JSON Schemas
+  AnimationKeyframeJSONSchema,
+  AnimationClipJSONSchema,
+  AnimationTriggerJSONSchema,
+  AnimationBindingJSONSchema,
+  AnimationStateJSONSchema,
+  EntityAnimationConfigJSONSchema,
+  AnimationOverlayJSONSchema,
+} from './entity-animation';
+
+export {
+  // Preset types and registry
+  ANIMATION_PRESETS,
+  getPresetById,
+  getPresetsByCategory,
+  type AnimationPreset,
+  type AnimationPresetCategory,
+} from './animation-presets';
 
 // =============================================================================
 // AI Action Schemas

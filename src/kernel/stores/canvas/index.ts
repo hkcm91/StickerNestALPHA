@@ -16,3 +16,13 @@ export type {
   CanvasActions,
   CanvasStore,
 } from './canvas.store';
+
+export {
+  useAnimationOverlayStore,
+} from './animation-overlay.store';
+
+export type {
+  AnimationOverlayState,
+  AnimationOverlayActions,
+  AnimationOverlayStore,
+} from './animation-overlay.store';

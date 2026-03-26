@@ -23,6 +23,7 @@ import type { StickerEntity } from '@sn/types';
 import { bus } from '../../../kernel/bus';
 
 import { entityTransformStyle, RENDER_SIZE_MULTIPLIER } from './entity-style';
+import { useAnimationOverlay, getOverlayStyles } from './use-animation-overlay';
 
 /** Event types for sticker click actions */
 const StickerActionEvents = {
@@ -119,6 +120,8 @@ export const StickerRenderer: React.FC<StickerRendererProps> = ({
   interactionMode = 'edit',
 }) => {
   const [isHovered, setIsHovered] = React.useState(false);
+  const animationOverlay = useAnimationOverlay(entity.id);
+  const overlayStyles = getOverlayStyles(animationOverlay, entity.opacity);
   const style = entityTransformStyle(entity);
   const hoverEffectStyle = getHoverEffectStyle(entity.hoverEffect);
   const hoverStateStyle = isHovered ? getHoverStateStyle(entity.hoverEffect) : {};
@@ -226,6 +229,7 @@ export const StickerRenderer: React.FC<StickerRendererProps> = ({
       onMouseLeave={() => setIsHovered(false)}
       style={{
         ...style,
+        ...overlayStyles,
         outline: isSelected ? '2px solid var(--sn-accent, #3b82f6)' : undefined,
         cursor: entity.locked ? 'default' : isInteractive ? 'pointer' : 'grab',
       }}
