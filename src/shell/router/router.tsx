@@ -423,7 +423,7 @@ export const AppRouter: React.FC = () => {
       />
 
       <Route
-        path="/marketplace"
+        path="/marketplace/*"
         element={
           <AuthGuard>
             <MarketplacePage />

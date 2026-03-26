@@ -16,6 +16,7 @@ import { CanvasEvents } from '@sn/types';
 import { bus } from '../../../kernel/bus';
 import { useGalleryStore } from '../../../kernel/stores/gallery';
 import { useUIStore } from '../../../kernel/stores/ui/ui.store';
+import { useWidgetStore } from '../../../kernel/stores/widget/widget.store';
 import { StickerSettingsModal, type StickerSettings } from '../../components';
 import { searchIconAssets, searchLottieAssets } from '../apis/sticker-asset-apis';
 
@@ -395,10 +396,27 @@ export const AssetPanel: React.FC<AssetPanelProps> = ({ assets = DEFAULT_ASSETS 
     [apiAssets, selectedApiPreviewId],
   );
 
+  // Merge marketplace-installed widgets into asset list
+  const widgetRegistry = useWidgetStore((s) => s.registry);
+  const allAssets = useMemo(() => {
+    const marketplaceWidgets: AssetItem[] = Object.values(widgetRegistry)
+      .filter((entry) => !entry.isBuiltIn)
+      .map((entry) => ({
+        id: `mp-${entry.widgetId}`,
+        name: entry.manifest.name,
+        type: 'widget' as const,
+        description: entry.manifest.description ?? undefined,
+        tags: entry.manifest.tags ?? [],
+        widgetType: entry.manifest.category ?? 'other',
+        metadata: { widgetId: entry.widgetId, marketplace: true },
+      }));
+    return [...assets, ...marketplaceWidgets];
+  }, [assets, widgetRegistry]);
+
   const filteredAssets = useMemo(() => {
-    if (!searchQuery.trim()) return assets;
+    if (!searchQuery.trim()) return allAssets;
     const lower = searchQuery.toLowerCase();
-    return assets.filter(
+    return allAssets.filter(
       (item) =>
         item.name.toLowerCase().includes(lower) ||
         item.type.toLowerCase().includes(lower) ||

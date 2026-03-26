@@ -1446,13 +1446,13 @@ export const CanvasPage: React.FC = () => {
   );
 };
 
-const MarketplacePageLazy = React.lazy(() =>
-  import('../pages/MarketplacePageFull').then((m) => ({ default: m.MarketplacePageFull })),
+const MarketplaceRootLazy = React.lazy(() =>
+  import('../pages/marketplace').then((m) => ({ default: m.MarketplaceRoot })),
 );
 
 export const MarketplacePage: React.FC = () => (
   <Suspense fallback={<div data-testid="page-marketplace" style={appPageStyle}>Loading marketplace...</div>}>
-    <MarketplacePageLazy />
+    <MarketplaceRootLazy />
   </Suspense>
 );
 
