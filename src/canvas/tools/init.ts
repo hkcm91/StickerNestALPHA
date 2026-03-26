@@ -20,15 +20,17 @@ import { createPathfinderTool } from './pathfinder-tool';
 import { createPenTool as createBrushTool } from './pen/brush-tool';
 import { createPenPathTool as createPenTool } from './pen-path';
 import type { PenToolState as PenPathToolState } from './pen-path';
+import { createRazorTool } from './razor';
 import { createToolRegistry } from './registry';
 import type { ToolRegistry, CanvasPointerEvent, CanvasKeyEvent } from './registry';
 import { createResizeTool } from './resize';
 import { createSelectTool } from './select';
 import { createShapeTool } from './shape';
+import { createSlipTool } from './slip';
 import { createTextTool } from './text';
 
 /** Tools that receive input via the bus bridge (L6 cannot import L4A-2 directly) */
-const BUS_BRIDGED_TOOLS = new Set(['pen', 'direct-select', 'pathfinder', 'ai']);
+const BUS_BRIDGED_TOOLS = new Set(['pen', 'direct-select', 'pathfinder', 'ai', 'razor', 'slip']);
 
 export interface CanvasToolsContext {
   registry: ToolRegistry;
@@ -56,6 +58,8 @@ export function initCanvasTools(
   registry.register(createDirectSelectTool(sceneGraph, getMode));
   registry.register(createPathfinderTool(sceneGraph, getMode));
   registry.register(createAiTool());
+  registry.register(createRazorTool());
+  registry.register(createSlipTool());
 
   registry.activate('select');
 

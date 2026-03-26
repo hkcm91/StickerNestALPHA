@@ -50,3 +50,8 @@ export {
   createAudioEngineSystem,
   type IAudioEngineSystem,
 } from './audio-engine-system';
+
+export {
+  createCompositingSystem,
+  type ICompositingSystem,
+} from './compositing-system';

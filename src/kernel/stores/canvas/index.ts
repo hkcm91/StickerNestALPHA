@@ -26,3 +26,14 @@ export type {
   AnimationOverlayActions,
   AnimationOverlayStore,
 } from './animation-overlay.store';
+
+export {
+  useCompositingStore,
+} from './compositing.store';
+
+export type {
+  MaskConfig,
+  CompositingState,
+  CompositingActions,
+  CompositingStore,
+} from './compositing.store';
