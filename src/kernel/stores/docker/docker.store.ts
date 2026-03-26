@@ -174,7 +174,7 @@ export const useDockerStore = create<DockerStore>()(
           dockMode: input.dockMode ?? 'floating',
           position: input.position,
           size: input.size,
-          visible: input.visible ?? true,
+          visible: input.visible ?? false,
           pinned: input.pinned ?? false,
           tabs: normalizedTabs,
           activeTabIndex: 0,

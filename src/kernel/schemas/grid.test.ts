@@ -67,7 +67,7 @@ describe('GridConfigSchema', () => {
       projection: 'hexagonal',
     });
     expect(config.projection).toBe('hexagonal');
-    expect(config.enabled).toBe(true); // default
+    expect(config.enabled).toBe(false); // default
   });
 
   it('defaults gridLineStyle to line', () => {

@@ -75,11 +75,11 @@ export type GridLineStyle = z.infer<typeof GridLineStyleSchema>;
  */
 export const GridConfigSchema = z.object({
   /** Whether the grid system is enabled */
-  enabled: z.boolean().default(true),
+  enabled: z.boolean().default(false),
   /** Size of each grid cell in canvas units (pixels) */
   cellSize: z.number().positive().default(64),
   /** Whether to render grid lines */
-  showGridLines: z.boolean().default(true),
+  showGridLines: z.boolean().default(false),
   /** Color of grid lines (CSS color string) */
   gridLineColor: z.string().default('rgba(255, 255, 255, 0.1)'),
   /** Width of grid lines in pixels */

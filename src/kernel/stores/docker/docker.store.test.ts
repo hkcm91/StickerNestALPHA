@@ -76,7 +76,7 @@ describe('dockerStore', () => {
       expect(docker.name).toBe('My Docker');
       expect(docker.size).toEqual({ width: 300, height: 400 });
       expect(docker.dockMode).toBe('floating');
-      expect(docker.visible).toBe(true);
+      expect(docker.visible).toBe(false);
       expect(docker.tabs).toHaveLength(1);
     });
 
