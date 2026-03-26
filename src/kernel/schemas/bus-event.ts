@@ -466,6 +466,10 @@ export const SocialGraphEvents = {
   CANVAS_MEMBER_ADDED: 'kernel.socialgraph.canvasMember.added',
   CANVAS_MEMBER_REMOVED: 'kernel.socialgraph.canvasMember.removed',
   CANVAS_MEMBER_ROLE_CHANGED: 'kernel.socialgraph.canvasMember.roleChanged',
+
+  // Canvas metadata events
+  CANVAS_TAGS_UPDATED: 'kernel.socialgraph.canvas.tagsUpdated',
+  CANVAS_THUMBNAIL_UPDATED: 'kernel.socialgraph.canvas.thumbnailUpdated',
 } as const;
 
 /**

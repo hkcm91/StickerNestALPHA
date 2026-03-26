@@ -88,14 +88,18 @@ export {
 // Canvas API (public queries + multi-user member management)
 export {
   getUserPublicCanvases,
+  getUserCanvases,
   addCanvasMember,
   removeCanvasMember,
   updateCanvasMemberRole,
   getCanvasMembers,
   getCanvasRole,
   getSharedCanvases,
+  updateCanvasTags,
+  updateCanvasThumbnail,
+  deriveCanvasCategory,
 } from './canvases';
-export type { PublicCanvas, CanvasMember, CanvasRole } from './canvases';
+export type { PublicCanvas, CanvasMember, CanvasRole, CanvasCategory } from './canvases';
 
 // Block API
 export {
@@ -109,11 +113,12 @@ export {
 export {
   sendMessage,
   getConversation,
+  getConversationList,
   canMessage,
   markAsRead,
   getUnreadMessageCount,
 } from './messages';
-export type { DirectMessage } from './messages';
+export type { DirectMessage, ConversationPreview } from './messages';
 
 // Widget Invite API
 export {
