@@ -1,12 +1,15 @@
 /**
  * BrowsePage — main marketplace landing: Featured + search + paginated grid.
  *
+ * Search/filter/page state is persisted to URL search params so users
+ * can navigate to a detail page and back without losing their filters.
+ *
  * @module shell/pages/marketplace/browse
  * @layer L6
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { useAuthStore } from '../../../../kernel/stores/auth/auth.store';
 import { useWidgetStore } from '../../../../kernel/stores/widget/widget.store';
@@ -27,14 +30,44 @@ export const BrowsePage: React.FC = () => {
   const userId = useAuthStore((s) => s.user?.id ?? null);
   const widgetRegistry = useWidgetStore((s) => s.registry);
 
-  const [query, setQuery] = useState('');
-  const [category, setCategory] = useState('');
-  const [sortBy, setSortBy] = useState<SortBy>('newest');
-  const [page, setPage] = useState(1);
+  // Persist search state to URL params
+  const [searchParams, setSearchParams] = useSearchParams();
+  const query = searchParams.get('q') ?? '';
+  const category = searchParams.get('cat') ?? '';
+  const sortBy = (searchParams.get('sort') ?? 'newest') as SortBy;
+  const page = parseInt(searchParams.get('page') ?? '1', 10) || 1;
+
   const [results, setResults] = useState<PaginatedResult<MarketplaceWidgetListing> | null>(null);
   const [loading, setLoading] = useState(false);
   const [installStatus, setInstallStatus] = useState<Record<string, InstallState>>({});
   const [uninstallStatus, setUninstallStatus] = useState<Record<string, UninstallState>>({});
+
+  const updateParam = useCallback(
+    (key: string, value: string) => {
+      setSearchParams((prev) => {
+        if (value) {
+          prev.set(key, value);
+        } else {
+          prev.delete(key);
+        }
+        return prev;
+      }, { replace: true });
+    },
+    [setSearchParams],
+  );
+
+  const setQuery = useCallback((q: string) => updateParam('q', q), [updateParam]);
+  const setCategory = useCallback((cat: string) => {
+    updateParam('cat', cat);
+    updateParam('page', '');
+  }, [updateParam]);
+  const setSortBy = useCallback((sort: SortBy) => {
+    updateParam('sort', sort === 'newest' ? '' : sort);
+    updateParam('page', '');
+  }, [updateParam]);
+  const setPage = useCallback((p: number) => {
+    updateParam('page', p <= 1 ? '' : String(p));
+  }, [updateParam]);
 
   const fetchListings = useCallback(async () => {
     setLoading(true);
@@ -112,18 +145,7 @@ export const BrowsePage: React.FC = () => {
 
   const handleSearch = useCallback(() => {
     setPage(1);
-    fetchListings();
-  }, [fetchListings]);
-
-  const handleCategoryChange = useCallback((cat: string) => {
-    setCategory(cat);
-    setPage(1);
-  }, []);
-
-  const handleSortChange = useCallback((sort: SortBy) => {
-    setSortBy(sort);
-    setPage(1);
-  }, []);
+  }, [setPage]);
 
   const renderAction = useCallback(
     (widget: MarketplaceWidgetListing) => (
@@ -160,8 +182,8 @@ export const BrowsePage: React.FC = () => {
         category={category}
         sortBy={sortBy}
         onQueryChange={setQuery}
-        onCategoryChange={handleCategoryChange}
-        onSortChange={handleSortChange}
+        onCategoryChange={setCategory}
+        onSortChange={setSortBy}
         onSearch={handleSearch}
       />
 

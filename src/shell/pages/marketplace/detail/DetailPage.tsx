@@ -19,7 +19,7 @@ import { themeVar } from '../../../theme/theme-vars';
 import { InstallButton, type InstallState, type UninstallState } from '../shared/InstallButton';
 import { LicenseBadge } from '../shared/LicenseBadge';
 import { StarRating } from '../shared/StarRating';
-import { btnSecondary, officialBadge, pageStyle, tagStyle } from '../styles';
+import { btnPrimary, btnSecondary, officialBadge, pageStyle, tagStyle } from '../styles';
 
 import { ReviewsSection } from './ReviewsSection';
 
@@ -224,6 +224,30 @@ export const DetailPage: React.FC = () => {
             {uninstallState === 'error' && (
               <div style={{ color: '#ef4444', fontSize: '13px', marginTop: '4px' }}>
                 Uninstall failed. Please try again.
+              </div>
+            )}
+
+            {/* Post-install guidance */}
+            {isInstalled && !isBuiltIn && (
+              <div
+                data-testid="post-install-cta"
+                style={{
+                  marginTop: '12px',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  background: themeVar('--sn-surface'),
+                  border: `1px solid ${themeVar('--sn-border')}`,
+                }}
+              >
+                <div style={{ fontSize: '14px', fontWeight: 600, marginBottom: '4px' }}>
+                  Widget installed!
+                </div>
+                <div style={{ fontSize: '13px', color: themeVar('--sn-text-muted'), marginBottom: '8px' }}>
+                  Open any canvas and find this widget in the Asset Panel to place it.
+                </div>
+                <button type="button" onClick={() => navigate('/')} style={btnPrimary}>
+                  Go to Canvas
+                </button>
               </div>
             )}
           </div>
