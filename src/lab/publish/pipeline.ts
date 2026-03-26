@@ -10,6 +10,9 @@
 
 import type { WidgetManifest } from '@sn/types';
 
+import { checkFeature } from '../../kernel/quota';
+import { useAuthStore } from '../../kernel/stores/auth';
+
 import { submitWidget } from './submitter';
 import type { SubmitResult } from './submitter';
 import { testWidget } from './tester';
@@ -39,6 +42,20 @@ export function createPublishPipeline(): PublishPipeline {
 
   return {
     async run(html: string, manifest: WidgetManifest, authorId?: string): Promise<PipelineStatus> {
+      // Step 0: Quota check — ensure user has publishing permission
+      const userId = authorId ?? useAuthStore.getState().user?.id;
+      if (userId) {
+        const featureCheck = await checkFeature(userId, 'canPublishWidgets');
+        if (!featureCheck.allowed) {
+          status = {
+            step: 'failed',
+            error: 'Publishing requires a Creator tier or higher',
+            errors: [`Upgrade to ${featureCheck.upgradeTier ?? 'Creator'} to publish widgets`],
+          };
+          return status;
+        }
+      }
+
       // Step 1: Validate
       status = { step: 'validating' };
       const validation = validateWidget(html);

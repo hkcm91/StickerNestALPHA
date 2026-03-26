@@ -34,6 +34,8 @@ import {
   SettingsPage,
   InvitePage,
   NotFoundPage,
+  TermsPage,
+  PrivacyPage,
 } from './pages';
 import { AuthGuard, TierGuard } from './route-guards';
 
@@ -370,9 +372,15 @@ export const AppRouter: React.FC = () => {
 
       <Route path="/login" element={<LoginPage />} />
       <Route path="/pricing" element={<PricingPage />} />
+      <Route path="/terms" element={<TermsPage />} />
+      <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="/invite/:token" element={<InvitePage />} />
-      <Route path="/dev/test" element={<TestHarness />} />
-      <Route path="/dev/split" element={<TestHarness initialTab="split" />} />
+      {import.meta.env.DEV && (
+        <>
+          <Route path="/dev/test" element={<TestHarness />} />
+          <Route path="/dev/split" element={<TestHarness initialTab="split" />} />
+        </>
+      )}
 
       <Route
         path="/"

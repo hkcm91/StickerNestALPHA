@@ -46,6 +46,7 @@ import { captureAndUploadThumbnail } from '../canvas/utils/thumbnail-capture';
 import { StickerSettingsModal, LoginForm } from '../components';
 import { GhostWidgetOverlay } from '../components/GhostWidgetOverlay';
 import type { StickerSettings } from '../components/StickerSettingsModal';
+import { UpgradePrompt } from '../components/UpgradePrompt';
 import { ShellLayout } from '../layout';
 import { applyThemeTokens, emitThemeChange } from '../theme/theme-provider';
 import { THEME_TOKENS } from '../theme/theme-tokens';
@@ -385,13 +386,54 @@ export const CanvasGalleryPage: React.FC = () => {
 export const NewCanvasPage: React.FC = () => {
   const navigate = useNavigate();
   const createdRef = useRef(false);
+  const [quotaBlocked, setQuotaBlocked] = useState<{
+    resource: string;
+    current: number;
+    limit: number;
+    upgradeTier: string | null;
+  } | null>(null);
 
   useEffect(() => {
     if (createdRef.current) return;
     createdRef.current = true;
-    const created = createLocalCanvas();
-    navigate(`/canvas/${created.slug}`, { replace: true });
+
+    const userId = useAuthStore.getState().user?.id;
+    if (!userId) {
+      const created = createLocalCanvas();
+      navigate(`/canvas/${created.slug}`, { replace: true });
+      return;
+    }
+
+    import('../../kernel/quota').then(({ checkQuota }) => {
+      checkQuota(userId, 'canvas_count').then((result) => {
+        if (!result.allowed) {
+          setQuotaBlocked({
+            resource: 'canvases',
+            current: result.current,
+            limit: result.limit,
+            upgradeTier: result.upgradeTier,
+          });
+          return;
+        }
+        const created = createLocalCanvas();
+        navigate(`/canvas/${created.slug}`, { replace: true });
+      });
+    });
   }, [navigate]);
+
+  if (quotaBlocked) {
+    return (
+      <div data-testid="page-canvas-new" style={appPageStyle}>
+        <UpgradePrompt
+          resource={quotaBlocked.resource}
+          current={quotaBlocked.current}
+          limit={quotaBlocked.limit}
+          upgradeTier={quotaBlocked.upgradeTier as 'creator' | 'pro' | 'enterprise' | null}
+          onClose={() => navigate('/canvas', { replace: true })}
+        />
+      </div>
+    );
+  }
 
   return (
     <div data-testid="page-canvas-new" style={appPageStyle}>
@@ -1511,6 +1553,175 @@ export const InvitePage: React.FC = () => {
 
 export const NotFoundPage: React.FC = () => (
   <div data-testid="page-not-found" style={appPageStyle}><h1>404 — Not Found</h1></div>
+);
+
+const legalPageStyle: React.CSSProperties = {
+  maxWidth: 720,
+  margin: '0 auto',
+  padding: '48px 24px',
+  lineHeight: 1.7,
+  fontSize: 14,
+  color: 'var(--sn-text, #1a1a2e)',
+};
+
+const legalHeadingStyle: React.CSSProperties = {
+  fontSize: 28,
+  fontWeight: 700,
+  marginBottom: 8,
+};
+
+const legalSubheadingStyle: React.CSSProperties = {
+  fontSize: 18,
+  fontWeight: 600,
+  marginTop: 32,
+  marginBottom: 12,
+};
+
+const legalMutedStyle: React.CSSProperties = {
+  fontSize: 13,
+  color: 'var(--sn-text-muted, #6b7280)',
+  marginBottom: 32,
+};
+
+export const TermsPage: React.FC = () => (
+  <div data-testid="page-terms" style={legalPageStyle}>
+    <h1 style={legalHeadingStyle}>Terms of Service</h1>
+    <p style={legalMutedStyle}>Last updated: March 2026</p>
+
+    <h2 style={legalSubheadingStyle}>1. Acceptance of Terms</h2>
+    <p>
+      By accessing or using StickerNest (&quot;the Platform&quot;), you agree to be bound by these Terms of Service.
+      If you do not agree, do not use the Platform.
+    </p>
+
+    <h2 style={legalSubheadingStyle}>2. Account Registration</h2>
+    <p>
+      You must provide accurate information when creating an account. You are responsible for maintaining
+      the security of your account credentials. You must be at least 13 years old to use the Platform.
+    </p>
+
+    <h2 style={legalSubheadingStyle}>3. Acceptable Use</h2>
+    <p>
+      You agree not to: upload malicious code or widgets; attempt to bypass security measures;
+      harass other users; violate intellectual property rights; use the Platform for illegal purposes;
+      or interfere with the Platform&apos;s operation.
+    </p>
+
+    <h2 style={legalSubheadingStyle}>4. Content and Widgets</h2>
+    <p>
+      You retain ownership of content you create. By publishing widgets or content, you grant StickerNest
+      a non-exclusive license to host, display, and distribute it on the Platform. Widgets run in
+      sandboxed environments and must comply with our security policies.
+    </p>
+
+    <h2 style={legalSubheadingStyle}>5. Commerce and Payments</h2>
+    <p>
+      Creators who sell through the Platform are responsible for their products and services.
+      Payment processing is handled by Stripe. StickerNest is not responsible for disputes
+      between buyers and sellers beyond providing a dispute resolution mechanism.
+    </p>
+
+    <h2 style={legalSubheadingStyle}>6. Intellectual Property</h2>
+    <p>
+      The StickerNest platform, including its software, design, and branding, is the property
+      of StickerNest. Widget licenses are set by their creators and must be respected.
+    </p>
+
+    <h2 style={legalSubheadingStyle}>7. Termination</h2>
+    <p>
+      We may suspend or terminate accounts that violate these terms. You may delete your account
+      at any time. Upon termination, your data will be handled according to our Privacy Policy.
+    </p>
+
+    <h2 style={legalSubheadingStyle}>8. Limitation of Liability</h2>
+    <p>
+      StickerNest is provided &quot;as is&quot; without warranties. We are not liable for indirect,
+      incidental, or consequential damages arising from your use of the Platform.
+    </p>
+
+    <h2 style={legalSubheadingStyle}>9. Changes to Terms</h2>
+    <p>
+      We may update these terms from time to time. Continued use of the Platform after changes
+      constitutes acceptance of the updated terms.
+    </p>
+
+    <p style={{ marginTop: 40, fontSize: 13, color: 'var(--sn-text-muted, #6b7280)' }}>
+      <Link to="/privacy" style={{ color: 'var(--sn-accent, #6366f1)' }}>Privacy Policy</Link>
+      {' | '}
+      <Link to="/" style={{ color: 'var(--sn-accent, #6366f1)' }}>Back to StickerNest</Link>
+    </p>
+  </div>
+);
+
+export const PrivacyPage: React.FC = () => (
+  <div data-testid="page-privacy" style={legalPageStyle}>
+    <h1 style={legalHeadingStyle}>Privacy Policy</h1>
+    <p style={legalMutedStyle}>Last updated: March 2026</p>
+
+    <h2 style={legalSubheadingStyle}>1. Information We Collect</h2>
+    <p>
+      We collect information you provide directly: email address, display name, profile information,
+      and content you create (canvases, widgets, stickers). We also collect usage data such as
+      page views, feature usage, and device information.
+    </p>
+
+    <h2 style={legalSubheadingStyle}>2. How We Use Your Information</h2>
+    <p>
+      We use your information to: provide and improve the Platform; process transactions;
+      send service-related communications; enforce our terms; and prevent fraud or abuse.
+    </p>
+
+    <h2 style={legalSubheadingStyle}>3. Data Sharing</h2>
+    <p>
+      We do not sell your personal data. We share information with: Stripe for payment processing;
+      Supabase for data hosting; and as required by law. Your public canvases and published widgets
+      are visible to other users as you configure them.
+    </p>
+
+    <h2 style={legalSubheadingStyle}>4. Data Storage and Security</h2>
+    <p>
+      Your data is stored securely using Supabase with row-level security policies. Widget code
+      runs in sandboxed iframes with strict Content Security Policies. We use encryption in transit
+      and at rest.
+    </p>
+
+    <h2 style={legalSubheadingStyle}>5. Cookies</h2>
+    <p>
+      We use essential cookies for authentication and session management. We do not use
+      third-party tracking cookies. Analytics cookies, if any, are anonymized.
+    </p>
+
+    <h2 style={legalSubheadingStyle}>6. Your Rights</h2>
+    <p>
+      You may: access your personal data; correct inaccurate data; request deletion of your account
+      and data; export your data; and withdraw consent for optional data processing.
+      Contact us to exercise these rights.
+    </p>
+
+    <h2 style={legalSubheadingStyle}>7. Data Retention</h2>
+    <p>
+      We retain your data for as long as your account is active. When you delete your account,
+      we delete your personal data within 30 days, except where retention is required by law.
+    </p>
+
+    <h2 style={legalSubheadingStyle}>8. Children&apos;s Privacy</h2>
+    <p>
+      The Platform is not intended for children under 13. We do not knowingly collect personal
+      information from children under 13.
+    </p>
+
+    <h2 style={legalSubheadingStyle}>9. Changes to This Policy</h2>
+    <p>
+      We may update this Privacy Policy from time to time. We will notify users of significant
+      changes via email or in-app notification.
+    </p>
+
+    <p style={{ marginTop: 40, fontSize: 13, color: 'var(--sn-text-muted, #6b7280)' }}>
+      <Link to="/terms" style={{ color: 'var(--sn-accent, #6366f1)' }}>Terms of Service</Link>
+      {' | '}
+      <Link to="/" style={{ color: 'var(--sn-accent, #6366f1)' }}>Back to StickerNest</Link>
+    </p>
+  </div>
 );
 
 // =============================================================================
