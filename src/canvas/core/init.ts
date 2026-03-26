@@ -5,7 +5,7 @@
  * @layer L4A-1
  */
 
-import type { CanvasEntity, BusEvent } from '@sn/types';
+import type { CanvasEntity, BusEvent, PropertyLayer } from '@sn/types';
 import { CanvasEvents } from '@sn/types';
 
 import { bus } from '../../kernel/bus';
@@ -125,6 +125,82 @@ export function initCanvasCore(): CanvasCoreContext {
       CanvasEvents.ENTITY_MOVED,
       handleEntityMoved,
     ),
+  );
+
+  // ── Property Layer Handlers ──────────────────────────────────────────────
+
+  const handlePropertyLayerAdded = (event: BusEvent<{ entityId: string; layer: PropertyLayer }>) => {
+    const { entityId, layer } = event.payload;
+    const existing = sceneGraph.getEntity(entityId);
+    if (!existing) return;
+    const existingLayers: PropertyLayer[] = existing.propertyLayers ?? [];
+    const layers = [...existingLayers];
+    // Normalize order to be the next index
+    layer.order = layers.length;
+    layers.push(layer);
+    sceneGraph.updateEntity(entityId, { propertyLayers: layers } as Partial<CanvasEntity>);
+    dirtyTracker.markDirty(entityBounds(existing));
+  };
+
+  const handlePropertyLayerUpdated = (event: BusEvent<{ entityId: string; layerId: string; widgetInstanceId?: string; updates: Partial<PropertyLayer> }>) => {
+    const { entityId, layerId, updates } = event.payload;
+    const existing = sceneGraph.getEntity(entityId);
+    if (!existing) return;
+    const existingLayers: PropertyLayer[] = existing.propertyLayers ?? [];
+    const layers = existingLayers.map((l: PropertyLayer) =>
+      l.id === layerId ? { ...l, ...updates, id: l.id } : l,
+    );
+    sceneGraph.updateEntity(entityId, { propertyLayers: layers } as Partial<CanvasEntity>);
+    dirtyTracker.markDirty(entityBounds(existing));
+  };
+
+  const handlePropertyLayerRemoved = (event: BusEvent<{ entityId: string; layerId: string }>) => {
+    const { entityId, layerId } = event.payload;
+    const existing = sceneGraph.getEntity(entityId);
+    if (!existing) return;
+    const existingLayers: PropertyLayer[] = existing.propertyLayers ?? [];
+    const layers = existingLayers
+      .filter((l: PropertyLayer) => l.id !== layerId)
+      .map((l: PropertyLayer, i: number) => ({ ...l, order: i }));
+    sceneGraph.updateEntity(entityId, { propertyLayers: layers } as Partial<CanvasEntity>);
+    dirtyTracker.markDirty(entityBounds(existing));
+  };
+
+  const handlePropertyLayerReordered = (event: BusEvent<{ entityId: string; layerIds: string[] }>) => {
+    const { entityId, layerIds } = event.payload;
+    const existing = sceneGraph.getEntity(entityId);
+    if (!existing) return;
+    const existingLayers: PropertyLayer[] = existing.propertyLayers ?? [];
+    const layerMap = new Map(existingLayers.map((l: PropertyLayer) => [l.id, l]));
+    const reordered = layerIds
+      .map((id, i) => {
+        const layer = layerMap.get(id);
+        return layer ? { ...layer, order: i } : null;
+      })
+      .filter((l): l is PropertyLayer => l !== null);
+    sceneGraph.updateEntity(entityId, { propertyLayers: reordered } as Partial<CanvasEntity>);
+    dirtyTracker.markDirty(entityBounds(existing));
+  };
+
+  const handlePropertyLayerToggled = (event: BusEvent<{ entityId: string; layerId: string; enabled: boolean }>) => {
+    const { entityId, layerId, enabled } = event.payload;
+    const existing = sceneGraph.getEntity(entityId);
+    if (!existing) return;
+    const existingLayers: PropertyLayer[] = existing.propertyLayers ?? [];
+    const layers = existingLayers.map((l: PropertyLayer) =>
+      l.id === layerId ? { ...l, enabled } : l,
+    );
+    sceneGraph.updateEntity(entityId, { propertyLayers: layers } as Partial<CanvasEntity>);
+    dirtyTracker.markDirty(entityBounds(existing));
+  };
+
+  // Subscribe to property layer events
+  unsubscribers.push(
+    bus.subscribe(CanvasEvents.PROPERTY_LAYER_ADDED, handlePropertyLayerAdded),
+    bus.subscribe(CanvasEvents.PROPERTY_LAYER_UPDATED, handlePropertyLayerUpdated),
+    bus.subscribe(CanvasEvents.PROPERTY_LAYER_REMOVED, handlePropertyLayerRemoved),
+    bus.subscribe(CanvasEvents.PROPERTY_LAYER_REORDERED, handlePropertyLayerReordered),
+    bus.subscribe(CanvasEvents.PROPERTY_LAYER_TOGGLED, handlePropertyLayerToggled),
   );
 
   // Subscribe to widget-namespaced events (emitted by sandboxed widgets via bridge)

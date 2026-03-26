@@ -25,6 +25,8 @@ import type { PropertiesController } from './properties';
 import { createPropertiesController } from './properties';
 import { createTimelinePanelController } from './timeline';
 import type { TimelinePanelController } from './timeline';
+import type { PropertyLayersController } from './property-layers';
+import { createPropertyLayersController } from './property-layers';
 import type { ToolbarController } from './toolbar';
 import { createToolbarController } from './toolbar';
 
@@ -40,6 +42,7 @@ export interface CanvasPanelsContext {
   minimap: MinimapController;
   animation: AnimationPanelController;
   timeline: TimelinePanelController;
+  propertyLayers: PropertyLayersController;
 }
 
 let context: CanvasPanelsContext | null = null;
@@ -59,6 +62,7 @@ export function initCanvasPanels(getZoom: () => number): CanvasPanelsContext {
     minimap: createMinimapController(),
     animation: createAnimationPanelController(),
     timeline: createTimelinePanelController(),
+    propertyLayers: createPropertyLayersController(),
   };
 
   return context;

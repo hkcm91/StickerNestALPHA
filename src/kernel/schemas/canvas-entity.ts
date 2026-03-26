@@ -8,6 +8,7 @@ import { z } from "zod";
 
 import { EntityAnimationConfigSchema } from "./entity-animation";
 import { AnchorPointSchema, PathFillRuleSchema } from "./path";
+import { PropertyLayerSchema } from "./property-layer";
 import {
   Point2DSchema,
   Size2DSchema,
@@ -159,6 +160,8 @@ export const CanvasEntityBaseSchema = z.object({
   name: z.string().optional(),
   /** Animation configuration (clips, triggers, states) */
   animations: EntityAnimationConfigSchema.optional(),
+  /** Widget-applied property layers (ordered stack of overrides) */
+  propertyLayers: z.array(PropertyLayerSchema).optional(),
   /** Creation timestamp */
   createdAt: z.string().datetime(),
   /** Last update timestamp */
