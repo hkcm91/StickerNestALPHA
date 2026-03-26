@@ -49,12 +49,32 @@ vi.mock('../../spatial/entities', () => ({
   WidgetInSpace: ({ entity }: { entity: { id: string } }) => (
     <div data-testid={`widget-in-space-${entity.id}`} />
   ),
+  Entity2DInSpace: ({ entity, children }: { entity: { id: string }; children: React.ReactNode }) => (
+    <div data-testid={`entity-2d-in-space-${entity.id}`}>{children}</div>
+  ),
+  SpatialCanvas2DPanel: ({ panelId, children }: { panelId: string; children: React.ReactNode }) => (
+    <div data-testid={`canvas-panel-${panelId}`}>{children}</div>
+  ),
 }));
 
 vi.mock('../../spatial/input', () => ({
   ControllerBridge: () => <div data-testid="controller-bridge" />,
   HandBridge: () => <div data-testid="hand-bridge" />,
   Pointer: () => <div data-testid="pointer" />,
+  GrabHandler: () => <div data-testid="grab-handler" />,
+}));
+
+// Mock 2D renderers to avoid pulling in runtime/supabase dependencies
+vi.mock('./renderers', () => ({
+  StickerRenderer: ({ entity }: { entity: { id: string } }) => <div data-testid={`sticker-${entity.id}`} />,
+  TextRenderer: ({ entity }: { entity: { id: string } }) => <div data-testid={`text-${entity.id}`} />,
+  ShapeRenderer: ({ entity }: { entity: { id: string } }) => <div data-testid={`shape-${entity.id}`} />,
+  DrawingRenderer: ({ entity }: { entity: { id: string } }) => <div data-testid={`drawing-${entity.id}`} />,
+  PathRenderer: ({ entity }: { entity: { id: string } }) => <div data-testid={`path-${entity.id}`} />,
+  SvgRenderer: ({ entity }: { entity: { id: string } }) => <div data-testid={`svg-${entity.id}`} />,
+  LottieRenderer: ({ entity }: { entity: { id: string } }) => <div data-testid={`lottie-${entity.id}`} />,
+  AudioRenderer: ({ entity }: { entity: { id: string } }) => <div data-testid={`audio-${entity.id}`} />,
+  GroupRenderer: ({ entity }: { entity: { id: string } }) => <div data-testid={`group-${entity.id}`} />,
 }));
 
 vi.mock('../../spatial/locomotion', () => ({
@@ -251,6 +271,71 @@ describe('SpatialCanvasLayer', () => {
     const button = await findByTestId('enter-vr-button');
     expect(button).toBeDefined();
     expect(button.textContent).toContain('Enter VR');
+  });
+
+  it('renders text entities through Entity2DInSpace', () => {
+    const entities = [
+      makeEntity('text-1', { type: 'text', canvasVisibility: '3d' }),
+    ];
+
+    const { getByTestId } = render(
+      <SpatialCanvasLayer
+        entities={entities as any}
+        selectedIds={new Set()}
+        spatialMode="3d"
+        setSpatialMode={vi.fn()}
+      />,
+    );
+
+    expect(getByTestId('entity-2d-in-space-text-1')).toBeDefined();
+  });
+
+  it('renders sticker entities through Entity2DInSpace', () => {
+    const entities = [
+      makeEntity('sticker-1', { type: 'sticker', canvasVisibility: 'both' }),
+    ];
+
+    const { getByTestId } = render(
+      <SpatialCanvasLayer
+        entities={entities as any}
+        selectedIds={new Set()}
+        spatialMode="3d"
+        setSpatialMode={vi.fn()}
+      />,
+    );
+
+    expect(getByTestId('entity-2d-in-space-sticker-1')).toBeDefined();
+  });
+
+  it('renders object3d entities through SpatialEntity (not Entity2DInSpace)', () => {
+    const entities = [
+      makeEntity('obj-1', { type: 'object3d', canvasVisibility: '3d' }),
+    ];
+
+    const { getByTestId, queryByTestId } = render(
+      <SpatialCanvasLayer
+        entities={entities as any}
+        selectedIds={new Set()}
+        spatialMode="3d"
+        setSpatialMode={vi.fn()}
+      />,
+    );
+
+    expect(getByTestId('spatial-entity-obj-1')).toBeDefined();
+    expect(queryByTestId('entity-2d-in-space-obj-1')).toBeNull();
+  });
+
+  it('renders spawn canvas panel button', () => {
+    const { getByTestId } = render(
+      <SpatialCanvasLayer
+        entities={[]}
+        selectedIds={new Set()}
+        spatialMode="3d"
+        setSpatialMode={vi.fn()}
+      />,
+    );
+
+    expect(getByTestId('spawn-canvas-panel-button')).toBeDefined();
   });
 
   it('hides Enter VR button in vr mode', () => {

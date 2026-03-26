@@ -232,6 +232,15 @@ export const SpatialEvents = {
 
   // Locomotion events
   TELEPORT_REQUESTED: 'spatial.teleport.requested',
+
+  // Spatial panel events (2D canvas panels in VR/3D space)
+  PANEL_SPAWNED: 'spatial.panel.spawned',
+  PANEL_GRABBED: 'spatial.panel.grabbed',
+  PANEL_RELEASED: 'spatial.panel.released',
+  PANEL_PINNED: 'spatial.panel.pinned',
+  PANEL_UNPINNED: 'spatial.panel.unpinned',
+  PANEL_CLOSED: 'spatial.panel.closed',
+  PANEL_RESIZED: 'spatial.panel.resized',
 } as const;
 
 /**
