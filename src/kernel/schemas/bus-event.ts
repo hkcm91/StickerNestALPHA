@@ -88,6 +88,10 @@ export const SocialEvents = {
   ENTITY_TRANSFORMED: 'social.entity.transformed',
   DATASOURCE_UPDATED: 'social.datasource.updated',
   CONFLICT_REJECTED: 'social.conflict.rejected',
+  EDIT_LOCK_ACQUIRED: 'social.editLock.acquired',
+  EDIT_LOCK_RELEASED: 'social.editLock.released',
+  CONNECTION_LOST: 'social.connection.lost',
+  CONNECTION_RESTORED: 'social.connection.restored',
 } as const;
 
 /**

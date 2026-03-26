@@ -17,6 +17,7 @@ import { useDockerStore } from '../../../kernel/stores/docker';
 import { useHistoryStore, selectCanUndo, selectCanRedo } from '../../../kernel/stores/history/history.store';
 import { useUIStore } from '../../../kernel/stores/ui/ui.store';
 import { enterXR } from '../../../spatial';
+import { PresenceAvatarBar } from '../components/PresenceAvatarBar';
 import type { SaveStatus } from '../hooks/usePersistence';
 import type { ViewportStore } from '../hooks/useViewport';
 
@@ -827,6 +828,9 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
         {/* Spacer */}
         <div style={{ flex: 1 }} />
+
+        {/* Presence avatars */}
+        <PresenceAvatarBar />
 
         {/* Zoom controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }} data-testid="toolbar-zoom">

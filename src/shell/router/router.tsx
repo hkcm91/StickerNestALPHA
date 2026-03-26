@@ -14,8 +14,10 @@ import { ShellEvents, SocialGraphEvents } from '@sn/types';
 import { bus } from '../../kernel/bus';
 import { getUnreadMessageCount } from '../../kernel/social-graph';
 import { useAuthStore } from '../../kernel/stores/auth/auth.store';
+import { ChatPanel } from '../components/ChatPanel';
 import { NotificationPanel } from '../components/NotificationPanel';
 import { NotionPermissionModal } from '../components/NotionPermissionModal';
+import { OfflineBanner } from '../components/OfflineBanner';
 import { ToastContainer } from '../components/ToastContainer';
 import { DataManagerPage } from '../data';
 import { TestHarness } from '../dev';
@@ -157,8 +159,16 @@ const navIconBtnStyle: React.CSSProperties = {
   transition: `background 150ms ${NAV_SPRING}`,
 };
 
+/** Simple chat icon SVG */
+const ChatIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M2 3h12v8H4l-2 2V3z" />
+  </svg>
+);
+
 const GlobalNav: React.FC = () => {
   const [notifOpen, setNotifOpen] = React.useState(false);
+  const [chatOpen, setChatOpen] = React.useState(false);
   const [unreadMsgCount, setUnreadMsgCount] = useState(0);
   const location = useLocation();
   const authUser = useAuthStore((s) => s.user);
@@ -317,8 +327,21 @@ const GlobalNav: React.FC = () => {
           </Link>
 
           <button
+            data-testid="nav-chat"
+            onClick={() => { setChatOpen((p) => !p); setNotifOpen(false); }}
+            title="Messages"
+            style={{
+              ...navIconBtnStyle,
+              background: chatOpen ? themeVar('--sn-accent') : 'transparent',
+              color: chatOpen ? '#fff' : themeVar('--sn-text-soft'),
+            }}
+          >
+            <ChatIcon />
+          </button>
+
+          <button
             data-testid="nav-notifications"
-            onClick={() => setNotifOpen((p) => !p)}
+            onClick={() => { setNotifOpen((p) => !p); setChatOpen(false); }}
             title="Notifications"
             style={{
               ...navIconBtnStyle,
@@ -349,6 +372,7 @@ const GlobalNav: React.FC = () => {
       </nav>
 
       <NotificationPanel isOpen={notifOpen} onClose={() => setNotifOpen(false)} />
+      <ChatPanel isOpen={chatOpen} onClose={() => setChatOpen(false)} />
     </>
   );
 };
@@ -364,6 +388,7 @@ export const AppRouter: React.FC = () => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
       <RouteChangeEmitter />
+      <OfflineBanner />
       {!isEmbedRoute && <GlobalNav />}
       <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
       <Routes>
