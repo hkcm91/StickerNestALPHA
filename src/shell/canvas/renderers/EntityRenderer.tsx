@@ -15,6 +15,7 @@ import { useSocialStore } from "../../../kernel/stores/social/social.store";
 import { useUIStore } from "../../../kernel/stores/ui/ui.store";
 
 import { AudioRenderer } from "./AudioRenderer";
+import { ConnectorRenderer } from "./ConnectorRenderer";
 import { DockerRenderer } from "./DockerRenderer";
 import { DrawingRenderer } from "./DrawingRenderer";
 import { GroupRenderer } from "./GroupRenderer";
@@ -175,6 +176,15 @@ export const EntityRenderer: React.FC<EntityRendererProps> = ({
           entity={resolvedEntity as typeof entity}
           isSelected={isSelected}
           interactionMode={interactionMode}
+        />
+      );
+      break;
+
+    case "connector":
+      rendered = (
+        <ConnectorRenderer
+          entity={resolvedEntity as typeof entity}
+          isSelected={isSelected}
         />
       );
       break;

@@ -47,6 +47,7 @@ export const CanvasEntityTypeSchema = z.enum([
   "artboard",
   "folder",
   "video",
+  "connector",
 ]);
 
 export type CanvasEntityType = z.infer<typeof CanvasEntityTypeSchema>;
@@ -592,6 +593,40 @@ export const VideoEntitySchema = CanvasEntityBaseSchema.extend({
 export type VideoEntity = z.infer<typeof VideoEntitySchema>;
 
 /**
+ * Connector entity — arrows and connecting lines between entities or free points.
+ */
+export const ConnectorLineStyleSchema = z.enum(["straight", "curved", "orthogonal"]);
+export const ConnectorArrowHeadSchema = z.enum(["none", "arrow", "circle", "diamond"]);
+
+export const ConnectorEntitySchema = CanvasEntityBaseSchema.extend({
+  type: z.literal("connector"),
+  /** Source entity ID (null for freeform endpoint) */
+  sourceEntityId: z.string().uuid().nullable(),
+  /** Target entity ID (null for freeform endpoint) */
+  targetEntityId: z.string().uuid().nullable(),
+  /** Source point in canvas space (used when sourceEntityId is null) */
+  sourcePoint: Point2DSchema,
+  /** Target point in canvas space (used when targetEntityId is null) */
+  targetPoint: Point2DSchema,
+  /** Line rendering style */
+  lineStyle: ConnectorLineStyleSchema.default("curved"),
+  /** Arrowhead at the target end */
+  arrowHead: ConnectorArrowHeadSchema.default("arrow"),
+  /** Arrowhead at the source end */
+  arrowTail: ConnectorArrowHeadSchema.default("none"),
+  /** Stroke color */
+  strokeColor: z.string().default("#6b7280"),
+  /** Stroke width in canvas units */
+  strokeWidth: z.number().positive().default(2),
+  /** Optional text label rendered at midpoint */
+  label: z.string().optional(),
+});
+
+export type ConnectorEntity = z.infer<typeof ConnectorEntitySchema>;
+export type ConnectorLineStyle = z.infer<typeof ConnectorLineStyleSchema>;
+export type ConnectorArrowHead = z.infer<typeof ConnectorArrowHeadSchema>;
+
+/**
  * Union of all entity types
  */
 export const CanvasEntitySchema = z.discriminatedUnion("type", [
@@ -610,6 +645,7 @@ export const CanvasEntitySchema = z.discriminatedUnion("type", [
   ArtboardEntitySchema,
   FolderEntitySchema,
   VideoEntitySchema,
+  ConnectorEntitySchema,
 ]);
 
 export type CanvasEntity = z.infer<typeof CanvasEntitySchema>;
@@ -625,6 +661,7 @@ export const SvgEntityJSONSchema = SvgEntitySchema.toJSONSchema();
 export const PathEntityJSONSchema = PathEntitySchema.toJSONSchema();
 export const ArtboardEntityJSONSchema = ArtboardEntitySchema.toJSONSchema();
 export const FolderEntityJSONSchema = FolderEntitySchema.toJSONSchema();
+export const ConnectorEntityJSONSchema = ConnectorEntitySchema.toJSONSchema();
 export const CanvasEntityJSONSchema = CanvasEntitySchema.toJSONSchema();
 export const WidgetIntrinsicSizeJSONSchema =
   WidgetIntrinsicSizeSchema.toJSONSchema();
