@@ -200,6 +200,15 @@ export {
 } from "./canvas-entity";
 
 // =============================================================================
+// Property Layer Schema
+// =============================================================================
+export {
+  PropertyLayerSchema,
+  type PropertyLayer,
+  PropertyLayerJSONSchema,
+} from "./property-layer";
+
+// =============================================================================
 // Path Sub-Schemas (anchor points, fill rules)
 // =============================================================================
 export {

@@ -70,6 +70,9 @@ export interface StickerNestSDK {
     createEntity(entityType: string, position: { x: number; y: number }, options?: { name?: string; size?: { width: number; height: number }; properties?: Record<string, unknown> }): Promise<{ entityId: string }>;
     updateEntity(entityId: string, updates: Record<string, unknown>): Promise<{ entityId: string }>;
     deleteEntity(entityId: string): Promise<{ entityId: string }>;
+    addPropertyLayer(entityId: string, properties: Record<string, unknown>, label?: string): Promise<{ layerId: string }>;
+    updatePropertyLayer(entityId: string, layerId: string, properties: Record<string, unknown>): Promise<{ layerId: string }>;
+    removePropertyLayer(entityId: string, layerId: string): Promise<{ layerId: string }>;
   };
   /** Create an entity on the canvas (requires canvas-write permission) — simple API */
   createEntity(entity: Record<string, unknown>): Promise<{ success: boolean; entityId?: string }>;
@@ -233,6 +236,15 @@ export function generateSDKTemplate(): string {
           rejectPending(canvasKey, new Error(data.error));
         } else {
           resolvePending(canvasKey, { entityId: data.entityId });
+        }
+        break;
+
+      case 'PROPERTY_LAYER_RESPONSE':
+        var plKey = 'pl_' + data.requestId;
+        if (data.error) {
+          rejectPending(plKey, new Error(data.error));
+        } else {
+          resolvePending(plKey, { layerId: data.layerId });
         }
         break;
 
@@ -589,6 +601,44 @@ export function generateSDKTemplate(): string {
             type: 'DELETE_ENTITY',
             requestId: requestId,
             entityId: entityId
+          });
+        });
+      },
+      addPropertyLayer: function(entityId, properties, label) {
+        return new Promise(function(resolve, reject) {
+          var requestId = 'req_' + (++_requestCounter);
+          addPendingRequest('pl_' + requestId, resolve, reject);
+          postToHost({
+            type: 'ADD_PROPERTY_LAYER',
+            requestId: requestId,
+            entityId: entityId,
+            properties: properties,
+            label: label
+          });
+        });
+      },
+      updatePropertyLayer: function(entityId, layerId, properties) {
+        return new Promise(function(resolve, reject) {
+          var requestId = 'req_' + (++_requestCounter);
+          addPendingRequest('pl_' + requestId, resolve, reject);
+          postToHost({
+            type: 'UPDATE_PROPERTY_LAYER',
+            requestId: requestId,
+            entityId: entityId,
+            layerId: layerId,
+            properties: properties
+          });
+        });
+      },
+      removePropertyLayer: function(entityId, layerId) {
+        return new Promise(function(resolve, reject) {
+          var requestId = 'req_' + (++_requestCounter);
+          addPendingRequest('pl_' + requestId, resolve, reject);
+          postToHost({
+            type: 'REMOVE_PROPERTY_LAYER',
+            requestId: requestId,
+            entityId: entityId,
+            layerId: layerId
           });
         });
       }

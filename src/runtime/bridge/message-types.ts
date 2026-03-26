@@ -41,6 +41,7 @@ export type HostMessage =
   | { type: 'AI_RESPONSE'; requestId: string; text: string; error?: string }
   | { type: 'AI_CHUNK'; requestId: string; chunk: string; done: boolean }
   | { type: 'CANVAS_WRITE_RESPONSE'; requestId: string; success: boolean; entityId?: string; error?: string }
+  | { type: 'PROPERTY_LAYER_RESPONSE'; requestId: string; success: boolean; layerId?: string; error?: string }
   | { type: 'ENTITY_RESPONSE'; requestId: string; result: unknown; error?: string }
   | { type: 'DESTROY' };
 
@@ -82,4 +83,8 @@ export type WidgetMessage =
   // Canvas entity write messages (requires 'canvas-write' permission)
   | { type: 'CREATE_ENTITY'; requestId: string; entityType?: string; entity?: unknown; name?: string; position?: { x: number; y: number }; size?: { width: number; height: number }; properties?: Record<string, unknown> }
   | { type: 'UPDATE_ENTITY'; requestId: string; entityId: string; updates: Record<string, unknown> }
-  | { type: 'DELETE_ENTITY'; requestId: string; entityId: string };
+  | { type: 'DELETE_ENTITY'; requestId: string; entityId: string }
+  // Property layer messages (requires 'canvas-write' permission)
+  | { type: 'ADD_PROPERTY_LAYER'; requestId: string; entityId: string; label?: string; properties: Record<string, unknown> }
+  | { type: 'UPDATE_PROPERTY_LAYER'; requestId: string; entityId: string; layerId: string; properties: Record<string, unknown> }
+  | { type: 'REMOVE_PROPERTY_LAYER'; requestId: string; entityId: string; layerId: string };

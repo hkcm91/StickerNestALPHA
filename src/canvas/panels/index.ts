@@ -45,6 +45,10 @@ export type { AnimationPanelController } from './animation';
 export { createTimelinePanelController } from './timeline';
 export type { TimelinePanelController } from './timeline';
 
+// Property Layers
+export { createPropertyLayersController } from './property-layers';
+export type { PropertyLayersController, PropertyLayerEntry } from './property-layers';
+
 // Init
 export { initCanvasPanels, teardownCanvasPanels, isCanvasPanelsInitialized, getCanvasPanelsContext } from './init';
 export type { CanvasPanelsContext } from './init';
