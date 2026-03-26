@@ -1039,6 +1039,17 @@ export const Toolbar: React.FC<ToolbarProps> = ({
               <TrayLabel>Group</TrayLabel>
               <button onClick={handleGroup} disabled={selectedIds.size < 2} title="Group (Ctrl+G)" style={{ ...smallBtnBase, padding: '0 8px', width: 'auto', opacity: selectedIds.size < 2 ? 0.4 : 1 }}>Group</button>
               <button onClick={handleUngroup} disabled={selectedIds.size === 0} title="Ungroup (Ctrl+Shift+G)" style={{ ...smallBtnBase, padding: '0 8px', width: 'auto', opacity: selectedIds.size === 0 ? 0.4 : 1 }}>Ungroup</button>
+              <button
+                onClick={() => {
+                  if (selectedIds.size === 0) return;
+                  useUIStore.getState().enterFocusMode(Array.from(selectedIds));
+                }}
+                disabled={selectedIds.size === 0}
+                title="Focus Mode (F)"
+                style={{ ...smallBtnBase, padding: '0 8px', width: 'auto', opacity: selectedIds.size === 0 ? 0.4 : 1 }}
+              >
+                Focus
+              </button>
             </div>
 
             <Divider />

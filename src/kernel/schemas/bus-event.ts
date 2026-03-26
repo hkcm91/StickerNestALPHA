@@ -346,6 +346,19 @@ export const GalleryEvents = {
 } as const;
 
 /**
+ * Event type constants for Focus Mode (canvas overlay carousel)
+ * Focus mode centers and expands selected widgets with a blur backdrop.
+ */
+export const FocusEvents = {
+  /** Focus mode was entered with one or more entities */
+  ENTERED: 'canvas.focus.entered',
+  /** Carousel navigated to a different entity */
+  NAVIGATED: 'canvas.focus.navigated',
+  /** Focus mode was exited */
+  EXITED: 'canvas.focus.exited',
+} as const;
+
+/**
  * Event type constants for Interaction Mode
  * Controls how the canvas responds to user input.
  */
