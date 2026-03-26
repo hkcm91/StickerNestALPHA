@@ -50,6 +50,16 @@ function generateEntityId(): string {
   return `ent-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function generateLayerId(): string {
+  return crypto.randomUUID();
+}
+
+const PROPERTY_LAYER_TYPES = new Set([
+  'ADD_PROPERTY_LAYER',
+  'UPDATE_PROPERTY_LAYER',
+  'REMOVE_PROPERTY_LAYER',
+] as const satisfies readonly WidgetMessage['type'][]);
+
 /**
  * Handle canvas write messages from widgets.
  * Returns true if the message was handled, false otherwise.
@@ -58,20 +68,25 @@ export function handleCanvasWriteMessage(
   message: WidgetMessage,
   ctx: HandlerContext,
 ): boolean {
-  if (message.type !== 'CREATE_ENTITY' && message.type !== 'UPDATE_ENTITY' && message.type !== 'DELETE_ENTITY') {
+  const isEntityMessage = message.type === 'CREATE_ENTITY' || message.type === 'UPDATE_ENTITY' || message.type === 'DELETE_ENTITY';
+  const isPropertyLayerMessage = PROPERTY_LAYER_TYPES.has(message.type as 'ADD_PROPERTY_LAYER');
+
+  if (!isEntityMessage && !isPropertyLayerMessage) {
     return false;
   }
+
+  const responseType = isPropertyLayerMessage ? 'PROPERTY_LAYER_RESPONSE' as const : 'CANVAS_WRITE_RESPONSE' as const;
 
   // Permission check
   if (!hasCanvasWritePermission(ctx.widgetId)) {
     console.warn(`[CanvasWrite][${ctx.instanceId}] blocked: widget lacks 'canvas-write' permission`);
     if ('requestId' in message) {
       ctx.bridge.send({
-        type: 'CANVAS_WRITE_RESPONSE',
+        type: responseType,
         requestId: (message as { requestId: string }).requestId,
         success: false,
         error: 'Permission denied: widget requires canvas-write permission',
-      });
+      } as Parameters<typeof ctx.bridge.send>[0]);
     }
     return true;
   }
@@ -81,11 +96,11 @@ export function handleCanvasWriteMessage(
     console.warn(`[CanvasWrite][${ctx.instanceId}] rate limited`);
     if ('requestId' in message) {
       ctx.bridge.send({
-        type: 'CANVAS_WRITE_RESPONSE',
+        type: responseType,
         requestId: (message as { requestId: string }).requestId,
         success: false,
         error: 'Rate limit exceeded: max 10 writes per minute',
-      });
+      } as Parameters<typeof ctx.bridge.send>[0]);
     }
     return true;
   }
@@ -145,6 +160,65 @@ export function handleCanvasWriteMessage(
         requestId: message.requestId,
         success: true,
         entityId: message.entityId,
+      });
+      return true;
+    }
+
+    case 'ADD_PROPERTY_LAYER': {
+      const layerId = generateLayerId();
+      const layer = {
+        id: layerId,
+        widgetInstanceId: ctx.instanceId,
+        widgetId: ctx.widgetId,
+        label: message.label ?? `Layer (${ctx.widgetId})`,
+        enabled: true,
+        order: Date.now(), // will be normalized by canvas core
+        properties: message.properties,
+        createdAt: new Date().toISOString(),
+      };
+      bus.emit(CanvasEvents.PROPERTY_LAYER_ADDED, {
+        entityId: message.entityId,
+        layer,
+      });
+      recordWrite(ctx.instanceId);
+      ctx.bridge.send({
+        type: 'PROPERTY_LAYER_RESPONSE',
+        requestId: message.requestId,
+        success: true,
+        layerId,
+      });
+      return true;
+    }
+
+    case 'UPDATE_PROPERTY_LAYER': {
+      bus.emit(CanvasEvents.PROPERTY_LAYER_UPDATED, {
+        entityId: message.entityId,
+        layerId: message.layerId,
+        widgetInstanceId: ctx.instanceId,
+        updates: { properties: message.properties },
+      });
+      recordWrite(ctx.instanceId);
+      ctx.bridge.send({
+        type: 'PROPERTY_LAYER_RESPONSE',
+        requestId: message.requestId,
+        success: true,
+        layerId: message.layerId,
+      });
+      return true;
+    }
+
+    case 'REMOVE_PROPERTY_LAYER': {
+      bus.emit(CanvasEvents.PROPERTY_LAYER_REMOVED, {
+        entityId: message.entityId,
+        layerId: message.layerId,
+        widgetInstanceId: ctx.instanceId,
+      });
+      recordWrite(ctx.instanceId);
+      ctx.bridge.send({
+        type: 'PROPERTY_LAYER_RESPONSE',
+        requestId: message.requestId,
+        success: true,
+        layerId: message.layerId,
       });
       return true;
     }

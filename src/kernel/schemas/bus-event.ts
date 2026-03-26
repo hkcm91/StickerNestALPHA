@@ -88,6 +88,10 @@ export const SocialEvents = {
   ENTITY_TRANSFORMED: 'social.entity.transformed',
   DATASOURCE_UPDATED: 'social.datasource.updated',
   CONFLICT_REJECTED: 'social.conflict.rejected',
+  EDIT_LOCK_ACQUIRED: 'social.editLock.acquired',
+  EDIT_LOCK_RELEASED: 'social.editLock.released',
+  CONNECTION_LOST: 'social.connection.lost',
+  CONNECTION_RESTORED: 'social.connection.restored',
 } as const;
 
 /**
@@ -150,6 +154,22 @@ export const CanvasEvents = {
   ENTITY_ANIMATION_COMPLETED: 'canvas.entity.animation.completed',
   ENTITY_ANIMATION_CANCELLED: 'canvas.entity.animation.cancelled',
   ENTITY_STATE_CHANGED: 'canvas.entity.state.changed',
+
+  // Property layer events — widget-attributed property overrides on entities
+  /** A widget added a property layer to an entity. Payload: { entityId, layer: PropertyLayer } */
+  PROPERTY_LAYER_ADDED: 'canvas.entity.propertyLayer.added',
+  /** A property layer was updated. Payload: { entityId, layerId, updates: Partial<PropertyLayer> } */
+  PROPERTY_LAYER_UPDATED: 'canvas.entity.propertyLayer.updated',
+  /** A property layer was removed. Payload: { entityId, layerId } */
+  PROPERTY_LAYER_REMOVED: 'canvas.entity.propertyLayer.removed',
+  /** Property layers were reordered. Payload: { entityId, layerIds: string[] } */
+  PROPERTY_LAYER_REORDERED: 'canvas.entity.propertyLayer.reordered',
+  /** A property layer was toggled on/off. Payload: { entityId, layerId, enabled: boolean } */
+  PROPERTY_LAYER_TOGGLED: 'canvas.entity.propertyLayer.toggled',
+  /** Request to open/focus the widget that created a property layer. Payload: { entityId, layerId } */
+  PROPERTY_LAYER_ALTER: 'canvas.entity.propertyLayer.alter',
+  /** Batch-replace all property layers on an entity. Payload: { entityId, layers: PropertyLayer[], previousLayers?: PropertyLayer[] } */
+  PROPERTY_LAYER_BATCH_UPDATED: 'canvas.entity.propertyLayer.batchUpdated',
 } as const;
 
 /**
@@ -186,6 +206,9 @@ export const CrossCanvasEvents = {
 export const ShellEvents = {
   THEME_CHANGED: 'shell.theme.changed',
   ROUTE_CHANGED: 'shell.route.changed',
+  SPATIAL_TOGGLE_3D: 'shell.spatial.toggle3d',
+  SPATIAL_ENTER_VR: 'shell.spatial.enterVR',
+  SPATIAL_ENTER_AR: 'shell.spatial.enterAR',
 } as const;
 
 /**
@@ -236,6 +259,15 @@ export const SpatialEvents = {
 
   // Locomotion events
   TELEPORT_REQUESTED: 'spatial.teleport.requested',
+
+  // Spatial panel events (2D canvas panels in VR/3D space)
+  PANEL_SPAWNED: 'spatial.panel.spawned',
+  PANEL_GRABBED: 'spatial.panel.grabbed',
+  PANEL_RELEASED: 'spatial.panel.released',
+  PANEL_PINNED: 'spatial.panel.pinned',
+  PANEL_UNPINNED: 'spatial.panel.unpinned',
+  PANEL_CLOSED: 'spatial.panel.closed',
+  PANEL_RESIZED: 'spatial.panel.resized',
 } as const;
 
 /**
@@ -454,6 +486,10 @@ export const SocialGraphEvents = {
   CANVAS_MEMBER_ADDED: 'kernel.socialgraph.canvasMember.added',
   CANVAS_MEMBER_REMOVED: 'kernel.socialgraph.canvasMember.removed',
   CANVAS_MEMBER_ROLE_CHANGED: 'kernel.socialgraph.canvasMember.roleChanged',
+
+  // Canvas metadata events
+  CANVAS_TAGS_UPDATED: 'kernel.socialgraph.canvas.tagsUpdated',
+  CANVAS_THUMBNAIL_UPDATED: 'kernel.socialgraph.canvas.thumbnailUpdated',
 } as const;
 
 /**

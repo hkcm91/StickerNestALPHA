@@ -27,9 +27,15 @@ export interface PublicCanvas {
   description: string | null;
   thumbnailUrl: string | null;
   ownerId: string;
+  tags: string[];
+  memberCount: number;
+  isPublic: boolean;
   createdAt: string;
   updatedAt: string;
 }
+
+/** Derived canvas category based on visibility and membership */
+export type CanvasCategory = 'public' | 'private' | 'collaborative';
 
 export interface CanvasMember {
   canvasId: string;
@@ -52,9 +58,19 @@ function mapCanvasRow(row: Record<string, unknown>): PublicCanvas {
     description: (row.description as string) ?? null,
     thumbnailUrl: (row.thumbnail_url as string) ?? null,
     ownerId: row.owner_id as string,
+    tags: (row.tags as string[]) ?? [],
+    memberCount: typeof row.member_count === 'number' ? row.member_count : 0,
+    isPublic: (row.is_public as boolean) ?? false,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   };
+}
+
+/** Derive category from canvas data */
+export function deriveCanvasCategory(canvas: PublicCanvas): CanvasCategory {
+  if (canvas.isPublic) return 'public';
+  if (canvas.memberCount > 0) return 'collaborative';
+  return 'private';
 }
 
 function mapMemberRow(row: Record<string, unknown>): CanvasMember {
@@ -99,7 +115,7 @@ export async function getUserPublicCanvases(
 
   let query = supabase
     .from('canvases')
-    .select('id, name, slug, description, thumbnail_url, owner_id, created_at, updated_at')
+    .select('id, name, slug, description, thumbnail_url, owner_id, tags, is_public, created_at, updated_at')
     .eq('owner_id', userId)
     .eq('is_public', true)
     .order('updated_at', { ascending: false })
@@ -420,16 +436,17 @@ export async function getCanvasRole(
 
 /**
  * Get canvases shared with a user (where they are a member, not the owner).
+ * Returns canvas metadata joined from the canvases table.
  */
 export async function getSharedCanvases(
   userId: string,
   options: PaginationOptions = {},
-): Promise<SocialResult<Paginated<CanvasMember>>> {
+): Promise<SocialResult<Paginated<PublicCanvas>>> {
   const limit = Math.min(options.limit ?? 20, 100);
 
   let query = supabase
     .from('canvas_members')
-    .select('*')
+    .select('canvas_id, role, created_at, canvases(id, name, slug, description, thumbnail_url, owner_id, tags, is_public, created_at, updated_at)')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(limit + 1);
@@ -447,12 +464,204 @@ export async function getSharedCanvases(
     };
   }
 
-  const items = (data ?? []).slice(0, limit).map(mapMemberRow);
+  const rows = (data ?? []).slice(0, limit);
   const hasMore = (data ?? []).length > limit;
-  const nextCursor = hasMore && items.length > 0 ? items[items.length - 1].createdAt : undefined;
+  const items = rows
+    .map((row) => {
+      const canvas = row.canvases as Record<string, unknown> | null;
+      if (!canvas) return null;
+      return mapCanvasRow(canvas);
+    })
+    .filter((c): c is PublicCanvas => c !== null);
+  const nextCursor = hasMore && rows.length > 0 ? (rows[rows.length - 1].created_at as string) : undefined;
 
   return {
     success: true,
     data: { items, nextCursor, hasMore },
   };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Owner Canvas Queries (for profile+gallery page)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Get ALL canvases owned by a user (public + private).
+ * Only the owner can call this — used for the unified profile+gallery page.
+ */
+export async function getUserCanvases(
+  userId: string,
+  callerId: string,
+  options: PaginationOptions = {},
+): Promise<SocialResult<Paginated<PublicCanvas>>> {
+  if (userId !== callerId) {
+    return {
+      success: false,
+      error: { code: 'PERMISSION_DENIED', message: 'Can only view your own full canvas list.' },
+    };
+  }
+
+  const limit = Math.min(options.limit ?? 50, 100);
+
+  let query = supabase
+    .from('canvases')
+    .select('id, name, slug, description, thumbnail_url, owner_id, tags, is_public, created_at, updated_at')
+    .eq('owner_id', userId)
+    .order('updated_at', { ascending: false })
+    .limit(limit + 1);
+
+  if (options.cursor) {
+    query = query.lt('updated_at', options.cursor);
+  }
+
+  const { data, error } = (await query) as QueryResult<Record<string, unknown>[]>;
+
+  if (error) {
+    return {
+      success: false,
+      error: { code: 'UNKNOWN', message: error.message },
+    };
+  }
+
+  const rows = (data ?? []).slice(0, limit);
+  const hasMore = (data ?? []).length > limit;
+  const items = rows.map(mapCanvasRow);
+
+  // Fetch member counts for all canvases in a single query
+  const canvasIds = items.map((c) => c.id);
+  if (canvasIds.length > 0) {
+    const { data: memberCounts } = (await supabase
+      .from('canvas_members')
+      .select('canvas_id')
+      .in('canvas_id', canvasIds)) as QueryResult<Array<{ canvas_id: string }>>;
+
+    if (memberCounts) {
+      const countMap = new Map<string, number>();
+      for (const row of memberCounts) {
+        countMap.set(row.canvas_id, (countMap.get(row.canvas_id) ?? 0) + 1);
+      }
+      for (const item of items) {
+        item.memberCount = countMap.get(item.id) ?? 0;
+      }
+    }
+  }
+
+  const nextCursor =
+    hasMore && items.length > 0
+      ? items[items.length - 1].updatedAt
+      : undefined;
+
+  return {
+    success: true,
+    data: { items, nextCursor, hasMore },
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Canvas Metadata Updates
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Update tags on a canvas. Caller must be the canvas owner.
+ */
+export async function updateCanvasTags(
+  canvasId: string,
+  tags: string[],
+  callerId: string,
+): Promise<SocialResult<{ tags: string[] }>> {
+  // Validate tags
+  if (tags.length > 20) {
+    return {
+      success: false,
+      error: { code: 'VALIDATION_ERROR', message: 'Maximum 20 tags allowed.' },
+    };
+  }
+  for (const tag of tags) {
+    if (tag.length > 50) {
+      return {
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: `Tag "${tag}" exceeds 50 character limit.` },
+      };
+    }
+  }
+
+  const ownerId = await getCanvasOwnerId(canvasId);
+  if (!ownerId) {
+    return {
+      success: false,
+      error: { code: 'NOT_FOUND', message: 'Canvas not found.' },
+    };
+  }
+  if (ownerId !== callerId) {
+    return {
+      success: false,
+      error: { code: 'PERMISSION_DENIED', message: 'Only canvas owner can update tags.' },
+    };
+  }
+
+  const { error } = (await supabase
+    .from('canvases')
+    .update({ tags } as Record<string, unknown>)
+    .eq('id', canvasId)) as QueryResult<null>;
+
+  if (error) {
+    return {
+      success: false,
+      error: { code: 'UNKNOWN', message: error.message },
+    };
+  }
+
+  bus.emit(SocialGraphEvents.CANVAS_TAGS_UPDATED, { canvasId, tags, updatedBy: callerId });
+
+  return { success: true, data: { tags } };
+}
+
+/**
+ * Update thumbnail URL on a canvas. Caller must be the canvas owner or an editor.
+ */
+export async function updateCanvasThumbnail(
+  canvasId: string,
+  thumbnailUrl: string,
+  callerId: string,
+): Promise<SocialResult<{ thumbnailUrl: string }>> {
+  const ownerId = await getCanvasOwnerId(canvasId);
+  if (!ownerId) {
+    return {
+      success: false,
+      error: { code: 'NOT_FOUND', message: 'Canvas not found.' },
+    };
+  }
+
+  // Allow owner or editor
+  if (ownerId !== callerId) {
+    const { data: membership } = (await supabase
+      .from('canvas_members')
+      .select('role')
+      .eq('canvas_id', canvasId)
+      .eq('user_id', callerId)
+      .single()) as QueryResult<{ role: CanvasRole }>;
+
+    if (!membership || (membership.role !== 'editor')) {
+      return {
+        success: false,
+        error: { code: 'PERMISSION_DENIED', message: 'Only canvas owner or editor can update thumbnail.' },
+      };
+    }
+  }
+
+  const { error } = (await supabase
+    .from('canvases')
+    .update({ thumbnail_url: thumbnailUrl })
+    .eq('id', canvasId)) as QueryResult<null>;
+
+  if (error) {
+    return {
+      success: false,
+      error: { code: 'UNKNOWN', message: error.message },
+    };
+  }
+
+  bus.emit(SocialGraphEvents.CANVAS_THUMBNAIL_UPDATED, { canvasId, thumbnailUrl, updatedBy: callerId });
+
+  return { success: true, data: { thumbnailUrl } };
 }

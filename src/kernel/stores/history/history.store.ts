@@ -188,4 +188,74 @@ export function setupHistoryBusSubscriptions(): void {
       timestamp: Date.now(),
     });
   });
+
+  // ── Property Layer Undo/Redo ──────────────────────────────────────────────
+
+  // Property layer added — inverse is remove
+  bus.subscribe(CanvasEvents.PROPERTY_LAYER_ADDED, (event: BusEvent) => {
+    const payload = event.payload as { entityId: string; layer: { id: string } };
+    useHistoryStore.getState().pushEntry({
+      event: { type: event.type, payload: event.payload },
+      inverseEvent: {
+        type: CanvasEvents.PROPERTY_LAYER_REMOVED,
+        payload: { entityId: payload.entityId, layerId: payload.layer.id },
+      },
+      timestamp: Date.now(),
+    });
+  });
+
+  // Property layer removed — inverse is add (using captured removedLayer snapshot)
+  bus.subscribe(CanvasEvents.PROPERTY_LAYER_REMOVED, (event: BusEvent) => {
+    const payload = event.payload as { entityId: string; layerId: string; removedLayer?: unknown };
+    if (!payload.removedLayer) return; // can't undo without snapshot
+    useHistoryStore.getState().pushEntry({
+      event: { type: event.type, payload: event.payload },
+      inverseEvent: {
+        type: CanvasEvents.PROPERTY_LAYER_ADDED,
+        payload: { entityId: payload.entityId, layer: payload.removedLayer },
+      },
+      timestamp: Date.now(),
+    });
+  });
+
+  // Property layer toggled — inverse is toggle back
+  bus.subscribe(CanvasEvents.PROPERTY_LAYER_TOGGLED, (event: BusEvent) => {
+    const payload = event.payload as { entityId: string; layerId: string; enabled: boolean };
+    useHistoryStore.getState().pushEntry({
+      event: { type: event.type, payload: event.payload },
+      inverseEvent: {
+        type: CanvasEvents.PROPERTY_LAYER_TOGGLED,
+        payload: { entityId: payload.entityId, layerId: payload.layerId, enabled: !payload.enabled },
+      },
+      timestamp: Date.now(),
+    });
+  });
+
+  // Property layer reordered — inverse uses previous order (augmented by canvas core)
+  bus.subscribe(CanvasEvents.PROPERTY_LAYER_REORDERED, (event: BusEvent) => {
+    const payload = event.payload as { entityId: string; layerIds: string[]; previousLayerIds?: string[] };
+    if (!payload.previousLayerIds) return; // can't undo without previous order
+    useHistoryStore.getState().pushEntry({
+      event: { type: event.type, payload: event.payload },
+      inverseEvent: {
+        type: CanvasEvents.PROPERTY_LAYER_REORDERED,
+        payload: { entityId: payload.entityId, layerIds: payload.previousLayerIds },
+      },
+      timestamp: Date.now(),
+    });
+  });
+
+  // Property layer batch updated — inverse replaces with previous layers (augmented by canvas core)
+  bus.subscribe(CanvasEvents.PROPERTY_LAYER_BATCH_UPDATED, (event: BusEvent) => {
+    const payload = event.payload as { entityId: string; layers: unknown[]; previousLayers?: unknown[] };
+    if (!payload.previousLayers) return; // can't undo without previous snapshot
+    useHistoryStore.getState().pushEntry({
+      event: { type: event.type, payload: event.payload },
+      inverseEvent: {
+        type: CanvasEvents.PROPERTY_LAYER_BATCH_UPDATED,
+        payload: { entityId: payload.entityId, layers: payload.previousLayers },
+      },
+      timestamp: Date.now(),
+    });
+  });
 }

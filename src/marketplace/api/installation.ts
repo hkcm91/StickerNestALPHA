@@ -20,12 +20,28 @@ export async function install(
 ): Promise<{ htmlContent: string; manifest: WidgetManifest }> {
   const { data, error } = await supabase
     .from('widgets')
-    .select('html_content,manifest')
+    .select('html_content,manifest,is_free,price_cents')
     .eq('id', widgetId)
     .eq('is_published', true)
     .single();
 
   if (error || !data) throw new Error(`Widget not found or not published`);
+
+  // Verify payment for paid widgets
+  const widgetData = data as Record<string, unknown>;
+  if (!widgetData.is_free && ((widgetData.price_cents as number) ?? 0) > 0) {
+    const { data: purchase } = await supabase
+      .from('orders')
+      .select('id')
+      .eq('buyer_id', userId)
+      .eq('item_id', widgetId)
+      .in('status', ['paid', 'fulfilled'])
+      .maybeSingle();
+
+    if (!purchase) {
+      throw new Error('Widget requires purchase. Please complete payment first.');
+    }
+  }
 
   const manifestResult = WidgetManifestSchema.safeParse(data.manifest);
   if (!manifestResult.success) {

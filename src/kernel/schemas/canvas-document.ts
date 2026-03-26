@@ -176,6 +176,8 @@ export const CanvasDocumentMetaSchema = z.object({
   description: z.string().optional(),
   /** Optional thumbnail URL */
   thumbnailUrl: z.string().url().optional(),
+  /** Tags for categorization and filtering (max 20 tags, each max 50 chars) */
+  tags: z.array(z.string().max(50)).max(20).optional(),
 });
 
 export type CanvasDocumentMeta = z.infer<typeof CanvasDocumentMetaSchema>;
@@ -270,6 +272,7 @@ export const UpdateCanvasDocumentInputSchema = z.object({
   layoutMode: LayoutModeSchema.optional(),
   platform: CanvasPlatformSchema.optional(),
   spatialMode: SpatialModeSchema.optional(),
+  tags: z.array(z.string().max(50)).max(20).optional(),
 });
 
 export type UpdateCanvasDocumentInput = z.infer<typeof UpdateCanvasDocumentInputSchema>;

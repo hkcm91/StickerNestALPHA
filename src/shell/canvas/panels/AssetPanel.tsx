@@ -14,9 +14,12 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { CanvasEvents } from '@sn/types';
 
 import { bus } from '../../../kernel/bus';
+import { useQuotaCheck } from '../../../kernel/quota';
 import { useGalleryStore } from '../../../kernel/stores/gallery';
 import { useUIStore } from '../../../kernel/stores/ui/ui.store';
+import { useWidgetStore, type WidgetRegistryEntry } from '../../../kernel/stores/widget';
 import { StickerSettingsModal, type StickerSettings } from '../../components';
+import { UpgradePrompt } from '../../components/UpgradePrompt';
 import { searchIconAssets, searchLottieAssets } from '../apis/sticker-asset-apis';
 
 export interface AssetItem {
@@ -293,6 +296,28 @@ export const AssetPanel: React.FC<AssetPanelProps> = ({ assets = DEFAULT_ASSETS 
   const [selectedSticker, setSelectedSticker] = useState<AssetItem | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // Quota enforcement
+  const { gateResource, blocked, clearBlocked } = useQuotaCheck();
+
+  // Marketplace-installed widgets from widgetStore
+  const installedWidgets = useWidgetStore((s) =>
+    Object.values(s.registry).filter((w: WidgetRegistryEntry) => !w.isBuiltIn),
+  );
+
+  const installedWidgetAssets: AssetItem[] = useMemo(
+    () =>
+      installedWidgets.map((w: WidgetRegistryEntry) => ({
+        id: w.widgetId,
+        name: w.manifest.name ?? w.widgetId,
+        type: 'widget' as const,
+        description: w.manifest.description ?? '',
+        tags: w.manifest.tags ?? [],
+        widgetType: 'installed',
+        metadata: { widgetId: w.widgetId },
+      })),
+    [installedWidgets],
+  );
+
   const [apiLoading, setApiLoading] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [iconApiAssets, setIconApiAssets] = useState<AssetItem[]>([]);
@@ -395,10 +420,27 @@ export const AssetPanel: React.FC<AssetPanelProps> = ({ assets = DEFAULT_ASSETS 
     [apiAssets, selectedApiPreviewId],
   );
 
+  // Merge marketplace-installed widgets into asset list
+  const widgetRegistry = useWidgetStore((s) => s.registry);
+  const allAssets = useMemo(() => {
+    const marketplaceWidgets: AssetItem[] = Object.values(widgetRegistry)
+      .filter((entry) => !entry.isBuiltIn)
+      .map((entry) => ({
+        id: `mp-${entry.widgetId}`,
+        name: entry.manifest.name,
+        type: 'widget' as const,
+        description: entry.manifest.description ?? undefined,
+        tags: entry.manifest.tags ?? [],
+        widgetType: entry.manifest.category ?? 'other',
+        metadata: { widgetId: entry.widgetId, marketplace: true },
+      }));
+    return [...assets, ...marketplaceWidgets];
+  }, [assets, widgetRegistry]);
+
   const filteredAssets = useMemo(() => {
-    if (!searchQuery.trim()) return assets;
+    if (!searchQuery.trim()) return allAssets;
     const lower = searchQuery.toLowerCase();
-    return assets.filter(
+    return allAssets.filter(
       (item) =>
         item.name.toLowerCase().includes(lower) ||
         item.type.toLowerCase().includes(lower) ||
@@ -421,7 +463,7 @@ export const AssetPanel: React.FC<AssetPanelProps> = ({ assets = DEFAULT_ASSETS 
   const { assets: galleryAssets, uploadAsset, isLoading: galleryLoading, error: galleryError } = useGalleryStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleAssetClick = useCallback((asset: AssetItem) => {
+  const handleAssetClick = useCallback(async (asset: AssetItem) => {
     if (asset.type === 'sticker' || asset.type === 'gallery') {
       setSelectedSticker(asset);
       setIsModalOpen(true);
@@ -468,12 +510,16 @@ export const AssetPanel: React.FC<AssetPanelProps> = ({ assets = DEFAULT_ASSETS 
       return;
     }
 
+    // Gate widget placement behind quota check
+    const result = await gateResource('widgets_per_canvas');
+    if (!result.allowed) return;
+
     bus.emit(CanvasEvents.TOOL_CHANGED, {
       tool: 'widget',
       widgetId: asset.id,
       metadata: asset.metadata,
     });
-  }, [apiIconColor]);
+  }, [apiIconColor, gateResource]);
 
   const toggleWidgetExpansion = useCallback((assetId: string) => {
     setExpandedWidgets((current) => ({ ...current, [assetId]: !current[assetId] }));
@@ -907,6 +953,79 @@ export const AssetPanel: React.FC<AssetPanelProps> = ({ assets = DEFAULT_ASSETS 
                 gap: 'var(--asset-panel-space-2)',
               }}
             >
+              {/* Marketplace-installed widgets */}
+              {installedWidgetAssets.length > 0 && (
+                <>
+                  <div
+                    style={{
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      letterSpacing: '0.3px',
+                      color: 'var(--asset-panel-muted)',
+                      textTransform: 'uppercase',
+                      marginBottom: '2px',
+                    }}
+                  >
+                    Installed
+                  </div>
+                  {installedWidgetAssets.map((asset) => (
+                    <button
+                      key={asset.id}
+                      data-testid={`installed-widget-${asset.id}`}
+                      onClick={() => handleAssetClick(asset)}
+                      style={{
+                        width: '100%',
+                        border: '1px solid var(--sn-accent, #6366f1)',
+                        borderRadius: 'var(--asset-panel-radius-md)',
+                        background: 'var(--asset-panel-bg)',
+                        padding: '10px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        color: 'inherit',
+                        fontSize: '12px',
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: '32px',
+                          height: '32px',
+                          background: 'var(--sn-accent, #6366f1)',
+                          borderRadius: 'var(--asset-panel-radius-sm)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '14px',
+                          color: '#fff',
+                        }}
+                      >
+                        {asset.icon ?? '\u2b50'}
+                      </div>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontWeight: 600 }}>{asset.name}</div>
+                        <div style={{ fontSize: '10px', color: 'var(--asset-panel-muted)' }}>
+                          Marketplace
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                  <div
+                    style={{
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      letterSpacing: '0.3px',
+                      color: 'var(--asset-panel-muted)',
+                      textTransform: 'uppercase',
+                      marginTop: '8px',
+                      marginBottom: '2px',
+                    }}
+                  >
+                    Built-in
+                  </div>
+                </>
+              )}
               {widgetAssets.map((asset) => {
                 const isExpanded = expandedWidgets[asset.id] === true;
                 return (
@@ -1325,6 +1444,16 @@ export const AssetPanel: React.FC<AssetPanelProps> = ({ assets = DEFAULT_ASSETS 
         assetUrl={selectedSticker?.assetUrl}
         assetType={selectedSticker?.assetType}
       />
+
+      {blocked && (
+        <UpgradePrompt
+          resource={blocked.resource}
+          current={blocked.current}
+          limit={blocked.limit}
+          upgradeTier={blocked.upgradeTier as 'creator' | 'pro' | 'enterprise' | null}
+          onClose={clearBlocked}
+        />
+      )}
     </>
   );
 };

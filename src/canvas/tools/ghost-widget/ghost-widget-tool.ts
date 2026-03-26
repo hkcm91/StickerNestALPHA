@@ -8,10 +8,12 @@
  * @layer L4A-2
  */
 
-import { CanvasEvents } from '@sn/types';
+import type { GridConfig } from '@sn/types';
+import { CanvasEvents, GridEvents } from '@sn/types';
 import type { WidgetInviteMode } from '@sn/types';
 
 import { bus } from '../../../kernel/bus';
+import { snapToGridCell } from '../move/snap';
 import type { Tool, CanvasPointerEvent, CanvasKeyEvent } from '../registry';
 
 export interface GhostWidgetPayload {
@@ -29,6 +31,12 @@ export function createGhostWidgetTool(
   payload: GhostWidgetPayload,
   getMode: () => 'edit' | 'preview',
 ): Tool {
+  let gridConfig: GridConfig | null = null;
+
+  const unsubGrid = bus.subscribe(GridEvents.CONFIG_CHANGED, (event: { payload: { config: Partial<GridConfig> } }) => {
+    gridConfig = gridConfig ? { ...gridConfig, ...event.payload.config } : null;
+  });
+
   return {
     name: 'ghost-widget',
 
@@ -42,6 +50,7 @@ export function createGhostWidgetTool(
     },
 
     onDeactivate() {
+      unsubGrid();
       bus.emit(CanvasEvents.GHOST_DEACTIVATED, {
         inviteId: payload.inviteId,
       });
@@ -59,16 +68,22 @@ export function createGhostWidgetTool(
 
       // Determine default size from manifest snapshot or use fallback
       const manifest = payload.widgetManifestSnapshot;
-      const size = manifest?.size as Record<string, unknown> | undefined;
-      const width = (size?.defaultWidth as number) ?? 300;
-      const height = (size?.defaultHeight as number) ?? 200;
+      const sizeSpec = manifest?.size as Record<string, unknown> | undefined;
+      const width = (sizeSpec?.defaultWidth as number) ?? 300;
+      const height = (sizeSpec?.defaultHeight as number) ?? 200;
+
+      const size = { width, height };
+      let position = event.canvasPosition;
+      if (gridConfig && gridConfig.enabled && gridConfig.snapMode !== 'none') {
+        position = snapToGridCell(position, gridConfig, size);
+      }
 
       // 1. Create the widget entity at click position
       bus.emit(CanvasEvents.ENTITY_CREATED, {
         type: 'widget',
         transform: {
-          position: event.canvasPosition,
-          size: { width, height },
+          position,
+          size,
           rotation: 0,
           scale: 1,
         },
@@ -87,14 +102,14 @@ export function createGhostWidgetTool(
           sourceWidgetInstanceId: payload.sourceWidgetInstanceId,
           sourcePortId: payload.sourcePortId,
           targetPortId: payload.targetPortId,
-          targetPosition: event.canvasPosition,
+          targetPosition: position,
         });
       }
 
       // 3. Signal placement complete
       bus.emit(CanvasEvents.GHOST_PLACED, {
         inviteId: payload.inviteId,
-        position: event.canvasPosition,
+        position,
       });
 
       // 4. Switch back to select tool

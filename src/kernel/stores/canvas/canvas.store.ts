@@ -27,6 +27,8 @@ export interface CanvasMeta {
   thumbnailUrl: string | null;
   /** Whether the canvas is publicly accessible via slug */
   isPublic: boolean;
+  /** Tags for categorization and filtering */
+  tags?: string[];
   /** Canvas-level settings (grid size, snap, background, etc.) */
   settings: Record<string, unknown>;
 }
@@ -57,6 +59,8 @@ export interface CanvasActions {
   setActiveCanvas: (id: string | null, meta: CanvasMeta | null) => void;
   setSharingSettings: (settings: CanvasSharingSettings | null) => void;
   setUserRole: (role: CanvasRole | null) => void;
+  setCanvasTags: (tags: string[]) => void;
+  setCanvasThumbnail: (url: string) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   clearError: () => void;
@@ -82,6 +86,14 @@ export const useCanvasStore = create<CanvasStore>()(
         set({ activeCanvasId, canvasMeta }),
       setSharingSettings: (sharingSettings) => set({ sharingSettings }),
       setUserRole: (userRole) => set({ userRole }),
+      setCanvasTags: (tags) =>
+        set((state) => ({
+          canvasMeta: state.canvasMeta ? { ...state.canvasMeta, tags } : null,
+        })),
+      setCanvasThumbnail: (url) =>
+        set((state) => ({
+          canvasMeta: state.canvasMeta ? { ...state.canvasMeta, thumbnailUrl: url } : null,
+        })),
       setLoading: (isLoading) => set({ isLoading }),
       setError: (error) => set({ error }),
       clearError: () => set({ error: null }),

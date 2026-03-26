@@ -148,6 +148,9 @@ export {
   Object3DEntitySchema,
   ArtboardEntitySchema,
   FolderEntitySchema,
+  ConnectorEntitySchema,
+  ConnectorLineStyleSchema,
+  ConnectorArrowHeadSchema,
   CanvasEntitySchema,
   // Types
   type CanvasEntityType,
@@ -173,6 +176,9 @@ export {
   type Object3DEntity,
   type ArtboardEntity,
   type FolderEntity,
+  type ConnectorEntity,
+  type ConnectorLineStyle,
+  type ConnectorArrowHead,
   type CanvasEntity,
   // JSON Schemas
   CropRectJSONSchema,
@@ -185,12 +191,22 @@ export {
   PathEntityJSONSchema,
   ArtboardEntityJSONSchema,
   FolderEntityJSONSchema,
+  ConnectorEntityJSONSchema,
   CanvasEntityJSONSchema,
   WidgetIntrinsicSizeJSONSchema,
   WidgetScalingModeJSONSchema,
   WidgetCropConfigJSONSchema,
   WidgetContainerEntityJSONSchema,
 } from "./canvas-entity";
+
+// =============================================================================
+// Property Layer Schema
+// =============================================================================
+export {
+  PropertyLayerSchema,
+  type PropertyLayer,
+  PropertyLayerJSONSchema,
+} from "./property-layer";
 
 // =============================================================================
 // Path Sub-Schemas (anchor points, fill rules)

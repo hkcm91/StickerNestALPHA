@@ -457,7 +457,7 @@ export function createGridRenderer(cellStore: GridCellStore): GridRenderer {
     _config: GridConfig
   ): void {
     const points = collectIntersectionPoints(visibleCellBounds, _viewport, _config);
-    const radius = _config.gridLineWidth;
+    const radius = _config.dotSize ?? _config.gridLineWidth;
 
     context.beginPath();
     for (const p of points) {

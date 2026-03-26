@@ -90,8 +90,8 @@ export const MyPurchasesSection: React.FC = () => {
           .limit(50),
       ]);
 
-      setSubscriptions((subsRes.data as CanvasSubscription[]) ?? []);
-      setOrders((ordersRes.data as Order[]) ?? []);
+      setSubscriptions((subsRes.data as unknown as CanvasSubscription[]) ?? []);
+      setOrders((ordersRes.data as unknown as Order[]) ?? []);
       setLoading(false);
     }
     load();
