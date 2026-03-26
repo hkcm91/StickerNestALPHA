@@ -15,6 +15,11 @@ import { bus } from '../../../kernel/bus';
 
 import { useCanvasShortcuts, type CanvasShortcutDeps } from './useCanvasShortcuts';
 
+// Mock enterXR to avoid WebXR session errors in test environment
+vi.mock('../../../spatial/session', () => ({
+  enterXR: vi.fn(),
+}));
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -549,5 +554,65 @@ describe('useCanvasShortcuts (production)', () => {
 
     result.current.onKeyDown(makeKeyEvent({ key: 'v', ctrlKey: true }));
     expect(deps.setTool).not.toHaveBeenCalled();
+  });
+
+  // ---- Spatial mode shortcuts ----
+
+  it('toggles spatialMode from 2d to 3d on Shift+3', () => {
+    const setSpatialMode = vi.fn();
+    const deps = makeDeps({ spatialMode: '2d', setSpatialMode });
+    const { result } = renderHook(() => useCanvasShortcuts(deps));
+
+    const e = makeKeyEvent({ key: '#', shiftKey: true });
+    result.current.onKeyDown(e);
+
+    expect(e.preventDefault).toHaveBeenCalled();
+    expect(setSpatialMode).toHaveBeenCalledWith('3d');
+  });
+
+  it('toggles spatialMode from 3d to 2d on Shift+3', () => {
+    const setSpatialMode = vi.fn();
+    const deps = makeDeps({ spatialMode: '3d', setSpatialMode });
+    const { result } = renderHook(() => useCanvasShortcuts(deps));
+
+    const e = makeKeyEvent({ key: '#', shiftKey: true });
+    result.current.onKeyDown(e);
+
+    expect(e.preventDefault).toHaveBeenCalled();
+    expect(setSpatialMode).toHaveBeenCalledWith('2d');
+  });
+
+  it('does not toggle spatialMode without setSpatialMode', () => {
+    const deps = makeDeps({ spatialMode: '2d' });
+    const { result } = renderHook(() => useCanvasShortcuts(deps));
+
+    const e = makeKeyEvent({ key: '#', shiftKey: true });
+    result.current.onKeyDown(e);
+
+    expect(e.preventDefault).not.toHaveBeenCalled();
+  });
+
+  it('enters VR on Shift+V when in 3d mode', () => {
+    const setSpatialMode = vi.fn();
+    const deps = makeDeps({ spatialMode: '3d', setSpatialMode });
+    const { result } = renderHook(() => useCanvasShortcuts(deps));
+
+    const e = makeKeyEvent({ key: 'V', shiftKey: true });
+    result.current.onKeyDown(e);
+
+    expect(e.preventDefault).toHaveBeenCalled();
+    expect(setSpatialMode).toHaveBeenCalledWith('vr');
+  });
+
+  it('does NOT enter VR on Shift+V when in 2d mode', () => {
+    const setSpatialMode = vi.fn();
+    const deps = makeDeps({ spatialMode: '2d', setSpatialMode });
+    const { result } = renderHook(() => useCanvasShortcuts(deps));
+
+    const e = makeKeyEvent({ key: 'V', shiftKey: true });
+    result.current.onKeyDown(e);
+
+    expect(e.preventDefault).not.toHaveBeenCalled();
+    expect(setSpatialMode).not.toHaveBeenCalled();
   });
 });

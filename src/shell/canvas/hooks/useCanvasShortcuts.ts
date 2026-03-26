@@ -11,11 +11,12 @@
 
 import { useCallback } from 'react';
 
-import type { CanvasEntity } from '@sn/types';
+import type { CanvasEntity, SpatialMode } from '@sn/types';
 import { CanvasEvents } from '@sn/types';
 
 import type { SceneGraph } from '../../../canvas/core';
 import { bus } from '../../../kernel/bus';
+import { enterXR } from '../../../spatial/session';
 
 import type { CanvasToolId } from './useActiveTool';
 import type { ViewportStore } from './useViewport';
@@ -41,6 +42,10 @@ export interface CanvasShortcutDeps {
   viewportStore?: ViewportStore;
   /** Last known cursor position in screen-space (relative to canvas container) */
   lastCursorScreen?: React.RefObject<{ x: number; y: number } | null>;
+  /** Current spatial mode (2d, 3d, vr, ar) */
+  spatialMode?: SpatialMode;
+  /** Set the spatial mode */
+  setSpatialMode?: (mode: SpatialMode) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -94,6 +99,8 @@ export function useCanvasShortcuts(deps: CanvasShortcutDeps) {
     setTool,
     viewportStore,
     lastCursorScreen,
+    spatialMode,
+    setSpatialMode,
   } = deps;
 
   const onKeyDown = useCallback(
@@ -283,6 +290,22 @@ export function useCanvasShortcuts(deps: CanvasShortcutDeps) {
         return;
       }
 
+      // ----- Shift+3 — toggle between 2D and 3D spatial mode -----
+      if (key === '#' && !mod && shift && setSpatialMode) {
+        e.preventDefault();
+        const next = spatialMode === '2d' ? '3d' : '2d';
+        setSpatialMode(next);
+        return;
+      }
+
+      // ----- Shift+V — enter VR from 3D mode -----
+      if (key === 'V' && !mod && shift && spatialMode !== '2d' && setSpatialMode) {
+        e.preventDefault();
+        setSpatialMode('vr');
+        enterXR('immersive-vr');
+        return;
+      }
+
       // ----- Single-key tool switching (V, H, T, R, P, E) -----
       const toolKey = TOOL_KEYS[key.toLowerCase()];
       if (toolKey && !mod && !shift && !hasSelection) {
@@ -291,7 +314,7 @@ export function useCanvasShortcuts(deps: CanvasShortcutDeps) {
         return;
       }
     },
-    [isEditMode, selectedIds, sceneGraph, selectIds, clearSelection, setTool, viewportStore, lastCursorScreen],
+    [isEditMode, selectedIds, sceneGraph, selectIds, clearSelection, setTool, viewportStore, lastCursorScreen, spatialMode, setSpatialMode],
   );
 
   return { onKeyDown };
