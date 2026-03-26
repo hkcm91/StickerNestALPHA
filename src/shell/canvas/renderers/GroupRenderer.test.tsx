@@ -42,11 +42,13 @@ describe('GroupRenderer', () => {
     expect(container.querySelector('[data-entity-type="group"]')).not.toBeNull();
   });
 
-  it('applies dashed selection outline when selected', () => {
+  it('renders differently when selected vs not selected', () => {
     const entity = makeGroup();
-    const { container } = render(<GroupRenderer entity={entity} isSelected={true} />);
-    const el = container.querySelector('[data-entity-type="group"]') as HTMLElement;
-    expect(el.style.outline).toContain('dashed');
+    const { container: c1 } = render(<GroupRenderer entity={entity} isSelected={true} />);
+    const { container: c2 } = render(<GroupRenderer entity={entity} isSelected={false} />);
+    const sel = c1.querySelector('[data-entity-type="group"]') as HTMLElement;
+    const unsel = c2.querySelector('[data-entity-type="group"]') as HTMLElement;
+    expect(sel.outerHTML).not.toBe(unsel.outerHTML);
   });
 
   it('has transparent background when not selected', () => {

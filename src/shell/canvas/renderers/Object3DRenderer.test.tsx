@@ -47,7 +47,9 @@ describe('Object3DRenderer', () => {
     const entity = makeObject3D({ color: '#00ff00' } as any);
     const { container } = render(<Object3DRenderer entity={entity} />);
     const el = container.firstElementChild as HTMLElement;
-    expect(el.style.background).toBe('rgb(0, 255, 0)');
+    // happy-dom may normalize hex to rgb or keep as hex
+    const bg = el.style.background;
+    expect(bg === 'rgb(0, 255, 0)' || bg === '#00ff00').toBe(true);
   });
 
   it('applies border-radius 50% for sphere primitive', () => {
@@ -68,6 +70,7 @@ describe('Object3DRenderer', () => {
     const entity = makeObject3D({ color: undefined } as any);
     const { container } = render(<Object3DRenderer entity={entity} />);
     const el = container.firstElementChild as HTMLElement;
-    expect(el.style.background).toBe('rgb(204, 204, 204)');
+    const bg = el.style.background;
+    expect(bg === 'rgb(204, 204, 204)' || bg === '#cccccc').toBe(true);
   });
 });

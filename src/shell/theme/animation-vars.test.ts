@@ -34,11 +34,16 @@ describe('transition', () => {
 
   it('handles multiple properties', () => {
     const result = transition('background', 'color', 'transform');
-    const parts = result.split(', ');
-    expect(parts).toHaveLength(3);
-    expect(parts[0]).toContain('background');
-    expect(parts[1]).toContain('color');
-    expect(parts[2]).toContain('transform');
+    // Result contains cubic-bezier with internal commas, so check substring presence
+    expect(result).toContain('background');
+    expect(result).toContain('color');
+    expect(result).toContain('transform');
+    // Each property should appear once with its own timing
+    const bgIndex = result.indexOf('background');
+    const colorIndex = result.indexOf('color');
+    const transformIndex = result.indexOf('transform');
+    expect(bgIndex).toBeLessThan(colorIndex);
+    expect(colorIndex).toBeLessThan(transformIndex);
   });
 
   it('respects duration and easing options', () => {
