@@ -11,10 +11,15 @@ import { CanvasEvents, CanvasDocumentEvents, ShellEvents, InteractionModeEvents 
 
 import { bus } from '../../bus';
 
+/** Toast notification shown in the canvas UI */
 export interface Toast {
+  /** Unique toast identifier for removal */
   id: string;
+  /** Human-readable message displayed to the user */
   message: string;
+  /** Visual severity — determines icon and color */
   type: 'info' | 'success' | 'warning' | 'error';
+  /** Auto-dismiss duration in ms. Omit for persistent toasts requiring manual dismissal. */
   duration?: number;
 }
 
@@ -33,17 +38,27 @@ export interface UIState {
    * Independent of canvasInteractionMode — you can have editor chrome with preview interaction.
    */
   chromeMode: ChromeMode;
+  /** Currently active canvas tool (e.g., 'select', 'pen', 'text', 'rect') */
   activeTool: string;
-  /** Metadata from the last TOOL_CHANGED event (e.g., widgetId, assetId) */
+  /** Metadata from the last TOOL_CHANGED event (e.g., widgetId, assetId for placement tools) */
   pendingToolData: Record<string, unknown> | null;
+  /** Whether the left sidebar panel is open */
   sidebarLeftOpen: boolean;
+  /** Whether the right sidebar panel is open */
   sidebarRightOpen: boolean;
+  /** Panel visibility map — keys are panel IDs, values are open/closed */
   panels: Record<string, boolean>;
+  /** Active color theme for the application shell */
   theme: 'light' | 'dark' | 'high-contrast';
+  /** Whether a global loading overlay is active */
   isGlobalLoading: boolean;
+  /** Queue of active toast notifications */
   toasts: Toast[];
+  /** Current spatial rendering mode: 2d canvas, 3d browser, or VR */
   spatialMode: SpatialMode;
+  /** Target platform for viewport sizing (web, mobile, desktop) */
   canvasPlatform: CanvasPlatform;
+  /** Whether artboard preview mode is active (renders within artboard bounds) */
   artboardPreviewMode: boolean;
   /** Fullscreen preview — hides all chrome and shows canvas in preview mode */
   fullscreenPreview: boolean;
@@ -51,23 +66,41 @@ export interface UIState {
   platformConfigs: Record<CanvasPlatform, Partial<ViewportConfig>>;
 }
 
+/** Actions for mutating UI state. All cross-store coordination goes through the event bus. */
 export interface UIActions {
+  /** Sets canvas interaction mode. Never persisted — always derived from role + URL context. */
   setCanvasInteractionMode: (mode: 'edit' | 'preview') => void;
+  /** Sets chrome visibility mode (editor: full UI, clean: minimal/embed) */
   setChromeMode: (mode: ChromeMode) => void;
+  /** Sets the active canvas tool. Normalizes 'move' to 'select'. */
   setActiveTool: (tool: string) => void;
+  /** Sets metadata from the last TOOL_CHANGED event (e.g., widgetId for widget tool) */
   setPendingToolData: (data: Record<string, unknown> | null) => void;
+  /** Toggles left sidebar open/closed */
   toggleSidebarLeft: () => void;
+  /** Toggles right sidebar open/closed */
   toggleSidebarRight: () => void;
+  /** Sets a named panel's open/closed state */
   setPanelOpen: (panelId: string, open: boolean) => void;
+  /** Sets the active theme. Emits ShellEvents.THEME_CHANGED for widget iframe forwarding. */
   setTheme: (theme: 'light' | 'dark' | 'high-contrast') => void;
+  /** Sets the global loading overlay state */
   setGlobalLoading: (loading: boolean) => void;
+  /** Adds a toast notification to the queue */
   addToast: (toast: Toast) => void;
+  /** Removes a toast by ID */
   removeToast: (id: string) => void;
+  /** Switches spatial rendering mode (2d, 3d, or vr) */
   setSpatialMode: (mode: SpatialMode) => void;
+  /** Sets the target canvas platform (web, mobile, desktop) and emits PLATFORM_CHANGED */
   setCanvasPlatform: (platform: CanvasPlatform) => void;
+  /** Updates viewport config for a specific platform preset */
   setPlatformConfig: (platform: CanvasPlatform, config: Partial<ViewportConfig>) => void;
+  /** Toggles artboard preview mode (renders canvas within artboard bounds) */
   setArtboardPreviewMode: (preview: boolean) => void;
+  /** Toggles fullscreen preview — hides all chrome and shows canvas in preview mode */
   setFullscreenPreview: (fullscreen: boolean) => void;
+  /** Resets all UI state to defaults */
   reset: () => void;
 }
 

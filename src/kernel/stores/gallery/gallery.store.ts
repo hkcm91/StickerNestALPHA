@@ -34,41 +34,68 @@ interface SupabaseErrorShape {
   details?: string;
 }
 
+/** User-uploaded gallery asset (image, GIF, video) available for canvas placement */
 export interface GalleryAsset {
+  /** Unique asset identifier (UUID) */
   id: string;
+  /** Display name of the asset file */
   name: string;
+  /** Public URL for rendering the asset (proxied via Supabase storage) */
   url: string;
+  /** Internal storage path in the Supabase 'assets' bucket */
   storagePath: string;
+  /** Public URL for the thumbnail version (if generated) */
   thumbnailUrl?: string;
+  /** File size in bytes */
   size: number;
+  /** MIME type (e.g., 'image/png', 'image/gif', 'video/mp4') */
   type: string;
+  /** Image/video pixel width (null for non-visual assets) */
   width?: number;
+  /** Image/video pixel height (null for non-visual assets) */
   height?: number;
+  /** Optional user-provided description */
   description?: string;
+  /** Tags for organization and search filtering */
   tags?: string[];
+  /** ISO 8601 creation timestamp */
   createdAt: string;
+  /** ISO 8601 last update timestamp */
   updatedAt: string;
 }
 
+/** Gallery state — tracks user-uploaded assets synced with Supabase storage */
 export interface GalleryState {
+  /** All loaded gallery assets for the current user */
   assets: GalleryAsset[];
+  /** True during upload, delete, or gallery load operations */
   isLoading: boolean;
+  /** Last error message from gallery operations */
   error: string | null;
+  /** True after the initial gallery load completes */
   isInitialized: boolean;
   /** Current user ID, set via AUTH_STATE_CHANGED bus event */
   currentUserId: string | null;
 }
 
+/** Actions for managing gallery assets. Emits GalleryEvents bus events on mutations. */
 export interface GalleryActions {
+  /** Uploads a file to Supabase storage and creates a gallery_assets row. Emits ASSET_UPLOADED. */
   uploadAsset: (file: File) => Promise<GalleryAsset | null>;
+  /** Deletes an asset from storage and the database. Emits ASSET_DELETED. */
   deleteAsset: (assetId: string) => Promise<void>;
+  /** Updates asset metadata (name, description, tags) in the database */
   updateAsset: (
     assetId: string,
     updates: { name?: string; description?: string; tags?: string[] }
   ) => Promise<void>;
+  /** Loads all gallery assets for the authenticated user from Supabase. Emits GALLERY_LOADED. */
   loadGallery: () => Promise<void>;
+  /** Sets the loading state */
   setLoading: (loading: boolean) => void;
+  /** Sets or clears the error message */
   setError: (error: string | null) => void;
+  /** Resets gallery state to initial values */
   reset: () => void;
 }
 

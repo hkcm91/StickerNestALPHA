@@ -39,45 +39,73 @@ export interface DockerState {
   error: string | null;
 }
 
+/**
+ * Actions for managing docker containers. Emits DockerEvents bus events on mutations.
+ * Dockers persist across sessions — they are user-level UI preferences, not canvas entities.
+ */
 export interface DockerActions {
-  // Docker CRUD
+  // ── Docker CRUD ──
+  /** Creates a new docker container. Returns the generated docker ID. Emits CREATED. */
   addDocker: (input: CreateDockerInput) => string;
+  /** Removes a docker and all its tabs/widgets. Emits DELETED. */
   removeDocker: (id: string) => void;
+  /** Updates docker properties (name, position, size, etc.). Emits UPDATED. */
   updateDocker: (id: string, updates: UpdateDockerInput) => void;
 
-  // Docking
+  // ── Docking ──
+  /** Sets dock mode: 'floating', 'docked-left', or 'docked-right'. Emits DOCK_MODE_CHANGED. */
   setDockMode: (id: string, mode: DockerDockMode) => void;
+  /** Sets the floating position (only applies when dockMode is 'floating') */
   setPosition: (id: string, position: Point2D) => void;
+  /** Sets the docker panel size */
   setSize: (id: string, size: Size2D) => void;
 
-  // Visibility
+  // ── Visibility ──
+  /** Toggles docker visibility (shown/hidden). Emits VISIBILITY_CHANGED. */
   toggleVisible: (id: string) => void;
+  /** Sets docker visibility explicitly. Emits VISIBILITY_CHANGED. */
   setVisible: (id: string, visible: boolean) => void;
+  /** Toggles whether the docker is pinned (stays visible across canvas navigation) */
   togglePinned: (id: string) => void;
 
-  // Tabs
+  // ── Tabs ──
+  /** Adds a tab to a docker. Returns the generated tab ID. Emits TAB_ADDED. */
   addTab: (dockerId: string, tab?: Partial<Omit<DockerTab, 'id'>>) => string;
+  /** Removes a tab by index. Emits TAB_REMOVED. */
   removeTab: (dockerId: string, tabIndex: number) => void;
+  /** Sets the active (focused) tab. Emits TAB_ACTIVATED. */
   setActiveTab: (dockerId: string, tabIndex: number) => void;
+  /** Renames a tab at the given index */
   renameTab: (dockerId: string, tabIndex: number, name: string) => void;
+  /** Reorders tabs by providing the desired tab ID order */
   reorderTabs: (dockerId: string, tabIds: string[]) => void;
 
-  // Widgets in tabs
+  // ── Widgets in tabs ──
+  /** Adds a widget instance to a tab. Emits WIDGET_ADDED. */
   addWidgetToTab: (dockerId: string, tabIndex: number, widgetInstanceId: string, height?: number) => void;
+  /** Removes a widget instance from a tab. Emits WIDGET_REMOVED. */
   removeWidgetFromTab: (dockerId: string, tabIndex: number, widgetInstanceId: string) => void;
+  /** Resizes a widget within a tab (undefined = auto height). Emits WIDGET_RESIZED. */
   resizeWidgetInTab: (dockerId: string, tabIndex: number, widgetInstanceId: string, height: number | undefined) => void;
+  /** Reorders widgets within a tab by providing the desired instance ID order */
   reorderWidgetsInTab: (dockerId: string, tabIndex: number, widgetInstanceIds: string[]) => void;
 
-  // Z-order
+  // ── Z-order ──
+  /** Brings a floating docker to the front of the z-order stack */
   bringToFront: (id: string) => void;
 
-  // Persistence
+  // ── Persistence ──
+  /** Loads docker configuration from backend. Emits CONFIG_LOADED. */
   loadFromConfig: (dockers: Docker[]) => void;
+  /** Returns all dockers as an array for backend persistence */
   getConfig: () => Docker[];
 
-  // Utility
+  // ── Utility ──
+  /** Sets the loading state for backend operations */
   setLoading: (loading: boolean) => void;
+  /** Sets or clears the error message */
   setError: (error: string | null) => void;
+  /** Resets all docker state to initial values */
   reset: () => void;
 }
 

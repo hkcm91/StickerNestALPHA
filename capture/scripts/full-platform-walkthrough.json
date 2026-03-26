@@ -1,0 +1,251 @@
+{
+  "name": "full-platform-walkthrough",
+  "feature": "Full Platform Walkthrough",
+  "audience": "creator",
+  "description": "3-minute walkthrough of StickerNest: canvas, tools, widgets, and preview mode.",
+  "metadata": {
+    "hook": "Build anything. On an infinite canvas.",
+    "cta": "Try StickerNest free",
+    "tags": ["platform", "walkthrough", "demo", "video"],
+    "description": "Full platform walkthrough video showing canvas editing, widgets, and preview mode."
+  },
+  "target": {
+    "baseUrl": "http://localhost:5173/canvas/demo",
+    "viewport": { "width": 1440, "height": 900 },
+    "deviceScaleFactor": 1
+  },
+  "setup": [
+    {
+      "id": "navigate-home",
+      "label": "Navigate to app home to establish localhost origin",
+      "action": { "type": "navigate", "url": "http://localhost:5173/" },
+      "capture": { "screenshot": false, "video": false, "gif": false, "settleDelay": 0 }
+    },
+    {
+      "id": "wait-for-app-load",
+      "label": "Wait for app shell to load",
+      "action": { "type": "wait", "ms": 1500 },
+      "capture": { "screenshot": false, "video": false, "gif": false, "settleDelay": 0 }
+    },
+    {
+      "id": "clear-demo-storage",
+      "label": "Clear saved demo canvas to force fresh seed",
+      "action": { "type": "eval", "script": "localStorage.removeItem('sn:canvas:demo'); localStorage.removeItem('sn:canvas:index');" },
+      "capture": { "screenshot": false, "video": false, "gif": false, "settleDelay": 0 }
+    },
+    {
+      "id": "navigate-demo",
+      "label": "Navigate to demo canvas (will seed fresh entities)",
+      "action": { "type": "navigate", "url": "http://localhost:5173/canvas/demo" },
+      "capture": { "screenshot": false, "video": false, "gif": false, "settleDelay": 0 }
+    },
+    {
+      "id": "wait-for-canvas",
+      "label": "Wait for canvas viewport",
+      "action": { "type": "waitForSelector", "selector": "[data-testid='canvas-viewport']", "state": "visible", "timeout": 15000 },
+      "capture": { "screenshot": false, "video": false, "gif": false, "settleDelay": 0 }
+    },
+    {
+      "id": "wait-for-seed",
+      "label": "Wait for demo entities to seed and render",
+      "action": { "type": "wait", "ms": 3000 },
+      "capture": { "screenshot": false, "video": false, "gif": false, "settleDelay": 0 }
+    },
+    {
+      "id": "zoom-to-fit",
+      "label": "Zoom to fit all seeded entities in viewport",
+      "action": { "type": "keyboard", "key": "1", "modifiers": ["Control"] },
+      "capture": { "screenshot": false, "video": false, "gif": false, "settleDelay": 0 }
+    },
+    {
+      "id": "wait-for-zoom-settle",
+      "label": "Wait for zoom animation to settle",
+      "action": { "type": "wait", "ms": 800 },
+      "capture": { "screenshot": false, "video": false, "gif": false, "settleDelay": 0 }
+    }
+  ],
+  "steps": [
+    {
+      "id": "hero-shot",
+      "label": "Hero: full canvas, all entities visible",
+      "action": { "type": "wait", "ms": 600 },
+      "capture": {
+        "screenshot": true,
+        "video": true,
+        "gif": false,
+        "annotation": "StickerNest — the infinite canvas platform",
+        "settleDelay": 400
+      },
+      "narration": "This is StickerNest. An infinite canvas where widgets, stickers, and data all live together."
+    },
+
+    {
+      "id": "zoom-in-widgets",
+      "label": "Zoom into the widget row",
+      "action": { "type": "scroll", "deltaX": 0, "deltaY": -400 },
+      "capture": {
+        "screenshot": false,
+        "video": true,
+        "gif": false,
+        "settleDelay": 500
+      },
+      "narration": "Zoom in — everything on the canvas is infinitely zoomable."
+    },
+    {
+      "id": "widget-row-shot",
+      "label": "Widget row: Todo, Kanban, Pathfinder",
+      "action": { "type": "wait", "ms": 600 },
+      "capture": {
+        "screenshot": true,
+        "video": true,
+        "gif": false,
+        "annotation": "Widgets are interactive apps — drop them anywhere on the canvas",
+        "settleDelay": 300
+      },
+      "narration": "Widgets are fully interactive apps living right on your canvas."
+    },
+
+    {
+      "id": "zoom-back-fit",
+      "label": "Zoom back to fit view",
+      "action": { "type": "keyboard", "key": "1", "modifiers": ["Control"] },
+      "capture": {
+        "screenshot": false,
+        "video": true,
+        "gif": false,
+        "settleDelay": 700
+      }
+    },
+    {
+      "id": "fit-view-shot",
+      "label": "Full canvas fit — all entities in frame",
+      "action": { "type": "wait", "ms": 500 },
+      "capture": {
+        "screenshot": true,
+        "video": true,
+        "gif": false,
+        "annotation": "Everything lives together — text, shapes, widgets, and stickers",
+        "settleDelay": 300
+      }
+    },
+
+    {
+      "id": "select-entity",
+      "label": "Click to select the title text",
+      "action": { "type": "click", "selector": "[data-testid='canvas-viewport']", "position": { "x": 300, "y": 200 } },
+      "capture": {
+        "screenshot": false,
+        "video": true,
+        "gif": false,
+        "settleDelay": 400
+      }
+    },
+    {
+      "id": "selected-entity-shot",
+      "label": "Entity selected — handles visible",
+      "action": { "type": "wait", "ms": 500 },
+      "capture": {
+        "screenshot": true,
+        "video": true,
+        "gif": false,
+        "annotation": "Click any entity to select, resize, move, or configure it",
+        "settleDelay": 300
+      },
+      "narration": "Click any entity to select it. Handles appear for resize, move, and config."
+    },
+
+    {
+      "id": "drag-entity",
+      "label": "Drag entity to a new position",
+      "action": {
+        "type": "drag",
+        "from": { "x": 300, "y": 200 },
+        "to": { "x": 400, "y": 160 },
+        "steps": 35
+      },
+      "capture": {
+        "screenshot": false,
+        "video": true,
+        "gif": false,
+        "settleDelay": 400
+      },
+      "narration": "Drag to reposition — every entity is fully movable."
+    },
+    {
+      "id": "post-drag-shot",
+      "label": "Entity repositioned",
+      "action": { "type": "wait", "ms": 400 },
+      "capture": {
+        "screenshot": true,
+        "video": true,
+        "gif": false,
+        "annotation": "Drag anything, anywhere — the canvas is your layout engine",
+        "settleDelay": 300
+      }
+    },
+
+    {
+      "id": "hover-mode-toggle",
+      "label": "Hover the preview mode button",
+      "action": { "type": "hover", "selector": "[data-testid='mode-toggle']" },
+      "capture": {
+        "screenshot": true,
+        "video": true,
+        "gif": false,
+        "annotation": "Run — one click to switch into Preview mode",
+        "settleDelay": 500
+      },
+      "narration": "Hit Run to go live. The editing tools disappear — your canvas becomes a product."
+    },
+
+    {
+      "id": "enter-preview",
+      "label": "Enter preview mode",
+      "action": { "type": "click", "selector": "[data-testid='mode-toggle']" },
+      "capture": {
+        "screenshot": false,
+        "video": true,
+        "gif": false,
+        "settleDelay": 1000
+      }
+    },
+    {
+      "id": "preview-shot",
+      "label": "Preview mode — clean, interactive canvas",
+      "action": { "type": "wait", "ms": 700 },
+      "capture": {
+        "screenshot": true,
+        "video": true,
+        "gif": false,
+        "annotation": "Preview mode — editing chrome disappears, widgets go live",
+        "settleDelay": 500
+      },
+      "narration": "Preview mode. No toolbars, no handles. Just your canvas, live and shareable."
+    },
+
+    {
+      "id": "exit-preview",
+      "label": "Return to edit mode",
+      "action": { "type": "click", "selector": "[data-testid='mode-toggle']" },
+      "capture": {
+        "screenshot": false,
+        "video": true,
+        "gif": false,
+        "settleDelay": 800
+      }
+    },
+    {
+      "id": "final-shot",
+      "label": "Back in edit mode — final wide shot",
+      "action": { "type": "wait", "ms": 800 },
+      "capture": {
+        "screenshot": true,
+        "video": true,
+        "gif": false,
+        "annotation": "StickerNest — design, build, ship",
+        "settleDelay": 600
+      },
+      "narration": "StickerNest. Your infinite canvas. Build anything."
+    }
+  ]
+}

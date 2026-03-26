@@ -1,0 +1,9 @@
+{
+  "name": "sn-content-pipeline",
+  "version": "0.1.0",
+  "description": "StickerNest Content Pipeline — content strategy, marketing production, and brand voice for Twitter/X, TikTok, YouTube, and Reddit.",
+  "author": {
+    "name": "Kimber"
+  },
+  "keywords": ["stickernest", "content", "marketing", "brand-voice", "social-media"]
+}

@@ -1,0 +1,7 @@
+{
+  "name": "sn-orchestrator",
+  "version": "0.3.0",
+  "description": "Orchestrates multi-agent StickerNest pipelines. Includes Dev Cycle, Content Pipeline, parallel execution, monitoring, and autonomous autopilot mode that works through TODO.md unattended.",
+  "author": { "name": "Kimber" },
+  "keywords": ["stickernest", "orchestrator", "pipeline", "autopilot", "command-center", "agents", "parallel", "monitor"]
+}

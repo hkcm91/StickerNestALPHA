@@ -1,0 +1,196 @@
+{
+  "scriptName": "full-platform-walkthrough",
+  "feature": "Full Platform Walkthrough",
+  "audience": "creator",
+  "screenshots": [
+    {
+      "stepId": "hero-shot",
+      "label": "Hero: full canvas, all entities visible",
+      "path": "screenshots/01-hero-shot.png",
+      "timestamp": 16241,
+      "annotation": "StickerNest — the infinite canvas platform",
+      "narration": "This is StickerNest. An infinite canvas where widgets, stickers, and data all live together."
+    },
+    {
+      "stepId": "widget-row-shot",
+      "label": "Widget row: Todo, Kanban, Pathfinder",
+      "path": "screenshots/03-widget-row-shot.png",
+      "timestamp": 18191,
+      "annotation": "Widgets are interactive apps — drop them anywhere on the canvas",
+      "narration": "Widgets are fully interactive apps living right on your canvas."
+    },
+    {
+      "stepId": "fit-view-shot",
+      "label": "Full canvas fit — all entities in frame",
+      "path": "screenshots/05-fit-view-shot.png",
+      "timestamp": 20329,
+      "annotation": "Everything lives together — text, shapes, widgets, and stickers"
+    },
+    {
+      "stepId": "selected-entity-shot",
+      "label": "Entity selected — handles visible",
+      "path": "screenshots/07-selected-entity-shot.png",
+      "timestamp": 23043,
+      "annotation": "Click any entity to select, resize, move, or configure it",
+      "narration": "Click any entity to select it. Handles appear for resize, move, and config."
+    },
+    {
+      "stepId": "post-drag-shot",
+      "label": "Entity repositioned",
+      "path": "screenshots/09-post-drag-shot.png",
+      "timestamp": 32964,
+      "annotation": "Drag anything, anywhere — the canvas is your layout engine"
+    },
+    {
+      "stepId": "hover-mode-toggle",
+      "label": "Hover the preview mode button",
+      "path": "screenshots/10-hover-mode-toggle.png",
+      "timestamp": 35187,
+      "annotation": "Run — one click to switch into Preview mode",
+      "narration": "Hit Run to go live. The editing tools disappear — your canvas becomes a product."
+    },
+    {
+      "stepId": "preview-shot",
+      "label": "Preview mode — clean, interactive canvas",
+      "path": "screenshots/12-preview-shot.png",
+      "timestamp": 38825,
+      "annotation": "Preview mode — editing chrome disappears, widgets go live",
+      "narration": "Preview mode. No toolbars, no handles. Just your canvas, live and shareable."
+    },
+    {
+      "stepId": "final-shot",
+      "label": "Back in edit mode — final wide shot",
+      "path": "screenshots/14-final-shot.png",
+      "timestamp": 42486,
+      "annotation": "StickerNest — design, build, ship",
+      "narration": "StickerNest. Your infinite canvas. Build anything."
+    }
+  ],
+  "recordings": [
+    {
+      "stepId": "hero-shot",
+      "label": "Hero: full canvas, all entities visible",
+      "path": "recordings/2d98d62f398099f969b69f965cbf3319.webm",
+      "startMs": 14661,
+      "endMs": 16241,
+      "narration": "This is StickerNest. An infinite canvas where widgets, stickers, and data all live together."
+    },
+    {
+      "stepId": "zoom-in-widgets",
+      "label": "Zoom into the widget row",
+      "path": "recordings/2d98d62f398099f969b69f965cbf3319.webm",
+      "startMs": 16241,
+      "endMs": 16850,
+      "narration": "Zoom in — everything on the canvas is infinitely zoomable."
+    },
+    {
+      "stepId": "widget-row-shot",
+      "label": "Widget row: Todo, Kanban, Pathfinder",
+      "path": "recordings/2d98d62f398099f969b69f965cbf3319.webm",
+      "startMs": 16850,
+      "endMs": 18191,
+      "narration": "Widgets are fully interactive apps living right on your canvas."
+    },
+    {
+      "stepId": "zoom-back-fit",
+      "label": "Zoom back to fit view",
+      "path": "recordings/2d98d62f398099f969b69f965cbf3319.webm",
+      "startMs": 18191,
+      "endMs": 18911
+    },
+    {
+      "stepId": "fit-view-shot",
+      "label": "Full canvas fit — all entities in frame",
+      "path": "recordings/2d98d62f398099f969b69f965cbf3319.webm",
+      "startMs": 18911,
+      "endMs": 20329
+    },
+    {
+      "stepId": "select-entity",
+      "label": "Click to select the title text",
+      "path": "recordings/2d98d62f398099f969b69f965cbf3319.webm",
+      "startMs": 20329,
+      "endMs": 21351
+    },
+    {
+      "stepId": "selected-entity-shot",
+      "label": "Entity selected — handles visible",
+      "path": "recordings/2d98d62f398099f969b69f965cbf3319.webm",
+      "startMs": 21351,
+      "endMs": 23043,
+      "narration": "Click any entity to select it. Handles appear for resize, move, and config."
+    },
+    {
+      "stepId": "drag-entity",
+      "label": "Drag entity to a new position",
+      "path": "recordings/2d98d62f398099f969b69f965cbf3319.webm",
+      "startMs": 23043,
+      "endMs": 31307,
+      "narration": "Drag to reposition — every entity is fully movable."
+    },
+    {
+      "stepId": "post-drag-shot",
+      "label": "Entity repositioned",
+      "path": "recordings/2d98d62f398099f969b69f965cbf3319.webm",
+      "startMs": 31307,
+      "endMs": 32964
+    },
+    {
+      "stepId": "hover-mode-toggle",
+      "label": "Hover the preview mode button",
+      "path": "recordings/2d98d62f398099f969b69f965cbf3319.webm",
+      "startMs": 32964,
+      "endMs": 35187,
+      "narration": "Hit Run to go live. The editing tools disappear — your canvas becomes a product."
+    },
+    {
+      "stepId": "enter-preview",
+      "label": "Enter preview mode",
+      "path": "recordings/2d98d62f398099f969b69f965cbf3319.webm",
+      "startMs": 35188,
+      "endMs": 36919
+    },
+    {
+      "stepId": "preview-shot",
+      "label": "Preview mode — clean, interactive canvas",
+      "path": "recordings/2d98d62f398099f969b69f965cbf3319.webm",
+      "startMs": 36919,
+      "endMs": 38825,
+      "narration": "Preview mode. No toolbars, no handles. Just your canvas, live and shareable."
+    },
+    {
+      "stepId": "exit-preview",
+      "label": "Return to edit mode",
+      "path": "recordings/2d98d62f398099f969b69f965cbf3319.webm",
+      "startMs": 38825,
+      "endMs": 40509
+    },
+    {
+      "stepId": "final-shot",
+      "label": "Back in edit mode — final wide shot",
+      "path": "recordings/2d98d62f398099f969b69f965cbf3319.webm",
+      "startMs": 40509,
+      "endMs": 42486,
+      "narration": "StickerNest. Your infinite canvas. Build anything."
+    }
+  ],
+  "gifs": [],
+  "totalDurationMs": 52088,
+  "capturedAt": "2026-03-26T01:43:41.048Z",
+  "metadata": {
+    "hook": "Build anything. On an infinite canvas.",
+    "cta": "Try StickerNest free",
+    "tags": [
+      "platform",
+      "walkthrough",
+      "demo",
+      "video"
+    ],
+    "description": "Full platform walkthrough video showing canvas editing, widgets, and preview mode."
+  },
+  "targetUrl": "http://localhost:5173/canvas/demo",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  }
+}

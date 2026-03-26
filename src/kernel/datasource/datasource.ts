@@ -24,10 +24,13 @@ export type DataSourceResult<T> =
   | { success: true; data: T }
   | { success: false; error: DataSourceError };
 
+/** Error returned by DataSource operations */
 export interface DataSourceError {
+  /** Error category — CONFLICT indicates a revision mismatch on table/custom types */
   code: 'PERMISSION_DENIED' | 'NOT_FOUND' | 'CONFLICT' | 'VALIDATION_ERROR' | 'UNKNOWN';
+  /** Human-readable error description */
   message: string;
-  /** For CONFLICT errors, the current server revision */
+  /** For CONFLICT errors, the current server revision to use when retrying */
   currentRevision?: number;
 }
 
@@ -73,7 +76,12 @@ function mapRow(row: Record<string, unknown>): DataSource {
 }
 
 /**
- * Create a new DataSource.
+ * Creates a new DataSource record.
+ * Validates input against CreateDataSourceInputSchema, enforces that callerId matches ownerId.
+ * Emits `KernelEvents.DATASOURCE_CREATED` on success.
+ * @param input - DataSource creation fields (type, scope, schema, metadata)
+ * @param callerId - User ID of the caller (must match input.ownerId)
+ * @returns DataSourceResult containing the created DataSource or an error
  */
 export async function createDataSource(
   input: CreateDataSourceInput,
@@ -128,7 +136,11 @@ export async function createDataSource(
 }
 
 /**
- * Read a single DataSource by ID.
+ * Reads a single DataSource by ID.
+ * Checks ownership, public scope, and ACL before returning.
+ * @param id - DataSource UUID
+ * @param callerId - User ID of the caller
+ * @returns DataSourceResult containing the DataSource or PERMISSION_DENIED/NOT_FOUND error
  */
 export async function readDataSource(
   id: string,
@@ -167,8 +179,14 @@ export async function readDataSource(
 }
 
 /**
- * Update a DataSource.
- * For table/custom types with lastSeenRevision: enforces revision-based conflict detection.
+ * Updates a DataSource. Requires editor or owner ACL role.
+ * For table/custom types: enforces revision-based conflict detection when lastSeenRevision is provided.
+ * Returns CONFLICT (HTTP 409 equivalent) if the server revision has advanced.
+ * Emits `KernelEvents.DATASOURCE_UPDATED` on success.
+ * @param id - DataSource UUID
+ * @param input - Fields to update (validated against UpdateDataSourceInputSchema)
+ * @param callerId - User ID of the caller
+ * @returns DataSourceResult containing the updated DataSource, or CONFLICT/PERMISSION_DENIED error
  */
 export async function updateDataSource(
   id: string,
@@ -264,7 +282,11 @@ export async function updateDataSource(
 }
 
 /**
- * Delete a DataSource. Requires 'owner' role.
+ * Deletes a DataSource. Only the owner role can delete.
+ * Emits `KernelEvents.DATASOURCE_DELETED` on success.
+ * @param id - DataSource UUID
+ * @param callerId - User ID of the caller (must have owner role)
+ * @returns DataSourceResult with the deleted ID, or PERMISSION_DENIED error
  */
 export async function deleteDataSource(
   id: string,
@@ -299,7 +321,11 @@ export async function deleteDataSource(
 }
 
 /**
- * List DataSources visible to the caller.
+ * Lists DataSources visible to the caller, with optional filtering.
+ * Results are paginated (default 50, max 100) and ordered by creation date descending.
+ * @param _callerId - User ID of the caller (used for RLS filtering)
+ * @param options - Optional filters: scope, type, canvasId, offset, limit
+ * @returns DataSourceResult containing an array of DataSource records
  */
 export async function listDataSources(
   _callerId: string,

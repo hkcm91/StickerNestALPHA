@@ -11,9 +11,13 @@ import { CanvasEvents } from '@sn/types';
 
 import { bus } from '../../bus';
 
+/** A single undoable action recorded in the history stack */
 export interface HistoryEntry {
+  /** The original bus event that was executed */
   event: BusEvent;
+  /** The inverse event that reverses this action (null if not undoable) */
   inverseEvent: BusEvent | null;
+  /** Unix timestamp (ms) when the action occurred */
   timestamp: number;
 }
 
@@ -23,11 +27,17 @@ export interface HistoryState {
   maxSize: number;
 }
 
+/** Actions for undo/redo stack management */
 export interface HistoryActions {
+  /** Pushes an undoable action onto the undo stack (clears redo stack) */
   pushEntry: (entry: HistoryEntry) => void;
+  /** Pops the last action, emits its inverse event, and moves it to the redo stack. Returns null if empty. */
   undo: () => HistoryEntry | null;
+  /** Pops from the redo stack, re-emits the original event, and moves it back to undo. Returns null if empty. */
   redo: () => HistoryEntry | null;
+  /** Clears both undo and redo stacks */
   clear: () => void;
+  /** Resets to initial state */
   reset: () => void;
 }
 

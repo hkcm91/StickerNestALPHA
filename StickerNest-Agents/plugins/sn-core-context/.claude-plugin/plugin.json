@@ -1,0 +1,9 @@
+{
+  "name": "sn-core-context",
+  "version": "0.1.0",
+  "description": "StickerNest V5 shared context and terminology. Install this first — all other StickerNest plugins depend on it.",
+  "author": {
+    "name": "Kimber"
+  },
+  "keywords": ["stickernest", "context", "terminology", "architecture"]
+}

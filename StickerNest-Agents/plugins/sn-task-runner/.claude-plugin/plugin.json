@@ -1,0 +1,9 @@
+{
+  "name": "sn-task-runner",
+  "version": "0.1.0",
+  "description": "StickerNest Task Runner — primary code-writing agent. Layer-aware, test-driven development with strict architectural enforcement.",
+  "author": {
+    "name": "Kimber"
+  },
+  "keywords": ["stickernest", "task-runner", "coding", "development"]
+}

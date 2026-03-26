@@ -18,9 +18,12 @@ export interface ACLError {
 }
 
 /**
- * Get the effective ACL role for a user on a DataSource.
- * Owner of the DataSource always has 'owner' role.
- * Returns null if user has no access.
+ * Resolves the effective ACL role for a user on a DataSource.
+ * Hierarchy: owner > editor > commenter > viewer.
+ * The DataSource owner always gets 'owner' role regardless of ACL table entries.
+ * @param dataSourceId - DataSource UUID to check
+ * @param userId - User ID to resolve the role for
+ * @returns The user's effective role, or null if they have no access
  */
 export async function getEffectiveRole(
   dataSourceId: string,
@@ -57,7 +60,9 @@ export async function getEffectiveRole(
 }
 
 /**
- * Check if a role can perform a write operation.
+ * Checks if a role permits write operations (mutating source data).
+ * Only 'owner' and 'editor' roles can write. Commenters and viewers cannot.
+ * @param role - The ACL role to check
  */
 export function canWrite(role: DataSourceACLRole): boolean {
   return role === 'owner' || role === 'editor';
@@ -78,8 +83,13 @@ export function canManageACL(role: DataSourceACLRole): boolean {
 }
 
 /**
- * Grant or update ACL for a user on a DataSource.
- * Requires 'owner' role on the DataSource.
+ * Grants or updates ACL for a user on a DataSource. Uses upsert — existing entries are updated.
+ * Only the DataSource owner can grant access.
+ * @param dataSourceId - DataSource UUID
+ * @param targetUserId - User ID to grant access to
+ * @param role - ACL role to assign (owner, editor, commenter, viewer)
+ * @param granterId - User ID of the granter (must have owner role)
+ * @returns ACLResult with the created/updated ACL entry or PERMISSION_DENIED error
  */
 export async function grantAccess(
   dataSourceId: string,
@@ -133,8 +143,12 @@ export async function grantAccess(
 }
 
 /**
- * Revoke a user's access to a DataSource.
- * Requires 'owner' role.
+ * Revokes a user's access to a DataSource by deleting their ACL entry.
+ * Only the DataSource owner can revoke access.
+ * @param dataSourceId - DataSource UUID
+ * @param targetUserId - User ID whose access is being revoked
+ * @param revokerId - User ID of the revoker (must have owner role)
+ * @returns ACLResult confirming removal or PERMISSION_DENIED error
  */
 export async function revokeAccess(
   dataSourceId: string,

@@ -251,7 +251,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   return (
     <div
       ref={containerRef}
-      data-testid="canvas-workspace"
+      data-testid="canvas-viewport"
       tabIndex={0}
       onKeyDown={handleKeyDown}
       onMouseMove={handleMouseMove}

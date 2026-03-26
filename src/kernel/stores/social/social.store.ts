@@ -11,11 +11,17 @@ import { SocialEvents } from '@sn/types';
 
 import { bus } from '../../bus';
 
+/** A user present on the active canvas (including Guests) */
 export interface PresenceUser {
+  /** User ID (or guest ID) */
   userId: string;
+  /** Display name shown next to their cursor ("Guest" for anonymous users) */
   displayName: string;
+  /** Randomly assigned cursor/avatar color */
   color: string;
+  /** Current cursor position in canvas-space coordinates, null if off-canvas */
   cursorPosition: { x: number; y: number } | null;
+  /** ISO timestamp when the user joined the canvas session */
   joinedAt: string;
 }
 
@@ -23,11 +29,17 @@ export interface SocialState {
   presenceMap: Record<string, PresenceUser>;
 }
 
+/** Actions for managing the presence map — driven by social.* bus events from Layer 1 */
 export interface SocialActions {
+  /** Adds or updates a user in the presence map */
   setPresence: (userId: string, user: PresenceUser) => void;
+  /** Removes a user from presence (on disconnect/leave) */
   removePresence: (userId: string) => void;
+  /** Updates a specific user's cursor position (throttled to 30fps by Layer 1) */
   updateCursor: (userId: string, position: { x: number; y: number } | null) => void;
+  /** Clears all presence data (e.g., on canvas leave) */
   clearPresence: () => void;
+  /** Resets to initial state */
   reset: () => void;
 }
 

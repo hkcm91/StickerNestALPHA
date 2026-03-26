@@ -1,0 +1,9 @@
+{
+  "name": "sn-qa",
+  "version": "0.1.0",
+  "description": "StickerNest QA Verifier — tests completed work visually and programmatically, screenshots results, files bug reports.",
+  "author": {
+    "name": "Kimber"
+  },
+  "keywords": ["stickernest", "qa", "testing", "verification"]
+}

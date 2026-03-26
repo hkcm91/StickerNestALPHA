@@ -1,0 +1,9 @@
+{
+  "name": "sn-pm",
+  "version": "0.2.0",
+  "description": "StickerNest PM agent — maintains task backlog across TODO.md and Notion, prioritizes work, proposes sprint plans, and audits TODO.md against the actual codebase.",
+  "author": {
+    "name": "Kimber"
+  },
+  "keywords": ["stickernest", "pm", "project-management", "sprint-planning", "todo-audit", "backlog"]
+}

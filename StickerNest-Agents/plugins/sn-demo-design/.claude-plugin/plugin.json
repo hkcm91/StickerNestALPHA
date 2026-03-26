@@ -1,0 +1,9 @@
+{
+  "name": "sn-demo-design",
+  "version": "0.1.0",
+  "description": "StickerNest Demo & Design — feature demonstrations with audience-specific scripts, visual asset production, and design system management.",
+  "author": {
+    "name": "Kimber"
+  },
+  "keywords": ["stickernest", "demo", "design", "visual-assets", "screenshots"]
+}

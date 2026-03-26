@@ -612,10 +612,10 @@ export const CanvasPage: React.FC = () => {
         } catch { return false; }
       };
 
-      // Seed demo entities for /canvas/demo route — skip if chat widget already saved
+      // Seed demo entities for /canvas/demo route — skip if already seeded
       if (isDemo && !seededRef.current) {
         seededRef.current = true;
-        if (!savedCanvasHasWidget('demo', 'wgt-live-chat')) {
+        if (!savedCanvasHasWidget('demo', 'sn.builtin.todo-list')) {
           seedDemoEntities();
           // Force immediate save so data persists even if user navigates away quickly
           setTimeout(() => bus.emit(CanvasDocumentEvents.SAVE_REQUESTED, {}), 500);

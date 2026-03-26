@@ -11,23 +11,37 @@ import { KernelEvents } from '@sn/types';
 
 import { bus } from '../../bus';
 
+/** Metadata for the active canvas */
 export interface CanvasMeta {
+  /** Canvas UUID */
   id: string;
+  /** Human-readable canvas name */
   name: string;
+  /** URL-safe slug for public/embed access (null if not published) */
   slug: string | null;
+  /** User ID of the canvas owner */
   ownerId: string;
+  /** Optional description shown in workspace listings */
   description: string | null;
+  /** Thumbnail screenshot URL for workspace cards */
   thumbnailUrl: string | null;
+  /** Whether the canvas is publicly accessible via slug */
   isPublic: boolean;
+  /** Canvas-level settings (grid size, snap, background, etc.) */
   settings: Record<string, unknown>;
 }
 
+/** Sharing configuration for a canvas */
 export interface CanvasSharingSettings {
+  /** Whether the canvas is publicly accessible */
   isPublic: boolean;
+  /** Default role assigned to users who access via public link */
   defaultRole: 'viewer' | 'commenter' | 'editor';
+  /** Public URL slug (null if not published) */
   slug: string | null;
 }
 
+/** Canvas-level role for the current user — determines edit/preview mode */
 export type CanvasRole = 'owner' | 'editor' | 'commenter' | 'viewer';
 
 export interface CanvasState {

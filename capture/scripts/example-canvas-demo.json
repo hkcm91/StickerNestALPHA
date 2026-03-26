@@ -1,0 +1,110 @@
+{
+  "name": "canvas-basics-demo",
+  "feature": "Canvas interaction basics",
+  "audience": "creator",
+  "target": {
+    "baseUrl": "http://localhost:5173/StickerNest5.0/",
+    "viewport": {
+      "width": 1920,
+      "height": 1080
+    },
+    "deviceScaleFactor": 2
+  },
+  "setup": [
+    {
+      "id": "wait-for-app",
+      "label": "Wait for app to load",
+      "action": {
+        "type": "waitForSelector",
+        "selector": "[data-testid='canvas-viewport'], .canvas-viewport, #app",
+        "state": "visible",
+        "timeout": 10000
+      },
+      "capture": {
+        "screenshot": false
+      }
+    }
+  ],
+  "steps": [
+    {
+      "id": "empty-canvas",
+      "label": "Show the empty canvas",
+      "action": {
+        "type": "wait",
+        "ms": 1000
+      },
+      "capture": {
+        "screenshot": true,
+        "settleDelay": 500,
+        "annotation": "The infinite canvas — your workspace"
+      },
+      "narration": "Welcome to StickerNest — an infinite canvas where everything comes alive."
+    },
+    {
+      "id": "open-toolbar",
+      "label": "Show the toolbar",
+      "action": {
+        "type": "hover",
+        "selector": "[data-testid='toolbar'], .toolbar, nav"
+      },
+      "capture": {
+        "screenshot": true,
+        "settleDelay": 300,
+        "annotation": "The toolbar — your creative tools"
+      },
+      "narration": "The toolbar gives you access to all your creative tools — stickers, widgets, text, shapes, and more."
+    },
+    {
+      "id": "canvas-pan",
+      "label": "Pan around the canvas",
+      "action": {
+        "type": "drag",
+        "from": { "x": 960, "y": 540 },
+        "to": { "x": 600, "y": 300 },
+        "steps": 20
+      },
+      "capture": {
+        "screenshot": true,
+        "gif": true,
+        "gifDuration": 2000,
+        "gifFps": 15,
+        "settleDelay": 300
+      },
+      "narration": "Pan around the infinite canvas by clicking and dragging. There are no boundaries here."
+    },
+    {
+      "id": "zoom-in",
+      "label": "Zoom into the canvas",
+      "action": {
+        "type": "keyboard",
+        "key": "=",
+        "modifiers": ["Control"]
+      },
+      "capture": {
+        "screenshot": true,
+        "settleDelay": 500
+      },
+      "narration": "Zoom in to focus on details, or zoom out to see the big picture."
+    },
+    {
+      "id": "final-state",
+      "label": "Show the canvas in its current state",
+      "action": {
+        "type": "wait",
+        "ms": 500
+      },
+      "capture": {
+        "screenshot": true,
+        "settleDelay": 300,
+        "annotation": "Your workspace, your rules"
+      },
+      "narration": "This is your workspace. Place stickers, install widgets, wire pipelines — the canvas is alive."
+    }
+  ],
+  "metadata": {
+    "hook": "What if your workspace was infinite and everything on it was interactive?",
+    "cta": "Try StickerNest — link in bio",
+    "tags": ["buildinpublic", "indiedev", "webdev", "infinitecanvas"],
+    "description": "A quick tour of the StickerNest infinite canvas — the spatial operating system where stickers, widgets, and pipelines compose into interactive workspaces."
+  }
+}

@@ -97,8 +97,8 @@ export const GridConfigSchema = z.object({
       y: z.number().default(0),
     })
     .default({ x: 0, y: 0 }),
-  /** Default background color for empty cells */
-  defaultBackground: z.string().default('#0d1117'),
+  /** Default background color for empty cells. 'transparent' lets the BackgroundRenderer show through. */
+  defaultBackground: z.string().default('transparent'),
   /** Minimum screen size (px) for grid lines to be visible */
   minCellScreenSize: z.number().positive().default(4),
   /** Grid projection mode (orthogonal or isometric) */

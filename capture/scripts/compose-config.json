@@ -1,0 +1,38 @@
+{
+  "style": {
+    "titleFont": "Inter",
+    "titleColor": "#FFFFFF",
+    "bgColor": "#1a1a2e",
+    "accentColor": "#e94560",
+    "transitionType": "fade",
+    "transitionDuration": 0.5,
+    "captionStyle": "bottom-bar",
+    "captionFontSize": 32
+  },
+  "narration": {
+    "voice": "en-US-JennyNeural",
+    "rate": "+0%",
+    "pitch": "+0Hz",
+    "enabled": true
+  },
+  "music": {
+    "volume": 0.15,
+    "fadeIn": 1,
+    "fadeOut": 2
+  },
+  "branding": {
+    "watermark": false,
+    "endCard": true,
+    "endCardDuration": 3
+  },
+  "titleCard": {
+    "enabled": true,
+    "duration": 3
+  },
+  "minSegmentDuration": 3,
+  "fps": 30,
+  "resolution": {
+    "width": 1920,
+    "height": 1080
+  }
+}
