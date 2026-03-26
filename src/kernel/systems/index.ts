@@ -55,3 +55,8 @@ export {
   createCompositingSystem,
   type ICompositingSystem,
 } from './compositing-system';
+
+export {
+  evaluateCubicBezier,
+  BEZIER_PRESETS,
+} from './bezier-easing';

@@ -32,6 +32,7 @@ import { useTimelineStore } from '../stores/timeline/timeline.store';
 import type { TickContext, TickSystem } from '../world/tick-loop';
 
 import { Easing } from './animation-system';
+import { evaluateCubicBezier } from './bezier-easing';
 
 // =============================================================================
 // Easing lookup
@@ -98,8 +99,16 @@ function interpolateKeyframes(
       if (duration <= 0) return kf1.value;
 
       const t = (time - kf0.time) / duration;
-      const easingFn = EASING_MAP[kf1.easing] ?? Easing.linear;
-      const easedT = easingFn(t);
+
+      // Use custom bezier handles if present, otherwise named easing
+      let easedT: number;
+      if (kf1.bezierHandles) {
+        const [x1, y1, x2, y2] = kf1.bezierHandles;
+        easedT = evaluateCubicBezier(t, x1, y1, x2, y2);
+      } else {
+        const easingFn = EASING_MAP[kf1.easing] ?? Easing.linear;
+        easedT = easingFn(t);
+      }
 
       return kf0.value + (kf1.value - kf0.value) * easedT;
     }
