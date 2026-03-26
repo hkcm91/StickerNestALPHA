@@ -502,6 +502,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
             onPan={handlePan}
             getZoom={getZoom}
             backgroundPortalId="canvas-bg-interaction"
+            gridConfig={gridConfig}
           />
 
           {/* Layer 4: Selection handles — ABOVE tool layer so handles receive pointer events.

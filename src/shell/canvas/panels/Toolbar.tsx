@@ -596,10 +596,9 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     bus.emit(GridEvents.TOGGLED, { canvasId: '', enabled: newEnabled });
   }, [gridConfig.enabled]);
 
-  const handleSnapToggle = useCallback(() => {
-    const nextSnap = gridConfig.snapMode === 'none' ? 'center' : 'none';
-    bus.emit(GridEvents.CONFIG_CHANGED, { canvasId: '', config: { snapMode: nextSnap } });
-  }, [gridConfig.snapMode]);
+  const handleSnapModeChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    bus.emit(GridEvents.CONFIG_CHANGED, { canvasId: '', config: { snapMode: e.target.value } });
+  }, []);
 
   const handleGridLinesToggle = useCallback(() => {
     const newShow = !gridConfig.showGridLines;
@@ -933,7 +932,12 @@ export const Toolbar: React.FC<ToolbarProps> = ({
               <TrayLabel>Grid</TrayLabel>
               <button data-testid="grid-toggle" onClick={handleGridToggle} title={gridConfig.enabled ? 'Hide grid (G)' : 'Show grid (G)'} style={{ ...(gridConfig.enabled ? smallBtnActive : smallBtnBase), padding: '0 8px', width: 'auto' }}>Grid</button>
               {gridConfig.enabled && <button data-testid="grid-lines-toggle" onClick={handleGridLinesToggle} title={gridConfig.showGridLines ? 'Hide grid lines' : 'Show grid lines'} style={{ ...(gridConfig.showGridLines ? smallBtnActive : smallBtnBase), padding: '0 8px', width: 'auto' }}>Lines</button>}
-              <button data-testid="snap-toggle" onClick={handleSnapToggle} title={gridConfig.snapMode !== 'none' ? 'Disable snap' : 'Enable snap'} style={{ ...(gridConfig.snapMode !== 'none' ? smallBtnActive : smallBtnBase), padding: '0 8px', width: 'auto' }}>Snap</button>
+              <select data-testid="snap-mode" value={gridConfig.snapMode ?? 'none'} onChange={handleSnapModeChange} title="Snap mode" style={traySelectStyle}>
+                <option value="none">No Snap</option>
+                <option value="center">Center</option>
+                <option value="corner">Corner</option>
+                <option value="edge">Edge</option>
+              </select>
               {gridConfig.enabled && (
                 <select data-testid="grid-projection" value={gridConfig.projection} onChange={handleProjectionChange} title="Grid projection" style={traySelectStyle}>
                   <option value="orthogonal">Square</option>
