@@ -274,3 +274,91 @@ export function initAuthListener(): { unsubscribe: () => void } {
     unsubscribe: () => subscription.unsubscribe(),
   };
 }
+
+// ── MFA / Two-Factor Authentication ───────────────────────────────
+
+export interface MFAFactor {
+  id: string;
+  factorType: 'totp';
+  friendlyName: string | null;
+  status: 'verified' | 'unverified';
+}
+
+/**
+ * Enroll a new TOTP MFA factor. Returns the QR code URI and secret
+ * for the user to scan with their authenticator app.
+ */
+export async function enrollMFA(friendlyName?: string) {
+  const { data, error } = await supabase.auth.mfa.enroll({
+    factorType: 'totp',
+    friendlyName: friendlyName ?? 'Authenticator App',
+  });
+
+  if (error) throw error;
+
+  return {
+    factorId: data.id,
+    qrCode: data.totp.qr_code,
+    secret: data.totp.secret,
+    uri: data.totp.uri,
+  };
+}
+
+/**
+ * Create an MFA challenge for a factor (step 1 of verification).
+ */
+export async function challengeMFA(factorId: string) {
+  const { data, error } = await supabase.auth.mfa.challenge({ factorId });
+  if (error) throw error;
+  return { challengeId: data.id };
+}
+
+/**
+ * Verify an MFA challenge with a TOTP code (step 2 of verification).
+ */
+export async function verifyMFA(factorId: string, challengeId: string, code: string) {
+  const { data, error } = await supabase.auth.mfa.verify({
+    factorId,
+    challengeId,
+    code,
+  });
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Unenroll (remove) an MFA factor.
+ */
+export async function unenrollMFA(factorId: string) {
+  const { error } = await supabase.auth.mfa.unenroll({ factorId });
+  if (error) throw error;
+}
+
+/**
+ * List all MFA factors for the current user.
+ */
+export async function listMFAFactors(): Promise<MFAFactor[]> {
+  const { data, error } = await supabase.auth.mfa.listFactors();
+  if (error) throw error;
+
+  return (data.totp ?? []).map((f) => ({
+    id: f.id,
+    factorType: 'totp' as const,
+    friendlyName: f.friendly_name ?? null,
+    status: f.status as 'verified' | 'unverified',
+  }));
+}
+
+/**
+ * Get the current MFA assurance level.
+ * Returns 'aal1' (password only) or 'aal2' (password + MFA).
+ */
+export async function getMFAAssuranceLevel() {
+  const { data, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  if (error) throw error;
+  return {
+    currentLevel: data.currentLevel,
+    nextLevel: data.nextLevel,
+    currentAuthenticationMethods: data.currentAuthenticationMethods,
+  };
+}

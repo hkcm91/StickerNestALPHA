@@ -10,4 +10,11 @@ export {
   signInWithOAuth,
   refreshSession,
   initAuthListener,
+  enrollMFA,
+  challengeMFA,
+  verifyMFA,
+  unenrollMFA,
+  listMFAFactors,
+  getMFAAssuranceLevel,
+  type MFAFactor,
 } from './auth';

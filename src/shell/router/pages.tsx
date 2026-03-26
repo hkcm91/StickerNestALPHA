@@ -1499,7 +1499,7 @@ export const MarketplacePage: React.FC = () => (
 );
 
 export const SettingsPage: React.FC = () => {
-  const [tab, setTab] = React.useState<'billing' | 'integrations' | 'commerce' | 'purchases'>('billing');
+  const [tab, setTab] = React.useState<'billing' | 'integrations' | 'commerce' | 'purchases' | 'security'>('billing');
 
   const tabBtnStyle = (active: boolean): React.CSSProperties => ({
     padding: '8px 16px',
@@ -1520,12 +1520,14 @@ export const SettingsPage: React.FC = () => {
         <button style={tabBtnStyle(tab === 'integrations')} onClick={() => setTab('integrations')}>Integrations</button>
         <button style={tabBtnStyle(tab === 'commerce')} onClick={() => setTab('commerce')}>Creator Commerce</button>
         <button style={tabBtnStyle(tab === 'purchases')} onClick={() => setTab('purchases')}>My Purchases</button>
+        <button style={tabBtnStyle(tab === 'security')} onClick={() => setTab('security')}>Security</button>
       </div>
       <Suspense fallback={<div>Loading...</div>}>
         {tab === 'billing' && <BillingSectionLazy />}
         {tab === 'integrations' && <IntegrationsSectionLazy />}
         {tab === 'commerce' && <CreatorCommerceSectionLazy />}
         {tab === 'purchases' && <MyPurchasesSectionLazy />}
+        {tab === 'security' && <SecuritySectionLazy />}
       </Suspense>
     </div>
   );
@@ -1542,6 +1544,9 @@ const CreatorCommerceSectionLazy = React.lazy(() =>
 );
 const MyPurchasesSectionLazy = React.lazy(() =>
   import('../pages/settings/MyPurchasesSection').then((m) => ({ default: m.MyPurchasesSection })),
+);
+const SecuritySectionLazy = React.lazy(() =>
+  import('../pages/settings/SecuritySection').then((m) => ({ default: m.SecuritySection })),
 );
 
 export const InvitePage: React.FC = () => {
