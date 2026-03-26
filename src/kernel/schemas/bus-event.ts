@@ -143,6 +143,13 @@ export const CanvasEvents = {
 
   // Cross-canvas pipeline edge request (from ghost tool)
   PIPELINE_CROSS_CANVAS_EDGE_REQUESTED: 'canvas.pipeline.crossCanvasEdge.requested',
+
+  // Entity animation lifecycle events
+  ENTITY_ANIMATION_TRIGGERED: 'canvas.entity.animation.triggered',
+  ENTITY_ANIMATION_STARTED: 'canvas.entity.animation.started',
+  ENTITY_ANIMATION_COMPLETED: 'canvas.entity.animation.completed',
+  ENTITY_ANIMATION_CANCELLED: 'canvas.entity.animation.cancelled',
+  ENTITY_STATE_CHANGED: 'canvas.entity.state.changed',
 } as const;
 
 /**

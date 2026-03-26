@@ -6,6 +6,7 @@
 import { z } from "zod";
 
 
+import { EntityAnimationConfigSchema } from "./entity-animation";
 import { AnchorPointSchema, PathFillRuleSchema } from "./path";
 import {
   Point2DSchema,
@@ -155,6 +156,8 @@ export const CanvasEntityBaseSchema = z.object({
   parentId: z.string().uuid().optional(),
   /** Optional name for layers panel */
   name: z.string().optional(),
+  /** Animation configuration (clips, triggers, states) */
+  animations: EntityAnimationConfigSchema.optional(),
   /** Creation timestamp */
   createdAt: z.string().datetime(),
   /** Last update timestamp */

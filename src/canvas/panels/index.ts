@@ -37,6 +37,10 @@ export type { FloatingActionBarController, FloatingAction } from './floating-bar
 export { createMinimapController } from './minimap';
 export type { MinimapController, MinimapState, MinimapEntity, MinimapViewport } from './minimap';
 
+// Animation
+export { createAnimationPanelController } from './animation';
+export type { AnimationPanelController } from './animation';
+
 // Init
 export { initCanvasPanels, teardownCanvasPanels, isCanvasPanelsInitialized, getCanvasPanelsContext } from './init';
 export type { CanvasPanelsContext } from './init';

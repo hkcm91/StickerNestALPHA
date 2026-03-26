@@ -7,6 +7,8 @@
 
 import type { AiPanelController } from './ai-panel';
 import { createAiPanelController } from './ai-panel';
+import type { AnimationPanelController } from './animation';
+import { createAnimationPanelController } from './animation';
 import { createAssetPanelController } from './assets';
 import type { AssetPanelController } from './assets';
 import { createContextMenuController } from './context-menu';
@@ -34,6 +36,7 @@ export interface CanvasPanelsContext {
   contextMenu: ContextMenuController;
   floatingBar: FloatingActionBarController;
   minimap: MinimapController;
+  animation: AnimationPanelController;
 }
 
 let context: CanvasPanelsContext | null = null;
@@ -51,6 +54,7 @@ export function initCanvasPanels(getZoom: () => number): CanvasPanelsContext {
     contextMenu: createContextMenuController(),
     floatingBar: createFloatingActionBarController(),
     minimap: createMinimapController(),
+    animation: createAnimationPanelController(),
   };
 
   return context;

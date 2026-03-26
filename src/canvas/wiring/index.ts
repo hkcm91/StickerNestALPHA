@@ -17,8 +17,11 @@ export type { ExecutionEngine } from './engine';
 export { createPipelinePersistence } from './persistence';
 export type { PipelinePersistence } from './persistence';
 
-export { initCanvasWiring, teardownCanvasWiring, isCanvasWiringInitialized } from './init';
+export { initCanvasWiring, teardownCanvasWiring, isCanvasWiringInitialized, initAnimationTriggers } from './init';
 export type { CanvasWiringContext } from './init';
+
+export { createAnimationTriggers } from './animation-triggers';
+export type { AnimationTriggersContext } from './animation-triggers';
 
 export { derivePipelineChannelName, initCrossCanvasEdgeHandler } from './cross-canvas-edge';
 export type { CrossCanvasEdgeRequest } from './cross-canvas-edge';

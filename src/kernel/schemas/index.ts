@@ -785,6 +785,53 @@ export {
 } from "./theme";
 
 // =============================================================================
+// Entity Animation Schemas
+// =============================================================================
+export {
+  // Schemas
+  AnimatablePropertiesSchema,
+  EasingNameSchema,
+  AnimationKeyframeSchema,
+  AnimationFillModeSchema,
+  AnimationClipSchema,
+  AnimationTriggerTypeSchema,
+  AnimationTriggerSchema,
+  AnimationBindingSchema,
+  AnimationStateSchema,
+  EntityAnimationConfigSchema,
+  AnimationOverlaySchema,
+  // Types
+  type AnimatableProperties,
+  type EasingName,
+  type AnimationKeyframe,
+  type AnimationFillMode,
+  type AnimationClip,
+  type AnimationTriggerType,
+  type AnimationTrigger,
+  type AnimationBinding,
+  type AnimationState,
+  type EntityAnimationConfig,
+  type AnimationOverlay,
+  // JSON Schemas
+  AnimationKeyframeJSONSchema,
+  AnimationClipJSONSchema,
+  AnimationTriggerJSONSchema,
+  AnimationBindingJSONSchema,
+  AnimationStateJSONSchema,
+  EntityAnimationConfigJSONSchema,
+  AnimationOverlayJSONSchema,
+} from './entity-animation';
+
+export {
+  // Preset types and registry
+  ANIMATION_PRESETS,
+  getPresetById,
+  getPresetsByCategory,
+  type AnimationPreset,
+  type AnimationPresetCategory,
+} from './animation-presets';
+
+// =============================================================================
 // AI Action Schemas
 // =============================================================================
 export {

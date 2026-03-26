@@ -35,3 +35,8 @@ export {
   type SequenceStep,
   type Sequence,
 } from './animation-system';
+
+export {
+  createEntityAnimationOrchestrator,
+  type IEntityAnimationOrchestrator,
+} from './entity-animation-orchestrator';
