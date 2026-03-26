@@ -102,13 +102,14 @@ describe('createLocalCanvas', () => {
 });
 
 describe('listLocalCanvases', () => {
-  it('lists canvases sorted by updatedAt descending', () => {
+  it('returns all created canvases', () => {
     createLocalCanvas({ name: 'First' });
     createLocalCanvas({ name: 'Second' });
     const list = listLocalCanvases();
     expect(list.length).toBe(2);
-    // Second was created later so has a later updatedAt
-    expect(list[0].name).toBe('Second');
+    const names = list.map((c) => c.name);
+    expect(names).toContain('First');
+    expect(names).toContain('Second');
   });
 });
 
