@@ -1,0 +1,107 @@
+{
+  "name": "canvas-editing-tools",
+  "feature": "Canvas Editing Tools",
+  "audience": "creator",
+  "target": {
+    "baseUrl": "http://localhost:5173/",
+    "viewport": { "width": 1920, "height": 1080 },
+    "deviceScaleFactor": 2
+  },
+  "setup": [
+    {
+      "id": "load-app",
+      "label": "Load StickerNest",
+      "action": { "type": "navigate", "url": "http://localhost:5173/" }
+    },
+    {
+      "id": "wait-canvas",
+      "label": "Wait for canvas to load",
+      "action": { "type": "waitForSelector", "selector": "[data-testid='canvas-viewport']", "timeout": 10000 }
+    }
+  ],
+  "steps": [
+    {
+      "id": "empty-canvas",
+      "label": "Show the infinite canvas",
+      "action": { "type": "wait", "ms": 1500 },
+      "capture": { "screenshot": true, "annotation": "Your blank canvas — infinite space to create" },
+      "narration": "This is your canvas. An infinite space where everything you build lives."
+    },
+    {
+      "id": "open-toolbar",
+      "label": "Show the editing toolbar",
+      "action": { "type": "hover", "selector": "[data-testid='canvas-toolbar']" },
+      "capture": { "screenshot": true, "annotation": "Editing toolbar" },
+      "narration": "The toolbar gives you everything you need — select, draw, add text, drop shapes."
+    },
+    {
+      "id": "place-shape",
+      "label": "Place a shape on the canvas",
+      "action": { "type": "click", "selector": "[data-testid='tool-rect']" },
+      "capture": { "screenshot": true },
+      "narration": "Let's start by placing a shape."
+    },
+    {
+      "id": "draw-shape",
+      "label": "Draw a rectangle",
+      "action": { "type": "drag", "from": { "x": 400, "y": 300 }, "to": { "x": 700, "y": 500 }, "steps": 20 },
+      "capture": { "screenshot": true, "gif": true, "annotation": "Drag to create" },
+      "narration": "Just drag to draw. The shape appears exactly where you want it."
+    },
+    {
+      "id": "select-entity",
+      "label": "Select the shape",
+      "action": { "type": "click", "selector": "[data-testid='tool-select']" },
+      "capture": { "screenshot": true },
+      "narration": "Switch to select mode to move and resize."
+    },
+    {
+      "id": "resize-demo",
+      "label": "Resize the shape",
+      "action": { "type": "drag", "from": { "x": 700, "y": 500 }, "to": { "x": 900, "y": 600 }, "steps": 15 },
+      "capture": { "gif": true, "annotation": "Drag handles to resize" },
+      "narration": "Grab any handle to resize. Hold shift to keep the proportions."
+    },
+    {
+      "id": "add-text",
+      "label": "Add text to the canvas",
+      "action": { "type": "click", "selector": "[data-testid='tool-text']" },
+      "capture": { "screenshot": true },
+      "narration": "Now let's add some text."
+    },
+    {
+      "id": "click-to-place-text",
+      "label": "Click canvas to begin text placement",
+      "action": { "type": "click", "selector": "[data-testid='canvas-viewport']" },
+      "capture": { "screenshot": false },
+      "narration": ""
+    },
+    {
+      "id": "type-text",
+      "label": "Type a label",
+      "action": { "type": "keyboard", "key": "M" },
+      "capture": { "screenshot": true, "annotation": "Type anywhere on the canvas" },
+      "narration": "Just click and type. Your text goes right where you want it."
+    },
+    {
+      "id": "zoom-out",
+      "label": "Zoom out to see the full canvas",
+      "action": { "type": "keyboard", "key": "-", "modifiers": ["Meta"] },
+      "capture": { "screenshot": true, "gif": true, "settleDelay": 800, "annotation": "Zoom out — infinite canvas" },
+      "narration": "Zoom out to see the big picture. Your canvas grows as big as your ideas."
+    },
+    {
+      "id": "final-state",
+      "label": "Final canvas state",
+      "action": { "type": "wait", "ms": 2000 },
+      "capture": { "screenshot": true, "annotation": "Your canvas, your way" },
+      "narration": "Shapes, text, images, widgets — everything lives together on one infinite canvas. Start building yours today."
+    }
+  ],
+  "metadata": {
+    "hook": "An infinite canvas where anything you build comes alive",
+    "cta": "Try StickerNest free — link in bio",
+    "tags": ["stickernest", "canvas", "editing", "creative-tools", "infinite-canvas"],
+    "description": "See how StickerNest's infinite canvas lets you create with shapes, text, and drag-and-drop tools — all in your browser."
+  }
+}

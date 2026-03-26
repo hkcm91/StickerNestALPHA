@@ -1,0 +1,9 @@
+{
+  "name": "sn-scribe",
+  "version": "0.1.0",
+  "description": "StickerNest Scribe agent — captures session changes, maintains the Build Journal, and records architecture decisions.",
+  "author": {
+    "name": "Kimber"
+  },
+  "keywords": ["stickernest", "scribe", "documentation", "build-journal"]
+}

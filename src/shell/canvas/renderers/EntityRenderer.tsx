@@ -10,9 +10,12 @@ import React, { useMemo } from "react";
 import type { CanvasEntity } from "@sn/types";
 
 import { resolveEntityTransform } from "../../../canvas/core";
+import { useAuthStore } from "../../../kernel/stores/auth";
+import { useSocialStore } from "../../../kernel/stores/social/social.store";
 import { useUIStore } from "../../../kernel/stores/ui/ui.store";
 
 import { AudioRenderer } from "./AudioRenderer";
+import { ConnectorRenderer } from "./ConnectorRenderer";
 import { DockerRenderer } from "./DockerRenderer";
 import { DrawingRenderer } from "./DrawingRenderer";
 import { GroupRenderer } from "./GroupRenderer";
@@ -23,6 +26,7 @@ import { ShapeRenderer } from "./ShapeRenderer";
 import { StickerRenderer } from "./StickerRenderer";
 import { SvgRenderer } from "./SvgRenderer";
 import { TextRenderer } from "./TextRenderer";
+import { VideoRenderer } from "./VideoRenderer";
 import { WidgetRenderer } from "./WidgetRenderer";
 
 export interface EntityRendererProps {
@@ -55,6 +59,18 @@ export const EntityRenderer: React.FC<EntityRendererProps> = ({
   theme,
   interactionMode = "edit",
 }) => {
+  // Check for edit locks by another user
+  const currentUserId = useAuthStore((s) => s.user?.id);
+  const editLock = useSocialStore((s) => s.editLocks[entity.id]);
+  const presenceMap = useSocialStore((s) => s.presenceMap);
+  const isLockedByOther = editLock && editLock.lockedBy !== currentUserId;
+  const lockerColor = isLockedByOther
+    ? presenceMap[editLock.lockedBy]?.color ?? '#ef4444'
+    : undefined;
+  const lockerName = isLockedByOther
+    ? presenceMap[editLock.lockedBy]?.displayName ?? 'Another user'
+    : undefined;
+
   // Resolve platform-specific transform so sub-renderers transparently
   // receive the correct position/size for the active platform.
   const platform = useUIStore((s) => s.canvasPlatform);
@@ -154,10 +170,71 @@ export const EntityRenderer: React.FC<EntityRendererProps> = ({
       rendered = <Object3DRenderer entity={resolvedEntity as typeof entity} />;
       break;
 
+    case "video":
+      rendered = (
+        <VideoRenderer
+          entity={resolvedEntity as typeof entity}
+          isSelected={isSelected}
+          interactionMode={interactionMode}
+        />
+      );
+      break;
+
+    case "connector":
+      rendered = (
+        <ConnectorRenderer
+          entity={resolvedEntity as typeof entity}
+          isSelected={isSelected}
+        />
+      );
+      break;
+
     default: {
       rendered = null;
     }
   }
 
-  return rendered ? renderWithAutoPointer(rendered) : null;
+  if (!rendered) return null;
+
+  const content = renderWithAutoPointer(rendered);
+
+  // Show edit lock indicator (colored border + name badge) when locked by another user
+  if (isLockedByOther && lockerColor) {
+    return (
+      <div style={{ position: 'relative', display: 'contents' }}>
+        {content}
+        <div
+          data-testid={`edit-lock-indicator-${entity.id}`}
+          style={{
+            position: 'absolute',
+            inset: -2,
+            border: `2px solid ${lockerColor}`,
+            borderRadius: 'inherit',
+            pointerEvents: 'none',
+            zIndex: 1,
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            top: -20,
+            left: 0,
+            fontSize: 10,
+            fontWeight: 600,
+            color: '#fff',
+            background: lockerColor,
+            padding: '2px 6px',
+            borderRadius: 4,
+            whiteSpace: 'nowrap',
+            pointerEvents: 'none',
+            zIndex: 1,
+          }}
+        >
+          {lockerName}
+        </div>
+      </div>
+    );
+  }
+
+  return content;
 };

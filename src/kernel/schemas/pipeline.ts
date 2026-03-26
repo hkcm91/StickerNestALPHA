@@ -51,6 +51,7 @@ export const PipelineNodeTypeSchema = z.enum([
   'ai-action',
   'ai-create-entity',
   'http-request',
+  'animate',
 ]);
 
 export type PipelineNodeType = z.infer<typeof PipelineNodeTypeSchema>;

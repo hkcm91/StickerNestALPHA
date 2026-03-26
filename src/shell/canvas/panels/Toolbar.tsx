@@ -17,6 +17,7 @@ import { useDockerStore } from '../../../kernel/stores/docker';
 import { useHistoryStore, selectCanUndo, selectCanRedo } from '../../../kernel/stores/history/history.store';
 import { useUIStore } from '../../../kernel/stores/ui/ui.store';
 import { enterXR } from '../../../spatial';
+import { PresenceAvatarBar } from '../components/PresenceAvatarBar';
 import type { SaveStatus } from '../hooks/usePersistence';
 import type { ViewportStore } from '../hooks/useViewport';
 
@@ -78,6 +79,8 @@ export interface ToolbarProps {
   canvasPosition?: CanvasPositionConfig;
   /** Currently selected entity IDs */
   selectedIds?: Set<string>;
+  /** Callback for capturing a thumbnail of the canvas */
+  onCaptureThumbnail?: () => void;
 }
 
 const DOCKER_LIBRARY_NAME = 'Docker Library';
@@ -219,6 +222,13 @@ const LibraryIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
     <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+  </svg>
+);
+
+const CameraIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+    <circle cx="12" cy="13" r="4" />
   </svg>
 );
 
@@ -386,6 +396,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   borderRadius,
   canvasPosition,
   selectedIds = new Set(),
+  onCaptureThumbnail,
 }) => {
   const activeTool = useUIStore((s) => (s.activeTool === 'move' ? 'select' : s.activeTool));
   const mode = useUIStore((s) => s.canvasInteractionMode);
@@ -561,12 +572,17 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   }, [artboardPreviewMode, setArtboardPreviewMode]);
 
   const handleEnterXR = useCallback(() => {
+    setSpatialMode('vr');
     enterXR('immersive-vr');
-  }, []);
+  }, [setSpatialMode]);
 
   const handleFullscreenPreview = useCallback(() => {
     setFullscreenPreview(true);
   }, [setFullscreenPreview]);
+
+  const handleCaptureThumbnail = useCallback(() => {
+    onCaptureThumbnail?.();
+  }, [onCaptureThumbnail]);
 
   // ── Alignment / Grouping ───────────────────────────────────────
 
@@ -596,10 +612,9 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     bus.emit(GridEvents.TOGGLED, { canvasId: '', enabled: newEnabled });
   }, [gridConfig.enabled]);
 
-  const handleSnapToggle = useCallback(() => {
-    const nextSnap = gridConfig.snapMode === 'none' ? 'center' : 'none';
-    bus.emit(GridEvents.CONFIG_CHANGED, { canvasId: '', config: { snapMode: nextSnap } });
-  }, [gridConfig.snapMode]);
+  const handleSnapModeChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    bus.emit(GridEvents.CONFIG_CHANGED, { canvasId: '', config: { snapMode: e.target.value } });
+  }, []);
 
   const handleGridLinesToggle = useCallback(() => {
     const newShow = !gridConfig.showGridLines;
@@ -661,6 +676,10 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     bus.emit(GridEvents.CONFIG_CHANGED, { canvasId: '', config: { gridLineWidth: Number(e.target.value) } });
   }, []);
 
+  const handleGridDotSizeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    bus.emit(GridEvents.CONFIG_CHANGED, { canvasId: '', config: { dotSize: Number(e.target.value) } });
+  }, []);
+
   const isEditMode = mode === 'edit';
 
   // Select style for tray dropdowns
@@ -685,7 +704,9 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           alignItems: 'center',
           gap: '4px',
           padding: '0 12px',
-          background: 'var(--sn-surface, #fff)',
+          background: 'var(--sn-surface-glass, rgba(255,255,255,0.75))',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
           borderBottom: '1px solid var(--sn-border, #e0e0e0)',
           height: '48px',
           fontFamily: 'var(--sn-font-family, system-ui)',
@@ -808,6 +829,9 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         {/* Spacer */}
         <div style={{ flex: 1 }} />
 
+        {/* Presence avatars */}
+        <PresenceAvatarBar />
+
         {/* Zoom controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }} data-testid="toolbar-zoom">
           <button data-testid="zoom-out" onClick={handleZoomOut} title="Zoom out" style={smallBtnBase}>-</button>
@@ -821,6 +845,23 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           </button>
           <button data-testid="zoom-in" onClick={handleZoomIn} title="Zoom in" style={smallBtnBase}>+</button>
         </div>
+
+        <Divider />
+
+        {/* Thumbnail capture */}
+        {isEditMode && (
+          <>
+            <Divider />
+            <button
+              data-testid="capture-thumbnail"
+              onClick={handleCaptureThumbnail}
+              title="Capture Thumbnail"
+              style={smallBtnBase}
+            >
+              <CameraIcon />
+            </button>
+          </>
+        )}
 
         <Divider />
 
@@ -892,7 +933,9 @@ export const Toolbar: React.FC<ToolbarProps> = ({
               alignItems: 'center',
               gap: '12px',
               padding: '8px 16px',
-              background: 'var(--sn-surface, #fff)',
+              background: 'var(--sn-surface-glass, rgba(255,255,255,0.75))',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
               borderBottom: '1px solid var(--sn-border, #e0e0e0)',
               boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
               fontFamily: 'var(--sn-font-family, system-ui)',
@@ -925,7 +968,12 @@ export const Toolbar: React.FC<ToolbarProps> = ({
               <TrayLabel>Grid</TrayLabel>
               <button data-testid="grid-toggle" onClick={handleGridToggle} title={gridConfig.enabled ? 'Hide grid (G)' : 'Show grid (G)'} style={{ ...(gridConfig.enabled ? smallBtnActive : smallBtnBase), padding: '0 8px', width: 'auto' }}>Grid</button>
               {gridConfig.enabled && <button data-testid="grid-lines-toggle" onClick={handleGridLinesToggle} title={gridConfig.showGridLines ? 'Hide grid lines' : 'Show grid lines'} style={{ ...(gridConfig.showGridLines ? smallBtnActive : smallBtnBase), padding: '0 8px', width: 'auto' }}>Lines</button>}
-              <button data-testid="snap-toggle" onClick={handleSnapToggle} title={gridConfig.snapMode !== 'none' ? 'Disable snap' : 'Enable snap'} style={{ ...(gridConfig.snapMode !== 'none' ? smallBtnActive : smallBtnBase), padding: '0 8px', width: 'auto' }}>Snap</button>
+              <select data-testid="snap-mode" value={gridConfig.snapMode ?? 'none'} onChange={handleSnapModeChange} title="Snap mode" style={traySelectStyle}>
+                <option value="none">No Snap</option>
+                <option value="center">Center</option>
+                <option value="corner">Corner</option>
+                <option value="edge">Edge</option>
+              </select>
               {gridConfig.enabled && (
                 <select data-testid="grid-projection" value={gridConfig.projection} onChange={handleProjectionChange} title="Grid projection" style={traySelectStyle}>
                   <option value="orthogonal">Square</option>
@@ -959,6 +1007,12 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Weight</span><span style={{ color: 'var(--sn-text-muted, #888)' }}>{gridConfig.gridLineWidth ?? 1}px</span></div>
                         <input data-testid="grid-weight-slider" type="range" min="0.5" max="4" step="0.5" value={gridConfig.gridLineWidth ?? 1} onChange={handleGridWeightChange} style={{ width: '100%', cursor: 'pointer' }} />
                       </label>
+                      {gridConfig.gridLineStyle === 'dot' && (
+                        <label style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Dot Size</span><span style={{ color: 'var(--sn-text-muted, #888)' }}>{gridConfig.dotSize ?? 1.5}px</span></div>
+                          <input data-testid="grid-dot-size-slider" type="range" min="0.5" max="6" step="0.5" value={gridConfig.dotSize ?? 1.5} onChange={handleGridDotSizeChange} style={{ width: '100%', cursor: 'pointer' }} />
+                        </label>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1020,7 +1074,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                 <option value="vr">VR</option>
                 <option value="ar">AR</option>
               </select>
-              {(spatialMode === 'vr' || spatialMode === 'ar') && <button onClick={handleEnterXR} title={`Enter WebXR (${spatialMode.toUpperCase()})`} style={smallBtnBase}><XRGogglesIcon /></button>}
+              {spatialMode !== '2d' && <button onClick={handleEnterXR} title={`Enter WebXR (${spatialMode.toUpperCase()})`} style={smallBtnBase}><XRGogglesIcon /></button>}
               <button onClick={handleArtboardPreviewToggle} title={artboardPreviewMode ? 'Exit Artboard Preview' : 'Artboard Preview'} style={{ ...(artboardPreviewMode ? smallBtnActive : smallBtnBase), padding: '0 8px', width: 'auto', fontSize: '11px' }}>Artboard</button>
             </div>
 

@@ -353,6 +353,25 @@ export function createExecutionEngine(graph: PipelineGraph, options: ExecutionEn
         break;
       }
 
+      case 'animate': {
+        // Triggers an entity animation via the event bus.
+        // config.targetEntityId: the entity to animate
+        // config.clipId: the animation clip to play
+        const targetEntityId = node.config?.targetEntityId as string | undefined;
+        const clipId = node.config?.clipId as string | undefined;
+        if (targetEntityId && clipId) {
+          bus.emit(CanvasEvents.ENTITY_ANIMATION_TRIGGERED, {
+            entityId: targetEntityId,
+            clipId,
+            source: 'pipeline',
+            nodeId: node.id,
+          });
+        }
+        // Forward payload downstream for chaining
+        forwardFromNode(node.id, payload, edges);
+        break;
+      }
+
       default: {
         // Handle additional async node types (ai-action, http-request)
         if (isAsyncNode(node.type)) {

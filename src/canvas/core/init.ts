@@ -5,9 +5,10 @@
  * @layer L4A-1
  */
 
-import type { CanvasEntity, BusEvent } from '@sn/types';
+import type { CanvasEntity, BusEvent, PropertyLayer } from '@sn/types';
 import { CanvasEvents } from '@sn/types';
 
+import { registerEntityProvider, unregisterEntityProvider } from '../../kernel/ai/entity-provider';
 import { bus } from '../../kernel/bus';
 
 import { entityBounds } from './hittest';
@@ -33,6 +34,9 @@ export function initCanvasCore(): CanvasCoreContext {
   const renderLoop = createRenderLoop(dirtyTracker);
 
   context = { sceneGraph, dirtyTracker, renderLoop };
+
+  // Register entity provider so L0/L3 modules can access entities
+  registerEntityProvider(() => sceneGraph.getEntitiesByZOrder());
 
   // Handler for entity creation events
   const handleEntityCreated = (event: BusEvent<CanvasEntity>) => {
@@ -79,6 +83,21 @@ export function initCanvasCore(): CanvasCoreContext {
     }
   };
 
+  // Handler for entity move events
+  const handleEntityMoved = (event: BusEvent<{ entityId: string; position: { x: number; y: number } }>) => {
+    const existing = sceneGraph.getEntity(event.payload.entityId);
+    if (!existing) return;
+    const oldBounds = entityBounds(existing);
+    dirtyTracker.markDirty(oldBounds);
+    sceneGraph.updateEntity(event.payload.entityId, {
+      transform: { ...existing.transform, position: event.payload.position },
+    } as Partial<CanvasEntity>);
+    const updated = sceneGraph.getEntity(event.payload.entityId);
+    if (updated) {
+      dirtyTracker.markDirty(entityBounds(updated));
+    }
+  };
+
   // Handler for entity deletion events
   const handleEntityDeleted = (event: BusEvent<{ id: string }>) => {
     const existing = sceneGraph.getEntity(event.payload.id);
@@ -105,6 +124,120 @@ export function initCanvasCore(): CanvasCoreContext {
     bus.subscribe<{ id: string }>(CanvasEvents.ENTITY_DELETED, handleEntityDeleted),
   );
 
+  unsubscribers.push(
+    bus.subscribe<{ entityId: string; position: { x: number; y: number } }>(
+      CanvasEvents.ENTITY_MOVED,
+      handleEntityMoved,
+    ),
+  );
+
+  // ── Property Layer Handlers ──────────────────────────────────────────────
+
+  const handlePropertyLayerAdded = (event: BusEvent<{ entityId: string; layer: PropertyLayer }>) => {
+    const { entityId, layer } = event.payload;
+    const existing = sceneGraph.getEntity(entityId);
+    if (!existing) return;
+    const existingLayers: PropertyLayer[] = existing.propertyLayers ?? [];
+    const layers = [...existingLayers];
+    // Normalize order to be the next index
+    layer.order = layers.length;
+    layers.push(layer);
+    sceneGraph.updateEntity(entityId, { propertyLayers: layers } as Partial<CanvasEntity>);
+    dirtyTracker.markDirty(entityBounds(existing));
+  };
+
+  const handlePropertyLayerUpdated = (event: BusEvent<{ entityId: string; layerId: string; widgetInstanceId?: string; updates: Partial<PropertyLayer> }>) => {
+    const { entityId, layerId, updates } = event.payload;
+    const existing = sceneGraph.getEntity(entityId);
+    if (!existing) return;
+    const existingLayers: PropertyLayer[] = existing.propertyLayers ?? [];
+    // Capture previous state for undo/redo
+    const previousLayer = existingLayers.find((l: PropertyLayer) => l.id === layerId);
+    const layers = existingLayers.map((l: PropertyLayer) =>
+      l.id === layerId ? { ...l, ...updates, id: l.id } : l,
+    );
+    sceneGraph.updateEntity(entityId, { propertyLayers: layers } as Partial<CanvasEntity>);
+    dirtyTracker.markDirty(entityBounds(existing));
+    // Augment payload with previous state for history store
+    if (previousLayer) {
+      (event.payload as Record<string, unknown>).previousProperties = previousLayer.properties;
+    }
+  };
+
+  const handlePropertyLayerRemoved = (event: BusEvent<{ entityId: string; layerId: string }>) => {
+    const { entityId, layerId } = event.payload;
+    const existing = sceneGraph.getEntity(entityId);
+    if (!existing) return;
+    const existingLayers: PropertyLayer[] = existing.propertyLayers ?? [];
+    // Capture the removed layer for undo/redo before filtering
+    const removedLayer = existingLayers.find((l: PropertyLayer) => l.id === layerId);
+    const layers = existingLayers
+      .filter((l: PropertyLayer) => l.id !== layerId)
+      .map((l: PropertyLayer, i: number) => ({ ...l, order: i }));
+    sceneGraph.updateEntity(entityId, { propertyLayers: layers } as Partial<CanvasEntity>);
+    dirtyTracker.markDirty(entityBounds(existing));
+    // Augment payload with removed layer snapshot for history store
+    if (removedLayer) {
+      (event.payload as Record<string, unknown>).removedLayer = removedLayer;
+    }
+  };
+
+  const handlePropertyLayerReordered = (event: BusEvent<{ entityId: string; layerIds: string[] }>) => {
+    const { entityId, layerIds } = event.payload;
+    const existing = sceneGraph.getEntity(entityId);
+    if (!existing) return;
+    const existingLayers: PropertyLayer[] = existing.propertyLayers ?? [];
+    // Capture previous order for undo/redo
+    const previousLayerIds = [...existingLayers].sort((a, b) => a.order - b.order).map((l) => l.id);
+    const layerMap = new Map(existingLayers.map((l: PropertyLayer) => [l.id, l]));
+    const reordered = layerIds
+      .map((id, i) => {
+        const layer = layerMap.get(id);
+        return layer ? { ...layer, order: i } : null;
+      })
+      .filter((l): l is PropertyLayer => l !== null);
+    sceneGraph.updateEntity(entityId, { propertyLayers: reordered } as Partial<CanvasEntity>);
+    dirtyTracker.markDirty(entityBounds(existing));
+    // Augment payload with previous order for history store
+    (event.payload as Record<string, unknown>).previousLayerIds = previousLayerIds;
+  };
+
+  const handlePropertyLayerToggled = (event: BusEvent<{ entityId: string; layerId: string; enabled: boolean }>) => {
+    const { entityId, layerId, enabled } = event.payload;
+    const existing = sceneGraph.getEntity(entityId);
+    if (!existing) return;
+    const existingLayers: PropertyLayer[] = existing.propertyLayers ?? [];
+    const layers = existingLayers.map((l: PropertyLayer) =>
+      l.id === layerId ? { ...l, enabled } : l,
+    );
+    sceneGraph.updateEntity(entityId, { propertyLayers: layers } as Partial<CanvasEntity>);
+    dirtyTracker.markDirty(entityBounds(existing));
+  };
+
+  const handlePropertyLayerBatchUpdated = (event: BusEvent<{ entityId: string; layers: PropertyLayer[]; previousLayers?: PropertyLayer[] }>) => {
+    const { entityId, layers: newLayers } = event.payload;
+    const existing = sceneGraph.getEntity(entityId);
+    if (!existing) return;
+    // Capture previous state for undo/redo
+    const previousLayers = existing.propertyLayers ?? [];
+    // Normalize order indices
+    const normalized = newLayers.map((l, i) => ({ ...l, order: i }));
+    sceneGraph.updateEntity(entityId, { propertyLayers: normalized } as Partial<CanvasEntity>);
+    dirtyTracker.markDirty(entityBounds(existing));
+    // Augment payload with previous layers for history store
+    (event.payload as Record<string, unknown>).previousLayers = previousLayers;
+  };
+
+  // Subscribe to property layer events
+  unsubscribers.push(
+    bus.subscribe(CanvasEvents.PROPERTY_LAYER_ADDED, handlePropertyLayerAdded),
+    bus.subscribe(CanvasEvents.PROPERTY_LAYER_UPDATED, handlePropertyLayerUpdated),
+    bus.subscribe(CanvasEvents.PROPERTY_LAYER_REMOVED, handlePropertyLayerRemoved),
+    bus.subscribe(CanvasEvents.PROPERTY_LAYER_REORDERED, handlePropertyLayerReordered),
+    bus.subscribe(CanvasEvents.PROPERTY_LAYER_TOGGLED, handlePropertyLayerToggled),
+    bus.subscribe(CanvasEvents.PROPERTY_LAYER_BATCH_UPDATED, handlePropertyLayerBatchUpdated),
+  );
+
   // Subscribe to widget-namespaced events (emitted by sandboxed widgets via bridge)
   // When a sandboxed widget calls StickerNest.emit('canvas.entity.created', payload),
   // the WidgetFrame namespaces it as 'widget.canvas.entity.created' via toBusEventType.
@@ -129,11 +262,19 @@ export function initCanvasCore(): CanvasCoreContext {
     ),
   );
 
+  unsubscribers.push(
+    bus.subscribe<{ entityId: string; position: { x: number; y: number } }>(
+      `widget.${CanvasEvents.ENTITY_MOVED}`,
+      handleEntityMoved,
+    ),
+  );
+
   return context;
 }
 
 export function teardownCanvasCore(): void {
   if (!context) return;
+  unregisterEntityProvider();
   context.renderLoop.stop();
   for (const unsub of unsubscribers) {
     unsub();

@@ -7,6 +7,8 @@ import { z } from 'zod';
 
 import { CanvasEntitySchema } from './canvas-entity';
 import { SpatialModeSchema } from './spatial';
+import { ThemeNameSchema } from './theme';
+import { TimelineDataSchema } from './timeline';
 
 // =============================================================================
 // Background Specification (Discriminated Union)
@@ -174,6 +176,8 @@ export const CanvasDocumentMetaSchema = z.object({
   description: z.string().optional(),
   /** Optional thumbnail URL */
   thumbnailUrl: z.string().url().optional(),
+  /** Tags for categorization and filtering (max 20 tags, each max 50 chars) */
+  tags: z.array(z.string().max(50)).max(20).optional(),
 });
 
 export type CanvasDocumentMeta = z.infer<typeof CanvasDocumentMetaSchema>;
@@ -185,7 +189,7 @@ export type CanvasDocumentMeta = z.infer<typeof CanvasDocumentMetaSchema>;
 /**
  * Current document version for migrations
  */
-export const CANVAS_DOCUMENT_VERSION = 1;
+export const CANVAS_DOCUMENT_VERSION = 2;
 
 /**
  * Canvas Document - the complete serialized state of a canvas
@@ -232,6 +236,10 @@ export const CanvasDocumentSchema = z.object({
   borderRadius: z.number().optional(),
   /** Canvas position/alignment configuration */
   canvasPosition: CanvasPositionConfigSchema.optional(),
+  /** Per-canvas theme override — falls back to global uiStore.theme when not set */
+  theme: ThemeNameSchema.optional(),
+  /** Timeline/video production data — present when canvas is in timeline mode */
+  timelineData: TimelineDataSchema.optional(),
 });
 
 export type CanvasDocument = z.infer<typeof CanvasDocumentSchema>;
@@ -264,6 +272,7 @@ export const UpdateCanvasDocumentInputSchema = z.object({
   layoutMode: LayoutModeSchema.optional(),
   platform: CanvasPlatformSchema.optional(),
   spatialMode: SpatialModeSchema.optional(),
+  tags: z.array(z.string().max(50)).max(20).optional(),
 });
 
 export type UpdateCanvasDocumentInput = z.infer<typeof UpdateCanvasDocumentInputSchema>;

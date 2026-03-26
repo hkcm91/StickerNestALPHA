@@ -37,6 +37,22 @@ export type { FloatingActionBarController, FloatingAction } from './floating-bar
 export { createMinimapController } from './minimap';
 export type { MinimapController, MinimapState, MinimapEntity, MinimapViewport } from './minimap';
 
+// Animation
+export { createAnimationPanelController } from './animation';
+export type { AnimationPanelController } from './animation';
+
+// Timeline
+export { createTimelinePanelController } from './timeline';
+export type { TimelinePanelController } from './timeline';
+
+// Export
+export { createExportPanelController } from './export';
+export type { ExportPanelController } from './export';
+
+// Property Layers
+export { createPropertyLayersController } from './property-layers';
+export type { PropertyLayersController, PropertyLayerEntry } from './property-layers';
+
 // Init
 export { initCanvasPanels, teardownCanvasPanels, isCanvasPanelsInitialized, getCanvasPanelsContext } from './init';
 export type { CanvasPanelsContext } from './init';

@@ -20,11 +20,11 @@ describe('initShell', () => {
 
   it('applies CSS vars on init', () => {
     initShell();
-    // Default theme is 'light'
+    // Default theme is 'midnight-aurora'
     expect(document.documentElement.style.getPropertyValue('--sn-bg')).toBe(
-      THEME_TOKENS.light['--sn-bg'],
+      THEME_TOKENS['midnight-aurora']['--sn-bg'],
     );
-    expect(document.documentElement.dataset.theme).toBe('light');
+    expect(document.documentElement.dataset.theme).toBe('midnight-aurora');
   });
 
   it('sets initialized flag', () => {

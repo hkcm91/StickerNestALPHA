@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "stickernest-capture": {
+      "command": "npx",
+      "args": ["tsx", "src/mcp-server.ts"],
+      "cwd": "capture/",
+      "description": "StickerNest Capture Pipeline — screenshot, video, and multi-format demo content generation"
+    }
+  }
+}

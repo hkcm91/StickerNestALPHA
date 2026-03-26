@@ -61,7 +61,7 @@ describe('BackgroundSpec schemas', () => {
         opacity: 0.8,
       };
       const result = GradientBackgroundSchema.parse(bg);
-      expect(result).toEqual(bg);
+      expect(result).toEqual({ ...bg, gradientType: 'linear' });
     });
 
     it('should reject gradients with less than 2 stops', () => {

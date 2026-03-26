@@ -11,21 +11,33 @@ import { KernelEvents } from '@sn/types';
 
 import { bus } from '../../bus';
 
+/** Workspace metadata — a workspace contains multiple canvases */
 export interface Workspace {
+  /** Workspace UUID */
   id: string;
+  /** Workspace display name */
   name: string;
+  /** User ID of the workspace owner */
   ownerId: string;
+  /** ISO timestamp when the workspace was created */
   createdAt: string;
 }
 
+/** A member of the workspace with their assigned role */
 export interface WorkspaceMember {
+  /** User ID */
   userId: string;
+  /** Display name shown in member lists */
   displayName: string;
+  /** Workspace-level role (independent of per-canvas roles) */
   role: 'owner' | 'editor' | 'commenter' | 'viewer';
+  /** Avatar image URL */
   avatarUrl: string | null;
 }
 
+/** Workspace-level configuration */
 export interface WorkspaceSettings {
+  /** Default role assigned to new members when they join a canvas */
   defaultCanvasRole: 'viewer' | 'commenter' | 'editor';
 }
 

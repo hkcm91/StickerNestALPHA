@@ -1,0 +1,124 @@
+{
+  "scriptName": "canvas-editing-tools",
+  "feature": "Canvas Editing Tools",
+  "audience": "creator",
+  "screenshots": [
+    {
+      "stepId": "empty-canvas",
+      "label": "Show the infinite canvas",
+      "path": "screenshots/01-empty-canvas.png",
+      "timestamp": 14395,
+      "annotation": "Your blank canvas — infinite space to create",
+      "narration": "This is your canvas. An infinite space where everything you build lives."
+    },
+    {
+      "stepId": "open-toolbar",
+      "label": "Show the editing toolbar",
+      "path": "screenshots/02-open-toolbar.png",
+      "timestamp": 18353,
+      "annotation": "Editing toolbar",
+      "narration": "The toolbar gives you everything you need — select, draw, add text, drop shapes."
+    },
+    {
+      "stepId": "place-shape",
+      "label": "Place a shape on the canvas",
+      "path": "screenshots/03-place-shape.png",
+      "timestamp": 22427,
+      "narration": "Let's start by placing a shape."
+    },
+    {
+      "stepId": "draw-shape",
+      "label": "Draw a rectangle",
+      "path": "screenshots/04-draw-shape.png",
+      "timestamp": 29168,
+      "annotation": "Drag to create",
+      "narration": "Just drag to draw. The shape appears exactly where you want it."
+    },
+    {
+      "stepId": "select-entity",
+      "label": "Select the shape",
+      "path": "screenshots/05-select-entity.png",
+      "timestamp": 86259,
+      "narration": "Switch to select mode to move and resize."
+    },
+    {
+      "stepId": "resize-demo",
+      "label": "Resize the shape",
+      "path": "screenshots/06-resize-demo.png",
+      "timestamp": 92624,
+      "annotation": "Drag handles to resize",
+      "narration": "Grab any handle to resize. Hold shift to keep the proportions."
+    },
+    {
+      "stepId": "add-text",
+      "label": "Add text to the canvas",
+      "path": "screenshots/07-add-text.png",
+      "timestamp": 152341,
+      "narration": "Now let's add some text."
+    },
+    {
+      "stepId": "type-text",
+      "label": "Type a label",
+      "path": "screenshots/09-type-text.png",
+      "timestamp": 157444,
+      "annotation": "Type anywhere on the canvas",
+      "narration": "Just click and type. Your text goes right where you want it."
+    },
+    {
+      "stepId": "zoom-out",
+      "label": "Zoom out to see the full canvas",
+      "path": "screenshots/10-zoom-out.png",
+      "timestamp": 161233,
+      "annotation": "Zoom out — infinite canvas",
+      "narration": "Zoom out to see the big picture. Your canvas grows as big as your ideas."
+    },
+    {
+      "stepId": "final-state",
+      "label": "Final canvas state",
+      "path": "screenshots/11-final-state.png",
+      "timestamp": 214063,
+      "annotation": "Your canvas, your way",
+      "narration": "Shapes, text, images, widgets — everything lives together on one infinite canvas. Start building yours today."
+    }
+  ],
+  "recordings": [],
+  "gifs": [
+    {
+      "stepId": "draw-shape",
+      "label": "Draw a rectangle",
+      "path": "gifs/04-draw-shape.gif",
+      "durationMs": 47025
+    },
+    {
+      "stepId": "resize-demo",
+      "label": "Resize the shape",
+      "path": "gifs/06-resize-demo.gif",
+      "durationMs": 49724
+    },
+    {
+      "stepId": "zoom-out",
+      "label": "Zoom out to see the full canvas",
+      "path": "gifs/10-zoom-out.gif",
+      "durationMs": 41695
+    }
+  ],
+  "totalDurationMs": 214169,
+  "capturedAt": "2026-03-25T18:42:05.999Z",
+  "metadata": {
+    "hook": "An infinite canvas where anything you build comes alive",
+    "cta": "Try StickerNest free — link in bio",
+    "tags": [
+      "stickernest",
+      "canvas",
+      "editing",
+      "creative-tools",
+      "infinite-canvas"
+    ],
+    "description": "See how StickerNest's infinite canvas lets you create with shapes, text, and drag-and-drop tools — all in your browser."
+  },
+  "targetUrl": "http://localhost:5173/",
+  "viewport": {
+    "width": 1920,
+    "height": 1080
+  }
+}

@@ -134,7 +134,7 @@ describe('executeAIAction', () => {
     expect(result.success).toBe(true);
     expect(bus.emit).toHaveBeenCalledWith(
       CanvasEvents.ENTITY_UPDATED,
-      { entityId, updates: { opacity: 0.5 } },
+      { id: entityId, updates: { opacity: 0.5 } },
     );
   });
 
@@ -148,7 +148,7 @@ describe('executeAIAction', () => {
     expect(result.success).toBe(true);
     expect(bus.emit).toHaveBeenCalledWith(
       CanvasEvents.ENTITY_DELETED,
-      { entityId },
+      { id: entityId },
     );
   });
 

@@ -1,0 +1,34 @@
+{
+  "name": "stickernest-capture",
+  "version": "0.1.0",
+  "description": "Automated screen capture pipeline for StickerNest demos",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "sn-capture": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "tsx src/index.ts",
+    "dev": "tsx src/index.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "capture": "tsx src/index.ts run",
+    "capture:example": "tsx src/index.ts run --script scripts/example-canvas-demo.json",
+    "compose": "tsx src/index.ts compose",
+    "export": "tsx src/index.ts export",
+    "mcp": "tsx src/mcp-server.ts",
+    "mcp:dev": "tsx --watch src/mcp-server.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "playwright": "^1.50.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0",
+    "vitest": "^3.0.0"
+  }
+}

@@ -1,0 +1,100 @@
+{
+  "name": "widget-system",
+  "feature": "Widget System & SDK",
+  "audience": "developer",
+  "target": {
+    "baseUrl": "http://localhost:5173/",
+    "viewport": { "width": 1920, "height": 1080 },
+    "deviceScaleFactor": 2
+  },
+  "setup": [
+    {
+      "id": "load-app",
+      "label": "Load StickerNest",
+      "action": { "type": "navigate", "url": "http://localhost:5173/" }
+    },
+    {
+      "id": "wait-canvas",
+      "label": "Wait for canvas",
+      "action": { "type": "waitForSelector", "selector": "[data-testid='canvas-viewport']", "timeout": 10000 }
+    }
+  ],
+  "steps": [
+    {
+      "id": "canvas-overview",
+      "label": "Show the canvas overview",
+      "action": { "type": "wait", "ms": 1500 },
+      "capture": { "screenshot": true, "annotation": "StickerNest Canvas" },
+      "narration": "StickerNest widgets are sandboxed programs that run inside the canvas. Here's how they work under the hood."
+    },
+    {
+      "id": "open-asset-panel",
+      "label": "Open the asset panel",
+      "action": { "type": "click", "selector": "[data-testid='asset-panel']" },
+      "capture": { "screenshot": false },
+      "narration": ""
+    },
+    {
+      "id": "show-stickers-tab",
+      "label": "Asset panel open — stickers library visible",
+      "action": { "type": "wait", "ms": 1500 },
+      "capture": { "screenshot": true, "annotation": "Asset library — stickers, widgets, API assets" },
+      "narration": "The asset panel is your launch pad. Stickers, widgets, and API-powered assets all live here — drag to canvas to place them."
+    },
+    {
+      "id": "switch-to-widgets-tab",
+      "label": "Switch to the Widgets tab",
+      "action": { "type": "click", "selector": "text=Widgets" },
+      "capture": { "screenshot": false },
+      "narration": ""
+    },
+    {
+      "id": "show-widget-library",
+      "label": "Widgets tab — built-in widget library",
+      "action": { "type": "wait", "ms": 1500 },
+      "capture": { "screenshot": true, "gif": true, "annotation": "Built-in widgets — sandboxed iframe apps" },
+      "narration": "Each widget is a single-file HTML app running in a sandboxed iframe. The Runtime injects the SDK, validates the manifest, and waits for the READY signal."
+    },
+    {
+      "id": "show-toolbar",
+      "label": "Hover over the canvas toolbar",
+      "action": { "type": "hover", "selector": "[data-testid='canvas-toolbar']" },
+      "capture": { "screenshot": true, "annotation": "Canvas toolbar — full tool suite" },
+      "narration": "Back on the canvas, the toolbar gives you access to all editing tools. Widgets share the same canvas space as shapes, text, and stickers."
+    },
+    {
+      "id": "switch-preview",
+      "label": "Switch to preview mode",
+      "action": { "type": "click", "selector": "[data-testid='mode-toggle']" },
+      "capture": { "screenshot": true, "gif": true, "settleDelay": 600, "annotation": "Preview mode — widgets fully interactive" },
+      "narration": "In preview mode, widgets become fully interactive. Layout locks, edit UI hides, and users interact with the live programs."
+    },
+    {
+      "id": "back-to-edit",
+      "label": "Return to edit mode",
+      "action": { "type": "click", "selector": "[data-testid='mode-toggle']" },
+      "capture": { "screenshot": true, "settleDelay": 500, "annotation": "Edit mode — configure and wire widgets" },
+      "narration": "Toggle back to edit mode to reconfigure or connect widgets via the Pipeline graph. The SDK makes it trivial to support both modes."
+    },
+    {
+      "id": "show-layers",
+      "label": "Show the layers panel",
+      "action": { "type": "click", "selector": "[data-testid='layers-panel']" },
+      "capture": { "screenshot": true, "annotation": "Entity z-order — everything is a canvas entity" },
+      "narration": "The layers panel shows every entity in z-order. Widgets, shapes, stickers — they're all entities managed by the same scene graph. One system, unlimited layouts."
+    },
+    {
+      "id": "final-overview",
+      "label": "Final canvas state",
+      "action": { "type": "wait", "ms": 2000 },
+      "capture": { "screenshot": true, "annotation": "Canvas as a spatial operating system" },
+      "narration": "That's the widget system. Single-file HTML, sandboxed execution, typed events, manifest-driven config. Build your first widget in ten minutes with the SDK."
+    }
+  ],
+  "metadata": {
+    "hook": "How StickerNest widgets work — sandboxed apps on an infinite canvas",
+    "cta": "Check out the SDK docs — build your first widget in 10 minutes",
+    "tags": ["stickernest", "widgets", "sdk", "architecture", "developer"],
+    "description": "Deep dive into StickerNest's widget system: sandboxed iframes, typed event bus, manifest-driven config, and the Widget SDK."
+  }
+}

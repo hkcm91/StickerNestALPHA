@@ -193,6 +193,10 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   // Interaction mode from Canvas Core
   const interactionMode = useInteractionStore((s) => s.mode);
 
+  // Spatial mode state (used by shortcuts and rendering)
+  const spatialMode = useUIStore((s) => s.spatialMode);
+  const setSpatialMode = useUIStore((s) => s.setSpatialMode);
+
   // Canvas keyboard shortcuts (edit mode only)
   const { onKeyDown: handleKeyDown } = useCanvasShortcuts({
     sceneGraph,
@@ -253,7 +257,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   return (
     <div
       ref={containerRef}
-      data-testid="canvas-workspace"
+      data-testid="canvas-viewport"
       tabIndex={0}
       onKeyDown={handleKeyDown}
       onMouseMove={handleMouseMove}
@@ -408,6 +412,53 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
             >
               + Add 2D Box
             </button>
+            <button
+              onClick={() => {
+                const instanceId = `wi-${Date.now()}`;
+                bus.emit("canvas.entity.created", {
+                  entity: {
+                    id: `widget-3d-${Date.now()}`,
+                    type: "widget",
+                    canvasId: "default",
+                    widgetId: "builtin:sticky-note",
+                    widgetInstanceId: instanceId,
+                    config: {},
+                    transform: {
+                      position: { x: 0, y: 0 },
+                      size: { width: 320, height: 240 },
+                      rotation: 0,
+                      scale: 1,
+                    },
+                    spatialTransform: {
+                      position: { x: -1, y: 1.2, z: 0 },
+                      rotation: { x: 0, y: 0, z: 0, w: 1 },
+                      scale: { x: 1, y: 1, z: 1 },
+                    },
+                    zIndex: 10,
+                    visible: true,
+                    canvasVisibility: "3d",
+                    locked: false,
+                    flipH: false,
+                    flipV: false,
+                    opacity: 1,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    createdBy: "user",
+                  },
+                });
+              }}
+              style={{
+                background: "var(--sn-surface)",
+                color: "var(--sn-text)",
+                border: "1px solid var(--sn-border)",
+                borderRadius: 4,
+                padding: "4px 8px",
+                cursor: "pointer",
+                fontSize: 12,
+              }}
+            >
+              + Add 3D Widget
+            </button>
             {selectedIds.size > 0 && (
               <button
                 onClick={() => {
@@ -447,6 +498,8 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
             selectedIds={selectedIds}
             widgetHtmlMap={widgetHtmlMap}
             theme={theme}
+            spatialMode={spatialMode}
+            setSpatialMode={setSpatialMode}
             onSelect={(id) => {
               const newSet = new Set<string>();
               newSet.add(id);
@@ -504,6 +557,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
             onPan={handlePan}
             getZoom={getZoom}
             backgroundPortalId="canvas-bg-interaction"
+            gridConfig={gridConfig}
           />
 
           {/* Layer 4: Selection handles — ABOVE tool layer so handles receive pointer events.

@@ -860,84 +860,52 @@ if (typeof window !== 'undefined') {
 }
 
 const DEMO_CANVAS_ID = '00000000-0000-4000-8000-000000000001';
-const DEMO_DOCKER_ID = 'ddd00000-0000-4000-a000-000000000001';
-const DEMO_TEXT_ID = 'ddd00000-0000-4000-a000-000000000002';
-const DEMO_STICKER_ID = 'ddd00000-0000-4000-a000-000000000003';
-const DEMO_SHAPE_ID = 'ddd00000-0000-4000-a000-000000000004';
-const DEMO_DRAWING_ID = 'ddd00000-0000-4000-a000-000000000005';
-const DEMO_SVG_ID = 'ddd00000-0000-4000-a000-000000000006';
-const DEMO_LIVE_CHAT_ID = 'ddd00000-0000-4000-a000-000000000007';
-const DEMO_AI_AGENT_ID = 'ddd00000-0000-4000-a000-000000000008';
-const DEMO_LIVE_CHAT_INST = 'ddd00000-0000-4000-a000-100000000001';
-const DEMO_AI_AGENT_INST = 'ddd00000-0000-4000-a000-100000000002';
-const DEMO_TTT_ID = 'ddd00000-0000-4000-a000-000000000009';
-const DEMO_TTT_INST = 'ddd00000-0000-4000-a000-100000000003';
-const DEMO_C4_ID = 'ddd00000-0000-4000-a000-00000000000a';
-const DEMO_C4_INST = 'ddd00000-0000-4000-a000-100000000004';
-const DEMO_PONG_ID = 'ddd00000-0000-4000-a000-00000000000c';
-const DEMO_PONG_INST = 'ddd00000-0000-4000-a000-100000000006';
-const DEMO_BS_ID = 'ddd00000-0000-4000-a000-00000000000b';
-const DEMO_BS_INST = 'ddd00000-0000-4000-a000-100000000005';
-const DEMO_DATA_TABLE_ID = 'ddd00000-0000-4000-a000-00000000000d';
-const DEMO_DATA_TABLE_INST = 'ddd00000-0000-4000-a000-100000000007';
-const DEMO_ENTITY_SPAWNER_ID = 'ddd00000-0000-4000-a000-00000000000e';
-const DEMO_ENTITY_SPAWNER_INST = 'ddd00000-0000-4000-a000-100000000008';
-const DEMO_CHILD_ENTITY_IDS = [
-  DEMO_TEXT_ID,
-  DEMO_STICKER_ID,
-  DEMO_SHAPE_ID,
-  DEMO_DRAWING_ID,
-  DEMO_SVG_ID,
-];
 const DEMO_USER_ID = 'ddd00000-0000-4000-a000-000000000099';
+
+// Header entities
+const DEMO_TITLE_ID = 'ddd00000-0000-4000-a000-000000000001';
+const DEMO_SUBTITLE_ID = 'ddd00000-0000-4000-a000-000000000002';
+const DEMO_DIVIDER_ID = 'ddd00000-0000-4000-a000-000000000003';
+
+// Widget entities — 3 across: Todo List | Kanban | Pathfinder
+const DEMO_TODO_ID = 'ddd00000-0000-4000-a000-000000000010';
+const DEMO_TODO_INST = 'ddd00000-0000-4000-a000-100000000010';
+const DEMO_KANBAN_ID = 'ddd00000-0000-4000-a000-000000000011';
+const DEMO_KANBAN_INST = 'ddd00000-0000-4000-a000-100000000011';
+const DEMO_PATHFINDER_ID = 'ddd00000-0000-4000-a000-000000000012';
+const DEMO_PATHFINDER_INST = 'ddd00000-0000-4000-a000-100000000012';
+
+// Decorative bottom-row entities
+const DEMO_CARD_ID = 'ddd00000-0000-4000-a000-000000000020';
+const DEMO_STICKER_ID = 'ddd00000-0000-4000-a000-000000000021';
+const DEMO_LABEL_ID = 'ddd00000-0000-4000-a000-000000000022';
+const DEMO_DRAWING_ID = 'ddd00000-0000-4000-a000-000000000023';
+const DEMO_SVG_ID = 'ddd00000-0000-4000-a000-000000000024';
 
 /**
  * Creates and emits demo entities onto the canvas via the event bus.
+ *
+ * Layout (canvas-space coordinates):
+ *   Row 1 — Hero header:  title + subtitle + divider  (y: 60–160)
+ *   Row 2 — 3 Widgets:    Todo List | Kanban | Pathfinder  (y: 180–540)
+ *   Row 3 — Decorative:   accent card + sticker + label text + drawing + SVG  (y: 570–680)
+ *
+ * Total canvas footprint: ~1200 × 700 units — designed to fill a 1440×900 viewport.
  * Call once after Canvas Core has been initialized.
  */
 export function seedDemoEntities(): void {
   const now = new Date().toISOString();
   const entities: CanvasEntity[] = [
-    // --- Docker folder entity (parent for all demo entities) ---
-    {
-      id: DEMO_DOCKER_ID,
-      type: 'docker',
-      canvasId: DEMO_CANVAS_ID,
-      transform: {
-        position: { x: 88, y: 44 },
-        size: { width: 72, height: 64 },
-        rotation: 0,
-        scale: 1,
-      },
-      zIndex: 6,
-      visible: true,
-      canvasVisibility: 'both' as const,
-      locked: false,
-      flipH: false,
-      flipV: false,
-      opacity: 1,
-      createdAt: now,
-      updatedAt: now,
-      createdBy: DEMO_USER_ID,
-      borderRadius: 12,
-      syncTransform2d3d: true,
-      name: 'Canvas Folder',
-      children: DEMO_CHILD_ENTITY_IDS,
-      layout: 'free',
-    } as CanvasEntity,
 
-    // --- Text entity ---
+    // ── Row 1: Header ────────────────────────────────────────────────────────
+
+    // Hero title
     {
-      id: DEMO_TEXT_ID,
+      id: DEMO_TITLE_ID,
       type: 'text',
       canvasId: DEMO_CANVAS_ID,
-      transform: {
-        position: { x: 120, y: 80 },
-        size: { width: 320, height: 60 },
-        rotation: 0,
-        scale: 1,
-      },
-      zIndex: 3,
+      transform: { position: { x: 80, y: 60 }, size: { width: 820, height: 80 }, rotation: 0, scale: 1 },
+      zIndex: 1,
       visible: true,
       canvasVisibility: 'both' as const,
       locked: false,
@@ -949,27 +917,21 @@ export function seedDemoEntities(): void {
       createdBy: DEMO_USER_ID,
       borderRadius: 0,
       syncTransform2d3d: true,
-      parentId: DEMO_DOCKER_ID,
-      name: 'Welcome Text',
-      content: 'Welcome to StickerNest Canvas',
-      fontSize: 28,
+      name: 'Hero Title',
+      content: 'Your infinite canvas.',
+      fontSize: 52,
       fontFamily: 'var(--sn-font-family, sans-serif)',
       fontWeight: 700,
-      color: '#ffffff',
+      color: 'var(--sn-text, #1a1a2e)',
       textAlign: 'left',
     } as CanvasEntity,
 
-    // --- Sticker entity ---
+    // Subtitle
     {
-      id: DEMO_STICKER_ID,
-      type: 'sticker',
+      id: DEMO_SUBTITLE_ID,
+      type: 'text',
       canvasId: DEMO_CANVAS_ID,
-      transform: {
-        position: { x: 140, y: 200 },
-        size: { width: 160, height: 160 },
-        rotation: 0,
-        scale: 1,
-      },
+      transform: { position: { x: 80, y: 148 }, size: { width: 700, height: 36 }, rotation: 0, scale: 1 },
       zIndex: 2,
       visible: true,
       canvasVisibility: 'both' as const,
@@ -980,157 +942,149 @@ export function seedDemoEntities(): void {
       createdAt: now,
       updatedAt: now,
       createdBy: DEMO_USER_ID,
-      borderRadius: 8,
+      borderRadius: 0,
       syncTransform2d3d: true,
-      parentId: DEMO_DOCKER_ID,
-      name: 'Demo Star',
-      assetUrl: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><polygon points="50,5 63,38 98,38 70,60 80,95 50,73 20,95 30,60 2,38 37,38" fill="%23f9ca24" stroke="%23f0932b" stroke-width="2"/></svg>'),
-      assetType: 'image',
+      name: 'Subtitle',
+      content: 'Widgets, stickers, and pipelines — composable by design.',
+      fontSize: 20,
+      fontFamily: 'var(--sn-font-family, sans-serif)',
+      fontWeight: 400,
+      color: 'var(--sn-text-muted, #666)',
+      textAlign: 'left',
     } as CanvasEntity,
 
-    // --- Shape entity (rectangle) ---
+    // Accent divider line
     {
-      id: DEMO_SHAPE_ID,
+      id: DEMO_DIVIDER_ID,
       type: 'shape',
       canvasId: DEMO_CANVAS_ID,
-      transform: {
-        position: { x: 380, y: 200 },
-        size: { width: 200, height: 140 },
-        rotation: 0,
-        scale: 1,
-      },
-      zIndex: 1,
+      transform: { position: { x: 80, y: 192 }, size: { width: 820, height: 4 }, rotation: 0, scale: 1 },
+      zIndex: 3,
       visible: true,
       canvasVisibility: 'both' as const,
       locked: false,
       flipH: false,
       flipV: false,
-      opacity: 0.85,
+      opacity: 1,
+      createdAt: now,
+      updatedAt: now,
+      createdBy: DEMO_USER_ID,
+      borderRadius: 2,
+      syncTransform2d3d: true,
+      name: 'Accent Divider',
+      shapeType: 'rectangle',
+      fill: 'var(--sn-accent, #6c5ce7)',
+      stroke: 'none',
+      strokeWidth: 0,
+    } as CanvasEntity,
+
+    // ── Row 2: Three widgets side-by-side ────────────────────────────────────
+
+    // Todo List widget (left)
+    {
+      id: DEMO_TODO_ID,
+      type: 'widget',
+      canvasId: DEMO_CANVAS_ID,
+      transform: { position: { x: 80, y: 214 }, size: { width: 320, height: 330 }, rotation: 0, scale: 1 },
+      zIndex: 10,
+      visible: true,
+      canvasVisibility: 'both' as const,
+      locked: false,
+      flipH: false,
+      flipV: false,
+      opacity: 1,
       createdAt: now,
       updatedAt: now,
       createdBy: DEMO_USER_ID,
       borderRadius: 12,
       syncTransform2d3d: true,
-      parentId: DEMO_DOCKER_ID,
-      name: 'Blue Card',
-      shapeType: 'rectangle',
-      fill: 'var(--sn-accent, #6c5ce7)',
-      stroke: 'var(--sn-border, #ddd)',
-      strokeWidth: 2,
+      name: 'Todo List',
+      widgetId: 'sn.builtin.todo-list',
+      widgetInstanceId: DEMO_TODO_INST,
+      config: { title: 'Today' },
     } as CanvasEntity,
 
-    // --- Drawing entity (pen stroke) ---
+    // Kanban widget (center)
     {
-      id: DEMO_DRAWING_ID,
-      type: 'drawing',
-      canvasId: DEMO_CANVAS_ID,
-      transform: {
-        position: { x: 140, y: 420 },
-        size: { width: 300, height: 80 },
-        rotation: 0,
-        scale: 1,
-      },
-      zIndex: 4,
-      visible: true,
-      canvasVisibility: 'both' as const,
-      locked: false,
-      flipH: false,
-      flipV: false,
-      opacity: 1,
-      createdAt: now,
-      updatedAt: now,
-      createdBy: DEMO_USER_ID,
-      borderRadius: 0,
-      syncTransform2d3d: true,
-      parentId: DEMO_DOCKER_ID,
-      name: 'Squiggle',
-      points: [
-        { x: 0, y: 40 },
-        { x: 30, y: 10 },
-        { x: 60, y: 50 },
-        { x: 100, y: 20 },
-        { x: 140, y: 60 },
-        { x: 180, y: 15 },
-        { x: 220, y: 55 },
-        { x: 260, y: 30 },
-        { x: 300, y: 45 },
-      ],
-      stroke: '#e17055',
-      strokeWidth: 3,
-      smoothing: 0.5,
-    } as CanvasEntity,
-
-    // --- SVG entity ---
-    {
-      id: DEMO_SVG_ID,
-      type: 'svg',
-      canvasId: DEMO_CANVAS_ID,
-      transform: {
-        position: { x: 500, y: 400 },
-        size: { width: 120, height: 120 },
-        rotation: 0,
-        scale: 1,
-      },
-      zIndex: 5,
-      visible: true,
-      canvasVisibility: 'both' as const,
-      locked: false,
-      flipH: false,
-      flipV: false,
-      opacity: 1,
-      createdAt: now,
-      updatedAt: now,
-      createdBy: DEMO_USER_ID,
-      borderRadius: 0,
-      syncTransform2d3d: true,
-      parentId: DEMO_DOCKER_ID,
-      name: 'Heart Icon',
-      svgContent:
-        '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" fill="currentColor"/></svg>',
-      fill: '#e84393',
-      stroke: '',
-    } as CanvasEntity,
-
-    // --- Live Chat widget ---
-    {
-      id: DEMO_LIVE_CHAT_ID,
+      id: DEMO_KANBAN_ID,
       type: 'widget',
       canvasId: DEMO_CANVAS_ID,
-      transform: {
-        position: { x: 500, y: 80 },
-        size: { width: 350, height: 450 },
-        rotation: 0,
-        scale: 1,
-      },
+      transform: { position: { x: 440, y: 214 }, size: { width: 460, height: 330 }, rotation: 0, scale: 1 },
+      zIndex: 11,
+      visible: true,
+      canvasVisibility: 'both' as const,
+      locked: false,
+      flipH: false,
+      flipV: false,
+      opacity: 1,
+      createdAt: now,
+      updatedAt: now,
+      createdBy: DEMO_USER_ID,
+      borderRadius: 12,
+      syncTransform2d3d: true,
+      name: 'Kanban Board',
+      widgetId: 'sn.builtin.kanban',
+      widgetInstanceId: DEMO_KANBAN_INST,
+      config: { title: 'Sprint Board' },
+    } as CanvasEntity,
+
+    // Pathfinder widget (right)
+    {
+      id: DEMO_PATHFINDER_ID,
+      type: 'widget',
+      canvasId: DEMO_CANVAS_ID,
+      transform: { position: { x: 940, y: 214 }, size: { width: 320, height: 330 }, rotation: 0, scale: 1 },
+      zIndex: 12,
+      visible: true,
+      canvasVisibility: 'both' as const,
+      locked: false,
+      flipH: false,
+      flipV: false,
+      opacity: 1,
+      createdAt: now,
+      updatedAt: now,
+      createdBy: DEMO_USER_ID,
+      borderRadius: 12,
+      syncTransform2d3d: true,
+      name: 'Pathfinder',
+      widgetId: 'sn.builtin.pathfinder',
+      widgetInstanceId: DEMO_PATHFINDER_INST,
+      config: {},
+    } as CanvasEntity,
+
+    // ── Row 3: Decorative bar ────────────────────────────────────────────────
+
+    // Accent card (colored background block)
+    {
+      id: DEMO_CARD_ID,
+      type: 'shape',
+      canvasId: DEMO_CANVAS_ID,
+      transform: { position: { x: 80, y: 572 }, size: { width: 380, height: 100 }, rotation: 0, scale: 1 },
       zIndex: 20,
       visible: true,
       canvasVisibility: 'both' as const,
       locked: false,
       flipH: false,
       flipV: false,
-      opacity: 1,
+      opacity: 0.9,
       createdAt: now,
       updatedAt: now,
       createdBy: DEMO_USER_ID,
-      borderRadius: 8,
+      borderRadius: 16,
       syncTransform2d3d: true,
-      name: 'Live Chat',
-      widgetId: 'wgt-live-chat',
-      widgetInstanceId: DEMO_LIVE_CHAT_INST,
-      config: {},
+      name: 'Accent Card',
+      shapeType: 'rectangle',
+      fill: 'var(--sn-accent, #6c5ce7)',
+      stroke: 'none',
+      strokeWidth: 0,
     } as CanvasEntity,
 
-    // --- AI Agent widget ---
+    // Star sticker
     {
-      id: DEMO_AI_AGENT_ID,
-      type: 'widget',
+      id: DEMO_STICKER_ID,
+      type: 'sticker',
       canvasId: DEMO_CANVAS_ID,
-      transform: {
-        position: { x: 880, y: 80 },
-        size: { width: 350, height: 450 },
-        rotation: 0,
-        scale: 1,
-      },
+      transform: { position: { x: 104, y: 588 }, size: { width: 68, height: 68 }, rotation: 0, scale: 1 },
       zIndex: 21,
       visible: true,
       canvasVisibility: 'both' as const,
@@ -1141,25 +1095,23 @@ export function seedDemoEntities(): void {
       createdAt: now,
       updatedAt: now,
       createdBy: DEMO_USER_ID,
-      borderRadius: 8,
+      borderRadius: 0,
       syncTransform2d3d: true,
-      name: 'AI Agent',
-      widgetId: 'wgt-ai-agent',
-      widgetInstanceId: DEMO_AI_AGENT_INST,
-      config: {},
+      name: 'Star Sticker',
+      assetUrl: 'data:image/svg+xml,' + encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">'
+        + '<polygon points="50,5 63,38 98,38 70,60 80,95 50,73 20,95 30,60 2,38 37,38" '
+        + 'fill="%23f9ca24" stroke="%23f0932b" stroke-width="2"/></svg>',
+      ),
+      assetType: 'image',
     } as CanvasEntity,
 
-    // --- Tic-Tac-Toe widget ---
+    // Label text on the accent card
     {
-      id: DEMO_TTT_ID,
-      type: 'widget',
+      id: DEMO_LABEL_ID,
+      type: 'text',
       canvasId: DEMO_CANVAS_ID,
-      transform: {
-        position: { x: 900, y: 80 },
-        size: { width: 320, height: 400 },
-        rotation: 0,
-        scale: 1,
-      },
+      transform: { position: { x: 192, y: 598 }, size: { width: 250, height: 60 }, rotation: 0, scale: 1 },
       zIndex: 22,
       visible: true,
       canvasVisibility: 'both' as const,
@@ -1170,25 +1122,23 @@ export function seedDemoEntities(): void {
       createdAt: now,
       updatedAt: now,
       createdBy: DEMO_USER_ID,
-      borderRadius: 8,
+      borderRadius: 0,
       syncTransform2d3d: true,
-      name: 'Tic-Tac-Toe',
-      widgetId: 'wgt-tictactoe',
-      widgetInstanceId: DEMO_TTT_INST,
-      config: {},
+      name: 'Card Label',
+      content: 'Design. Build. Ship.',
+      fontSize: 22,
+      fontFamily: 'var(--sn-font-family, sans-serif)',
+      fontWeight: 700,
+      color: '#ffffff',
+      textAlign: 'left',
     } as CanvasEntity,
 
-    // --- Connect Four widget ---
+    // Freehand drawing annotation (squiggle underline)
     {
-      id: DEMO_C4_ID,
-      type: 'widget',
+      id: DEMO_DRAWING_ID,
+      type: 'drawing',
       canvasId: DEMO_CANVAS_ID,
-      transform: {
-        position: { x: 1260, y: 80 },
-        size: { width: 350, height: 420 },
-        rotation: 0,
-        scale: 1,
-      },
+      transform: { position: { x: 500, y: 580 }, size: { width: 360, height: 60 }, rotation: 0, scale: 1 },
       zIndex: 23,
       visible: true,
       canvasVisibility: 'both' as const,
@@ -1199,54 +1149,25 @@ export function seedDemoEntities(): void {
       createdAt: now,
       updatedAt: now,
       createdBy: DEMO_USER_ID,
-      borderRadius: 8,
+      borderRadius: 0,
       syncTransform2d3d: true,
-      name: 'Connect Four',
-      widgetId: 'wgt-connect4',
-      widgetInstanceId: DEMO_C4_INST,
-      config: {},
+      name: 'Annotation',
+      points: [
+        { x: 0, y: 30 }, { x: 40, y: 10 }, { x: 80, y: 40 },
+        { x: 130, y: 8 }, { x: 180, y: 38 }, { x: 230, y: 12 },
+        { x: 280, y: 42 }, { x: 320, y: 18 }, { x: 360, y: 35 },
+      ],
+      stroke: '#e17055',
+      strokeWidth: 3,
+      smoothing: 0.6,
     } as CanvasEntity,
 
-    // --- Pong widget ---
+    // Heart SVG icon
     {
-      id: DEMO_PONG_ID,
-      type: 'widget',
+      id: DEMO_SVG_ID,
+      type: 'svg',
       canvasId: DEMO_CANVAS_ID,
-      transform: {
-        position: { x: 1040, y: 540 },
-        size: { width: 420, height: 340 },
-        rotation: 0,
-        scale: 1,
-      },
-      zIndex: 25,
-      visible: true,
-      canvasVisibility: 'both' as const,
-      locked: false,
-      flipH: false,
-      flipV: false,
-      opacity: 1,
-      createdAt: now,
-      updatedAt: now,
-      createdBy: DEMO_USER_ID,
-      borderRadius: 8,
-      syncTransform2d3d: true,
-      name: 'Pong',
-      widgetId: 'wgt-pong',
-      widgetInstanceId: DEMO_PONG_INST,
-      config: {},
-    } as CanvasEntity,
-
-    // --- Battleship widget ---
-    {
-      id: DEMO_BS_ID,
-      type: 'widget',
-      canvasId: DEMO_CANVAS_ID,
-      transform: {
-        position: { x: 500, y: 540 },
-        size: { width: 500, height: 500 },
-        rotation: 0,
-        scale: 1,
-      },
+      transform: { position: { x: 900, y: 578 }, size: { width: 88, height: 88 }, rotation: 0, scale: 1 },
       zIndex: 24,
       visible: true,
       canvasVisibility: 'both' as const,
@@ -1257,74 +1178,20 @@ export function seedDemoEntities(): void {
       createdAt: now,
       updatedAt: now,
       createdBy: DEMO_USER_ID,
-      borderRadius: 8,
+      borderRadius: 0,
       syncTransform2d3d: true,
-      name: 'Battleship',
-      widgetId: 'wgt-battleship',
-      widgetInstanceId: DEMO_BS_INST,
-      config: {},
-    } as CanvasEntity,
-
-    // --- Data Table widget (DataSource SDK test) ---
-    {
-      id: DEMO_DATA_TABLE_ID,
-      type: 'widget',
-      canvasId: DEMO_CANVAS_ID,
-      transform: {
-        position: { x: 1100, y: 80 },
-        size: { width: 380, height: 360 },
-        rotation: 0,
-        scale: 1,
-      },
-      zIndex: 25,
-      visible: true,
-      canvasVisibility: 'both' as const,
-      locked: false,
-      flipH: false,
-      flipV: false,
-      opacity: 1,
-      createdAt: now,
-      updatedAt: now,
-      createdBy: DEMO_USER_ID,
-      borderRadius: 8,
-      syncTransform2d3d: true,
-      name: 'Data Table',
-      widgetId: 'sn.builtin.data-table',
-      widgetInstanceId: DEMO_DATA_TABLE_INST,
-      config: {},
-    } as CanvasEntity,
-
-    // --- Entity Spawner widget (widget→entity creation test) ---
-    {
-      id: DEMO_ENTITY_SPAWNER_ID,
-      type: 'widget',
-      canvasId: DEMO_CANVAS_ID,
-      transform: {
-        position: { x: 1100, y: 480 },
-        size: { width: 280, height: 380 },
-        rotation: 0,
-        scale: 1,
-      },
-      zIndex: 26,
-      visible: true,
-      canvasVisibility: 'both' as const,
-      locked: false,
-      flipH: false,
-      flipV: false,
-      opacity: 1,
-      createdAt: now,
-      updatedAt: now,
-      createdBy: DEMO_USER_ID,
-      borderRadius: 8,
-      syncTransform2d3d: true,
-      name: 'Entity Spawner',
-      widgetId: 'sn.builtin.entity-spawner',
-      widgetInstanceId: DEMO_ENTITY_SPAWNER_INST,
-      config: {},
+      name: 'Heart Icon',
+      svgContent:
+        '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">'
+        + '<path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3'
+        + 'c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5'
+        + 'c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" fill="currentColor"/></svg>',
+      fill: '#e84393',
+      stroke: '',
     } as CanvasEntity,
   ];
 
-  // Emit each entity as a ENTITY_CREATED bus event
+  // Emit each entity as an ENTITY_CREATED bus event
   for (const entity of entities) {
     bus.emit(CanvasEvents.ENTITY_CREATED, entity);
   }

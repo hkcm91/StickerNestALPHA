@@ -8,7 +8,7 @@
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 
-import type { BackgroundSpec, CanvasEntity, StickerEntity, ViewportConfig } from '@sn/types';
+import type { BackgroundSpec, CanvasEntity, StickerEntity, ThemeName, ViewportConfig } from '@sn/types';
 import { CanvasDocumentEvents, CanvasEvents, DEFAULT_BACKGROUND, DockerEvents } from '@sn/types';
 
 import { initCanvasCore, teardownCanvasCore, project2Dto3D } from '../../canvas/core';
@@ -42,10 +42,13 @@ import type { LocalCanvasSummary } from '../canvas';
 import { HistoryPanel } from '../canvas/panels';
 import type { CanvasPositionConfig } from '../canvas/panels/CanvasSettingsDropdown';
 import { seedDemoEntities, seedCommerceCanvas, seedClaudeLabCanvas } from '../canvas/seedDemoEntities';
+import { captureAndUploadThumbnail } from '../canvas/utils/thumbnail-capture';
 import { StickerSettingsModal, LoginForm } from '../components';
 import { GhostWidgetOverlay } from '../components/GhostWidgetOverlay';
 import type { StickerSettings } from '../components/StickerSettingsModal';
+import { UpgradePrompt } from '../components/UpgradePrompt';
 import { ShellLayout } from '../layout';
+import { applyThemeTokens, emitThemeChange } from '../theme/theme-provider';
 import { THEME_TOKENS } from '../theme/theme-tokens';
 import { themeVar } from '../theme/theme-vars';
 
@@ -383,13 +386,54 @@ export const CanvasGalleryPage: React.FC = () => {
 export const NewCanvasPage: React.FC = () => {
   const navigate = useNavigate();
   const createdRef = useRef(false);
+  const [quotaBlocked, setQuotaBlocked] = useState<{
+    resource: string;
+    current: number;
+    limit: number;
+    upgradeTier: string | null;
+  } | null>(null);
 
   useEffect(() => {
     if (createdRef.current) return;
     createdRef.current = true;
-    const created = createLocalCanvas();
-    navigate(`/canvas/${created.slug}`, { replace: true });
+
+    const userId = useAuthStore.getState().user?.id;
+    if (!userId) {
+      const created = createLocalCanvas();
+      navigate(`/canvas/${created.slug}`, { replace: true });
+      return;
+    }
+
+    import('../../kernel/quota').then(({ checkQuota }) => {
+      checkQuota(userId, 'canvas_count').then((result) => {
+        if (!result.allowed) {
+          setQuotaBlocked({
+            resource: 'canvases',
+            current: result.current,
+            limit: result.limit,
+            upgradeTier: result.upgradeTier,
+          });
+          return;
+        }
+        const created = createLocalCanvas();
+        navigate(`/canvas/${created.slug}`, { replace: true });
+      });
+    });
   }, [navigate]);
+
+  if (quotaBlocked) {
+    return (
+      <div data-testid="page-canvas-new" style={appPageStyle}>
+        <UpgradePrompt
+          resource={quotaBlocked.resource}
+          current={quotaBlocked.current}
+          limit={quotaBlocked.limit}
+          upgradeTier={quotaBlocked.upgradeTier as 'creator' | 'pro' | 'enterprise' | null}
+          onClose={() => navigate('/canvas', { replace: true })}
+        />
+      </div>
+    );
+  }
 
   return (
     <div data-testid="page-canvas-new" style={appPageStyle}>
@@ -469,8 +513,12 @@ export const CanvasPage: React.FC = () => {
   const [sceneGraph, setSceneGraph] = useState<SceneGraph | null>(null);
   const [canvasSummary, setCanvasSummary] = useState<LocalCanvasSummary | null>(null);
 
+  // Per-canvas theme override — when set, overrides global theme for this canvas
+  const [canvasTheme, setCanvasTheme] = useState<ThemeName | undefined>(undefined);
+
   // Sticker settings modal state (works for stickers and non-sticker conversion)
   const [entityToEditAsSticker, setEntityToEditAsSticker] = useState<CanvasEntity | null>(null);
+  const canvasViewportRef = useRef<HTMLDivElement>(null);
 
   // Canvas settings state — wired to CanvasSettingsDropdown events
   const [viewportConfig, setViewportConfig] = useState<ViewportConfig>({
@@ -612,10 +660,10 @@ export const CanvasPage: React.FC = () => {
         } catch { return false; }
       };
 
-      // Seed demo entities for /canvas/demo route — skip if chat widget already saved
+      // Seed demo entities for /canvas/demo route — skip if already seeded
       if (isDemo && !seededRef.current) {
         seededRef.current = true;
-        if (!savedCanvasHasWidget('demo', 'wgt-live-chat')) {
+        if (!savedCanvasHasWidget('demo', 'sn.builtin.todo-list')) {
           seedDemoEntities();
           // Force immediate save so data persists even if user navigates away quickly
           setTimeout(() => bus.emit(CanvasDocumentEvents.SAVE_REQUESTED, {}), 500);
@@ -687,10 +735,13 @@ export const CanvasPage: React.FC = () => {
   borderRadiusRef.current = typeof borderRadius === 'number' ? borderRadius : 0;
   const canvasPositionRef = useRef(canvasPosition);
   canvasPositionRef.current = canvasPosition;
+  const canvasThemeRef = useRef<string | undefined>(canvasTheme);
+  canvasThemeRef.current = canvasTheme;
   const persistence = usePersistence(canvasKey, sceneGraph, canvasSummary ?? undefined, {
     viewportConfig: viewportConfigRef,
     borderRadius: borderRadiusRef,
     canvasPosition: canvasPositionRef,
+    theme: canvasThemeRef,
   });
 
   useEffect(() => {
@@ -795,6 +846,28 @@ export const CanvasPage: React.FC = () => {
     setFullscreenPreview(false);
     setMode('edit');
   }, [setFullscreenPreview, setMode]);
+
+  // Per-canvas theme: apply on load, restore global on unmount
+  useEffect(() => {
+    const unsub = bus.subscribe('canvas.document.theme.loaded', (event: { payload: { theme: ThemeName } }) => {
+      setCanvasTheme(event.payload.theme);
+    });
+    return unsub;
+  }, []);
+
+  useEffect(() => {
+    const effectiveTheme = canvasTheme ?? activeTheme;
+    applyThemeTokens(effectiveTheme);
+    emitThemeChange(effectiveTheme);
+  }, [canvasTheme, activeTheme]);
+
+  // Restore global theme when leaving this canvas
+  useEffect(() => {
+    return () => {
+      const globalTheme = useUIStore.getState().theme;
+      applyThemeTokens(globalTheme);
+    };
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -1139,8 +1212,31 @@ export const CanvasPage: React.FC = () => {
     }
   }, [canvasSummary]);
 
+  const handleCaptureThumbnail = useCallback(async () => {
+    const el = canvasViewportRef.current;
+    if (!el || !canvasSummary) return;
+    try {
+      const url = await captureAndUploadThumbnail(el, canvasSummary.id);
+      useCanvasStore.getState().setCanvasThumbnail(url);
+    } catch {
+      // Thumbnail capture is best-effort; don't block the user
+    }
+  }, [canvasSummary]);
+
+  // Auto-capture thumbnail on save (debounced, best-effort)
+  const lastManualCaptureRef = useRef(0);
+  useEffect(() => {
+    const unsub = bus.subscribe(CanvasDocumentEvents.SAVED, () => {
+      // Skip auto-capture if a manual capture happened within the last 60s
+      if (Date.now() - lastManualCaptureRef.current < 60_000) return;
+      handleCaptureThumbnail();
+    });
+    return unsub;
+  }, [handleCaptureThumbnail]);
+
   return (
     <div
+      ref={canvasViewportRef}
       data-testid="page-canvas"
       data-mode={mode}
       style={{
@@ -1163,6 +1259,7 @@ export const CanvasPage: React.FC = () => {
             borderRadius={typeof borderRadius === 'number' ? borderRadius : borderRadius.topLeft}
             canvasPosition={canvasPosition}
             selectedIds={selectedIds}
+            onCaptureThumbnail={handleCaptureThumbnail}
           />
         }
         renderDockerWidget={renderDockerWidget}
@@ -1225,6 +1322,11 @@ export const CanvasPage: React.FC = () => {
               overflow: 'hidden',
               flexShrink: 0,
               transition: 'width 200ms ease, height 200ms ease',
+              ...(viewportConfig.sizeMode === 'bounded' ? {
+                background: 'var(--sn-surface-glass, rgba(20,17,24,0.85))',
+                backdropFilter: 'blur(16px)',
+                WebkitBackdropFilter: 'blur(16px)',
+              } : {}),
               border: canvasStroke.weight > 0
                 ? `${canvasStroke.weight}px ${canvasStroke.style} ${canvasStroke.color}`
                 : undefined,
@@ -1386,18 +1488,18 @@ export const CanvasPage: React.FC = () => {
   );
 };
 
-const MarketplacePageLazy = React.lazy(() =>
-  import('../pages/MarketplacePageFull').then((m) => ({ default: m.MarketplacePageFull })),
+const MarketplaceRootLazy = React.lazy(() =>
+  import('../pages/marketplace').then((m) => ({ default: m.MarketplaceRoot })),
 );
 
 export const MarketplacePage: React.FC = () => (
   <Suspense fallback={<div data-testid="page-marketplace" style={appPageStyle}>Loading marketplace...</div>}>
-    <MarketplacePageLazy />
+    <MarketplaceRootLazy />
   </Suspense>
 );
 
 export const SettingsPage: React.FC = () => {
-  const [tab, setTab] = React.useState<'billing' | 'integrations' | 'commerce' | 'purchases'>('billing');
+  const [tab, setTab] = React.useState<'billing' | 'integrations' | 'commerce' | 'purchases' | 'security'>('billing');
 
   const tabBtnStyle = (active: boolean): React.CSSProperties => ({
     padding: '8px 16px',
@@ -1418,12 +1520,14 @@ export const SettingsPage: React.FC = () => {
         <button style={tabBtnStyle(tab === 'integrations')} onClick={() => setTab('integrations')}>Integrations</button>
         <button style={tabBtnStyle(tab === 'commerce')} onClick={() => setTab('commerce')}>Creator Commerce</button>
         <button style={tabBtnStyle(tab === 'purchases')} onClick={() => setTab('purchases')}>My Purchases</button>
+        <button style={tabBtnStyle(tab === 'security')} onClick={() => setTab('security')}>Security</button>
       </div>
       <Suspense fallback={<div>Loading...</div>}>
         {tab === 'billing' && <BillingSectionLazy />}
         {tab === 'integrations' && <IntegrationsSectionLazy />}
         {tab === 'commerce' && <CreatorCommerceSectionLazy />}
         {tab === 'purchases' && <MyPurchasesSectionLazy />}
+        {tab === 'security' && <SecuritySectionLazy />}
       </Suspense>
     </div>
   );
@@ -1441,16 +1545,329 @@ const CreatorCommerceSectionLazy = React.lazy(() =>
 const MyPurchasesSectionLazy = React.lazy(() =>
   import('../pages/settings/MyPurchasesSection').then((m) => ({ default: m.MyPurchasesSection })),
 );
+const SecuritySectionLazy = React.lazy(() =>
+  import('../pages/settings/SecuritySection').then((m) => ({ default: m.SecuritySection })),
+);
 
 export const InvitePage: React.FC = () => {
   const { token } = useParams<{ token: string }>();
+  const navigate = useNavigate();
+  const isAuthenticated = useAuthStore(selectIsAuthenticated);
+  const [invite, setInvite] = useState<{
+    canvasName?: string;
+    inviterName?: string;
+    role: string;
+    status: string;
+    expiresAt: string;
+  } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [accepting, setAccepting] = useState(false);
+
+  useEffect(() => {
+    if (!token) return;
+    import('../../kernel/social-graph/canvas-invites').then(({ getInviteByToken }) => {
+      getInviteByToken(token).then((result) => {
+        if (!result) {
+          setError('This invite link is invalid or has been revoked.');
+          return;
+        }
+        if (result.status !== 'pending') {
+          setError(`This invite has already been ${result.status}.`);
+          return;
+        }
+        if (new Date(result.expiresAt) < new Date()) {
+          setError('This invite has expired.');
+          return;
+        }
+        setInvite({
+          canvasName: result.canvasName,
+          inviterName: result.inviterName,
+          role: result.role,
+          status: result.status,
+          expiresAt: result.expiresAt,
+        });
+      });
+    });
+  }, [token]);
+
+  const handleAccept = useCallback(async () => {
+    if (!token) return;
+    const userId = useAuthStore.getState().user?.id;
+    if (!userId) return;
+
+    setAccepting(true);
+    try {
+      const { acceptInvite } = await import('../../kernel/social-graph/canvas-invites');
+      const { canvasId } = await acceptInvite(token, userId);
+      navigate(`/canvas/${canvasId}`, { replace: true });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to accept invite');
+      setAccepting(false);
+    }
+  }, [token, navigate]);
+
+  if (error) {
+    return (
+      <div data-testid="page-invite" style={{ ...appPageStyle, textAlign: 'center' as const, paddingTop: 80 }}>
+        <h2 style={{ marginBottom: 12 }}>Invite Error</h2>
+        <p style={{ color: 'var(--sn-text-muted, #6b7280)', marginBottom: 24 }}>{error}</p>
+        <Link to="/" style={{ color: 'var(--sn-accent, #6366f1)' }}>Go to Dashboard</Link>
+      </div>
+    );
+  }
+
+  if (!invite) {
+    return (
+      <div data-testid="page-invite" style={appPageStyle}>
+        <p>Loading invite...</p>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div data-testid="page-invite" style={{ ...appPageStyle, textAlign: 'center' as const, paddingTop: 80 }}>
+        <h2 style={{ marginBottom: 12 }}>Canvas Invitation</h2>
+        <p style={{ marginBottom: 8 }}>
+          {invite.inviterName ? `${invite.inviterName} invited you` : 'You have been invited'} to join
+          {invite.canvasName ? ` "${invite.canvasName}"` : ' a canvas'} as a <strong>{invite.role}</strong>.
+        </p>
+        <p style={{ color: 'var(--sn-text-muted, #6b7280)', marginBottom: 24 }}>
+          Please sign in to accept this invitation.
+        </p>
+        <Link
+          to={`/login?redirect=/invite/${token}`}
+          style={{
+            display: 'inline-block',
+            padding: '10px 24px',
+            background: 'var(--sn-accent, #6366f1)',
+            color: '#fff',
+            borderRadius: 'var(--sn-radius, 8px)',
+            textDecoration: 'none',
+            fontWeight: 600,
+          }}
+        >
+          Sign In
+        </Link>
+      </div>
+    );
+  }
+
   return (
-    <div data-testid="page-invite" style={appPageStyle}><h1>Accept Invite</h1><p>Token: {token}</p></div>
+    <div data-testid="page-invite" style={{ ...appPageStyle, textAlign: 'center' as const, paddingTop: 80 }}>
+      <h2 style={{ marginBottom: 12 }}>Canvas Invitation</h2>
+      <p style={{ marginBottom: 8 }}>
+        {invite.inviterName ? `${invite.inviterName} invited you` : 'You have been invited'} to join
+        {invite.canvasName ? ` "${invite.canvasName}"` : ' a canvas'} as a <strong>{invite.role}</strong>.
+      </p>
+      <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 24 }}>
+        <button
+          data-testid="invite-accept"
+          onClick={handleAccept}
+          disabled={accepting}
+          style={{
+            padding: '10px 24px',
+            background: 'var(--sn-accent, #6366f1)',
+            color: '#fff',
+            border: 'none',
+            borderRadius: 'var(--sn-radius, 8px)',
+            cursor: accepting ? 'not-allowed' : 'pointer',
+            fontWeight: 600,
+            fontSize: 14,
+          }}
+        >
+          {accepting ? 'Joining...' : 'Accept Invitation'}
+        </button>
+        <button
+          data-testid="invite-decline"
+          onClick={() => navigate('/', { replace: true })}
+          style={{
+            padding: '10px 24px',
+            background: 'transparent',
+            border: '1px solid var(--sn-border, #e5e7eb)',
+            borderRadius: 'var(--sn-radius, 8px)',
+            cursor: 'pointer',
+            fontSize: 14,
+          }}
+        >
+          Decline
+        </button>
+      </div>
+    </div>
   );
 };
 
 export const NotFoundPage: React.FC = () => (
   <div data-testid="page-not-found" style={appPageStyle}><h1>404 — Not Found</h1></div>
+);
+
+const legalPageStyle: React.CSSProperties = {
+  maxWidth: 720,
+  margin: '0 auto',
+  padding: '48px 24px',
+  lineHeight: 1.7,
+  fontSize: 14,
+  color: 'var(--sn-text, #1a1a2e)',
+};
+
+const legalHeadingStyle: React.CSSProperties = {
+  fontSize: 28,
+  fontWeight: 700,
+  marginBottom: 8,
+};
+
+const legalSubheadingStyle: React.CSSProperties = {
+  fontSize: 18,
+  fontWeight: 600,
+  marginTop: 32,
+  marginBottom: 12,
+};
+
+const legalMutedStyle: React.CSSProperties = {
+  fontSize: 13,
+  color: 'var(--sn-text-muted, #6b7280)',
+  marginBottom: 32,
+};
+
+export const TermsPage: React.FC = () => (
+  <div data-testid="page-terms" style={legalPageStyle}>
+    <h1 style={legalHeadingStyle}>Terms of Service</h1>
+    <p style={legalMutedStyle}>Last updated: March 2026</p>
+
+    <h2 style={legalSubheadingStyle}>1. Acceptance of Terms</h2>
+    <p>
+      By accessing or using StickerNest (&quot;the Platform&quot;), you agree to be bound by these Terms of Service.
+      If you do not agree, do not use the Platform.
+    </p>
+
+    <h2 style={legalSubheadingStyle}>2. Account Registration</h2>
+    <p>
+      You must provide accurate information when creating an account. You are responsible for maintaining
+      the security of your account credentials. You must be at least 13 years old to use the Platform.
+    </p>
+
+    <h2 style={legalSubheadingStyle}>3. Acceptable Use</h2>
+    <p>
+      You agree not to: upload malicious code or widgets; attempt to bypass security measures;
+      harass other users; violate intellectual property rights; use the Platform for illegal purposes;
+      or interfere with the Platform&apos;s operation.
+    </p>
+
+    <h2 style={legalSubheadingStyle}>4. Content and Widgets</h2>
+    <p>
+      You retain ownership of content you create. By publishing widgets or content, you grant StickerNest
+      a non-exclusive license to host, display, and distribute it on the Platform. Widgets run in
+      sandboxed environments and must comply with our security policies.
+    </p>
+
+    <h2 style={legalSubheadingStyle}>5. Commerce and Payments</h2>
+    <p>
+      Creators who sell through the Platform are responsible for their products and services.
+      Payment processing is handled by Stripe. StickerNest is not responsible for disputes
+      between buyers and sellers beyond providing a dispute resolution mechanism.
+    </p>
+
+    <h2 style={legalSubheadingStyle}>6. Intellectual Property</h2>
+    <p>
+      The StickerNest platform, including its software, design, and branding, is the property
+      of StickerNest. Widget licenses are set by their creators and must be respected.
+    </p>
+
+    <h2 style={legalSubheadingStyle}>7. Termination</h2>
+    <p>
+      We may suspend or terminate accounts that violate these terms. You may delete your account
+      at any time. Upon termination, your data will be handled according to our Privacy Policy.
+    </p>
+
+    <h2 style={legalSubheadingStyle}>8. Limitation of Liability</h2>
+    <p>
+      StickerNest is provided &quot;as is&quot; without warranties. We are not liable for indirect,
+      incidental, or consequential damages arising from your use of the Platform.
+    </p>
+
+    <h2 style={legalSubheadingStyle}>9. Changes to Terms</h2>
+    <p>
+      We may update these terms from time to time. Continued use of the Platform after changes
+      constitutes acceptance of the updated terms.
+    </p>
+
+    <p style={{ marginTop: 40, fontSize: 13, color: 'var(--sn-text-muted, #6b7280)' }}>
+      <Link to="/privacy" style={{ color: 'var(--sn-accent, #6366f1)' }}>Privacy Policy</Link>
+      {' | '}
+      <Link to="/" style={{ color: 'var(--sn-accent, #6366f1)' }}>Back to StickerNest</Link>
+    </p>
+  </div>
+);
+
+export const PrivacyPage: React.FC = () => (
+  <div data-testid="page-privacy" style={legalPageStyle}>
+    <h1 style={legalHeadingStyle}>Privacy Policy</h1>
+    <p style={legalMutedStyle}>Last updated: March 2026</p>
+
+    <h2 style={legalSubheadingStyle}>1. Information We Collect</h2>
+    <p>
+      We collect information you provide directly: email address, display name, profile information,
+      and content you create (canvases, widgets, stickers). We also collect usage data such as
+      page views, feature usage, and device information.
+    </p>
+
+    <h2 style={legalSubheadingStyle}>2. How We Use Your Information</h2>
+    <p>
+      We use your information to: provide and improve the Platform; process transactions;
+      send service-related communications; enforce our terms; and prevent fraud or abuse.
+    </p>
+
+    <h2 style={legalSubheadingStyle}>3. Data Sharing</h2>
+    <p>
+      We do not sell your personal data. We share information with: Stripe for payment processing;
+      Supabase for data hosting; and as required by law. Your public canvases and published widgets
+      are visible to other users as you configure them.
+    </p>
+
+    <h2 style={legalSubheadingStyle}>4. Data Storage and Security</h2>
+    <p>
+      Your data is stored securely using Supabase with row-level security policies. Widget code
+      runs in sandboxed iframes with strict Content Security Policies. We use encryption in transit
+      and at rest.
+    </p>
+
+    <h2 style={legalSubheadingStyle}>5. Cookies</h2>
+    <p>
+      We use essential cookies for authentication and session management. We do not use
+      third-party tracking cookies. Analytics cookies, if any, are anonymized.
+    </p>
+
+    <h2 style={legalSubheadingStyle}>6. Your Rights</h2>
+    <p>
+      You may: access your personal data; correct inaccurate data; request deletion of your account
+      and data; export your data; and withdraw consent for optional data processing.
+      Contact us to exercise these rights.
+    </p>
+
+    <h2 style={legalSubheadingStyle}>7. Data Retention</h2>
+    <p>
+      We retain your data for as long as your account is active. When you delete your account,
+      we delete your personal data within 30 days, except where retention is required by law.
+    </p>
+
+    <h2 style={legalSubheadingStyle}>8. Children&apos;s Privacy</h2>
+    <p>
+      The Platform is not intended for children under 13. We do not knowingly collect personal
+      information from children under 13.
+    </p>
+
+    <h2 style={legalSubheadingStyle}>9. Changes to This Policy</h2>
+    <p>
+      We may update this Privacy Policy from time to time. We will notify users of significant
+      changes via email or in-app notification.
+    </p>
+
+    <p style={{ marginTop: 40, fontSize: 13, color: 'var(--sn-text-muted, #6b7280)' }}>
+      <Link to="/terms" style={{ color: 'var(--sn-accent, #6366f1)' }}>Terms of Service</Link>
+      {' | '}
+      <Link to="/" style={{ color: 'var(--sn-accent, #6366f1)' }}>Back to StickerNest</Link>
+    </p>
+  </div>
 );
 
 // =============================================================================

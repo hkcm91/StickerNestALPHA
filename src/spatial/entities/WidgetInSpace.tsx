@@ -20,6 +20,9 @@ import { WidgetFrame } from '../../runtime/WidgetFrame';
 /** Scale factor to convert canvas units to meters */
 const CANVAS_TO_METERS = 0.01;
 
+/** Depth of the backing panel behind the widget HTML content */
+const PANEL_DEPTH = 0.008;
+
 /**
  * Props for the WidgetInSpace component.
  */
@@ -118,15 +121,20 @@ export const WidgetInSpace = React.memo<WidgetInSpaceProps>(
       };
     }, [onSelect, entity.id]);
 
+    const w = entity.transform.size.width;
+    const h = entity.transform.size.height;
+    const panelW = w * CANVAS_TO_METERS;
+    const panelH = h * CANVAS_TO_METERS;
+
     const containerStyle = useMemo(
       () => ({
-        width: entity.transform.size.width,
-        height: entity.transform.size.height,
+        width: w,
+        height: h,
         overflow: 'hidden' as const,
-        border: selected ? '2px solid #6366f1' : 'none',
-        borderRadius: '4px',
+        border: selected ? '2px solid #6366f1' : '1px solid rgba(255,255,255,0.1)',
+        borderRadius: '6px',
       }),
-      [entity.transform.size.width, entity.transform.size.height, selected],
+      [w, h, selected],
     );
 
     return (
@@ -136,6 +144,18 @@ export const WidgetInSpace = React.memo<WidgetInSpaceProps>(
         scale={scale}
         onClick={handleClick}
       >
+        {/* Depth backing — gives the widget a physical panel feel in 3D/VR */}
+        <mesh position={[0, 0, -PANEL_DEPTH / 2]}>
+          <boxGeometry args={[panelW, panelH, PANEL_DEPTH]} />
+          <meshStandardMaterial
+            color={selected ? '#312e81' : '#1a1a2e'}
+            transparent
+            opacity={0.92}
+            emissive={selected ? '#6366f1' : '#000000'}
+            emissiveIntensity={selected ? 0.3 : 0}
+          />
+        </mesh>
+
         <Html transform occlude>
           <div style={containerStyle}>
             <WidgetFrame
@@ -145,8 +165,8 @@ export const WidgetInSpace = React.memo<WidgetInSpaceProps>(
               config={config}
               theme={theme}
               visible={entity.visible}
-              width={entity.transform.size.width}
-              height={entity.transform.size.height}
+              width={w}
+              height={h}
             />
           </div>
         </Html>

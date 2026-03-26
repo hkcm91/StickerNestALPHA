@@ -1,0 +1,184 @@
+{
+  "version": 1,
+  "lastScanAt": "2026-03-24T16:00:00Z",
+  "lastPostAt": null,
+  "cadence": {
+    "twitter": { "postsPerWeek": 4, "bestTimes": ["09:00", "12:30", "17:00"] },
+    "tiktok": { "postsPerWeek": 2, "bestTimes": ["11:00", "19:00"] },
+    "youtube": { "postsPerWeek": 1, "bestTimes": ["10:00"] },
+    "reddit": { "postsPerWeek": 1, "bestTimes": ["10:00", "14:00"] }
+  },
+  "queue": [
+    {
+      "id": "content-0001",
+      "status": "queued",
+      "idea": {
+        "title": "Lab visual overhaul — ghost pipeline wireframe + atmosphere effects",
+        "angle": "feature-spotlight",
+        "source": "commits:aebdd51,b8d8a25,054a7f5",
+        "score": { "visual": 5, "novelty": 4, "reach": 4, "story": 3, "total": 16 }
+      },
+      "platforms": ["twitter", "tiktok"],
+      "priority": "high",
+      "createdAt": "2026-03-24T16:00:00Z",
+      "scheduledFor": null,
+      "captureScript": null,
+      "assets": null
+    },
+    {
+      "id": "content-0002",
+      "status": "queued",
+      "idea": {
+        "title": "AI prompt refinement overlay — clarifying questions before generation",
+        "angle": "build-in-public",
+        "source": "commits:8ae5c47,a56c46b,48398a6,8ae40ca",
+        "score": { "visual": 4, "novelty": 5, "reach": 4, "story": 4, "total": 17 }
+      },
+      "platforms": ["twitter", "tiktok", "reddit"],
+      "priority": "high",
+      "createdAt": "2026-03-24T16:00:00Z",
+      "scheduledFor": null,
+      "captureScript": null,
+      "assets": null
+    },
+    {
+      "id": "content-0003",
+      "status": "queued",
+      "idea": {
+        "title": "Widget SDK bridge protocol — datasource access + cross-canvas events",
+        "angle": "technical",
+        "source": "commits:53cfc67,a6caf43,45637f7",
+        "score": { "visual": 3, "novelty": 4, "reach": 3, "story": 4, "total": 14 }
+      },
+      "platforms": ["twitter", "reddit"],
+      "priority": "medium",
+      "createdAt": "2026-03-24T16:00:00Z",
+      "scheduledFor": null,
+      "captureScript": null,
+      "assets": null
+    },
+    {
+      "id": "content-0004",
+      "status": "queued",
+      "idea": {
+        "title": "Canvas member management — multi-user canvases with roles",
+        "angle": "build-in-public",
+        "source": "commits:37155be,8364e73,e6c1619",
+        "score": { "visual": 3, "novelty": 3, "reach": 4, "story": 3, "total": 13 }
+      },
+      "platforms": ["twitter"],
+      "priority": "medium",
+      "createdAt": "2026-03-24T16:00:00Z",
+      "scheduledFor": null,
+      "captureScript": null,
+      "assets": null
+    },
+    {
+      "id": "content-0005",
+      "status": "ready",
+      "idea": {
+        "title": "StickerNest canvas editing tools — infinite canvas demo",
+        "angle": "feature-spotlight",
+        "source": "existing-feature",
+        "score": { "visual": 5, "novelty": 3, "reach": 5, "story": 3, "total": 16 }
+      },
+      "platforms": ["twitter", "tiktok"],
+      "priority": "high",
+      "createdAt": "2026-03-24T16:00:00Z",
+      "capturedAt": "2026-03-25T11:45:00Z",
+      "scheduledFor": null,
+      "captureScript": "capture/scripts/canvas-editing-demo.json",
+      "assets": {
+        "screenshots": [
+          "capture/output/canvas-editing-tools/capture/screenshots/01-empty-canvas.png",
+          "capture/output/canvas-editing-tools/capture/screenshots/02-open-toolbar.png",
+          "capture/output/canvas-editing-tools/capture/screenshots/03-place-shape.png",
+          "capture/output/canvas-editing-tools/capture/screenshots/04-draw-shape.png",
+          "capture/output/canvas-editing-tools/capture/screenshots/05-select-entity.png",
+          "capture/output/canvas-editing-tools/capture/screenshots/06-resize-demo.png",
+          "capture/output/canvas-editing-tools/capture/screenshots/07-add-text.png",
+          "capture/output/canvas-editing-tools/capture/screenshots/09-type-text.png",
+          "capture/output/canvas-editing-tools/capture/screenshots/10-zoom-out.png",
+          "capture/output/canvas-editing-tools/capture/screenshots/11-final-state.png"
+        ],
+        "gifs": [
+          "capture/output/canvas-editing-tools/capture/gifs/04-draw-shape.gif",
+          "capture/output/canvas-editing-tools/capture/gifs/06-resize-demo.gif",
+          "capture/output/canvas-editing-tools/capture/gifs/10-zoom-out.gif"
+        ],
+        "manifest": "capture/output/canvas-editing-tools/capture/manifest.json"
+      }
+    },
+    {
+      "id": "content-0006",
+      "status": "ready",
+      "idea": {
+        "title": "Widget system deep dive — sandboxed apps on an infinite canvas",
+        "angle": "technical",
+        "source": "existing-feature",
+        "score": { "visual": 4, "novelty": 4, "reach": 3, "story": 4, "total": 15 }
+      },
+      "platforms": ["twitter", "reddit"],
+      "priority": "medium",
+      "createdAt": "2026-03-24T16:00:00Z",
+      "capturedAt": "2026-03-25T11:55:00Z",
+      "scheduledFor": null,
+      "captureScript": "capture/scripts/widget-system-demo.json",
+      "assets": {
+        "screenshots": [
+          "capture/output/widget-system/capture/screenshots/01-canvas-overview.png",
+          "capture/output/widget-system/capture/screenshots/02-open-widget-panel.png",
+          "capture/output/widget-system/capture/screenshots/03-show-stickers-tab.png",
+          "capture/output/widget-system/capture/screenshots/03-show-widget-library.png",
+          "capture/output/widget-system/capture/screenshots/05-show-widget-library.png",
+          "capture/output/widget-system/capture/screenshots/06-show-toolbar.png",
+          "capture/output/widget-system/capture/screenshots/07-switch-preview.png",
+          "capture/output/widget-system/capture/screenshots/08-back-to-edit.png",
+          "capture/output/widget-system/capture/screenshots/09-show-layers.png",
+          "capture/output/widget-system/capture/screenshots/10-final-overview.png"
+        ],
+        "gifs": [
+          "capture/output/widget-system/capture/gifs/03-show-widget-library.gif",
+          "capture/output/widget-system/capture/gifs/05-show-widget-library.gif",
+          "capture/output/widget-system/capture/gifs/07-switch-preview.gif"
+        ],
+        "manifest": "capture/output/widget-system/capture/manifest.json"
+      }
+    },
+    {
+      "id": "content-0007",
+      "status": "ready",
+      "idea": {
+        "title": "StickerNest V5 platform overview — the spatial operating system",
+        "angle": "vision",
+        "source": "existing-feature",
+        "score": { "visual": 5, "novelty": 4, "reach": 5, "story": 5, "total": 19 }
+      },
+      "platforms": ["twitter", "tiktok", "reddit"],
+      "priority": "high",
+      "createdAt": "2026-03-24T16:00:00Z",
+      "capturedAt": "2026-03-25T11:31:00Z",
+      "scheduledFor": null,
+      "captureScript": "capture/scripts/platform-overview-demo.json",
+      "assets": {
+        "screenshots": [
+          "capture/output/platform-overview/capture/screenshots/01-hero-shot.png",
+          "capture/output/platform-overview/capture/screenshots/02-canvas-interaction.png",
+          "capture/output/platform-overview/capture/screenshots/03-widget-ecosystem.png",
+          "capture/output/platform-overview/capture/screenshots/04-built-in-widgets.png",
+          "capture/output/platform-overview/capture/screenshots/05-theme-system.png",
+          "capture/output/platform-overview/capture/screenshots/06-pipeline-wiring.png",
+          "capture/output/platform-overview/capture/screenshots/07-layers-panel.png",
+          "capture/output/platform-overview/capture/screenshots/08-zoom-out-vision.png",
+          "capture/output/platform-overview/capture/screenshots/09-closing.png"
+        ],
+        "gifs": [
+          "capture/output/platform-overview/capture/gifs/02-canvas-interaction.gif",
+          "capture/output/platform-overview/capture/gifs/05-theme-system.gif"
+        ],
+        "manifest": "capture/output/platform-overview/capture/manifest.json"
+      }
+    }
+  ],
+  "posted": []
+}

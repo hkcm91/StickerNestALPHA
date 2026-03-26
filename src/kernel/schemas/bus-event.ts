@@ -88,6 +88,10 @@ export const SocialEvents = {
   ENTITY_TRANSFORMED: 'social.entity.transformed',
   DATASOURCE_UPDATED: 'social.datasource.updated',
   CONFLICT_REJECTED: 'social.conflict.rejected',
+  EDIT_LOCK_ACQUIRED: 'social.editLock.acquired',
+  EDIT_LOCK_RELEASED: 'social.editLock.released',
+  CONNECTION_LOST: 'social.connection.lost',
+  CONNECTION_RESTORED: 'social.connection.restored',
 } as const;
 
 /**
@@ -143,6 +147,29 @@ export const CanvasEvents = {
 
   // Cross-canvas pipeline edge request (from ghost tool)
   PIPELINE_CROSS_CANVAS_EDGE_REQUESTED: 'canvas.pipeline.crossCanvasEdge.requested',
+
+  // Entity animation lifecycle events
+  ENTITY_ANIMATION_TRIGGERED: 'canvas.entity.animation.triggered',
+  ENTITY_ANIMATION_STARTED: 'canvas.entity.animation.started',
+  ENTITY_ANIMATION_COMPLETED: 'canvas.entity.animation.completed',
+  ENTITY_ANIMATION_CANCELLED: 'canvas.entity.animation.cancelled',
+  ENTITY_STATE_CHANGED: 'canvas.entity.state.changed',
+
+  // Property layer events — widget-attributed property overrides on entities
+  /** A widget added a property layer to an entity. Payload: { entityId, layer: PropertyLayer } */
+  PROPERTY_LAYER_ADDED: 'canvas.entity.propertyLayer.added',
+  /** A property layer was updated. Payload: { entityId, layerId, updates: Partial<PropertyLayer> } */
+  PROPERTY_LAYER_UPDATED: 'canvas.entity.propertyLayer.updated',
+  /** A property layer was removed. Payload: { entityId, layerId } */
+  PROPERTY_LAYER_REMOVED: 'canvas.entity.propertyLayer.removed',
+  /** Property layers were reordered. Payload: { entityId, layerIds: string[] } */
+  PROPERTY_LAYER_REORDERED: 'canvas.entity.propertyLayer.reordered',
+  /** A property layer was toggled on/off. Payload: { entityId, layerId, enabled: boolean } */
+  PROPERTY_LAYER_TOGGLED: 'canvas.entity.propertyLayer.toggled',
+  /** Request to open/focus the widget that created a property layer. Payload: { entityId, layerId } */
+  PROPERTY_LAYER_ALTER: 'canvas.entity.propertyLayer.alter',
+  /** Batch-replace all property layers on an entity. Payload: { entityId, layers: PropertyLayer[], previousLayers?: PropertyLayer[] } */
+  PROPERTY_LAYER_BATCH_UPDATED: 'canvas.entity.propertyLayer.batchUpdated',
 } as const;
 
 /**
@@ -179,6 +206,9 @@ export const CrossCanvasEvents = {
 export const ShellEvents = {
   THEME_CHANGED: 'shell.theme.changed',
   ROUTE_CHANGED: 'shell.route.changed',
+  SPATIAL_TOGGLE_3D: 'shell.spatial.toggle3d',
+  SPATIAL_ENTER_VR: 'shell.spatial.enterVR',
+  SPATIAL_ENTER_AR: 'shell.spatial.enterAR',
 } as const;
 
 /**
@@ -229,6 +259,15 @@ export const SpatialEvents = {
 
   // Locomotion events
   TELEPORT_REQUESTED: 'spatial.teleport.requested',
+
+  // Spatial panel events (2D canvas panels in VR/3D space)
+  PANEL_SPAWNED: 'spatial.panel.spawned',
+  PANEL_GRABBED: 'spatial.panel.grabbed',
+  PANEL_RELEASED: 'spatial.panel.released',
+  PANEL_PINNED: 'spatial.panel.pinned',
+  PANEL_UNPINNED: 'spatial.panel.unpinned',
+  PANEL_CLOSED: 'spatial.panel.closed',
+  PANEL_RESIZED: 'spatial.panel.resized',
 } as const;
 
 /**
@@ -460,6 +499,10 @@ export const SocialGraphEvents = {
   CANVAS_MEMBER_ADDED: 'kernel.socialgraph.canvasMember.added',
   CANVAS_MEMBER_REMOVED: 'kernel.socialgraph.canvasMember.removed',
   CANVAS_MEMBER_ROLE_CHANGED: 'kernel.socialgraph.canvasMember.roleChanged',
+
+  // Canvas metadata events
+  CANVAS_TAGS_UPDATED: 'kernel.socialgraph.canvas.tagsUpdated',
+  CANVAS_THUMBNAIL_UPDATED: 'kernel.socialgraph.canvas.thumbnailUpdated',
 } as const;
 
 /**
@@ -494,6 +537,59 @@ export const DockerEvents = {
   CONFIG_LOADED: 'docker.config.loaded',
   /** Docker configuration was saved to backend */
   CONFIG_SAVED: 'docker.config.saved',
+} as const;
+
+/**
+ * Event type constants for Timeline / Video Production system
+ * Timeline events are emitted when timeline state changes.
+ */
+export const TimelineEvents = {
+  // Transport
+  PLAY: 'timeline.transport.play',
+  PAUSE: 'timeline.transport.pause',
+  STOP: 'timeline.transport.stop',
+  SEEK: 'timeline.transport.seek',
+  PLAYHEAD_MOVED: 'timeline.playhead.moved',
+  PLAYBACK_RATE_CHANGED: 'timeline.playbackRate.changed',
+
+  // Track CRUD
+  TRACK_ADDED: 'timeline.track.added',
+  TRACK_REMOVED: 'timeline.track.removed',
+  TRACK_UPDATED: 'timeline.track.updated',
+
+  // Clip CRUD
+  CLIP_ADDED: 'timeline.clip.added',
+  CLIP_REMOVED: 'timeline.clip.removed',
+  CLIP_MOVED: 'timeline.clip.moved',
+  CLIP_TRIMMED: 'timeline.clip.trimmed',
+  CLIP_SPLIT: 'timeline.clip.split',
+  CLIP_PROPERTY_CHANGED: 'timeline.clip.property.changed',
+
+  // Keyframes
+  KEYFRAME_ADDED: 'timeline.keyframe.added',
+  KEYFRAME_REMOVED: 'timeline.keyframe.removed',
+  KEYFRAME_MOVED: 'timeline.keyframe.moved',
+  KEYFRAME_VALUE_CHANGED: 'timeline.keyframe.value.changed',
+
+  // Composition
+  COMPOSITION_CHANGED: 'timeline.composition.changed',
+  LOOP_REGION_CHANGED: 'timeline.loopRegion.changed',
+  MARKER_ADDED: 'timeline.marker.added',
+  MARKER_REMOVED: 'timeline.marker.removed',
+
+  // Mode
+  TIMELINE_MODE_ENTERED: 'timeline.mode.entered',
+  TIMELINE_MODE_EXITED: 'timeline.mode.exited',
+
+  // Render/Export
+  RENDER_REQUESTED: 'timeline.render.requested',
+  RENDER_PROGRESS: 'timeline.render.progress',
+  RENDER_COMPLETED: 'timeline.render.completed',
+  RENDER_FAILED: 'timeline.render.failed',
+
+  // Audio
+  AUDIO_VOLUME_CHANGED: 'timeline.audio.volume.changed',
+  AUDIO_WAVEFORM_READY: 'timeline.audio.waveform.ready',
 } as const;
 
 /**

@@ -69,7 +69,7 @@ const ThemeCard: React.FC<{
 };
 
 export const ThemesTab: React.FC<{ fav: FavoritesHook }> = ({ fav }) => {
-  const [activeTheme, setActiveTheme] = useState<ThemeName>('dark');
+  const [activeTheme, setActiveTheme] = useState<ThemeName>('midnight-aurora');
 
   const applyTheme = (name: ThemeName) => {
     setActiveTheme(name);
@@ -82,10 +82,12 @@ export const ThemesTab: React.FC<{ fav: FavoritesHook }> = ({ fav }) => {
 
   return (
     <>
-      <SectionTitle sub="Dark mode glows. Light mode grounds. High-contrast draws hard lines. Click a card to preview.">Theme Comparison</SectionTitle>
+      <SectionTitle sub="Five themes. Click a card to preview.">Theme Comparison</SectionTitle>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
-        <ThemeCard name="dark" label="Dark" id="theme-dark" fav={fav} active={activeTheme === 'dark'} onSelect={() => applyTheme('dark')} />
-        <ThemeCard name="light" label="Light" id="theme-light" fav={fav} active={activeTheme === 'light'} onSelect={() => applyTheme('light')} />
+        <ThemeCard name="midnight-aurora" label="Midnight Aurora" id="theme-midnight" fav={fav} active={activeTheme === 'midnight-aurora'} onSelect={() => applyTheme('midnight-aurora')} />
+        <ThemeCard name="crystal-light" label="Crystal Light" id="theme-crystal" fav={fav} active={activeTheme === 'crystal-light'} onSelect={() => applyTheme('crystal-light')} />
+        <ThemeCard name="bubbles-sky" label="Bubbles & Sky" id="theme-bubbles" fav={fav} active={activeTheme === 'bubbles-sky'} onSelect={() => applyTheme('bubbles-sky')} />
+        <ThemeCard name="autumn-fireflies" label="Autumn Fireflies" id="theme-autumn" fav={fav} active={activeTheme === 'autumn-fireflies'} onSelect={() => applyTheme('autumn-fireflies')} />
         <ThemeCard name="high-contrast" label="High Contrast" id="theme-hc" fav={fav} active={activeTheme === 'high-contrast'} onSelect={() => applyTheme('high-contrast')} />
       </div>
     </>

@@ -22,3 +22,5 @@ export {
 } from './HandBridge';
 
 export { Pointer, type PointerProps } from './Pointer';
+
+export { GrabHandler } from './GrabHandler';

@@ -1,0 +1,113 @@
+{
+  "scriptName": "platform-overview",
+  "feature": "StickerNest Platform Overview",
+  "audience": "investor",
+  "screenshots": [
+    {
+      "stepId": "hero-shot",
+      "label": "Platform hero shot",
+      "path": "screenshots/01-hero-shot.png",
+      "timestamp": 14932,
+      "annotation": "StickerNest V5 — Spatial Operating System",
+      "narration": "StickerNest is a spatial operating system. An infinite canvas where widgets, data, and event-driven pipelines compose into interactive spaces."
+    },
+    {
+      "stepId": "canvas-interaction",
+      "label": "Show canvas editing",
+      "path": "screenshots/02-canvas-interaction.png",
+      "timestamp": 22370,
+      "annotation": "Intuitive canvas editing",
+      "narration": "The canvas is the desktop. Users create with intuitive drag-and-drop tools — shapes, text, images, and interactive widgets."
+    },
+    {
+      "stepId": "widget-ecosystem",
+      "label": "Show asset panel",
+      "path": "screenshots/03-widget-ecosystem.png",
+      "timestamp": 86211,
+      "annotation": "Widget ecosystem",
+      "narration": "The widget ecosystem is the app store. Creators build and publish widgets. Users install and compose them into custom workflows."
+    },
+    {
+      "stepId": "built-in-widgets",
+      "label": "Show built-in widget variety",
+      "path": "screenshots/04-built-in-widgets.png",
+      "timestamp": 91476,
+      "annotation": "Built-in widgets: Todo, Kanban, Image Gen, Stories, Pathfinder",
+      "narration": "We ship five built-in widgets out of the box — todo lists, kanban boards, image generation, interactive stories, and pathfinding. Third-party creators will build hundreds more."
+    },
+    {
+      "stepId": "theme-system",
+      "label": "Show mode toggle (edit/preview)",
+      "path": "screenshots/05-theme-system.png",
+      "timestamp": 96399,
+      "annotation": "Edit / Preview mode",
+      "narration": "Full theming support. Light, dark, high-contrast, and custom workspace themes. Every widget adapts automatically through CSS token injection."
+    },
+    {
+      "stepId": "pipeline-wiring",
+      "label": "Back to edit mode then show tools",
+      "path": "screenshots/06-pipeline-wiring.png",
+      "timestamp": 158626,
+      "annotation": "Visual pipeline editor",
+      "narration": "The pipeline editor connects widget outputs to widget inputs visually. No code required. Creators build automations by drawing connections."
+    },
+    {
+      "stepId": "layers-panel",
+      "label": "Show layers panel",
+      "path": "screenshots/07-layers-panel.png",
+      "timestamp": 164196,
+      "annotation": "Full entity management",
+      "narration": "Every object on the canvas is an entity in a managed scene graph. Z-order, visibility, grouping, spatial indexing — it's a real rendering engine."
+    },
+    {
+      "stepId": "zoom-out-vision",
+      "label": "Zoom out for the big picture",
+      "path": "screenshots/08-zoom-out-vision.png",
+      "timestamp": 168308,
+      "annotation": "The spatial operating system",
+      "narration": "StickerNest positions at the intersection of creative tools, spatial computing, and the widget economy. The canvas is the desktop. Widgets are apps. The event bus is IPC. The marketplace is the app store."
+    },
+    {
+      "stepId": "closing",
+      "label": "Closing shot",
+      "path": "screenshots/09-closing.png",
+      "timestamp": 174720,
+      "annotation": "StickerNest V5",
+      "narration": "Seven-layer architecture. Real-time collaboration. 2D, 3D, and VR. Creator commerce built in. Let's schedule a deeper dive."
+    }
+  ],
+  "recordings": [],
+  "gifs": [
+    {
+      "stepId": "canvas-interaction",
+      "label": "Show canvas editing",
+      "path": "gifs/02-canvas-interaction.gif",
+      "durationMs": 48549
+    },
+    {
+      "stepId": "theme-system",
+      "label": "Show mode toggle (edit/preview)",
+      "path": "gifs/05-theme-system.gif",
+      "durationMs": 51088
+    }
+  ],
+  "totalDurationMs": 174968,
+  "capturedAt": "2026-03-25T18:28:40.562Z",
+  "metadata": {
+    "hook": "StickerNest is a spatial operating system — the canvas is the new desktop",
+    "cta": "Let's schedule a deeper dive",
+    "tags": [
+      "stickernest",
+      "platform",
+      "spatial-computing",
+      "startup",
+      "demo"
+    ],
+    "description": "StickerNest V5 platform overview: infinite canvas, widget ecosystem, pipeline automation, and the vision for spatial computing."
+  },
+  "targetUrl": "http://localhost:5173/",
+  "viewport": {
+    "width": 1920,
+    "height": 1080
+  }
+}

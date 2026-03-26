@@ -16,11 +16,12 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
-import type { Point2D, CanvasEntity, DockerEntity } from '@sn/types';
+import type { Point2D, CanvasEntity, DockerEntity, GridConfig } from '@sn/types';
 import { CanvasEvents } from '@sn/types';
 
 import { screenToCanvas, anchorsToSvgPath, resolveEntityTransform, setEntityPlatformTransform } from '../../canvas/core';
 import type { ViewportState, SceneGraph } from '../../canvas/core';
+import { snapToGridCell } from '../../canvas/tools/move/snap';
 import { bus } from '../../kernel/bus';
 import { useUIStore } from '../../kernel/stores/ui/ui.store';
 
@@ -46,6 +47,8 @@ export interface CanvasToolLayerProps {
   getZoom?: () => number;
   /** Optional ID of an element to portal the background capture layer into */
   backgroundPortalId?: string;
+  /** Grid configuration for snap-to-grid during entity drag and placement */
+  gridConfig?: GridConfig;
 }
 
 let entityCounter = 0;
@@ -204,11 +207,21 @@ export const CanvasToolLayer: React.FC<CanvasToolLayerProps> = ({
   onPan,
   getZoom,
   backgroundPortalId,
+  gridConfig,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const normalizedTool: CanvasToolId =
     (activeTool as string) === 'move' ? 'select' : activeTool;
   const canvasPlatform = useUIStore((s) => s.canvasPlatform);
+
+  /** Apply grid snap if enabled */
+  const applySnap = useCallback(
+    (pos: Point2D, entitySize?: { width: number; height: number }): Point2D => {
+      if (!gridConfig || !gridConfig.enabled || gridConfig.snapMode === 'none') return pos;
+      return snapToGridCell(pos, gridConfig, entitySize);
+    },
+    [gridConfig],
+  );
 
 
   // ── Space key tracking for pan mode ──────────────────────────
@@ -395,7 +408,7 @@ export const CanvasToolLayer: React.FC<CanvasToolLayerProps> = ({
         type: 'widget',
         canvasId: DEMO_CANVAS_ID,
         transform: {
-          position: { x: canvasPoint.x, y: canvasPoint.y },
+          position: applySnap(canvasPoint, { width: 240, height: 180 }),
           size: { width: 240, height: 180 },
           rotation: 0,
           scale: 1,
@@ -424,7 +437,7 @@ export const CanvasToolLayer: React.FC<CanvasToolLayerProps> = ({
       useUIStore.getState().setActiveTool('select');
       useUIStore.getState().setPendingToolData(null);
     },
-    [sceneGraph, onSelectionChange],
+    [sceneGraph, onSelectionChange, applySnap],
   );
 
   // ── Sticker tool handler ───────────────────────────────────
@@ -440,7 +453,7 @@ export const CanvasToolLayer: React.FC<CanvasToolLayerProps> = ({
         type: 'sticker',
         canvasId: DEMO_CANVAS_ID,
         transform: {
-          position: { x: canvasPoint.x, y: canvasPoint.y },
+          position: applySnap(canvasPoint, { width: 120, height: 120 }),
           size: { width: 120, height: 120 },
           rotation: 0,
           scale: 1,
@@ -469,7 +482,7 @@ export const CanvasToolLayer: React.FC<CanvasToolLayerProps> = ({
       useUIStore.getState().setActiveTool('select');
       useUIStore.getState().setPendingToolData(null);
     },
-    [sceneGraph, onSelectionChange],
+    [sceneGraph, onSelectionChange, applySnap],
   );
 
   // - Lottie tool handler ----------------------------------------------------
@@ -487,7 +500,7 @@ export const CanvasToolLayer: React.FC<CanvasToolLayerProps> = ({
         type: 'lottie',
         canvasId: DEMO_CANVAS_ID,
         transform: {
-          position: { x: canvasPoint.x, y: canvasPoint.y },
+          position: applySnap(canvasPoint, { width: 160, height: 160 }),
           size: { width: 160, height: 160 },
           rotation: 0,
           scale: 1,
@@ -519,7 +532,7 @@ export const CanvasToolLayer: React.FC<CanvasToolLayerProps> = ({
       useUIStore.getState().setActiveTool('select');
       useUIStore.getState().setPendingToolData(null);
     },
-    [sceneGraph, onSelectionChange],
+    [sceneGraph, onSelectionChange, applySnap],
   );
 
   // - SVG tool handler -------------------------------------------------------
@@ -547,7 +560,7 @@ export const CanvasToolLayer: React.FC<CanvasToolLayerProps> = ({
         type: 'svg',
         canvasId: DEMO_CANVAS_ID,
         transform: {
-          position: { x: canvasPoint.x, y: canvasPoint.y },
+          position: applySnap(canvasPoint, { width: defaultWidth, height: defaultHeight }),
           size: { width: defaultWidth, height: defaultHeight },
           rotation: 0,
           scale: 1,
@@ -577,7 +590,7 @@ export const CanvasToolLayer: React.FC<CanvasToolLayerProps> = ({
       useUIStore.getState().setActiveTool('select');
       useUIStore.getState().setPendingToolData(null);
     },
-    [sceneGraph, onSelectionChange],
+    [sceneGraph, onSelectionChange, applySnap],
   );
 
   // ── Text tool handler ────────────────────────────────────────
@@ -589,7 +602,7 @@ export const CanvasToolLayer: React.FC<CanvasToolLayerProps> = ({
         type: 'text',
         canvasId: DEMO_CANVAS_ID,
         transform: {
-          position: { x: canvasPoint.x, y: canvasPoint.y },
+          position: applySnap(canvasPoint, { width: 200, height: 40 }),
           size: { width: 200, height: 40 },
           rotation: 0,
           scale: 1,
@@ -617,7 +630,7 @@ export const CanvasToolLayer: React.FC<CanvasToolLayerProps> = ({
       bus.emit(CanvasEvents.ENTITY_CREATED, entity);
       onSelectionChange(new Set([entity.id]));
     },
-    [sceneGraph, onSelectionChange],
+    [sceneGraph, onSelectionChange, applySnap],
   );
 
   // ── Start entity move (shared by select + move tools) ────────
@@ -941,8 +954,9 @@ export const CanvasToolLayer: React.FC<CanvasToolLayerProps> = ({
           const entity = sceneGraph.getEntity(id);
           if (!entity) continue;
           
-          const newPos = { x: startPos.x + dx, y: startPos.y + dy };
-          
+          const rawPos = { x: startPos.x + dx, y: startPos.y + dy };
+          const newPos = applySnap(rawPos, entity.transform.size);
+
           if (entity.parentId && openFolderIds.has(entity.parentId)) {
             const parent = sceneGraph.getEntity(entity.parentId);
             if (parent && parent.type === 'docker') {
@@ -996,7 +1010,7 @@ export const CanvasToolLayer: React.FC<CanvasToolLayerProps> = ({
         });
       }
     },
-    [normalizedTool, sceneGraph, viewport, getCanvasPoint, onPan, getZoom],
+    [normalizedTool, sceneGraph, viewport, getCanvasPoint, onPan, getZoom, applySnap],
   );
 
   // ── Pointer up ───────────────────────────────────────────────
@@ -1079,9 +1093,12 @@ export const CanvasToolLayer: React.FC<CanvasToolLayerProps> = ({
         }
 
         for (const [id, startPos] of dragEntityStartPositions.current) {
+          const entity = sceneGraph.getEntity(id);
+          const rawPos = { x: startPos.x + dx, y: startPos.y + dy };
+          const snappedPos = applySnap(rawPos, entity?.transform.size);
           bus.emit(CanvasEvents.ENTITY_MOVED, {
             id,
-            position: { x: startPos.x + dx, y: startPos.y + dy },
+            position: snappedPos,
           });
         }
 
@@ -1304,7 +1321,7 @@ export const CanvasToolLayer: React.FC<CanvasToolLayerProps> = ({
         dragRootEntityIds.current.clear();
       }
     },
-    [sceneGraph, normalizedTool, selectedIds, getCanvasPoint, onSelectionChange],
+    [sceneGraph, normalizedTool, selectedIds, getCanvasPoint, onSelectionChange, applySnap],
   );
 
   // ── Double-click: enter group edit context ──────────────────

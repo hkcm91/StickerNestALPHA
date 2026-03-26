@@ -21,3 +21,5 @@ export { AssetPanel } from './AssetPanel';
 export type { AssetPanelProps, AssetItem } from './AssetPanel';
 
 export { HistoryPanel } from './HistoryPanel';
+
+export { TimelinePanel } from './timeline';

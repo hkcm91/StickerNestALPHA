@@ -35,3 +35,28 @@ export {
   type SequenceStep,
   type Sequence,
 } from './animation-system';
+
+export {
+  createEntityAnimationOrchestrator,
+  type IEntityAnimationOrchestrator,
+} from './entity-animation-orchestrator';
+
+export {
+  createTimelineSystem,
+  type ITimelineSystem,
+} from './timeline-system';
+
+export {
+  createAudioEngineSystem,
+  type IAudioEngineSystem,
+} from './audio-engine-system';
+
+export {
+  createCompositingSystem,
+  type ICompositingSystem,
+} from './compositing-system';
+
+export {
+  evaluateCubicBezier,
+  BEZIER_PRESETS,
+} from './bezier-easing';

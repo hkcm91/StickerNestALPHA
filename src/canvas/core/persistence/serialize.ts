@@ -16,6 +16,7 @@ import type {
   LayoutMode,
   CanvasPlatform,
   SpatialMode,
+  ThemeName,
 } from '@sn/types';
 import { DEFAULT_BACKGROUND } from '@sn/types';
 
@@ -45,6 +46,8 @@ export interface SerializeContext {
   borderRadius?: number;
   /** Optional canvas position/alignment */
   canvasPosition?: CanvasPositionConfig;
+  /** Optional per-canvas theme override */
+  theme?: ThemeName;
 }
 
 /**
@@ -140,6 +143,7 @@ export function serialize(
     platformConfigs: context.platformConfigs,
     borderRadius: context.borderRadius ?? 0,
     canvasPosition: context.canvasPosition,
+    theme: context.theme,
   };
 }
 

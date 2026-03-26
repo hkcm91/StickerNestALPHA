@@ -40,6 +40,17 @@ class EventBus implements IEventBus {
     return count;
   }
 
+  /**
+   * Emits a typed event to all matching subscribers.
+   *
+   * Dispatch order: exact-match → wildcard → catch-all.
+   * Within each group, handlers are sorted by priority (higher first).
+   * Handler errors are caught and logged — they never propagate.
+   *
+   * @param type - Dot-namespaced event type (e.g., 'widget.mounted')
+   * @param payload - Event payload (must be JSON-serializable)
+   * @param spatial - Optional spatial context for VR/3D events. Leave undefined for non-spatial events.
+   */
   emit<T>(type: string, payload: T, spatial?: SpatialContext): void {
     const event = createBusEvent(type, payload, spatial);
     this.history.push(event as BusEvent);
@@ -63,6 +74,17 @@ class EventBus implements IEventBus {
     }
   }
 
+  /**
+   * Subscribes to events matching an exact type or wildcard pattern.
+   *
+   * Wildcard patterns end with `.*` and match any event whose type starts
+   * with the prefix (e.g., `'social.*'` matches `'social.cursor.moved'`).
+   *
+   * @param type - Exact event type or wildcard pattern (e.g., 'social.*')
+   * @param handler - Callback invoked with the matching BusEvent
+   * @param options - Subscription options (once, priority)
+   * @returns Unsubscribe function — call to remove this subscription
+   */
   subscribe<T = unknown>(
     type: string,
     handler: BusHandler<T>,
@@ -105,6 +127,14 @@ class EventBus implements IEventBus {
     };
   }
 
+  /**
+   * Subscribes to every event regardless of type.
+   * Useful for debugging, logging, and the event inspector.
+   *
+   * @param handler - Callback invoked for every emitted event
+   * @param options - Subscription options (once, priority)
+   * @returns Unsubscribe function — call to remove this subscription
+   */
   subscribeAll(handler: BusHandler, options?: SubscribeOptions): Unsubscribe {
     const entry: HandlerEntry = {
       handler,
@@ -117,12 +147,22 @@ class EventBus implements IEventBus {
     };
   }
 
+  /**
+   * Removes all subscriptions — exact, wildcard, and catch-all.
+   * Primarily used in test teardown.
+   */
   unsubscribeAll(): void {
     this.handlers.clear();
     this.wildcardHandlers.clear();
     this.allHandlers.clear();
   }
 
+  /**
+   * Returns recent events from the ring buffer history.
+   *
+   * @param count - Number of most recent events to return. Omit for all history.
+   * @returns Readonly array of BusEvents, oldest first
+   */
   getHistory(count?: number): ReadonlyArray<BusEvent> {
     if (count === undefined) {
       return this.history.getAll();
@@ -130,6 +170,13 @@ class EventBus implements IEventBus {
     return this.history.getLast(count);
   }
 
+  /**
+   * Returns recent events filtered by exact type match.
+   *
+   * @param type - Exact event type to filter by
+   * @param count - Number of most recent matching events. Omit for all matches.
+   * @returns Readonly array of matching BusEvents, oldest first
+   */
   getHistoryByType(type: string, count?: number): ReadonlyArray<BusEvent> {
     const all = this.history.getAll().filter((e) => e.type === type);
     if (count === undefined) {
@@ -138,6 +185,16 @@ class EventBus implements IEventBus {
     return all.slice(-count);
   }
 
+  /**
+   * Runs a throughput benchmark to verify the < 1ms latency contract.
+   *
+   * Benchmark events (`__bench__` type) are automatically cleaned from
+   * the ring buffer history after the run. This is a diagnostic tool —
+   * do not call in production code paths.
+   *
+   * @param iterations - Number of emit/handle cycles (default: 10,000)
+   * @returns BenchResult with latency statistics and throughput
+   */
   bench(iterations: number = 10000): BenchResult {
     const latencies: number[] = [];
     let handlerCalledAt = 0;

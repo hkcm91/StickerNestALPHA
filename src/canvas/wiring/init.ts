@@ -5,6 +5,8 @@
  * @layer L4A-3
  */
 
+import { createAnimationTriggers } from './animation-triggers';
+import type { AnimationTriggersContext } from './animation-triggers';
 import { createExecutionEngine } from './engine';
 import type { ExecutionEngine } from './engine';
 import { createPipelineGraph } from './graph';
@@ -16,6 +18,7 @@ export interface CanvasWiringContext {
   graph: PipelineGraph;
   engine: ExecutionEngine;
   persistence: PipelinePersistence;
+  animationTriggers: AnimationTriggersContext | null;
 }
 
 let context: CanvasWiringContext | null = null;
@@ -29,13 +32,26 @@ export function initCanvasWiring(): CanvasWiringContext {
 
   engine.start();
 
-  context = { graph, engine, persistence };
+  // Animation triggers are initialized lazily when an orchestrator is available.
+  // The orchestrator is created by the world system and injected via
+  // initAnimationTriggers() after world setup.
+  context = { graph, engine, persistence, animationTriggers: null };
   return context;
+}
+
+export function initAnimationTriggers(
+  orchestrator: Parameters<typeof createAnimationTriggers>[0],
+): AnimationTriggersContext | null {
+  if (!context) return null;
+  if (context.animationTriggers) return context.animationTriggers;
+  context.animationTriggers = createAnimationTriggers(orchestrator);
+  return context.animationTriggers;
 }
 
 export function teardownCanvasWiring(): void {
   if (context) {
     context.engine.stop();
+    context.animationTriggers?.destroy();
   }
   context = null;
 }

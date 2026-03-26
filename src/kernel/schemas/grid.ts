@@ -75,11 +75,11 @@ export type GridLineStyle = z.infer<typeof GridLineStyleSchema>;
  */
 export const GridConfigSchema = z.object({
   /** Whether the grid system is enabled */
-  enabled: z.boolean().default(true),
+  enabled: z.boolean().default(false),
   /** Size of each grid cell in canvas units (pixels) */
   cellSize: z.number().positive().default(64),
   /** Whether to render grid lines */
-  showGridLines: z.boolean().default(true),
+  showGridLines: z.boolean().default(false),
   /** Color of grid lines (CSS color string) */
   gridLineColor: z.string().default('rgba(255, 255, 255, 0.1)'),
   /** Width of grid lines in pixels */
@@ -88,6 +88,8 @@ export const GridConfigSchema = z.object({
   gridLineStyle: GridLineStyleSchema.default('line'),
   /** Grid line opacity (0–1), applied independently of gridLineColor */
   gridLineOpacity: z.number().min(0).max(1).default(0.1),
+  /** Dot radius in pixels when gridLineStyle is 'dot'. Falls back to gridLineWidth if unset. */
+  dotSize: z.number().positive().default(1.5),
   /** Snap mode for widget placement */
   snapMode: GridSnapModeSchema.default('none'),
   /** Grid origin offset (for aligning grid to specific coordinates) */
@@ -97,8 +99,8 @@ export const GridConfigSchema = z.object({
       y: z.number().default(0),
     })
     .default({ x: 0, y: 0 }),
-  /** Default background color for empty cells */
-  defaultBackground: z.string().default('#0d1117'),
+  /** Default background color for empty cells. 'transparent' lets the BackgroundRenderer show through. */
+  defaultBackground: z.string().default('transparent'),
   /** Minimum screen size (px) for grid lines to be visible */
   minCellScreenSize: z.number().positive().default(4),
   /** Grid projection mode (orthogonal or isometric) */

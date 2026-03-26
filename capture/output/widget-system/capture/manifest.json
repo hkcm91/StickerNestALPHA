@@ -1,0 +1,105 @@
+{
+  "scriptName": "widget-system",
+  "feature": "Widget System & SDK",
+  "audience": "developer",
+  "screenshots": [
+    {
+      "stepId": "canvas-overview",
+      "label": "Show the canvas overview",
+      "path": "screenshots/01-canvas-overview.png",
+      "timestamp": 15031,
+      "annotation": "StickerNest Canvas",
+      "narration": "StickerNest widgets are sandboxed programs that run inside the canvas. Here's how they work under the hood."
+    },
+    {
+      "stepId": "show-stickers-tab",
+      "label": "Asset panel open — stickers library visible",
+      "path": "screenshots/03-show-stickers-tab.png",
+      "timestamp": 26575,
+      "annotation": "Asset library — stickers, widgets, API assets",
+      "narration": "The asset panel is your launch pad. Stickers, widgets, and API-powered assets all live here — drag to canvas to place them."
+    },
+    {
+      "stepId": "show-widget-library",
+      "label": "Widgets tab — built-in widget library",
+      "path": "screenshots/05-show-widget-library.png",
+      "timestamp": 32976,
+      "annotation": "Built-in widgets — sandboxed iframe apps",
+      "narration": "Each widget is a single-file HTML app running in a sandboxed iframe. The Runtime injects the SDK, validates the manifest, and waits for the READY signal."
+    },
+    {
+      "stepId": "show-toolbar",
+      "label": "Hover over the canvas toolbar",
+      "path": "screenshots/06-show-toolbar.png",
+      "timestamp": 96391,
+      "annotation": "Canvas toolbar — full tool suite",
+      "narration": "Back on the canvas, the toolbar gives you access to all editing tools. Widgets share the same canvas space as shapes, text, and stickers."
+    },
+    {
+      "stepId": "switch-preview",
+      "label": "Switch to preview mode",
+      "path": "screenshots/07-switch-preview.png",
+      "timestamp": 101107,
+      "annotation": "Preview mode — widgets fully interactive",
+      "narration": "In preview mode, widgets become fully interactive. Layout locks, edit UI hides, and users interact with the live programs."
+    },
+    {
+      "stepId": "back-to-edit",
+      "label": "Return to edit mode",
+      "path": "screenshots/08-back-to-edit.png",
+      "timestamp": 164263,
+      "annotation": "Edit mode — configure and wire widgets",
+      "narration": "Toggle back to edit mode to reconfigure or connect widgets via the Pipeline graph. The SDK makes it trivial to support both modes."
+    },
+    {
+      "stepId": "show-layers",
+      "label": "Show the layers panel",
+      "path": "screenshots/09-show-layers.png",
+      "timestamp": 170513,
+      "annotation": "Entity z-order — everything is a canvas entity",
+      "narration": "The layers panel shows every entity in z-order. Widgets, shapes, stickers — they're all entities managed by the same scene graph. One system, unlimited layouts."
+    },
+    {
+      "stepId": "final-overview",
+      "label": "Final canvas state",
+      "path": "screenshots/10-final-overview.png",
+      "timestamp": 176548,
+      "annotation": "Canvas as a spatial operating system",
+      "narration": "That's the widget system. Single-file HTML, sandboxed execution, typed events, manifest-driven config. Build your first widget in ten minutes with the SDK."
+    }
+  ],
+  "recordings": [],
+  "gifs": [
+    {
+      "stepId": "show-widget-library",
+      "label": "Widgets tab — built-in widget library",
+      "path": "gifs/05-show-widget-library.gif",
+      "durationMs": 52769
+    },
+    {
+      "stepId": "switch-preview",
+      "label": "Switch to preview mode",
+      "path": "gifs/07-switch-preview.gif",
+      "durationMs": 52710
+    }
+  ],
+  "totalDurationMs": 176657,
+  "capturedAt": "2026-03-25T18:49:01.419Z",
+  "metadata": {
+    "hook": "How StickerNest widgets work — sandboxed apps on an infinite canvas",
+    "cta": "Check out the SDK docs — build your first widget in 10 minutes",
+    "tags": [
+      "stickernest",
+      "widgets",
+      "sdk",
+      "architecture",
+      "developer"
+    ],
+    "description": "Deep dive into StickerNest's widget system: sandboxed iframes, typed event bus, manifest-driven config, and the Widget SDK."
+  },
+  "targetUrl": "http://localhost:5173/",
+  "viewport": {
+    "width": 1920,
+    "height": 1080
+  }
+}

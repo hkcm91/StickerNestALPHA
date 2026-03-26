@@ -16,7 +16,9 @@ import type { WidgetManifest } from '@sn/types';
 
 import { executeAIActions } from '../../../kernel/ai/action-executor';
 import { buildCanvasAIContext } from '../../../kernel/ai/canvas-context';
+import { getCanvasEntities } from '../../../kernel/ai/entity-provider';
 import { buildAIPrompt, parseAIResponse } from '../../../kernel/ai/prompt-builder';
+import { supabase } from '../../../kernel/supabase';
 import { useEmit, useSubscribe, useWidgetState } from '../../hooks';
 
 // ---------------------------------------------------------------------------
@@ -118,8 +120,10 @@ export const AICanvasAgentWidget: React.FC<{ instanceId: string }> = ({ instance
     emit('widget.ai-canvas-agent.command.started', { command: trimmed });
 
     try {
-      // Build canvas context snapshot
+      // Build canvas context snapshot with current entities (via kernel entity provider)
+      const entities = getCanvasEntities();
       const context = buildCanvasAIContext({
+        entities,
         viewport: { x: 0, y: 0, zoom: 1, screenWidth: 1920, screenHeight: 1080 },
       });
 
@@ -282,25 +286,20 @@ export const AICanvasAgentWidget: React.FC<{ instanceId: string }> = ({ instance
 // ---------------------------------------------------------------------------
 
 async function callAIAgent(prompt: { system: string; messages: Array<{ role: string; content: string }> }): Promise<string> {
-  // Use the Supabase edge function for AI canvas agent
-  // In production this would go through the integration proxy
-  const response = await fetch('/functions/v1/ai-canvas-agent', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
+  // Use the Supabase client to invoke the edge function — handles auth + URL automatically
+  const { data, error } = await supabase.functions.invoke('ai-canvas-agent', {
+    body: {
       system: prompt.system,
       messages: prompt.messages,
-    }),
+    },
   });
 
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({ error: 'Network error' }));
-    throw new Error(err.error || `AI agent request failed (${response.status})`);
+  if (error) {
+    throw new Error(error.message || 'AI agent request failed');
   }
 
-  const data = await response.json();
-  if (!data.success) {
-    throw new Error(data.error || 'AI agent returned unsuccessful response');
+  if (!data?.success) {
+    throw new Error(data?.error || 'AI agent returned unsuccessful response');
   }
 
   return data.text;

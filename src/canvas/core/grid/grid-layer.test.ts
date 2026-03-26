@@ -78,7 +78,7 @@ describe('GridLayer', () => {
       gridLayer.setConfig({ cellSize: 32 });
       const config = gridLayer.getConfig();
       expect(config.cellSize).toBe(32);
-      expect(config.enabled).toBe(true); // Other values preserved
+      expect(config.enabled).toBe(false); // Other values preserved
     });
 
     it('emits config changed event', () => {
@@ -280,11 +280,11 @@ describe('GridLayer', () => {
     });
 
     it('toggles grid lines', () => {
-      expect(gridLayer.getConfig().showGridLines).toBe(true);
-      gridLayer.toggleGridLines();
       expect(gridLayer.getConfig().showGridLines).toBe(false);
       gridLayer.toggleGridLines();
       expect(gridLayer.getConfig().showGridLines).toBe(true);
+      gridLayer.toggleGridLines();
+      expect(gridLayer.getConfig().showGridLines).toBe(false);
     });
   });
 
@@ -321,9 +321,9 @@ describe('GridLayer', () => {
 
 describe('DEFAULT_GRID_CONFIG', () => {
   it('has correct defaults', () => {
-    expect(DEFAULT_GRID_CONFIG.enabled).toBe(true);
+    expect(DEFAULT_GRID_CONFIG.enabled).toBe(false);
     expect(DEFAULT_GRID_CONFIG.cellSize).toBe(64);
-    expect(DEFAULT_GRID_CONFIG.showGridLines).toBe(true);
+    expect(DEFAULT_GRID_CONFIG.showGridLines).toBe(false);
     expect(DEFAULT_GRID_CONFIG.snapMode).toBe('none');
     expect(DEFAULT_GRID_CONFIG.origin).toEqual({ x: 0, y: 0 });
   });

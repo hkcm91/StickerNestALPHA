@@ -332,4 +332,75 @@ export function registerDefaultShortcuts(registry: ShortcutRegistry): void {
     busEvent: 'canvas.viewport.panStep',
     payload: { dx: -200, dy: 0 },
   });
+
+  // -----------------------------------------------------------------------
+  // Timeline shortcuts (canvas scope, active when timeline mode is on)
+  // -----------------------------------------------------------------------
+
+  registry.register({
+    id: 'timeline-toggle-play',
+    key: ' ',
+    ctrl: false,
+    shift: false,
+    alt: false,
+    scope: 'canvas',
+    busEvent: 'timeline.transport.play',
+  });
+
+  registry.register({
+    id: 'timeline-razor',
+    key: 'c',
+    ctrl: false,
+    shift: false,
+    alt: false,
+    scope: 'canvas',
+    busEvent: 'canvas.tool.changed',
+    payload: { tool: 'razor' },
+  });
+
+  registry.register({
+    id: 'timeline-slip',
+    key: 'y',
+    ctrl: false,
+    shift: false,
+    alt: false,
+    scope: 'canvas',
+    busEvent: 'canvas.tool.changed',
+    payload: { tool: 'slip' },
+  });
+
+  registry.register({
+    id: 'timeline-add-marker',
+    key: 'm',
+    ctrl: false,
+    shift: false,
+    alt: false,
+    scope: 'canvas',
+    busEvent: 'timeline.marker.added',
+    payload: {},
+  });
+
+  // -----------------------------------------------------------------------
+  // Spatial mode shortcuts
+  // -----------------------------------------------------------------------
+
+  registry.register({
+    id: 'toggle-spatial-3d',
+    key: '#',
+    ctrl: false,
+    shift: true,
+    alt: false,
+    scope: 'canvas',
+    busEvent: 'shell.spatial.toggle3d',
+  });
+
+  registry.register({
+    id: 'enter-vr',
+    key: 'V',
+    ctrl: false,
+    shift: true,
+    alt: false,
+    scope: 'canvas',
+    busEvent: 'shell.spatial.enterVR',
+  });
 }

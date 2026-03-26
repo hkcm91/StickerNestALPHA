@@ -6,7 +6,9 @@
 import { z } from "zod";
 
 
+import { EntityAnimationConfigSchema } from "./entity-animation";
 import { AnchorPointSchema, PathFillRuleSchema } from "./path";
+import { PropertyLayerSchema } from "./property-layer";
 import {
   Point2DSchema,
   Size2DSchema,
@@ -45,6 +47,8 @@ export const CanvasEntityTypeSchema = z.enum([
   "object3d",
   "artboard",
   "folder",
+  "video",
+  "connector",
 ]);
 
 export type CanvasEntityType = z.infer<typeof CanvasEntityTypeSchema>;
@@ -155,6 +159,10 @@ export const CanvasEntityBaseSchema = z.object({
   parentId: z.string().uuid().optional(),
   /** Optional name for layers panel */
   name: z.string().optional(),
+  /** Animation configuration (clips, triggers, states) */
+  animations: EntityAnimationConfigSchema.optional(),
+  /** Widget-applied property layers (ordered stack of overrides) */
+  propertyLayers: z.array(PropertyLayerSchema).optional(),
   /** Creation timestamp */
   createdAt: z.string().datetime(),
   /** Last update timestamp */
@@ -559,6 +567,69 @@ export const FolderEntitySchema = CanvasEntityBaseSchema.extend({
 export type FolderEntity = z.infer<typeof FolderEntitySchema>;
 
 /**
+ * Video entity schema — dedicated video type for timeline-driven playback
+ */
+export const VideoEntitySchema = CanvasEntityBaseSchema.extend({
+  type: z.literal("video"),
+  /** URL to the video file (proxied, never direct bucket URL) */
+  assetUrl: z.string().url(),
+  /** Native video width in pixels */
+  nativeWidth: z.number().int().positive().optional(),
+  /** Native video height in pixels */
+  nativeHeight: z.number().int().positive().optional(),
+  /** Native duration in seconds */
+  nativeDuration: z.number().positive().optional(),
+  /** Volume (0-1) */
+  volume: z.number().min(0).max(1).default(1),
+  /** Whether the audio track is muted */
+  audioMuted: z.boolean().default(false),
+  /** Aspect ratio lock */
+  aspectLocked: z.boolean().default(true),
+  /** Alt text for accessibility */
+  altText: z.string().optional(),
+  /** Thumbnail URL for poster frame */
+  thumbnailUrl: z.string().url().optional(),
+  /** Whether to show poster frame when not playing */
+  showPoster: z.boolean().default(true),
+});
+
+export type VideoEntity = z.infer<typeof VideoEntitySchema>;
+
+/**
+ * Connector entity — arrows and connecting lines between entities or free points.
+ */
+export const ConnectorLineStyleSchema = z.enum(["straight", "curved", "orthogonal"]);
+export const ConnectorArrowHeadSchema = z.enum(["none", "arrow", "circle", "diamond"]);
+
+export const ConnectorEntitySchema = CanvasEntityBaseSchema.extend({
+  type: z.literal("connector"),
+  /** Source entity ID (null for freeform endpoint) */
+  sourceEntityId: z.string().uuid().nullable(),
+  /** Target entity ID (null for freeform endpoint) */
+  targetEntityId: z.string().uuid().nullable(),
+  /** Source point in canvas space (used when sourceEntityId is null) */
+  sourcePoint: Point2DSchema,
+  /** Target point in canvas space (used when targetEntityId is null) */
+  targetPoint: Point2DSchema,
+  /** Line rendering style */
+  lineStyle: ConnectorLineStyleSchema.default("curved"),
+  /** Arrowhead at the target end */
+  arrowHead: ConnectorArrowHeadSchema.default("arrow"),
+  /** Arrowhead at the source end */
+  arrowTail: ConnectorArrowHeadSchema.default("none"),
+  /** Stroke color */
+  strokeColor: z.string().default("#6b7280"),
+  /** Stroke width in canvas units */
+  strokeWidth: z.number().positive().default(2),
+  /** Optional text label rendered at midpoint */
+  label: z.string().optional(),
+});
+
+export type ConnectorEntity = z.infer<typeof ConnectorEntitySchema>;
+export type ConnectorLineStyle = z.infer<typeof ConnectorLineStyleSchema>;
+export type ConnectorArrowHead = z.infer<typeof ConnectorArrowHeadSchema>;
+
+/**
  * Union of all entity types
  */
 export const CanvasEntitySchema = z.discriminatedUnion("type", [
@@ -576,6 +647,8 @@ export const CanvasEntitySchema = z.discriminatedUnion("type", [
   Object3DEntitySchema,
   ArtboardEntitySchema,
   FolderEntitySchema,
+  VideoEntitySchema,
+  ConnectorEntitySchema,
 ]);
 
 export type CanvasEntity = z.infer<typeof CanvasEntitySchema>;
@@ -591,6 +664,7 @@ export const SvgEntityJSONSchema = SvgEntitySchema.toJSONSchema();
 export const PathEntityJSONSchema = PathEntitySchema.toJSONSchema();
 export const ArtboardEntityJSONSchema = ArtboardEntitySchema.toJSONSchema();
 export const FolderEntityJSONSchema = FolderEntitySchema.toJSONSchema();
+export const ConnectorEntityJSONSchema = ConnectorEntitySchema.toJSONSchema();
 export const CanvasEntityJSONSchema = CanvasEntitySchema.toJSONSchema();
 export const WidgetIntrinsicSizeJSONSchema =
   WidgetIntrinsicSizeSchema.toJSONSchema();
