@@ -15,6 +15,11 @@ import { bus } from '../../../kernel/bus';
 
 import { useCanvasShortcuts, type CanvasShortcutDeps } from './useCanvasShortcuts';
 
+// Mock enterXR to avoid WebXR session errors in test environment
+vi.mock('../../../spatial/session', () => ({
+  enterXR: vi.fn(),
+}));
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -550,4 +555,7 @@ describe('useCanvasShortcuts (production)', () => {
     result.current.onKeyDown(makeKeyEvent({ key: 'v', ctrlKey: true }));
     expect(deps.setTool).not.toHaveBeenCalled();
   });
+
+  // Spatial mode shortcuts (Shift+3, Shift+V) are now handled by the global
+  // shortcut registry in src/shell/shortcuts/shortcut-registry.ts, not this hook.
 });

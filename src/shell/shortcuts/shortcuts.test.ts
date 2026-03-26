@@ -136,4 +136,48 @@ describe('ShortcutRegistry', () => {
     expect(handler).toHaveBeenCalledTimes(1);
     unsub();
   });
+
+  // ---- Spatial mode shortcuts ----
+
+  it('Shift+# (Shift+3) emits shell.spatial.toggle3d in canvas scope', () => {
+    const handler = vi.fn();
+    const unsub = bus.subscribe('shell.spatial.toggle3d', handler);
+
+    fireKey('#', { shiftKey: true });
+
+    expect(handler).toHaveBeenCalledTimes(1);
+    unsub();
+  });
+
+  it('Shift+V emits shell.spatial.enterVR in canvas scope', () => {
+    const handler = vi.fn();
+    const unsub = bus.subscribe('shell.spatial.enterVR', handler);
+
+    fireKey('V', { shiftKey: true });
+
+    expect(handler).toHaveBeenCalledTimes(1);
+    unsub();
+  });
+
+  it('Shift+# does NOT fire in lab scope', () => {
+    const handler = vi.fn();
+    const unsub = bus.subscribe('shell.spatial.toggle3d', handler);
+
+    registry.setActiveScope('lab');
+    fireKey('#', { shiftKey: true });
+
+    expect(handler).not.toHaveBeenCalled();
+    unsub();
+  });
+
+  it('Shift+V does NOT fire in lab scope', () => {
+    const handler = vi.fn();
+    const unsub = bus.subscribe('shell.spatial.enterVR', handler);
+
+    registry.setActiveScope('lab');
+    fireKey('V', { shiftKey: true });
+
+    expect(handler).not.toHaveBeenCalled();
+    unsub();
+  });
 });

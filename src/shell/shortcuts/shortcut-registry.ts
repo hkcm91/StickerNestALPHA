@@ -332,4 +332,28 @@ export function registerDefaultShortcuts(registry: ShortcutRegistry): void {
     busEvent: 'canvas.viewport.panStep',
     payload: { dx: -200, dy: 0 },
   });
+
+  // -----------------------------------------------------------------------
+  // Spatial mode shortcuts
+  // -----------------------------------------------------------------------
+
+  registry.register({
+    id: 'toggle-spatial-3d',
+    key: '#',
+    ctrl: false,
+    shift: true,
+    alt: false,
+    scope: 'canvas',
+    busEvent: 'shell.spatial.toggle3d',
+  });
+
+  registry.register({
+    id: 'enter-vr',
+    key: 'V',
+    ctrl: false,
+    shift: true,
+    alt: false,
+    scope: 'canvas',
+    busEvent: 'shell.spatial.enterVR',
+  });
 }

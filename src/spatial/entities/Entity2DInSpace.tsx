@@ -1,92 +1,72 @@
 /**
- * WidgetInSpace — renders a widget inside 3D space using drei's `<Html>` component.
+ * Entity2DInSpace — renders any 2D canvas entity in 3D space via drei's `<Html>`.
  *
- * Embeds a `<WidgetFrame>` (from the Runtime layer) inside a Three.js scene
- * via `@react-three/drei`'s `<Html transform occlude>`. Supports spatial positioning
- * through the entity's `spatialTransform` or a derived default from the 2D transform.
+ * Uses the existing per-type renderers from the shell canvas layer, embedded in
+ * a Three.js group via `@react-three/drei`'s `<Html transform occlude>`.
+ * Supports spatial positioning through the entity's `spatialTransform` or a
+ * derived default from the 2D transform.
  *
- * @module spatial/entities/WidgetInSpace
+ * This component renders sticker, text, shape, drawing, path, svg, lottie, audio,
+ * group, and docker entities — all entity types that are NOT `widget` or `object3d`.
+ * Widgets use `WidgetInSpace` (separate Runtime integration). Object3D entities use
+ * `SpatialEntity` (native Three.js geometry).
+ *
+ * @module spatial/entities/Entity2DInSpace
  * @layer L4B
  */
 
 import { Html } from '@react-three/drei';
 import React, { useMemo } from 'react';
 
-import type { Transform3D, WidgetContainerEntity } from '@sn/types';
-
-import type { ThemeTokens } from '../../runtime/bridge/message-types';
-import { WidgetFrame } from '../../runtime/WidgetFrame';
+import type { CanvasEntityBase, Transform3D } from '@sn/types';
 
 /** Scale factor to convert canvas units to meters */
 const CANVAS_TO_METERS = 0.01;
 
-/** Depth of the backing panel behind the widget HTML content */
-const PANEL_DEPTH = 0.008;
+/** Thin panel depth behind the 2D content for visual backing */
+const PANEL_DEPTH = 0.005;
 
 /**
- * Props for the WidgetInSpace component.
+ * Props for the Entity2DInSpace component.
  */
-export interface WidgetInSpaceProps {
-  /** The widget container entity */
-  entity: WidgetContainerEntity;
-  /** Widget HTML source */
-  widgetHtml: string;
-  /** Widget configuration */
-  config: Record<string, unknown>;
-  /** Theme tokens to inject into the widget */
-  theme: ThemeTokens;
+export interface Entity2DInSpaceProps {
+  /** The canvas entity to render */
+  entity: CanvasEntityBase;
+  /** React element for the entity's 2D content (rendered by the appropriate renderer) */
+  children: React.ReactNode;
   /** Whether this entity is currently selected */
   selected?: boolean;
   /** Callback fired when the entity is clicked */
   onSelect?: (entityId: string) => void;
 }
 
-/**
- * Derives a default position from the 2D transform.
- */
-function deriveDefaultPosition(entity: WidgetContainerEntity): [number, number, number] {
+function deriveDefaultPosition(entity: CanvasEntityBase): [number, number, number] {
   const pos = entity.transform.position;
   return [pos.x * CANVAS_TO_METERS, pos.y * CANVAS_TO_METERS, 0];
 }
 
-/**
- * Extracts position tuple from a Transform3D.
- */
 function extractPosition(t: Transform3D): [number, number, number] {
   return [t.position.x, t.position.y, t.position.z];
 }
 
-/**
- * Extracts quaternion tuple from a Transform3D.
- */
 function extractRotation(t: Transform3D): [number, number, number, number] {
   return [t.rotation.x, t.rotation.y, t.rotation.z, t.rotation.w];
 }
 
-/**
- * Extracts scale tuple from a Transform3D.
- */
 function extractScale(t: Transform3D): [number, number, number] {
   return [t.scale.x, t.scale.y, t.scale.z];
 }
 
 /**
- * Renders a widget entity in 3D space via an embedded `<Html>` wrapper from drei.
+ * Renders any 2D entity in 3D space by wrapping its DOM renderer in drei's `<Html>`.
  *
  * - Uses the entity's `spatialTransform` when present, or derives position from 2D transform.
- * - Wraps the `<WidgetFrame>` in a sized `<div>` inside the `<Html>` component.
- * - Applies a subtle border when `selected` is true.
+ * - Renders a subtle backing mesh behind the HTML content for depth.
+ * - Applies a highlight border when `selected` is true.
  * - Returns `null` when `entity.visible` is `false`.
  */
-export const WidgetInSpace = React.memo<WidgetInSpaceProps>(
-  function WidgetInSpace({
-    entity,
-    widgetHtml,
-    config,
-    theme,
-    selected = false,
-    onSelect,
-  }) {
+export const Entity2DInSpace = React.memo<Entity2DInSpaceProps>(
+  function Entity2DInSpace({ entity, children, selected = false, onSelect }) {
     if (!entity.visible) return null;
 
     const position = useMemo(
@@ -123,6 +103,8 @@ export const WidgetInSpace = React.memo<WidgetInSpaceProps>(
 
     const w = entity.transform.size.width;
     const h = entity.transform.size.height;
+
+    // Backing panel geometry (slightly behind the HTML content)
     const panelW = w * CANVAS_TO_METERS;
     const panelH = h * CANVAS_TO_METERS;
 
@@ -131,10 +113,12 @@ export const WidgetInSpace = React.memo<WidgetInSpaceProps>(
         width: w,
         height: h,
         overflow: 'hidden' as const,
-        border: selected ? '2px solid #6366f1' : '1px solid rgba(255,255,255,0.1)',
-        borderRadius: '6px',
+        border: selected ? '2px solid #6366f1' : '1px solid rgba(255,255,255,0.08)',
+        borderRadius: entity.borderRadius > 0 ? entity.borderRadius : 4,
+        background: 'rgba(17, 17, 27, 0.95)',
+        pointerEvents: 'auto' as const,
       }),
-      [w, h, selected],
+      [w, h, selected, entity.borderRadius],
     );
 
     return (
@@ -144,30 +128,22 @@ export const WidgetInSpace = React.memo<WidgetInSpaceProps>(
         scale={scale}
         onClick={handleClick}
       >
-        {/* Depth backing — gives the widget a physical panel feel in 3D/VR */}
+        {/* Backing panel mesh — gives depth to the 2D content */}
         <mesh position={[0, 0, -PANEL_DEPTH / 2]}>
           <boxGeometry args={[panelW, panelH, PANEL_DEPTH]} />
           <meshStandardMaterial
-            color={selected ? '#312e81' : '#1a1a2e'}
+            color={selected ? '#312e81' : '#1e1b4b'}
             transparent
-            opacity={0.92}
+            opacity={0.9}
             emissive={selected ? '#6366f1' : '#000000'}
             emissiveIntensity={selected ? 0.3 : 0}
           />
         </mesh>
 
+        {/* 2D DOM content rendered in 3D space */}
         <Html transform occlude>
           <div style={containerStyle}>
-            <WidgetFrame
-              widgetId={entity.widgetId}
-              instanceId={entity.widgetInstanceId}
-              widgetHtml={widgetHtml}
-              config={config}
-              theme={theme}
-              visible={entity.visible}
-              width={w}
-              height={h}
-            />
+            {children}
           </div>
         </Html>
       </group>

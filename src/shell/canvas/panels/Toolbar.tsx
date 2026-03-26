@@ -561,8 +561,9 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   }, [artboardPreviewMode, setArtboardPreviewMode]);
 
   const handleEnterXR = useCallback(() => {
+    setSpatialMode('vr');
     enterXR('immersive-vr');
-  }, []);
+  }, [setSpatialMode]);
 
   const handleFullscreenPreview = useCallback(() => {
     setFullscreenPreview(true);
@@ -1013,7 +1014,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                 <option value="vr">VR</option>
                 <option value="ar">AR</option>
               </select>
-              {(spatialMode === 'vr' || spatialMode === 'ar') && <button onClick={handleEnterXR} title={`Enter WebXR (${spatialMode.toUpperCase()})`} style={smallBtnBase}><XRGogglesIcon /></button>}
+              {spatialMode !== '2d' && <button onClick={handleEnterXR} title={`Enter WebXR (${spatialMode.toUpperCase()})`} style={smallBtnBase}><XRGogglesIcon /></button>}
               <button onClick={handleArtboardPreviewToggle} title={artboardPreviewMode ? 'Exit Artboard Preview' : 'Artboard Preview'} style={{ ...(artboardPreviewMode ? smallBtnActive : smallBtnBase), padding: '0 8px', width: 'auto', fontSize: '11px' }}>Artboard</button>
             </div>
 
