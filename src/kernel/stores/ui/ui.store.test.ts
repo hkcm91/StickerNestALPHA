@@ -52,8 +52,8 @@ describe('uiStore', () => {
       expect(useUIStore.getState().panels).toEqual({});
     });
 
-    it('should have light theme', () => {
-      expect(useUIStore.getState().theme).toBe('light');
+    it('should have midnight-aurora theme', () => {
+      expect(useUIStore.getState().theme).toBe('midnight-aurora');
     });
 
     it('should not be globally loading', () => {
@@ -113,8 +113,8 @@ describe('uiStore', () => {
     });
 
     it('setTheme should update theme', () => {
-      useUIStore.getState().setTheme('dark');
-      expect(useUIStore.getState().theme).toBe('dark');
+      useUIStore.getState().setTheme('bubbles-sky');
+      expect(useUIStore.getState().theme).toBe('bubbles-sky');
 
       useUIStore.getState().setTheme('high-contrast');
       expect(useUIStore.getState().theme).toBe('high-contrast');
@@ -162,7 +162,7 @@ describe('uiStore', () => {
       useUIStore.getState().setCanvasInteractionMode('preview');
       useUIStore.getState().setActiveTool('pen');
       useUIStore.getState().toggleSidebarLeft();
-      useUIStore.getState().setTheme('dark');
+      useUIStore.getState().setTheme('bubbles-sky');
       useUIStore.getState().setGlobalLoading(true);
       useUIStore.getState().addToast(mockToast);
       useUIStore.getState().setPanelOpen('layers', true);
@@ -175,7 +175,7 @@ describe('uiStore', () => {
       expect(state.sidebarLeftOpen).toBe(false);
       expect(state.sidebarRightOpen).toBe(false);
       expect(state.panels).toEqual({});
-      expect(state.theme).toBe('light');
+      expect(state.theme).toBe('midnight-aurora');
       expect(state.isGlobalLoading).toBe(false);
       expect(state.toasts).toEqual([]);
     });
@@ -209,28 +209,28 @@ describe('uiStore', () => {
     it('should update theme on shell.theme.changed', () => {
       setupUIBusSubscriptions();
 
-      bus.emit(ShellEvents.THEME_CHANGED, { theme: 'dark' });
-      expect(useUIStore.getState().theme).toBe('dark');
+      bus.emit(ShellEvents.THEME_CHANGED, { theme: 'bubbles-sky' });
+      expect(useUIStore.getState().theme).toBe('bubbles-sky');
 
       bus.emit(ShellEvents.THEME_CHANGED, { theme: 'high-contrast' });
       expect(useUIStore.getState().theme).toBe('high-contrast');
 
-      bus.emit(ShellEvents.THEME_CHANGED, { theme: 'light' });
-      expect(useUIStore.getState().theme).toBe('light');
+      bus.emit(ShellEvents.THEME_CHANGED, { theme: 'crystal-light' });
+      expect(useUIStore.getState().theme).toBe('crystal-light');
     });
 
-    it('should ignore shell.theme.changed with invalid theme', () => {
+    it('should update theme on shell.theme.changed with any valid theme', () => {
       setupUIBusSubscriptions();
 
-      bus.emit(ShellEvents.THEME_CHANGED, { theme: 'neon' });
-      expect(useUIStore.getState().theme).toBe('light');
+      bus.emit(ShellEvents.THEME_CHANGED, { theme: 'autumn-fireflies' });
+      expect(useUIStore.getState().theme).toBe('autumn-fireflies');
     });
 
     it('should ignore shell.theme.changed with null payload', () => {
       setupUIBusSubscriptions();
 
       bus.emit(ShellEvents.THEME_CHANGED, null);
-      expect(useUIStore.getState().theme).toBe('light');
+      expect(useUIStore.getState().theme).toBe('midnight-aurora');
     });
   });
 });

@@ -7,6 +7,7 @@ import { z } from 'zod';
 
 import { CanvasEntitySchema } from './canvas-entity';
 import { SpatialModeSchema } from './spatial';
+import { ThemeNameSchema } from './theme';
 
 // =============================================================================
 // Background Specification (Discriminated Union)
@@ -232,6 +233,8 @@ export const CanvasDocumentSchema = z.object({
   borderRadius: z.number().optional(),
   /** Canvas position/alignment configuration */
   canvasPosition: CanvasPositionConfigSchema.optional(),
+  /** Per-canvas theme override — falls back to global uiStore.theme when not set */
+  theme: ThemeNameSchema.optional(),
 });
 
 export type CanvasDocument = z.infer<typeof CanvasDocumentSchema>;

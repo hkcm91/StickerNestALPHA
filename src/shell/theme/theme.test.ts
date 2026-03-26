@@ -21,16 +21,16 @@ describe('Theme system', () => {
   });
 
   describe('applyThemeTokens', () => {
-    it('sets CSS variables on documentElement for dark theme', () => {
-      applyThemeTokens('dark');
+    it('sets CSS variables on documentElement for midnight-aurora theme', () => {
+      applyThemeTokens('midnight-aurora');
       const style = document.documentElement.style;
       expect(style.getPropertyValue('--sn-bg')).toBe('#0A0A0E');
       expect(style.getPropertyValue('--sn-text')).toBe('#EDEBE6');
-      expect(style.getPropertyValue('--sn-accent')).toBe('#3E7D94');
+      expect(style.getPropertyValue('--sn-accent')).toBe('#4E7B8E');
     });
 
-    it('sets CSS variables on documentElement for light theme', () => {
-      applyThemeTokens('light');
+    it('sets CSS variables on documentElement for crystal-light theme', () => {
+      applyThemeTokens('crystal-light');
       const style = document.documentElement.style;
       expect(style.getPropertyValue('--sn-bg')).toBe('#FAF8F5');
       expect(style.getPropertyValue('--sn-text')).toBe('#1A1820');
@@ -40,31 +40,45 @@ describe('Theme system', () => {
       applyThemeTokens('high-contrast');
       const style = document.documentElement.style;
       expect(style.getPropertyValue('--sn-radius')).toBe('0px');
-      expect(style.getPropertyValue('--sn-accent')).toBe('#6BA4B8');
+      expect(style.getPropertyValue('--sn-accent')).toBe('#7A9DAE');
     });
 
     it('sets data-theme attribute', () => {
-      applyThemeTokens('dark');
-      expect(document.documentElement.dataset.theme).toBe('dark');
+      applyThemeTokens('midnight-aurora');
+      expect(document.documentElement.dataset.theme).toBe('midnight-aurora');
     });
 
     it('applies all extended tokens to documentElement', () => {
-      applyThemeTokens('dark');
+      applyThemeTokens('midnight-aurora');
       const style = document.documentElement.style;
-      expect(style.getPropertyValue('--sn-storm')).toBe('#3E7D94');
+      expect(style.getPropertyValue('--sn-storm')).toBe('#4E7B8E');
       expect(style.getPropertyValue('--sn-ember')).toBe('#E8806C');
       expect(style.getPropertyValue('--sn-opal')).toBe('#B0D0D8');
       expect(style.getPropertyValue('--sn-moss')).toBe('#5AA878');
       expect(style.getPropertyValue('--sn-violet')).toBe('#B8A0D8');
-      expect(style.getPropertyValue('--sn-surface-raised')).toBe('#1A1A1F');
-      expect(style.getPropertyValue('--sn-surface-glass')).toBe('rgba(20,17,24,0.75)');
-      expect(style.getPropertyValue('--sn-surface-glass-light')).toBe('rgba(20,17,24,0.65)');
+      expect(style.getPropertyValue('--sn-surface-raised')).toBe('#1E1E24');
+      expect(style.getPropertyValue('--sn-surface-glass')).toBe('rgba(20,17,24,0.85)');
+      expect(style.getPropertyValue('--sn-surface-glass-light')).toBe('rgba(20,17,24,0.72)');
       expect(style.getPropertyValue('--sn-bg-ground')).toBe('#110E14');
       expect(style.getPropertyValue('--sn-font-serif')).toContain('Newsreader');
       expect(style.getPropertyValue('--sn-font-mono')).toContain('DM Mono');
       expect(style.getPropertyValue('--sn-success')).toBe('#5AA878');
       expect(style.getPropertyValue('--sn-warning')).toBe('#D4A04C');
       expect(style.getPropertyValue('--sn-error')).toBe('#C85858');
+    });
+
+    it('applies bubbles-sky theme tokens', () => {
+      applyThemeTokens('bubbles-sky');
+      const style = document.documentElement.style;
+      expect(style.getPropertyValue('--sn-bg')).toBe('#0B1628');
+      expect(style.getPropertyValue('--sn-accent')).toBe('#38BDF8');
+    });
+
+    it('applies autumn-fireflies theme tokens', () => {
+      applyThemeTokens('autumn-fireflies');
+      const style = document.documentElement.style;
+      expect(style.getPropertyValue('--sn-bg')).toBe('#1A1008');
+      expect(style.getPropertyValue('--sn-accent')).toBe('#E8A44C');
     });
   });
 
@@ -73,7 +87,7 @@ describe('Theme system', () => {
       const handler = vi.fn();
       const unsub = bus.subscribe(ShellEvents.THEME_CHANGED, handler);
 
-      emitThemeChange('dark');
+      emitThemeChange('midnight-aurora');
 
       expect(handler).toHaveBeenCalledTimes(1);
       const event = handler.mock.calls[0][0];
@@ -94,17 +108,17 @@ describe('Theme system', () => {
       unsub();
     });
 
-    it('emits correct core token values for dark theme', () => {
+    it('emits correct core token values for midnight-aurora theme', () => {
       const handler = vi.fn();
       const unsub = bus.subscribe(ShellEvents.THEME_CHANGED, handler);
 
-      emitThemeChange('dark');
+      emitThemeChange('midnight-aurora');
 
       const event = handler.mock.calls[0][0];
       const payload = event.payload as { theme: string; tokens: Record<string, string> };
-      expect(payload.theme).toBe('dark');
+      expect(payload.theme).toBe('midnight-aurora');
       expect(payload.tokens['--sn-bg']).toBe('#0A0A0E');
-      expect(payload.tokens['--sn-accent']).toBe('#3E7D94');
+      expect(payload.tokens['--sn-accent']).toBe('#4E7B8E');
 
       unsub();
     });

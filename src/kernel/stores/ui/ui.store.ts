@@ -6,7 +6,7 @@
 import { create } from 'zustand';
 import { devtools, subscribeWithSelector } from 'zustand/middleware';
 
-import type { BusEvent, CanvasPlatform, SpatialMode, ViewportConfig } from '@sn/types';
+import type { BusEvent, CanvasPlatform, SpatialMode, ThemeName, ViewportConfig } from '@sn/types';
 import { CanvasEvents, CanvasDocumentEvents, ShellEvents, InteractionModeEvents } from '@sn/types';
 
 import { bus } from '../../bus';
@@ -49,7 +49,7 @@ export interface UIState {
   /** Panel visibility map — keys are panel IDs, values are open/closed */
   panels: Record<string, boolean>;
   /** Active color theme for the application shell */
-  theme: 'light' | 'dark' | 'high-contrast';
+  theme: ThemeName;
   /** Whether a global loading overlay is active */
   isGlobalLoading: boolean;
   /** Queue of active toast notifications */
@@ -83,7 +83,7 @@ export interface UIActions {
   /** Sets a named panel's open/closed state */
   setPanelOpen: (panelId: string, open: boolean) => void;
   /** Sets the active theme. Emits ShellEvents.THEME_CHANGED for widget iframe forwarding. */
-  setTheme: (theme: 'light' | 'dark' | 'high-contrast') => void;
+  setTheme: (theme: ThemeName) => void;
   /** Sets the global loading overlay state */
   setGlobalLoading: (loading: boolean) => void;
   /** Adds a toast notification to the queue */
@@ -114,7 +114,7 @@ const initialState: UIState = {
   sidebarLeftOpen: false,
   sidebarRightOpen: false,
   panels: {},
-  theme: 'light',
+  theme: 'midnight-aurora',
   isGlobalLoading: false,
   toasts: [],
   spatialMode: '2d',
@@ -201,13 +201,8 @@ export function setupUIBusSubscriptions(): void {
 
   // Shell theme changed — update theme
   bus.subscribe(ShellEvents.THEME_CHANGED, (event: BusEvent) => {
-    const payload = event.payload as { theme: 'light' | 'dark' | 'high-contrast' } | null;
-    if (
-      payload &&
-      (payload.theme === 'light' ||
-        payload.theme === 'dark' ||
-        payload.theme === 'high-contrast')
-    ) {
+    const payload = event.payload as { theme: ThemeName } | null;
+    if (payload && payload.theme) {
       useUIStore.getState().setTheme(payload.theme);
     }
   });

@@ -54,13 +54,16 @@ function getBuiltinResults(): PaletteResult[] {
     },
     {
       id: "toggle-theme",
-      label: "Toggle dark mode",
+      label: "Cycle theme",
       category: "setting",
       icon: "◐",
       action: () => {
+        const THEMES = ['midnight-aurora', 'crystal-light', 'bubbles-sky', 'autumn-fireflies', 'high-contrast'] as const;
         const current = useUIStore.getState().theme;
+        const idx = THEMES.indexOf(current);
+        const next = THEMES[(idx + 1) % THEMES.length];
         bus.emit("shell.theme.changed", {
-          theme: current === "dark" ? "light" : "dark",
+          theme: next,
           tokens: {},
         });
       },

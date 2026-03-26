@@ -12,7 +12,7 @@ import { useUIStore } from '../../kernel/stores/ui/ui.store';
 import { applyThemeTokens, emitThemeChange } from '../theme/theme-provider';
 import type { ThemeName } from '../theme/theme-tokens';
 
-const THEME_CYCLE: ThemeName[] = ['dark', 'light', 'high-contrast'];
+const THEME_CYCLE: ThemeName[] = ['midnight-aurora', 'crystal-light', 'bubbles-sky', 'autumn-fireflies', 'high-contrast'];
 
 export const ThemeToggle: React.FC = () => {
   const theme = useUIStore((s) => s.theme);

@@ -8,7 +8,7 @@
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 
-import type { BackgroundSpec, CanvasEntity, StickerEntity, ViewportConfig } from '@sn/types';
+import type { BackgroundSpec, CanvasEntity, StickerEntity, ThemeName, ViewportConfig } from '@sn/types';
 import { CanvasDocumentEvents, CanvasEvents, DEFAULT_BACKGROUND, DockerEvents } from '@sn/types';
 
 import { initCanvasCore, teardownCanvasCore, project2Dto3D } from '../../canvas/core';
@@ -46,6 +46,7 @@ import { StickerSettingsModal, LoginForm } from '../components';
 import { GhostWidgetOverlay } from '../components/GhostWidgetOverlay';
 import type { StickerSettings } from '../components/StickerSettingsModal';
 import { ShellLayout } from '../layout';
+import { applyThemeTokens, emitThemeChange } from '../theme/theme-provider';
 import { THEME_TOKENS } from '../theme/theme-tokens';
 import { themeVar } from '../theme/theme-vars';
 
@@ -469,6 +470,9 @@ export const CanvasPage: React.FC = () => {
   const [sceneGraph, setSceneGraph] = useState<SceneGraph | null>(null);
   const [canvasSummary, setCanvasSummary] = useState<LocalCanvasSummary | null>(null);
 
+  // Per-canvas theme override — when set, overrides global theme for this canvas
+  const [canvasTheme, setCanvasTheme] = useState<ThemeName | undefined>(undefined);
+
   // Sticker settings modal state (works for stickers and non-sticker conversion)
   const [entityToEditAsSticker, setEntityToEditAsSticker] = useState<CanvasEntity | null>(null);
 
@@ -687,10 +691,13 @@ export const CanvasPage: React.FC = () => {
   borderRadiusRef.current = typeof borderRadius === 'number' ? borderRadius : 0;
   const canvasPositionRef = useRef(canvasPosition);
   canvasPositionRef.current = canvasPosition;
+  const canvasThemeRef = useRef<string | undefined>(canvasTheme);
+  canvasThemeRef.current = canvasTheme;
   const persistence = usePersistence(canvasKey, sceneGraph, canvasSummary ?? undefined, {
     viewportConfig: viewportConfigRef,
     borderRadius: borderRadiusRef,
     canvasPosition: canvasPositionRef,
+    theme: canvasThemeRef,
   });
 
   useEffect(() => {
@@ -795,6 +802,28 @@ export const CanvasPage: React.FC = () => {
     setFullscreenPreview(false);
     setMode('edit');
   }, [setFullscreenPreview, setMode]);
+
+  // Per-canvas theme: apply on load, restore global on unmount
+  useEffect(() => {
+    const unsub = bus.subscribe('canvas.document.theme.loaded', (event: { payload: { theme: ThemeName } }) => {
+      setCanvasTheme(event.payload.theme);
+    });
+    return unsub;
+  }, []);
+
+  useEffect(() => {
+    const effectiveTheme = canvasTheme ?? activeTheme;
+    applyThemeTokens(effectiveTheme);
+    emitThemeChange(effectiveTheme);
+  }, [canvasTheme, activeTheme]);
+
+  // Restore global theme when leaving this canvas
+  useEffect(() => {
+    return () => {
+      const globalTheme = useUIStore.getState().theme;
+      applyThemeTokens(globalTheme);
+    };
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -1225,6 +1254,11 @@ export const CanvasPage: React.FC = () => {
               overflow: 'hidden',
               flexShrink: 0,
               transition: 'width 200ms ease, height 200ms ease',
+              ...(viewportConfig.sizeMode === 'bounded' ? {
+                background: 'var(--sn-surface-glass, rgba(20,17,24,0.85))',
+                backdropFilter: 'blur(16px)',
+                WebkitBackdropFilter: 'blur(16px)',
+              } : {}),
               border: canvasStroke.weight > 0
                 ? `${canvasStroke.weight}px ${canvasStroke.style} ${canvasStroke.color}`
                 : undefined,

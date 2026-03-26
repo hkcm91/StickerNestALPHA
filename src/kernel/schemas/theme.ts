@@ -104,8 +104,19 @@ export type FullThemeTokens = z.infer<typeof FullThemeTokensSchema>;
 
 /**
  * Built-in theme names.
+ * - midnight-aurora: Deep purple/blue Her/Rothko palette (was "dark")
+ * - crystal-light: Bright frosted glass with soft blue accents (was "light")
+ * - bubbles-sky: Deep navy/teal with cyan accents
+ * - autumn-fireflies: Warm amber/brown with golden accents
+ * - high-contrast: WCAG 4.5:1+ accessible palette
  */
-export const ThemeNameSchema = z.enum(['light', 'dark', 'high-contrast']);
+export const ThemeNameSchema = z.enum([
+  'midnight-aurora',
+  'crystal-light',
+  'bubbles-sky',
+  'autumn-fireflies',
+  'high-contrast',
+]);
 
 export type ThemeName = z.infer<typeof ThemeNameSchema>;
 

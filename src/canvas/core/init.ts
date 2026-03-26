@@ -79,6 +79,21 @@ export function initCanvasCore(): CanvasCoreContext {
     }
   };
 
+  // Handler for entity move events
+  const handleEntityMoved = (event: BusEvent<{ entityId: string; position: { x: number; y: number } }>) => {
+    const existing = sceneGraph.getEntity(event.payload.entityId);
+    if (!existing) return;
+    const oldBounds = entityBounds(existing);
+    dirtyTracker.markDirty(oldBounds);
+    sceneGraph.updateEntity(event.payload.entityId, {
+      transform: { ...existing.transform, position: event.payload.position },
+    } as Partial<CanvasEntity>);
+    const updated = sceneGraph.getEntity(event.payload.entityId);
+    if (updated) {
+      dirtyTracker.markDirty(entityBounds(updated));
+    }
+  };
+
   // Handler for entity deletion events
   const handleEntityDeleted = (event: BusEvent<{ id: string }>) => {
     const existing = sceneGraph.getEntity(event.payload.id);
@@ -105,6 +120,13 @@ export function initCanvasCore(): CanvasCoreContext {
     bus.subscribe<{ id: string }>(CanvasEvents.ENTITY_DELETED, handleEntityDeleted),
   );
 
+  unsubscribers.push(
+    bus.subscribe<{ entityId: string; position: { x: number; y: number } }>(
+      CanvasEvents.ENTITY_MOVED,
+      handleEntityMoved,
+    ),
+  );
+
   // Subscribe to widget-namespaced events (emitted by sandboxed widgets via bridge)
   // When a sandboxed widget calls StickerNest.emit('canvas.entity.created', payload),
   // the WidgetFrame namespaces it as 'widget.canvas.entity.created' via toBusEventType.
@@ -126,6 +148,13 @@ export function initCanvasCore(): CanvasCoreContext {
     bus.subscribe<{ id: string }>(
       `widget.${CanvasEvents.ENTITY_DELETED}`,
       handleEntityDeleted,
+    ),
+  );
+
+  unsubscribers.push(
+    bus.subscribe<{ entityId: string; position: { x: number; y: number } }>(
+      `widget.${CanvasEvents.ENTITY_MOVED}`,
+      handleEntityMoved,
     ),
   );
 

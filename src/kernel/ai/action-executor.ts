@@ -124,7 +124,7 @@ function executeMoveEntity(action: AIAction & { action: 'move_entity' }): Action
 
 function executeUpdateEntity(action: AIAction & { action: 'update_entity' }): ActionResult {
   bus.emit(CanvasEvents.ENTITY_UPDATED, {
-    entityId: action.entityId,
+    id: action.entityId,
     updates: action.updates,
   });
   return { action, success: true, entityId: action.entityId };
@@ -132,7 +132,7 @@ function executeUpdateEntity(action: AIAction & { action: 'update_entity' }): Ac
 
 function executeDeleteEntity(action: AIAction & { action: 'delete_entity' }): ActionResult {
   bus.emit(CanvasEvents.ENTITY_DELETED, {
-    entityId: action.entityId,
+    id: action.entityId,
   });
   return { action, success: true, entityId: action.entityId };
 }

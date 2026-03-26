@@ -251,6 +251,7 @@ export interface CanvasSettingsRefs {
   viewportConfig?: React.RefObject<ViewportConfig | null>;
   borderRadius?: React.RefObject<number>;
   canvasPosition?: React.RefObject<CanvasPositionConfig | null>;
+  theme?: React.RefObject<string | undefined>;
 }
 
 export function usePersistence(
@@ -313,6 +314,7 @@ export function usePersistence(
         platformConfigs: uiState.platformConfigs as any,
         borderRadius: settingsRefs?.borderRadius?.current ?? 0,
         canvasPosition: settingsRefs?.canvasPosition?.current ?? undefined,
+        theme: (settingsRefs?.theme?.current as any) ?? undefined,
       });
 
       const storageKey = getStorageKey(canvasSlug);
@@ -416,6 +418,9 @@ export function usePersistence(
         }
         if (loadedDoc.canvasPosition) {
           bus.emit(CanvasDocumentEvents.CANVAS_POSITION_CHANGED, { position: loadedDoc.canvasPosition });
+        }
+        if (loadedDoc.theme) {
+          bus.emit('canvas.document.theme.loaded', { theme: loadedDoc.theme });
         }
       }
       console.log('[Persistence] Load successful, sceneGraph entityCount:', sg.entityCount);

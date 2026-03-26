@@ -11,13 +11,13 @@ import { THEME_TOKENS } from './theme-tokens';
 
 export type ThemeTokenKey = keyof FullThemeTokens;
 
-const LIGHT_THEME_FALLBACKS = THEME_TOKENS.light;
+const FALLBACK_THEME = THEME_TOKENS['crystal-light'];
 
 /**
- * Build a CSS var reference with a centralized fallback from the light theme.
+ * Build a CSS var reference with a centralized fallback from the crystal-light theme.
  */
 export function themeVar(token: ThemeTokenKey): string {
-  return `var(${token}, ${LIGHT_THEME_FALLBACKS[token]})`;
+  return `var(${token}, ${FALLBACK_THEME[token]})`;
 }
 
 /**

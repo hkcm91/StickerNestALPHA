@@ -101,9 +101,16 @@ describe('Theme schemas', () => {
 
   describe('ThemeNameSchema', () => {
     it('accepts valid theme names', () => {
-      expect(ThemeNameSchema.safeParse('light').success).toBe(true);
-      expect(ThemeNameSchema.safeParse('dark').success).toBe(true);
+      expect(ThemeNameSchema.safeParse('midnight-aurora').success).toBe(true);
+      expect(ThemeNameSchema.safeParse('crystal-light').success).toBe(true);
+      expect(ThemeNameSchema.safeParse('bubbles-sky').success).toBe(true);
+      expect(ThemeNameSchema.safeParse('autumn-fireflies').success).toBe(true);
       expect(ThemeNameSchema.safeParse('high-contrast').success).toBe(true);
+    });
+
+    it('rejects old theme names', () => {
+      expect(ThemeNameSchema.safeParse('dark').success).toBe(false);
+      expect(ThemeNameSchema.safeParse('light').success).toBe(false);
     });
 
     it('rejects invalid theme names', () => {

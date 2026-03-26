@@ -9,11 +9,13 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
-import type { ViewportConfig } from '@sn/types';
+import type { ThemeName, ViewportConfig } from '@sn/types';
 import { CanvasDocumentEvents } from '@sn/types';
 
 import { bus } from '../../../kernel/bus';
 import { useUIStore } from '../../../kernel/stores/ui/ui.store';
+import { applyThemeTokens, emitThemeChange } from '../../theme/theme-provider';
+import { THEME_DISPLAY_NAMES, THEME_TOKENS } from '../../theme/theme-tokens';
 
 // =============================================================================
 // Types
@@ -494,6 +496,58 @@ export const CanvasSettingsDropdown: React.FC<CanvasSettingsDropdownProps> = ({
             style={{ ...inputStyle, width: '60px' }}
           />
           <span style={{ fontSize: '11px', color: 'var(--sn-text-muted, #6b7280)' }}>px</span>
+        </div>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          THEME SECTION
+          ═══════════════════════════════════════════════════════════════════════ */}
+      <div style={sectionStyle}>
+        <div style={sectionTitleStyle}>Canvas Theme</div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+          {(Object.keys(THEME_TOKENS) as ThemeName[]).map((name) => {
+            const tokens = THEME_TOKENS[name];
+            const isActive = useUIStore.getState().theme === name;
+            return (
+              <button
+                key={name}
+                type="button"
+                data-testid={`theme-chip-${name}`}
+                onClick={() => {
+                  useUIStore.getState().setTheme(name);
+                  applyThemeTokens(name);
+                  emitThemeChange(name);
+                  bus.emit('canvas.document.theme.loaded', { theme: name });
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '6px 10px',
+                  border: isActive ? '2px solid var(--sn-accent)' : '1px solid var(--sn-border, #e5e7eb)',
+                  borderRadius: 'var(--sn-radius, 6px)',
+                  background: isActive ? 'var(--sn-accent)' : 'transparent',
+                  color: isActive ? '#fff' : 'var(--sn-text, #1a1a2e)',
+                  cursor: 'pointer',
+                  fontSize: '11px',
+                  fontFamily: 'inherit',
+                  fontWeight: 500,
+                }}
+              >
+                <span
+                  style={{
+                    width: '12px',
+                    height: '12px',
+                    borderRadius: '50%',
+                    background: tokens['--sn-accent'],
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    flexShrink: 0,
+                  }}
+                />
+                {THEME_DISPLAY_NAMES[name]}
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>
