@@ -74,6 +74,8 @@ Deno.serve(async (req: Request) => {
         return await handleSubscribe(user, body);
       case "buy":
         return await handleBuyItem(user, body);
+      case "buy_widget":
+        return await handleBuyWidget(user, body);
       default:
         return jsonResponse({ error: `Unknown action: ${action}` }, 400);
     }
@@ -297,4 +299,106 @@ async function handleBuyItem(
     }
     throw err;
   }
+}
+
+async function handleBuyWidget(
+  user: { id: string; email?: string },
+  body: { widgetId: string },
+) {
+  const db = getServiceClient();
+
+  // Fetch widget from the widgets table (not shop_items)
+  const { data: widget } = await db
+    .from("widgets")
+    .select("id, name, author_id, price_cents, currency, is_free, is_published, thumbnail_url")
+    .eq("id", body.widgetId)
+    .eq("is_published", true)
+    .single();
+
+  if (!widget) {
+    return jsonResponse({ error: "Widget not found" }, 404);
+  }
+
+  if (widget.is_free || !widget.price_cents || widget.price_cents <= 0) {
+    // Free widget — install directly without Stripe
+    return jsonResponse({ free: true });
+  }
+
+  if (!widget.author_id) {
+    return jsonResponse({ error: "Widget has no author" }, 400);
+  }
+
+  // Prevent duplicate purchases
+  const { data: existingOrder } = await db
+    .from("orders")
+    .select("id")
+    .eq("buyer_id", user.id)
+    .eq("item_id", widget.id)
+    .in("status", ["paid", "fulfilled"])
+    .maybeSingle();
+
+  if (existingOrder) {
+    // Already purchased — allow install without re-payment
+    return jsonResponse({ free: true, alreadyPurchased: true });
+  }
+
+  // Get seller's Stripe Connect account
+  const { data: sellerAccount } = await db
+    .from("creator_accounts")
+    .select("stripe_connect_account_id")
+    .eq("user_id", widget.author_id)
+    .single();
+
+  if (!sellerAccount?.stripe_connect_account_id) {
+    return jsonResponse({ error: "Widget author has not connected Stripe" }, 400);
+  }
+
+  // Platform fee based on seller's tier
+  const { data: sellerUser } = await db
+    .from("users")
+    .select("tier")
+    .eq("id", widget.author_id)
+    .single();
+
+  const platformFee = PLATFORM_FEE_MAP[sellerUser?.tier ?? "creator"] ?? 12;
+  const feeAmount = Math.round(widget.price_cents * (platformFee / 100));
+
+  // Idempotency key
+  const timeBucket = Math.floor(Date.now() / (5 * 60 * 1000));
+  const idempotencyKey = `widget_${user.id}_${widget.id}_${timeBucket}`;
+
+  const sessionParams: Stripe.Checkout.SessionCreateParams = {
+    mode: "payment",
+    line_items: [
+      {
+        price_data: {
+          currency: widget.currency,
+          unit_amount: widget.price_cents,
+          product_data: {
+            name: widget.name,
+            ...(widget.thumbnail_url ? { images: [widget.thumbnail_url] } : {}),
+          },
+        },
+        quantity: 1,
+      },
+    ],
+    payment_intent_data: {
+      application_fee_amount: feeAmount,
+    },
+    success_url: `${SITE_URL}/marketplace/widget/${widget.id}?purchase=success`,
+    cancel_url: `${SITE_URL}/marketplace/widget/${widget.id}`,
+    metadata: {
+      supabase_buyer_id: user.id,
+      seller_id: widget.author_id,
+      widget_id: widget.id,
+      order_type: "widget",
+    },
+  };
+
+  const session = await stripe.checkout.sessions.create(
+    sessionParams,
+    { stripeAccount: sellerAccount.stripe_connect_account_id, idempotencyKey },
+  );
+
+  return jsonResponse({ url: session.url });
 }

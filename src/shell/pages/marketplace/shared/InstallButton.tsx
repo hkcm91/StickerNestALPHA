@@ -58,7 +58,7 @@ export const InstallButton: React.FC<InstallButtonProps> = ({
     }
     try {
       const resp = await supabase.functions.invoke('creator-checkout', {
-        body: { action: 'buy', itemId: widgetId },
+        body: { action: 'buy_widget', widgetId },
       });
       const data = resp.data as Record<string, unknown> | null;
       if (data?.url && typeof data.url === 'string') {

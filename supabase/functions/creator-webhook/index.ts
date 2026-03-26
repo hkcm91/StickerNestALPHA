@@ -112,7 +112,7 @@ async function handleCreatorCheckoutComplete(
       buyer_id: buyerId,
       seller_id: sellerId,
       order_type: orderType,
-      item_id: meta.tier_id ?? meta.item_id,
+      item_id: meta.tier_id ?? meta.item_id ?? meta.widget_id,
       stripe_checkout_session_id: session.id,
       stripe_payment_intent_id:
         typeof session.payment_intent === "string"
@@ -184,6 +184,21 @@ async function handleCreatorCheckoutComplete(
       if (item?.stock_count !== null) {
         await db.rpc("decrement_stock", { item_id: meta.item_id });
       }
+    }
+
+    // Handle widget purchase — digital, instant fulfillment
+    if (orderType === "widget" && meta.widget_id) {
+      // Mark order as fulfilled immediately (widgets are digital)
+      await db
+        .from("orders")
+        .update({ status: "fulfilled" })
+        .eq("stripe_checkout_session_id", session.id);
+
+      // Record in user_installed_widgets so the install flow can verify ownership
+      await db.from("user_installed_widgets").upsert(
+        { user_id: buyerId, widget_id: meta.widget_id },
+        { onConflict: "user_id,widget_id" },
+      );
     }
   } catch (err) {
     console.error(`handleCreatorCheckoutComplete failed for session ${session.id}:`, err);

@@ -54,12 +54,45 @@ export const DetailPage: React.FC = () => {
     return () => { cancelled = true; };
   }, [api, id]);
 
-  // Handle post-purchase auto-install
+  // Handle post-purchase auto-install with retry (webhook may not have fired yet)
   useEffect(() => {
-    if (searchParams.get('purchase') === 'success' && detail && userId && !isInstalled) {
-      handleInstall(detail.id);
-      setSearchParams({}, { replace: true });
+    if (searchParams.get('purchase') !== 'success' || !detail || !userId || isInstalled) return;
+
+    let attempts = 0;
+    const maxAttempts = 5;
+    let cancelled = false;
+
+    async function tryInstall() {
+      if (cancelled) return;
+      attempts++;
+      try {
+        const result = await installService.install(userId!, detail!.id);
+        if (cancelled) return;
+        if (result.success) {
+          setInstallState('installed');
+          setSearchParams({}, { replace: true });
+          return;
+        }
+        // Payment not yet recorded by webhook — retry after delay
+        if (attempts < maxAttempts) {
+          setTimeout(tryInstall, 2000);
+        } else {
+          setInstallState('error');
+          setSearchParams({}, { replace: true });
+        }
+      } catch {
+        if (cancelled) return;
+        if (attempts < maxAttempts) {
+          setTimeout(tryInstall, 2000);
+        } else {
+          setInstallState('error');
+          setSearchParams({}, { replace: true });
+        }
+      }
     }
+
+    tryInstall();
+    return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [detail, searchParams]);
 

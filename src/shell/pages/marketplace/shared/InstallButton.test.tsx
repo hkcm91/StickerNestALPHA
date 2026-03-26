@@ -70,4 +70,56 @@ describe('InstallButton', () => {
     render(<InstallButton {...baseProps} isInstalled={false} uninstallState="uninstalled" />);
     expect(screen.getByTestId('install-btn').textContent).toBe('Install');
   });
+
+  it('calls creator-checkout with buy_widget action for paid widgets', async () => {
+    const { supabase: mockSupabase } = await import('../../../../kernel/supabase');
+    const mockInvoke = mockSupabase.functions.invoke as ReturnType<typeof vi.fn>;
+    mockInvoke.mockResolvedValue({ data: { url: 'https://checkout.stripe.com/test' } });
+
+    // Mock window.location.href setter
+    const hrefSpy = vi.spyOn(window, 'location', 'get').mockReturnValue({
+      ...window.location,
+      href: '',
+    } as Location);
+
+    render(
+      <InstallButton
+        {...baseProps}
+        isFree={false}
+        priceCents={99}
+        stripePriceId="price_test_123"
+        onInstall={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('buy-btn'));
+
+    // Wait for async handleBuy to complete
+    await vi.waitFor(() => {
+      expect(mockInvoke).toHaveBeenCalledWith('creator-checkout', {
+        body: { action: 'buy_widget', widgetId: 'w-1' },
+      });
+    });
+
+    hrefSpy.mockRestore();
+  });
+
+  it('calls onInstall directly for paid widget without stripePriceId', async () => {
+    const onInstall = vi.fn().mockResolvedValue(undefined);
+    render(
+      <InstallButton
+        {...baseProps}
+        isFree={false}
+        priceCents={99}
+        stripePriceId={null}
+        onInstall={onInstall}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('buy-btn'));
+
+    await vi.waitFor(() => {
+      expect(onInstall).toHaveBeenCalledWith('w-1');
+    });
+  });
 });
