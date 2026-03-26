@@ -96,3 +96,42 @@ export function getOverlayStyles(
 
   return styles;
 }
+
+/**
+ * Build a CSS filter string from animation overlay filter properties.
+ * Used by the compositing system and renderers for filter effects.
+ */
+export function getFilterStyles(
+  overlay: AnimationOverlay | undefined,
+): string | undefined {
+  if (!overlay) return undefined;
+
+  const filters: string[] = [];
+
+  const filterBlur = (overlay as Record<string, unknown>)['filterBlur'];
+  if (typeof filterBlur === 'number' && filterBlur > 0) {
+    filters.push(`blur(${filterBlur}px)`);
+  }
+
+  const filterBrightness = (overlay as Record<string, unknown>)['filterBrightness'];
+  if (typeof filterBrightness === 'number') {
+    filters.push(`brightness(${filterBrightness})`);
+  }
+
+  const filterContrast = (overlay as Record<string, unknown>)['filterContrast'];
+  if (typeof filterContrast === 'number') {
+    filters.push(`contrast(${filterContrast})`);
+  }
+
+  const filterSaturate = (overlay as Record<string, unknown>)['filterSaturate'];
+  if (typeof filterSaturate === 'number') {
+    filters.push(`saturate(${filterSaturate})`);
+  }
+
+  const filterHueRotate = (overlay as Record<string, unknown>)['filterHueRotate'];
+  if (typeof filterHueRotate === 'number') {
+    filters.push(`hue-rotate(${filterHueRotate}deg)`);
+  }
+
+  return filters.length > 0 ? filters.join(' ') : undefined;
+}
