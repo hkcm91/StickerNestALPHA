@@ -7,7 +7,7 @@ import { create } from 'zustand';
 import { devtools, subscribeWithSelector } from 'zustand/middleware';
 
 import type { BusEvent, CanvasPlatform, SpatialMode, ViewportConfig } from '@sn/types';
-import { CanvasEvents, CanvasDocumentEvents, ShellEvents, InteractionModeEvents } from '@sn/types';
+import { CanvasEvents, CanvasDocumentEvents, ShellEvents, InteractionModeEvents, FocusEvents } from '@sn/types';
 
 import { bus } from '../../bus';
 
@@ -24,6 +24,16 @@ export interface Toast {
  * - 'clean': Minimal UI for viewing/playing (public slugs, embeds)
  */
 export type ChromeMode = 'editor' | 'clean';
+
+/** Focus mode state — ephemeral, never persisted */
+export interface FocusModeState {
+  /** Whether focus mode is active */
+  active: boolean;
+  /** Ordered entity IDs for carousel navigation */
+  focusedEntityIds: string[];
+  /** Index of the currently displayed entity in the carousel */
+  activeIndex: number;
+}
 
 export interface UIState {
   /** Canvas interaction mode — NEVER persisted, always derived from role + URL context on load */
@@ -49,6 +59,8 @@ export interface UIState {
   fullscreenPreview: boolean;
   /** Platform-specific viewport configurations (size) */
   platformConfigs: Record<CanvasPlatform, Partial<ViewportConfig>>;
+  /** Focus mode — centers and expands selected widgets with blur backdrop. Ephemeral. */
+  focusMode: FocusModeState | null;
 }
 
 export interface UIActions {
@@ -68,6 +80,12 @@ export interface UIActions {
   setPlatformConfig: (platform: CanvasPlatform, config: Partial<ViewportConfig>) => void;
   setArtboardPreviewMode: (preview: boolean) => void;
   setFullscreenPreview: (fullscreen: boolean) => void;
+  /** Enter focus mode with the given entity IDs (carousel order) */
+  enterFocusMode: (entityIds: string[]) => void;
+  /** Exit focus mode */
+  exitFocusMode: () => void;
+  /** Navigate the focus carousel (wraps around) */
+  focusNavigate: (direction: 'next' | 'prev') => void;
   reset: () => void;
 }
 
@@ -88,6 +106,7 @@ const initialState: UIState = {
   canvasPlatform: 'web',
   artboardPreviewMode: false,
   fullscreenPreview: false,
+  focusMode: null,
   platformConfigs: {
     web: { width: 1440, height: 900, sizeMode: 'bounded' },
     mobile: { width: 375, height: 812, sizeMode: 'bounded' },
@@ -149,6 +168,37 @@ export const useUIStore = create<UIStore>()(
               })),
             setArtboardPreviewMode: (artboardPreviewMode) => set({ artboardPreviewMode }),
             setFullscreenPreview: (fullscreenPreview) => set({ fullscreenPreview }),
+
+      enterFocusMode: (entityIds) => {
+        if (entityIds.length === 0) return;
+        const focusMode: FocusModeState = {
+          active: true,
+          focusedEntityIds: entityIds,
+          activeIndex: 0,
+        };
+        set({ focusMode });
+        bus.emit(FocusEvents.ENTERED, { entityIds, activeIndex: 0 });
+      },
+
+      exitFocusMode: () => {
+        set({ focusMode: null });
+        bus.emit(FocusEvents.EXITED, {});
+      },
+
+      focusNavigate: (direction) => {
+        set((state) => {
+          const fm = state.focusMode;
+          if (!fm || fm.focusedEntityIds.length <= 1) return state;
+          const len = fm.focusedEntityIds.length;
+          const nextIndex = direction === 'next'
+            ? (fm.activeIndex + 1) % len
+            : (fm.activeIndex - 1 + len) % len;
+          bus.emit(FocusEvents.NAVIGATED, { activeIndex: nextIndex, direction });
+          return {
+            focusMode: { ...fm, activeIndex: nextIndex },
+          };
+        });
+      },
 
       reset: () => set(initialState),
     })),

@@ -81,6 +81,7 @@ export {
   GridEvents,
   CanvasDocumentEvents,
   GalleryEvents,
+  FocusEvents,
   InteractionModeEvents,
   InputEvents,
   LayoutModeEvents,

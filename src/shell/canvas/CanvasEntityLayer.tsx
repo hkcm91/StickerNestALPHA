@@ -10,6 +10,8 @@ import React, { useCallback, useMemo } from 'react';
 
 import type { CanvasEntity } from '@sn/types';
 
+import { useUIStore } from '../../kernel/stores/ui/ui.store';
+
 import { EntityRenderer } from './renderers';
 
 export interface CanvasEntityLayerProps {
@@ -84,23 +86,36 @@ export const CanvasEntityLayer: React.FC<CanvasEntityLayerProps> = ({
     return { visibleEntities: filtered, entitiesByParent: byParent };
   }, [entities, openFolderIds]);
 
-  const renderEntity = useCallback((entity: CanvasEntity) => (
-    <EntityRenderer
-      key={entity.id}
-      entity={entity}
-      isSelected={selectedIds.has(entity.id)}
-      folderOpen={entity.type === 'docker' ? openFolderIds.has(entity.id) : undefined}
-      childrenEntities={entity.type === 'docker' ? entitiesByParent.get(entity.id) : undefined}
-      renderChild={renderEntity}
-      widgetHtml={
-        entity.type === 'widget'
-          ? widgetHtmlMap?.get(entity.widgetInstanceId)
-          : undefined
-      }
-      theme={theme}
-      interactionMode={interactionMode}
-    />
-  ), [selectedIds, openFolderIds, entitiesByParent, widgetHtmlMap, theme, interactionMode]);
+  // Hide the active focused entity (rendered in FocusOverlay instead)
+  const focusMode = useUIStore((s) => s.focusMode);
+  const focusedActiveId = focusMode?.active
+    ? focusMode.focusedEntityIds[focusMode.activeIndex]
+    : null;
+
+  const renderEntity = useCallback((entity: CanvasEntity) => {
+    const isFocusHidden = entity.id === focusedActiveId;
+    return (
+      <div
+        key={entity.id}
+        style={isFocusHidden ? { opacity: 0, pointerEvents: 'none' } : undefined}
+      >
+        <EntityRenderer
+          entity={entity}
+          isSelected={selectedIds.has(entity.id)}
+          folderOpen={entity.type === 'docker' ? openFolderIds.has(entity.id) : undefined}
+          childrenEntities={entity.type === 'docker' ? entitiesByParent.get(entity.id) : undefined}
+          renderChild={renderEntity}
+          widgetHtml={
+            entity.type === 'widget'
+              ? widgetHtmlMap?.get(entity.widgetInstanceId)
+              : undefined
+          }
+          theme={theme}
+          interactionMode={interactionMode}
+        />
+      </div>
+    );
+  }, [selectedIds, openFolderIds, entitiesByParent, widgetHtmlMap, theme, interactionMode, focusedActiveId]);
 
   return (
     <div data-testid="canvas-entity-layer" style={{ position: 'absolute', inset: 0 }}>

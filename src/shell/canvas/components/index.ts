@@ -21,3 +21,5 @@ export { RothkoField } from "./RothkoField";
 export type { RothkoFieldProps } from "./RothkoField";
 export { WidgetStateOverlay } from "./WidgetStateOverlay";
 export type { WidgetStateOverlayProps, WidgetState } from "./WidgetStateOverlay";
+export { FocusOverlay } from "./FocusOverlay";
+export type { FocusOverlayProps } from "./FocusOverlay";

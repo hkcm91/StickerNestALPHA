@@ -37,6 +37,7 @@ import {
   CanvasContextMenu,
   ConstellationLines,
   CursorGlow,
+  FocusOverlay,
   PresenceCursorsLayer,
   RothkoField,
   SelectionOverlay,
@@ -247,6 +248,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   );
 
   const spatialMode = useUIStore((s) => s.spatialMode);
+  const focusMode = useUIStore((s) => s.focusMode);
 
   return (
     <div
@@ -528,6 +530,17 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
             selectedIds={selectedIds}
             interactionMode={rendererMode}
           />
+
+          {/* Layer 6: Focus Mode overlay (above everything) */}
+          {focusMode?.active && (
+            <FocusOverlay
+              focusedEntityIds={focusMode.focusedEntityIds}
+              activeIndex={focusMode.activeIndex}
+              entities={entities}
+              widgetHtmlMap={widgetHtmlMap}
+              theme={theme}
+            />
+          )}
         </>
       )}
     </div>

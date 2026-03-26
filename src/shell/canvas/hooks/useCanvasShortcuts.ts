@@ -16,6 +16,7 @@ import { CanvasEvents } from '@sn/types';
 
 import type { SceneGraph } from '../../../canvas/core';
 import { bus } from '../../../kernel/bus';
+import { useUIStore } from '../../../kernel/stores/ui/ui.store';
 
 import type { CanvasToolId } from './useActiveTool';
 import type { ViewportStore } from './useViewport';
@@ -280,6 +281,16 @@ export function useCanvasShortcuts(deps: CanvasShortcutDeps) {
       if (key === '0' && mod && !shift && viewportStore) {
         e.preventDefault();
         viewportStore.reset();
+        return;
+      }
+
+      // ----- F — enter focus mode on selected entities -----
+      if (key === 'f' && !mod && !shift && hasSelection) {
+        e.preventDefault();
+        const focusMode = useUIStore.getState().focusMode;
+        if (!focusMode?.active) {
+          useUIStore.getState().enterFocusMode(Array.from(selectedIds));
+        }
         return;
       }
 
