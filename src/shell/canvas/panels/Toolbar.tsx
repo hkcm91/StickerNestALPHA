@@ -661,6 +661,10 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     bus.emit(GridEvents.CONFIG_CHANGED, { canvasId: '', config: { gridLineWidth: Number(e.target.value) } });
   }, []);
 
+  const handleGridDotSizeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    bus.emit(GridEvents.CONFIG_CHANGED, { canvasId: '', config: { dotSize: Number(e.target.value) } });
+  }, []);
+
   const isEditMode = mode === 'edit';
 
   // Select style for tray dropdowns
@@ -963,6 +967,12 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Weight</span><span style={{ color: 'var(--sn-text-muted, #888)' }}>{gridConfig.gridLineWidth ?? 1}px</span></div>
                         <input data-testid="grid-weight-slider" type="range" min="0.5" max="4" step="0.5" value={gridConfig.gridLineWidth ?? 1} onChange={handleGridWeightChange} style={{ width: '100%', cursor: 'pointer' }} />
                       </label>
+                      {gridConfig.gridLineStyle === 'dot' && (
+                        <label style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Dot Size</span><span style={{ color: 'var(--sn-text-muted, #888)' }}>{gridConfig.dotSize ?? 1.5}px</span></div>
+                          <input data-testid="grid-dot-size-slider" type="range" min="0.5" max="6" step="0.5" value={gridConfig.dotSize ?? 1.5} onChange={handleGridDotSizeChange} style={{ width: '100%', cursor: 'pointer' }} />
+                        </label>
+                      )}
                     </div>
                   )}
                 </div>

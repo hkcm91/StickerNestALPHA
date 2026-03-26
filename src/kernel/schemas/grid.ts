@@ -88,6 +88,8 @@ export const GridConfigSchema = z.object({
   gridLineStyle: GridLineStyleSchema.default('line'),
   /** Grid line opacity (0–1), applied independently of gridLineColor */
   gridLineOpacity: z.number().min(0).max(1).default(0.1),
+  /** Dot radius in pixels when gridLineStyle is 'dot'. Falls back to gridLineWidth if unset. */
+  dotSize: z.number().positive().default(1.5),
   /** Snap mode for widget placement */
   snapMode: GridSnapModeSchema.default('none'),
   /** Grid origin offset (for aligning grid to specific coordinates) */

@@ -192,6 +192,7 @@ describe('coordinate utilities', () => {
     gridLineWidth: 1,
     gridLineStyle: 'line' as const,
     gridLineOpacity: 0.1,
+    dotSize: 1.5,
     snapMode: 'none',
     origin: { x: 0, y: 0 },
     defaultBackground: '#0d1117',

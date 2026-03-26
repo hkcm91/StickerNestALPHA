@@ -251,7 +251,7 @@ export const GridLayerPanel: React.FC = () => {
 
         if (gridLineStyle === 'dot') {
           const pts = collectPoints();
-          const r = gridLineWidth;
+          const r = currentConfig.dotSize ?? gridLineWidth;
           ctx.beginPath();
           for (const p of pts) {
             ctx.moveTo(p.x + r, p.y);
