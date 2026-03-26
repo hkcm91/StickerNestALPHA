@@ -91,20 +91,38 @@ export const CompositionConfigSchema = z.object({
   /** Path to the CaptureResult manifest.json */
   captureManifest: z.string(),
   /** Visual style settings */
-  style: StyleConfigSchema.default({}),
+  style: StyleConfigSchema.default({
+    titleFont: 'Inter',
+    titleColor: '#FFFFFF',
+    bgColor: '#1a1a2e',
+    accentColor: '#e94560',
+    transitionType: 'fade',
+    transitionDuration: 0.5,
+    captionStyle: 'bottom-bar',
+    captionFontSize: 32,
+  }),
   /** Narration settings */
-  narration: NarrationConfigSchema.default({}),
+  narration: NarrationConfigSchema.default({
+    voice: 'en-US-JennyNeural',
+    rate: '+0%',
+    pitch: '+0Hz',
+    enabled: true,
+  }),
   /** Background music settings */
   music: MusicConfigSchema.optional(),
   /** Branding settings */
-  branding: BrandingConfigSchema.default({}),
+  branding: BrandingConfigSchema.default({
+    watermark: false,
+    endCard: true,
+    endCardDuration: 3,
+  }),
   /** Title card settings */
   titleCard: z.object({
     /** Whether to show a title card at the start */
     enabled: z.boolean().default(true),
     /** Duration in seconds */
     duration: z.number().min(1).max(10).default(3),
-  }).default({}),
+  }).default({ enabled: true, duration: 3 }),
   /** Minimum display time per screenshot in seconds */
   minSegmentDuration: z.number().min(1).max(30).default(3),
   /** Output FPS */
@@ -113,7 +131,7 @@ export const CompositionConfigSchema = z.object({
   resolution: z.object({
     width: z.number().int().default(1920),
     height: z.number().int().default(1080),
-  }).default({}),
+  }).default({ width: 1920, height: 1080 }),
 });
 
 export type CompositionConfig = z.infer<typeof CompositionConfigSchema>;
