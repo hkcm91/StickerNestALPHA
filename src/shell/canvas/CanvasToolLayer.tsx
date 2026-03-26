@@ -408,7 +408,7 @@ export const CanvasToolLayer: React.FC<CanvasToolLayerProps> = ({
         type: 'widget',
         canvasId: DEMO_CANVAS_ID,
         transform: {
-          position: { x: canvasPoint.x, y: canvasPoint.y },
+          position: applySnap(canvasPoint, { width: 240, height: 180 }),
           size: { width: 240, height: 180 },
           rotation: 0,
           scale: 1,
@@ -437,7 +437,7 @@ export const CanvasToolLayer: React.FC<CanvasToolLayerProps> = ({
       useUIStore.getState().setActiveTool('select');
       useUIStore.getState().setPendingToolData(null);
     },
-    [sceneGraph, onSelectionChange],
+    [sceneGraph, onSelectionChange, applySnap],
   );
 
   // ── Sticker tool handler ───────────────────────────────────
@@ -453,7 +453,7 @@ export const CanvasToolLayer: React.FC<CanvasToolLayerProps> = ({
         type: 'sticker',
         canvasId: DEMO_CANVAS_ID,
         transform: {
-          position: { x: canvasPoint.x, y: canvasPoint.y },
+          position: applySnap(canvasPoint, { width: 120, height: 120 }),
           size: { width: 120, height: 120 },
           rotation: 0,
           scale: 1,
@@ -482,7 +482,7 @@ export const CanvasToolLayer: React.FC<CanvasToolLayerProps> = ({
       useUIStore.getState().setActiveTool('select');
       useUIStore.getState().setPendingToolData(null);
     },
-    [sceneGraph, onSelectionChange],
+    [sceneGraph, onSelectionChange, applySnap],
   );
 
   // - Lottie tool handler ----------------------------------------------------
@@ -500,7 +500,7 @@ export const CanvasToolLayer: React.FC<CanvasToolLayerProps> = ({
         type: 'lottie',
         canvasId: DEMO_CANVAS_ID,
         transform: {
-          position: { x: canvasPoint.x, y: canvasPoint.y },
+          position: applySnap(canvasPoint, { width: 160, height: 160 }),
           size: { width: 160, height: 160 },
           rotation: 0,
           scale: 1,
@@ -532,7 +532,7 @@ export const CanvasToolLayer: React.FC<CanvasToolLayerProps> = ({
       useUIStore.getState().setActiveTool('select');
       useUIStore.getState().setPendingToolData(null);
     },
-    [sceneGraph, onSelectionChange],
+    [sceneGraph, onSelectionChange, applySnap],
   );
 
   // - SVG tool handler -------------------------------------------------------
@@ -560,7 +560,7 @@ export const CanvasToolLayer: React.FC<CanvasToolLayerProps> = ({
         type: 'svg',
         canvasId: DEMO_CANVAS_ID,
         transform: {
-          position: { x: canvasPoint.x, y: canvasPoint.y },
+          position: applySnap(canvasPoint, { width: defaultWidth, height: defaultHeight }),
           size: { width: defaultWidth, height: defaultHeight },
           rotation: 0,
           scale: 1,
@@ -590,7 +590,7 @@ export const CanvasToolLayer: React.FC<CanvasToolLayerProps> = ({
       useUIStore.getState().setActiveTool('select');
       useUIStore.getState().setPendingToolData(null);
     },
-    [sceneGraph, onSelectionChange],
+    [sceneGraph, onSelectionChange, applySnap],
   );
 
   // ── Text tool handler ────────────────────────────────────────
@@ -602,7 +602,7 @@ export const CanvasToolLayer: React.FC<CanvasToolLayerProps> = ({
         type: 'text',
         canvasId: DEMO_CANVAS_ID,
         transform: {
-          position: { x: canvasPoint.x, y: canvasPoint.y },
+          position: applySnap(canvasPoint, { width: 200, height: 40 }),
           size: { width: 200, height: 40 },
           rotation: 0,
           scale: 1,
@@ -630,7 +630,7 @@ export const CanvasToolLayer: React.FC<CanvasToolLayerProps> = ({
       bus.emit(CanvasEvents.ENTITY_CREATED, entity);
       onSelectionChange(new Set([entity.id]));
     },
-    [sceneGraph, onSelectionChange],
+    [sceneGraph, onSelectionChange, applySnap],
   );
 
   // ── Start entity move (shared by select + move tools) ────────
