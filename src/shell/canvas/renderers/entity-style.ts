@@ -7,6 +7,8 @@
 
 import type { CanvasEntityBase, Transform2D } from "@sn/types";
 
+import { useCompositingStore } from '../../../kernel/stores/canvas/compositing.store';
+
 /** 
  * Multiplier for rendering assets at higher resolution than their canvas size.
  * Ensures sharpness when zooming or scaling up entities.
@@ -105,4 +107,25 @@ export function getEntityBoundingBox(entity: CanvasEntityBase, transformOverride
     maxX: position.x + halfW,
     maxY: position.y + halfH,
   };
+}
+
+/**
+ * Get CSS compositing styles for an entity from the compositing store.
+ * Returns blend mode and filter properties to spread into element style.
+ */
+export function getCompositingStyles(entityId: string): Record<string, string | undefined> {
+  const store = useCompositingStore.getState();
+  const styles: Record<string, string | undefined> = {};
+
+  const blendMode = store.blendModes.get(entityId);
+  if (blendMode) {
+    styles.mixBlendMode = blendMode;
+  }
+
+  const filter = store.filters.get(entityId);
+  if (filter) {
+    styles.filter = filter;
+  }
+
+  return styles;
 }
