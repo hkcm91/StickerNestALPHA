@@ -12,10 +12,10 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import { useAuthStore } from '../../../../kernel/stores/auth/auth.store';
 import { useWidgetStore } from '../../../../kernel/stores/widget/widget.store';
-import { buildWidgetPackage, downloadPackage } from '../../../../runtime/package/builder';
 import { createMarketplaceAPI } from '../../../../marketplace/api/marketplace-api';
 import type { MarketplaceWidgetDetail } from '../../../../marketplace/api/types';
 import { createInstallFlowService } from '../../../../marketplace/install/install-flow';
+import { buildWidgetPackage, downloadPackage } from '../../../../runtime/package/builder';
 import { themeVar } from '../../../theme/theme-vars';
 import { InstallButton, type InstallState, type UninstallState } from '../shared/InstallButton';
 import { LicenseBadge } from '../shared/LicenseBadge';
@@ -95,7 +95,6 @@ export const DetailPage: React.FC = () => {
 
     tryInstall();
     return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [detail, searchParams]);
 
   const isInstalled = useMemo(() => {
@@ -136,6 +135,17 @@ export const DetailPage: React.FC = () => {
     },
     [userId, installService],
   );
+
+  const handleDownloadZip = useCallback(() => {
+    if (!detail) return;
+    const entry = widgetRegistry[detail.id];
+    if (!entry) return;
+    const data = buildWidgetPackage({
+      manifest: entry.manifest,
+      htmlContent: entry.htmlContent,
+    });
+    downloadPackage(data, `${entry.manifest.id}.snwidget.zip`);
+  }, [detail, widgetRegistry]);
 
   if (loading) {
     return (
@@ -278,9 +288,14 @@ export const DetailPage: React.FC = () => {
                 <div style={{ fontSize: '13px', color: themeVar('--sn-text-muted'), marginBottom: '8px' }}>
                   Open any canvas and find this widget in the Asset Panel to place it.
                 </div>
-                <button type="button" onClick={() => navigate('/')} style={btnPrimary}>
-                  Go to Canvas
-                </button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button type="button" onClick={() => navigate('/')} style={btnPrimary}>
+                    Go to Canvas
+                  </button>
+                  <button type="button" onClick={handleDownloadZip} style={btnSecondary}>
+                    Download .zip
+                  </button>
+                </div>
               </div>
             )}
           </div>
