@@ -470,68 +470,6 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     }
   }, [dockers, addDocker, setDockerVisible, bringDockerToFront]);
 
-  const handleHistoryClick = useCallback(() => {
-    const HISTORY_DOCKER_NAME = 'History';
-    const existing = Object.values(dockers).find((docker) => docker.name === HISTORY_DOCKER_NAME);
-    if (existing) {
-      setDockerVisible(existing.id, true);
-      bringDockerToFront(existing.id);
-    } else {
-      const dockerId = addDocker({
-        name: HISTORY_DOCKER_NAME,
-        dockMode: 'floating',
-        visible: true,
-        pinned: false,
-        position: { x: 400, y: 96 },
-        size: { width: 300, height: 400 },
-        tabs: [
-          {
-            id: crypto.randomUUID(),
-            name: 'History',
-            widgets: [{ widgetInstanceId: HISTORY_WIDGET_INSTANCE_ID }],
-          },
-        ],
-      });
-      bringDockerToFront(dockerId);
-    }
-  }, [dockers, addDocker, setDockerVisible, bringDockerToFront]);
-
-  const handleSpatialModeChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSpatialMode(e.target.value as any);
-  }, [setSpatialMode]);
-
-  const handlePlatformChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-    const platform = e.target.value as CanvasPlatform;
-    setCanvasPlatform(platform);
-  }, [setCanvasPlatform]);
-
-  const handlePresetChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-    const presetLabel = e.target.value;
-    if (presetLabel === '__current__') return;
-    const presets = PLATFORM_PRESETS[canvasPlatform];
-    const preset = presets.find((p) => p.label === presetLabel);
-    if (preset) {
-      setPlatformConfig(canvasPlatform, {
-        width: preset.width,
-        height: preset.height,
-        sizeMode: 'bounded',
-      });
-      bus.emit(CanvasDocumentEvents.VIEWPORT_CHANGED, {
-        canvasId: '',
-        viewport: { width: preset.width, height: preset.height, sizeMode: 'bounded' },
-      });
-    }
-  }, [canvasPlatform, setPlatformConfig]);
-
-  const handleArtboardPreviewToggle = useCallback(() => {
-    setArtboardPreviewMode(!artboardPreviewMode);
-  }, [artboardPreviewMode, setArtboardPreviewMode]);
-
-  const handleEnterXR = useCallback(() => {
-    setSpatialMode('vr');
-    enterXR('immersive-vr');
-  }, [setSpatialMode]);
-
   const handleFullscreenPreview = useCallback(() => {
     setFullscreenPreview(true);
   }, [setFullscreenPreview]);
