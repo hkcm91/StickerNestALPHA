@@ -45,6 +45,7 @@ import { seedDemoEntities, seedCommerceCanvas, seedClaudeLabCanvas } from '../ca
 import { captureAndUploadThumbnail } from '../canvas/utils/thumbnail-capture';
 import { StickerSettingsModal, LoginForm } from '../components';
 import { GhostWidgetOverlay } from '../components/GhostWidgetOverlay';
+import { OnboardingWizard, useOnboarding } from '../components/onboarding';
 import type { StickerSettings } from '../components/StickerSettingsModal';
 import { UpgradePrompt } from '../components/UpgradePrompt';
 import { ShellLayout } from '../layout';
@@ -515,6 +516,9 @@ export const CanvasPage: React.FC = () => {
 
   // Per-canvas theme override — when set, overrides global theme for this canvas
   const [canvasTheme, setCanvasTheme] = useState<ThemeName | undefined>(undefined);
+
+  // Onboarding wizard
+  const onboarding = useOnboarding();
 
   // Sticker settings modal state (works for stickers and non-sticker conversion)
   const [entityToEditAsSticker, setEntityToEditAsSticker] = useState<CanvasEntity | null>(null);
@@ -1429,6 +1433,16 @@ export const CanvasPage: React.FC = () => {
 
       {/* Ghost widget overlay for invite placement */}
       <GhostWidgetOverlay />
+
+      {/* Onboarding spotlight wizard */}
+      <OnboardingWizard
+        active={onboarding.active}
+        currentStep={onboarding.currentStep}
+        stepIndex={onboarding.stepIndex}
+        totalSteps={onboarding.totalSteps}
+        onSkip={onboarding.skip}
+        onComplete={onboarding.completeStep}
+      />
 
       {/* Fullscreen preview overlay — strips all chrome, shows canvas only */}
       {fullscreenPreview && (
