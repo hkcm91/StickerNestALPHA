@@ -10,7 +10,7 @@ import React from 'react';
 import type { MarketplaceWidgetListing, PaginatedResult } from '../../../../marketplace/api/types';
 import { themeVar } from '../../../theme/theme-vars';
 import { WidgetCard } from '../shared/WidgetCard';
-import { btnSecondary, PAGE_SIZE } from '../styles';
+import { btnSecondary, PAGE_SIZE, sectionHeading } from '../styles';
 
 export interface WidgetGridProps {
   results: PaginatedResult<MarketplaceWidgetListing> | null;
@@ -47,9 +47,18 @@ export const WidgetGrid: React.FC<WidgetGridProps> = ({
   }
 
   const totalPages = results ? Math.ceil(results.total / PAGE_SIZE) : 0;
+  const totalCount = results?.total ?? 0;
 
   return (
     <>
+      <h2 style={{ ...sectionHeading, display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+        All Widgets
+        {totalCount > 0 && (
+          <span style={{ fontSize: '14px', fontWeight: 400, color: themeVar('--sn-text-muted') }}>
+            ({totalCount})
+          </span>
+        )}
+      </h2>
       <div
         data-testid="marketplace-grid"
         style={{
@@ -65,6 +74,7 @@ export const WidgetGrid: React.FC<WidgetGridProps> = ({
             name={widget.name}
             description={widget.description}
             thumbnailUrl={widget.thumbnailUrl}
+            category={widget.category}
             ratingAverage={widget.ratingAverage}
             ratingCount={widget.ratingCount}
             installCount={widget.installCount}
