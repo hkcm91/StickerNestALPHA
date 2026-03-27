@@ -337,4 +337,5 @@ const styles: Record<string, React.CSSProperties> = {
   result: { margin: '0 12px', padding: '10px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 'var(--sn-radius, 6px)', fontSize: '13px', color: '#166534' },
   tips: { padding: '16px', color: 'var(--sn-text-muted, #666)' },
   tipsTitle: { fontWeight: 600, fontSize: '13px', marginBottom: '8px', color: 'var(--sn-text, #111)' },
-  ti
+  tipsList: { fontSize: '12px', lineHeight: 1.8, paddingLeft: '16px', margin: 0 },
+};

@@ -121,4 +121,7 @@ function getValidKeysForType(entityType: CanvasEntityType): Set<string> {
 export function getInvalidPropertyKeys(
   entityType: CanvasEntityType,
   propertyKeys: string[],
-):
+): string[] {
+  const validKeys = getValidKeysForType(entityType);
+  return propertyKeys.filter((k) => !validKeys.has(k));
+}

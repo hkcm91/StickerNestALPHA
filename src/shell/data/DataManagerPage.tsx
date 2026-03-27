@@ -381,4 +381,32 @@ const styles: Record<string, React.CSSProperties> = {
     color: 'var(--sn-text, #E8E6ED)',
   },
   tabBar: {
-    display: 
+    display: 'flex',
+    gap: '4px',
+    padding: '12px 16px',
+    borderBottom: `1px solid ${SN_GLASS_BORDER}`,
+    background: 'var(--sn-surface-glass, rgba(20,17,24,0.75))',
+    backdropFilter: 'blur(16px) saturate(1.2)',
+    WebkitBackdropFilter: 'blur(16px) saturate(1.2)',
+  },
+  tab: {
+    padding: '8px 16px',
+    border: 'none',
+    borderRadius: 'var(--sn-radius, 6px)',
+    background: 'transparent',
+    color: 'var(--sn-text-muted, #7A7784)',
+    fontSize: '14px',
+    fontWeight: 500,
+    fontFamily: "'Outfit', sans-serif",
+    cursor: 'pointer',
+    transition: 'all 0.2s ' + SN_SPRING,
+  },
+  tabActive: {
+    background: 'var(--sn-accent, #3E7D94)',
+    color: '#fff',
+  },
+  main: {
+    flex: 1,
+    overflow: 'auto',
+  },
+};

@@ -332,3 +332,25 @@ export function createPenPathTool(
           anchors.splice(activeAnchorIndex, 1);
           activeAnchorIndex = anchors.length > 0 ? anchors.length - 1 : -1;
           if (anchors.length === 0) resetState();
+        }
+      }
+    },
+
+    cancel() {
+      if (anchors.length >= 2) commitPath(false);
+      else resetState();
+    },
+
+    getToolState(): PenToolState {
+      return {
+        state,
+        anchors: [...anchors],
+        activeAnchorIndex,
+        mousePosition,
+        closed: false,
+      };
+    },
+  };
+
+  return tool;
+}

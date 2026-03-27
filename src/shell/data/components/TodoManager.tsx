@@ -595,4 +595,9 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '6px 12px',
     background: 'transparent',
     border: '1px solid var(--sn-border, #e5e7eb)',
-    borderRa
+    borderRadius: '6px',
+    fontSize: '12px',
+    cursor: 'pointer',
+    color: 'var(--sn-text-muted, #6b7280)',
+  },
+};

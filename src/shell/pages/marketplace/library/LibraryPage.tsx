@@ -35,6 +35,50 @@ export const LibraryPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [uninstallStatus, setUninstallStatus] = useState<Record<string, UninstallState>>({});
 
+  // Package upload state
+  const [showUpload, setShowUpload] = useState(false);
+  const [uploadLoading, setUploadLoading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [pendingPackage, setPendingPackage] = useState<{
+    contents: WidgetPackageContents;
+    data: ArrayBuffer;
+  } | null>(null);
+
+  const handlePackageLoaded = useCallback((data: ArrayBuffer) => {
+    setUploadError(null);
+    const result = extractWidgetPackage(data);
+    if (!result.success) {
+      setUploadError(result.error);
+      return;
+    }
+    let contents = result.contents;
+    if (contents.manifestGenerated) {
+      const aiResult = generateManifestFromHtml(contents.htmlContent);
+      contents = { ...contents, manifest: aiResult.manifest, manifestConfidence: aiResult.confidence };
+    }
+    setPendingPackage({ contents, data });
+  }, []);
+
+  const handleInstallPackage = useCallback(async (manifest: WidgetManifest) => {
+    if (!userId || !pendingPackage) return;
+    setUploadLoading(true);
+    try {
+      const result = await installService.installFromPackage(userId, pendingPackage.data, manifest);
+      if (result.success) {
+        setPendingPackage(null);
+        setShowUpload(false);
+        const items = await api.getInstalledWidgets(userId);
+        setWidgets(items);
+      } else {
+        setUploadError(result.error ?? 'Installation failed');
+      }
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Installation failed');
+    } finally {
+      setUploadLoading(false);
+    }
+  }, [userId, pendingPackage, installService, api]);
+
   useEffect(() => {
     if (!userId) return;
     let cancelled = false;
@@ -116,10 +160,80 @@ export const LibraryPage: React.FC = () => {
     <div data-testid="page-marketplace-library" style={pageStyle}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
         <h1 style={{ margin: 0, fontSize: '24px' }}>My Library</h1>
-        <button type="button" onClick={() => navigate('/marketplace')} style={btnSecondary}>
-          Browse Marketplace
-        </button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            type="button"
+            onClick={() => { setShowUpload(true); setPendingPackage(null); setUploadError(null); }}
+            style={{
+              ...btnSecondary,
+              background: themeVar('--sn-accent'),
+              color: '#fff',
+              borderColor: themeVar('--sn-accent'),
+            }}
+          >
+            Install from file
+          </button>
+          <button type="button" onClick={() => navigate('/marketplace')} style={btnSecondary}>
+            Browse Marketplace
+          </button>
+        </div>
       </div>
+
+      {showUpload && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.4)',
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowUpload(false); }}
+        >
+          <div
+            style={{
+              background: themeVar('--sn-bg'),
+              borderRadius: '12px',
+              padding: '24px',
+              maxWidth: '520px',
+              width: '90%',
+              maxHeight: '80vh',
+              overflow: 'auto',
+              boxShadow: '0 16px 48px rgba(0,0,0,0.2)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h2 style={{ margin: 0, fontSize: '18px' }}>Install Widget from File</h2>
+              <button
+                type="button"
+                onClick={() => setShowUpload(false)}
+                style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: themeVar('--sn-text-muted') }}
+              >
+                &times;
+              </button>
+            </div>
+
+            {!pendingPackage ? (
+              <PackageUpload
+                onPackageLoaded={handlePackageLoaded}
+                isLoading={uploadLoading}
+                error={uploadError}
+              />
+            ) : (
+              <ManifestReview
+                manifest={pendingPackage.contents.manifest}
+                confidence={pendingPackage.contents.manifestConfidence}
+                readme={pendingPackage.contents.readme}
+                onConfirm={handleInstallPackage}
+                onCancel={() => { setPendingPackage(null); setUploadError(null); }}
+                isInstalling={uploadLoading}
+              />
+            )}
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <div style={{ color: themeVar('--sn-text-muted'), padding: '40px', textAlign: 'center' }}>
@@ -201,4 +315,21 @@ export const LibraryPage: React.FC = () => {
                       <InstallButton
                         widgetId={widget.id}
                         isInstalled
-                        isBu
+                        isBuiltIn={false}
+                        isFree={widget.isFree}
+                        uninstallState={uninstallStatus[widget.id]}
+                        onInstall={handleInstallNoop}
+                        onUninstall={handleUninstall}
+                        compact
+                      />
+                    }
+                  />
+                ))}
+              </div>
+            </>
+          )}
+        </>
+      )}
+    </div>
+  );
+};

@@ -122,4 +122,10 @@ export const officialBadge: React.CSSProperties = {
 export const sectionHeading: React.CSSProperties = {
   margin: '0 0 16px',
   fontSize: '18px',
-  fontW
+  fontWeight: 600,
+};
+
+export const mutedText: React.CSSProperties = {
+  fontSize: '13px',
+  color: themeVar('--sn-text-muted'),
+};

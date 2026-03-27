@@ -1,2 +1,2 @@
 #!/bin/sh
-npx lint-staged --config .lintstag
+npx lint-staged --config .lintstagedrc.json

@@ -212,4 +212,109 @@ export const ShellLayout: React.FC<ShellLayoutProps> = ({
                 transform: leftOpen ? 'translateX(0)' : 'translateX(-100%)',
                 transition: PANEL_TRANSITION,
                 overflow: 'hidden auto',
-        
+              }}
+            >
+              {sidebarLeft}
+              {/* Resize handle — right edge */}
+              <div
+                data-testid="resize-handle-left"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  startResize('left', e.clientX);
+                }}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  right: 0,
+                  width: 4,
+                  height: '100%',
+                  cursor: 'col-resize',
+                  zIndex: 1,
+                }}
+              />
+            </div>
+          </>
+        )}
+
+        {/* Right tray overlay */}
+        {hasRight && (
+          <>
+            {/* Right toggle tab */}
+            <button
+              data-testid="tray-tab-right"
+              onClick={toggleRight}
+              style={{
+                position: 'absolute',
+                top: '50%',
+                right: rightOpen ? rightWidth : 0,
+                transform: 'translateY(-50%)',
+                zIndex: TRAY_Z + 1,
+                width: TAB_WIDTH,
+                height: TAB_HEIGHT,
+                border: `1px solid ${themeVar('--sn-border')}`,
+                borderRight: 'none',
+                borderRadius: '6px 0 0 6px',
+                background: themeVar('--sn-surface'),
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: 0,
+                boxShadow: '-2px 0 8px rgba(0,0,0,0.08)',
+                transition: isResizing.current ? 'none' : TAB_TRANSITION_RIGHT,
+                color: themeVar('--sn-text-muted'),
+                fontSize: '11px',
+                writingMode: 'vertical-rl',
+                textOrientation: 'mixed',
+                letterSpacing: '1px',
+                fontFamily: themeVar('--sn-font-family'),
+              }}
+            >
+              {rightOpen ? '\u25B6' : 'Props'}
+            </button>
+
+            {/* Right tray panel */}
+            <div
+              data-testid="shell-sidebar-right"
+              style={{
+                position: 'absolute',
+                top: 0,
+                right: 0,
+                bottom: 0,
+                width: rightWidth,
+                zIndex: TRAY_Z,
+                background: themeVar('--sn-surface-glass'),
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+                borderLeft: `1px solid ${themeVar('--sn-border')}`,
+                boxShadow: '-2px 0 12px rgba(0,0,0,0.1)',
+                transform: rightOpen ? 'translateX(0)' : 'translateX(100%)',
+                transition: PANEL_TRANSITION,
+                overflow: 'hidden auto',
+              }}
+            >
+              {sidebarRight}
+              {/* Resize handle — left edge */}
+              <div
+                data-testid="resize-handle-right"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  startResize('right', e.clientX);
+                }}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: 4,
+                  height: '100%',
+                  cursor: 'col-resize',
+                  zIndex: 1,
+                }}
+              />
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+};

@@ -9,3 +9,5 @@ export { createAIGenerator, validateWidgetHtml, extractHtml } from './ai-generat
 export type { AIGenerator, AIGenerationResult } from './ai-generator';
 export { AI_MODELS, getDefaultModel, getModelById, loadSavedModelId, saveModelId } from './models';
 export type { AIModel } from './models';
+export { generateManifestFromHtml } from './manifest-generator';
+export type { ManifestGenerationResult } from './manifest-generator';

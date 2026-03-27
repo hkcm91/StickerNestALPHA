@@ -26,9 +26,11 @@ import { DetailPage } from './detail/DetailPage';
 import { LibraryPage } from './library/LibraryPage';
 import { PublisherPage } from './publisher/PublisherPage';
 import { WidgetManagePage } from './publisher/WidgetManagePage';
+import { SamplesPage } from './samples';
 
 const TABS = [
   { path: '/marketplace', label: 'Browse', exact: true },
+  { path: '/marketplace/samples', label: 'Samples', exact: false },
   { path: '/marketplace/library', label: 'My Library', exact: false },
   { path: '/marketplace/publisher', label: 'Publisher', exact: false },
 ] as const;
@@ -97,6 +99,7 @@ export const MarketplaceRoot: React.FC = () => {
       <Routes>
         <Route index element={<BrowsePage />} />
         <Route path="widget/:id" element={<DetailPage />} />
+        <Route path="samples" element={<SamplesPage />} />
         <Route path="library" element={<LibraryPage />} />
         <Route path="publisher" element={<PublisherPage />} />
         <Route path="publisher/:widgetId" element={<WidgetManagePage />} />

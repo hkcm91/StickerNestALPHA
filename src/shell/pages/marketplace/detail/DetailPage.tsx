@@ -12,6 +12,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import { useAuthStore } from '../../../../kernel/stores/auth/auth.store';
 import { useWidgetStore } from '../../../../kernel/stores/widget/widget.store';
+import { buildWidgetPackage, downloadPackage } from '../../../../runtime/package/builder';
 import { createMarketplaceAPI } from '../../../../marketplace/api/marketplace-api';
 import type { MarketplaceWidgetDetail } from '../../../../marketplace/api/types';
 import { createInstallFlowService } from '../../../../marketplace/install/install-flow';
@@ -355,4 +356,70 @@ export const DetailPage: React.FC = () => {
               </summary>
               <div style={{ padding: '16px' }}>
                 {/* Event Contract */}
-      
+                {hasEvents && (
+                  <div style={{ marginBottom: hasPermissions ? '16px' : 0 }}>
+                    <h3 style={{ fontSize: '13px', marginBottom: '8px', marginTop: 0 }}>Event Contract</h3>
+                    <div
+                      style={{
+                        fontSize: '12px',
+                        fontFamily: 'monospace',
+                        background: themeVar('--sn-surface'),
+                        padding: '12px',
+                        borderRadius: '6px',
+                        border: `1px solid ${themeVar('--sn-border')}`,
+                      }}
+                    >
+                      {detail.manifest.events!.emits && detail.manifest.events!.emits.length > 0 && (
+                        <div style={{ marginBottom: '8px' }}>
+                          <strong>Emits:</strong>{' '}
+                          {detail.manifest.events!.emits
+                            .map((e: unknown) =>
+                              typeof e === 'string'
+                                ? e
+                                : ((e as Record<string, unknown>)?.name ??
+                                   (e as Record<string, unknown>)?.type ??
+                                   String(e)),
+                            )
+                            .join(', ')}
+                        </div>
+                      )}
+                      {detail.manifest.events!.subscribes && detail.manifest.events!.subscribes.length > 0 && (
+                        <div>
+                          <strong>Subscribes:</strong>{' '}
+                          {detail.manifest.events!.subscribes
+                            .map((e: unknown) =>
+                              typeof e === 'string'
+                                ? e
+                                : ((e as Record<string, unknown>)?.name ??
+                                   (e as Record<string, unknown>)?.type ??
+                                   String(e)),
+                            )
+                            .join(', ')}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Permissions */}
+                {hasPermissions && (
+                  <div>
+                    <h3 style={{ fontSize: '13px', marginBottom: '8px', marginTop: 0 }}>Permissions</h3>
+                    <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '13px' }}>
+                      {detail.manifest.permissions!.map((perm: string) => (
+                        <li key={perm}>{perm}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </details>
+          )}
+
+          {/* Reviews */}
+          <ReviewsSection widgetId={detail.id} />
+        </div>
+      </div>
+    </div>
+  );
+};

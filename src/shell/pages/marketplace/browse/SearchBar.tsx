@@ -70,4 +70,38 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         </svg>
         <input
           type="text"
-      
+          placeholder="Search widgets..."
+          value={query}
+          onChange={(e) => onQueryChange(e.target.value)}
+          onKeyDown={handleKeyDown}
+          style={{ ...inputStyle, width: '100%', boxSizing: 'border-box', paddingLeft: '32px' }}
+          data-testid="marketplace-search"
+        />
+      </div>
+      <select
+        value={category}
+        onChange={(e) => onCategoryChange(e.target.value)}
+        style={selectStyle}
+        data-testid="marketplace-category"
+      >
+        {CATEGORIES.map((cat) => (
+          <option key={cat.value} value={cat.value}>
+            {cat.label}
+          </option>
+        ))}
+      </select>
+      <select
+        value={sortBy}
+        onChange={(e) => onSortChange(e.target.value as SortBy)}
+        style={selectStyle}
+        data-testid="marketplace-sort"
+      >
+        {SORT_OPTIONS.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+};

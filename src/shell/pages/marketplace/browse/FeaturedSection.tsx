@@ -86,3 +86,167 @@ export const FeaturedSection: React.FC<FeaturedSectionProps> = ({
   }, [activeIndex, scrollToIndex]);
 
   const handleNext = useCallback(() => {
+    scrollToIndex(activeIndex + 1);
+  }, [activeIndex, scrollToIndex]);
+
+  // Auto-advance
+  useEffect(() => {
+    if (featured.length <= 1) return;
+
+    autoAdvanceRef.current = setInterval(() => {
+      if (pausedRef.current) return;
+      setActiveIndex((prev) => {
+        const next = (prev + 1) % featured.length;
+        const el = scrollRef.current;
+        if (el) {
+          el.scrollTo({
+            left: next * (CARD_WIDTH + CARD_GAP),
+            behavior: 'smooth',
+          });
+        }
+        return next;
+      });
+    }, AUTO_ADVANCE_MS);
+
+    return () => {
+      if (autoAdvanceRef.current) clearInterval(autoAdvanceRef.current);
+    };
+  }, [featured.length]);
+
+  const handleMouseEnter = useCallback(() => { pausedRef.current = true; }, []);
+  const handleMouseLeave = useCallback(() => { pausedRef.current = false; }, []);
+
+  // Sync activeIndex on manual scroll
+  const handleScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const scrollLeft = el.scrollLeft;
+    const index = Math.round(scrollLeft / (CARD_WIDTH + CARD_GAP));
+    setActiveIndex(Math.max(0, Math.min(index, featured.length - 1)));
+  }, [featured.length]);
+
+  if (loading) {
+    return (
+      <div style={{ marginBottom: '24px' }}>
+        <h2 style={sectionHeading}>Featured</h2>
+        <div style={{ color: themeVar('--sn-text-muted'), fontSize: '14px' }}>
+          Loading featured widgets...
+        </div>
+      </div>
+    );
+  }
+
+  if (featured.length === 0) return null;
+
+  return (
+    <div
+      data-testid="featured-section"
+      style={{ marginBottom: '32px', position: 'relative' }}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
+      <h2 style={sectionHeading}>Featured</h2>
+
+      {/* Carousel container */}
+      <div style={{ position: 'relative' }}>
+        {/* Previous arrow */}
+        {activeIndex > 0 && (
+          <button
+            type="button"
+            onClick={handlePrev}
+            aria-label="Previous"
+            style={{ ...arrowStyle, left: '-12px' }}
+          >
+            &#8249;
+          </button>
+        )}
+
+        {/* Next arrow */}
+        {activeIndex < featured.length - 1 && (
+          <button
+            type="button"
+            onClick={handleNext}
+            aria-label="Next"
+            style={{ ...arrowStyle, right: '-12px' }}
+          >
+            &#8250;
+          </button>
+        )}
+
+        {/* Scrollable track */}
+        <div
+          ref={scrollRef}
+          onScroll={handleScroll}
+          style={{
+            display: 'flex',
+            gap: `${CARD_GAP}px`,
+            overflowX: 'auto',
+            scrollSnapType: 'x mandatory',
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+            paddingBottom: '4px',
+          }}
+        >
+          <style>{`[data-testid="featured-section"] div::-webkit-scrollbar { display: none; }`}</style>
+          {featured.map((widget) => (
+            <div
+              key={widget.id}
+              style={{
+                flex: `0 0 ${CARD_WIDTH}px`,
+                scrollSnapAlign: 'start',
+              }}
+            >
+              <WidgetCard
+                id={widget.id}
+                name={widget.name}
+                description={widget.description}
+                thumbnailUrl={widget.thumbnailUrl}
+                category={widget.category}
+                ratingAverage={widget.ratingAverage}
+                ratingCount={widget.ratingCount}
+                installCount={widget.installCount}
+                isFree={widget.isFree}
+                priceCents={widget.priceCents}
+                currency={widget.currency}
+                isOfficial={!!(widget.metadata as Record<string, unknown>)?.official}
+                onClick={onWidgetClick}
+                action={renderAction?.(widget)}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Dot indicators */}
+      {featured.length > 1 && (
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'center',
+            gap: '6px',
+            marginTop: '12px',
+          }}
+        >
+          {featured.map((widget, i) => (
+            <button
+              key={widget.id}
+              type="button"
+              onClick={() => scrollToIndex(i)}
+              aria-label={`Go to featured widget ${i + 1}`}
+              style={{
+                width: i === activeIndex ? '20px' : '8px',
+                height: '8px',
+                borderRadius: '4px',
+                border: 'none',
+                background: i === activeIndex ? themeVar('--sn-accent') : themeVar('--sn-border'),
+                cursor: 'pointer',
+                padding: 0,
+                transition: `width 200ms ${ANIMATION_EASING.spring}, background 200ms`,
+              }}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};

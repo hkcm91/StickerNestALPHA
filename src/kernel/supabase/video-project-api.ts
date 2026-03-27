@@ -199,4 +199,15 @@ export function subscribeToRenderJob(
         event: 'UPDATE',
         schema: 'public',
         table: 'video_renders',
-        fil
+        filter: `id=eq.${renderJobId}`,
+      },
+      (payload) => {
+        onUpdate(payload.new as RenderJobRow);
+      },
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}
