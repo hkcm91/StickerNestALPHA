@@ -23,6 +23,7 @@ import { screenToCanvas, anchorsToSvgPath, resolveEntityTransform, setEntityPlat
 import type { ViewportState, SceneGraph } from '../../canvas/core';
 import { snapToGridCell } from '../../canvas/tools/move/snap';
 import { bus } from '../../kernel/bus';
+import { useAuthStore } from '../../kernel/stores/auth/auth.store';
 import { useUIStore } from '../../kernel/stores/ui/ui.store';
 
 import { CanvasViewportLayer } from './CanvasViewportLayer';
@@ -51,13 +52,15 @@ export interface CanvasToolLayerProps {
   gridConfig?: GridConfig;
 }
 
-let entityCounter = 0;
-function nextEntityId(prefix: string): string {
-  entityCounter += 1;
-  return `${prefix}-${Date.now()}-${entityCounter}`;
+function nextEntityId(_prefix?: string): string {
+  return crypto.randomUUID();
 }
 
 const DEMO_CANVAS_ID = '00000000-0000-4000-8000-000000000001';
+const ANON_USER_ID = '00000000-0000-4000-a000-000000000000';
+function currentUserId(): string {
+  return useAuthStore.getState().user?.id ?? ANON_USER_ID;
+}
 const FOLDER_TOGGLE_EVENT = 'canvas.folder.toggled';
 
 /** Drag modes — only one active at a time */
@@ -424,7 +427,7 @@ export const CanvasToolLayer: React.FC<CanvasToolLayerProps> = ({
         name: widgetId,
         createdAt: now,
         updatedAt: now,
-        createdBy: 'user',
+        createdBy: currentUserId(),
         widgetInstanceId: instanceId,
         widgetId,
         config: {},
@@ -469,8 +472,8 @@ export const CanvasToolLayer: React.FC<CanvasToolLayerProps> = ({
         name: assetId,
         createdAt: now,
         updatedAt: now,
-        createdBy: 'user',
-        assetUrl: '',
+        createdBy: currentUserId(),
+        assetUrl: (typeof metadata?.assetUrl === 'string' && metadata.assetUrl) || 'https://placeholder.stickernest.invalid/asset.png',
         assetType: 'image',
         ...metadata,
       } as CanvasEntity;
@@ -516,7 +519,7 @@ export const CanvasToolLayer: React.FC<CanvasToolLayerProps> = ({
         name: typeof metadata.name === 'string' ? metadata.name : assetId,
         createdAt: now,
         updatedAt: now,
-        createdBy: 'user',
+        createdBy: currentUserId(),
         assetUrl,
         loop: metadata.loop === false ? false : true,
         speed: typeof metadata.speed === 'number' ? metadata.speed : 1,
@@ -576,7 +579,7 @@ export const CanvasToolLayer: React.FC<CanvasToolLayerProps> = ({
         name: typeof metadata.name === 'string' ? metadata.name : assetId,
         createdAt: now,
         updatedAt: now,
-        createdBy: 'user',
+        createdBy: currentUserId(),
         svgContent,
         assetUrl: typeof metadata.assetUrl === 'string' ? metadata.assetUrl : undefined,
         altText: typeof metadata.altText === 'string' ? metadata.altText : undefined,
@@ -618,7 +621,7 @@ export const CanvasToolLayer: React.FC<CanvasToolLayerProps> = ({
         name: 'New Text',
         createdAt: now,
         updatedAt: now,
-        createdBy: 'user',
+        createdBy: currentUserId(),
         content: 'Double-click to edit',
         fontSize: 16,
         fontFamily: 'var(--sn-font-family, sans-serif)',
@@ -1169,7 +1172,7 @@ export const CanvasToolLayer: React.FC<CanvasToolLayerProps> = ({
             name: artboardName,
             createdAt: now,
             updatedAt: now,
-            createdBy: 'user',
+            createdBy: currentUserId(),
             children: [],
             devicePreset: 'Custom',
             childCanvasId: newCanvas.id,
@@ -1200,7 +1203,7 @@ export const CanvasToolLayer: React.FC<CanvasToolLayerProps> = ({
             name: activeTool === 'ellipse' ? 'New Ellipse' : 'New Rectangle',
             createdAt: now,
             updatedAt: now,
-            createdBy: 'user',
+            createdBy: currentUserId(),
             shapeType: activeTool === 'ellipse' ? 'ellipse' : 'rect',
             fill: 'var(--sn-accent, #6366f1)',
             stroke: 'var(--sn-border, #e0e0e0)',
@@ -1256,7 +1259,7 @@ export const CanvasToolLayer: React.FC<CanvasToolLayerProps> = ({
           name: 'New Drawing',
           createdAt: now,
           updatedAt: now,
-          createdBy: 'user',
+          createdBy: currentUserId(),
           points: normalizedPoints,
           stroke: 'var(--sn-text, #1a1a2e)',
           strokeWidth: 3,

@@ -26,6 +26,7 @@ import { DEFAULT_BACKGROUND, GridEvents } from "@sn/types";
 import { DEFAULT_GRID_CONFIG, useInteractionStore } from "../../canvas/core";
 import type { SceneGraph } from "../../canvas/core";
 import { bus } from "../../kernel/bus";
+import { useAuthStore } from "../../kernel/stores/auth/auth.store";
 import { useUIStore } from "../../kernel/stores/ui/ui.store";
 import { themeVar } from "../theme/theme-vars";
 
@@ -289,9 +290,9 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
               onClick={() => {
                 bus.emit("canvas.entity.created", {
                   entity: {
-                    id: `3d-${Date.now()}`,
+                    id: crypto.randomUUID(),
                     type: "object3d",
-                    canvasId: "default",
+                    canvasId: "00000000-0000-4000-8000-000000000001",
                     transform: {
                       position: { x: 0, y: 0 },
                       size: { width: 100, height: 100 },
@@ -314,7 +315,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                     opacity: 1,
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString(),
-                    createdBy: "user",
+                    createdBy: useAuthStore.getState().user?.id ?? "00000000-0000-4000-a000-000000000000",
                   },
                 });
               }}
@@ -334,9 +335,9 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
               onClick={() => {
                 bus.emit("canvas.entity.created", {
                   entity: {
-                    id: `3d-${Date.now()}`,
+                    id: crypto.randomUUID(),
                     type: "object3d",
-                    canvasId: "default",
+                    canvasId: "00000000-0000-4000-8000-000000000001",
                     transform: {
                       position: { x: 100, y: 100 },
                       size: { width: 100, height: 100 },
@@ -357,7 +358,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                     opacity: 1,
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString(),
-                    createdBy: "user",
+                    createdBy: useAuthStore.getState().user?.id ?? "00000000-0000-4000-a000-000000000000",
                   },
                 });
               }}
@@ -377,9 +378,9 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
               onClick={() => {
                 bus.emit("canvas.entity.created", {
                   entity: {
-                    id: `2d-${Date.now()}`,
+                    id: crypto.randomUUID(),
                     type: "object3d",
-                    canvasId: "default",
+                    canvasId: "00000000-0000-4000-8000-000000000001",
                     transform: {
                       position: { x: 200, y: 200 },
                       size: { width: 80, height: 80 },
@@ -395,7 +396,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                     opacity: 1,
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString(),
-                    createdBy: "user",
+                    createdBy: useAuthStore.getState().user?.id ?? "00000000-0000-4000-a000-000000000000",
                   },
                 });
               }}
@@ -413,12 +414,12 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
             </button>
             <button
               onClick={() => {
-                const instanceId = `wi-${Date.now()}`;
+                const instanceId = crypto.randomUUID();
                 bus.emit("canvas.entity.created", {
                   entity: {
-                    id: `widget-3d-${Date.now()}`,
+                    id: crypto.randomUUID(),
                     type: "widget",
-                    canvasId: "default",
+                    canvasId: "00000000-0000-4000-8000-000000000001",
                     widgetId: "builtin:sticky-note",
                     widgetInstanceId: instanceId,
                     config: {},
@@ -442,7 +443,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                     opacity: 1,
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString(),
-                    createdBy: "user",
+                    createdBy: useAuthStore.getState().user?.id ?? "00000000-0000-4000-a000-000000000000",
                   },
                 });
               }}

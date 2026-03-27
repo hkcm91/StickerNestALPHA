@@ -51,6 +51,83 @@ const defaultOptions: Required<DeserializeOptions> = {
   skipInvalidEntities: false,
 };
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isValidUrl(s: string): boolean {
+  try {
+    new URL(s);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Repair entities that were saved with non-UUID ids/fields (pre-fix legacy data).
+ * Mutates the input object in place and returns the number of repairs made.
+ */
+function repairLegacyEntities(doc: Record<string, unknown>): number {
+  const entities = doc.entities;
+  if (!Array.isArray(entities)) return 0;
+
+  let repairs = 0;
+  const FALLBACK_CANVAS_ID = '00000000-0000-4000-8000-000000000001';
+  const FALLBACK_USER_ID = '00000000-0000-4000-a000-000000000000';
+
+  for (const entity of entities) {
+    if (!entity || typeof entity !== 'object') continue;
+    const e = entity as Record<string, unknown>;
+
+    if (typeof e.id === 'string' && !UUID_RE.test(e.id)) {
+      e.id = crypto.randomUUID();
+      repairs++;
+    }
+    if (typeof e.canvasId === 'string' && !UUID_RE.test(e.canvasId)) {
+      e.canvasId = FALLBACK_CANVAS_ID;
+      repairs++;
+    }
+    if (typeof e.createdBy === 'string' && !UUID_RE.test(e.createdBy)) {
+      e.createdBy = FALLBACK_USER_ID;
+      repairs++;
+    }
+    if (typeof e.parentId === 'string' && e.parentId !== '' && !UUID_RE.test(e.parentId)) {
+      e.parentId = undefined;
+      repairs++;
+    }
+    // Widget-specific UUID fields
+    if (typeof e.widgetInstanceId === 'string' && !UUID_RE.test(e.widgetInstanceId)) {
+      e.widgetInstanceId = crypto.randomUUID();
+      repairs++;
+    }
+    // Group/docker children arrays
+    if (Array.isArray(e.children)) {
+      e.children = (e.children as unknown[]).filter(
+        (c) => typeof c === 'string' && UUID_RE.test(c),
+      );
+    }
+
+    // Repair empty/invalid URL fields on media entities
+    const TYPES_WITH_REQUIRED_ASSET_URL = ['sticker', 'lottie', 'audio', 'video'];
+    if (
+      TYPES_WITH_REQUIRED_ASSET_URL.includes(e.type as string) &&
+      (typeof e.assetUrl !== 'string' || !isValidUrl(e.assetUrl))
+    ) {
+      e.assetUrl = 'https://placeholder.stickernest.invalid/asset.png';
+      repairs++;
+    }
+
+    // Repair optional URL fields — remove invalid values so they pass .url().optional()
+    for (const urlField of ['thumbnailUrl', 'iconUrl', 'url'] as const) {
+      if (typeof e[urlField] === 'string' && e[urlField] !== '' && !isValidUrl(e[urlField] as string)) {
+        e[urlField] = undefined;
+        repairs++;
+      }
+    }
+  }
+
+  return repairs;
+}
+
 /**
  * Validate the raw input as a canvas document
  */
@@ -142,6 +219,14 @@ export function deserialize(
 
   const originalVersion = versionCheck.version;
   let workingDoc = parsed;
+
+  // Repair legacy non-UUID entity fields before validation
+  if (workingDoc && typeof workingDoc === 'object') {
+    const repairs = repairLegacyEntities(workingDoc as Record<string, unknown>);
+    if (repairs > 0) {
+      warnings.push(`Repaired ${repairs} legacy non-UUID field(s) in entities`);
+    }
+  }
 
   // Migrate if needed
   const requiresMigration = needsMigration(originalVersion);

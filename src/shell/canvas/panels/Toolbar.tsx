@@ -770,7 +770,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
               <div style={{ ...popoverStyle, flexDirection: 'column', gap: '8px', minWidth: '220px' }}>
                 {/* Grid toggle + snap */}
                 <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                  <LabeledToolBtn testId="grid-toggle" icon={<span style={{ fontSize: '14px' }}>#</span>} label="Grid" active={gridVisible} onClick={handleGridToggle} title="Toggle Grid (G)" />
+                  <LabeledToolBtn testId="grid-toggle" icon={<span style={{ fontSize: '14px' }}>#</span>} label="Grid" active={gridConfig.enabled} onClick={() => bus.emit(GridEvents.TOGGLED, { enabled: !gridConfig.enabled })} title="Toggle Grid (G)" />
                   <select data-testid="snap-mode" value={snapMode} onChange={(e) => handleSnapModeChange(e as any)} style={dropdownSelectStyle}>
                     <option value="none">No Snap</option>
                     <option value="grid">Snap Grid</option>
@@ -960,4 +960,3 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     </div>
   );
 };
-                                                                                                                                                                                                                                                                                                                           
