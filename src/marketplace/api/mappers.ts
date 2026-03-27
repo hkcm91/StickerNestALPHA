@@ -49,11 +49,30 @@ export function rowToListing(row: Record<string, unknown>): MarketplaceWidgetLis
 export function rowToDetail(row: Record<string, unknown>): MarketplaceWidgetDetail | null {
   const listing = rowToListing(row);
   const manifestResult = WidgetManifestSchema.safeParse(row.manifest);
-  if (!manifestResult.success) return null;
+  if (manifestResult.success) {
+    return {
+      ...listing,
+      htmlContent: row.html_content as string,
+      manifest: manifestResult.data,
+    };
+  }
+  // Fallback: construct a minimal valid manifest from listing data so the
+  // detail page can still render even if the stored manifest is V4-era or
+  // otherwise malformed.
+  const fallbackManifest = WidgetManifestSchema.safeParse({
+    id: listing.slug || listing.id,
+    name: listing.name,
+    version: listing.version || '1.0.0',
+    description: listing.description ?? undefined,
+    category: listing.category ?? 'other',
+    tags: listing.tags,
+    license: listing.license ?? 'MIT',
+  });
+  if (!fallbackManifest.success) return null;
   return {
     ...listing,
-    htmlContent: row.html_content as string,
-    manifest: manifestResult.data,
+    htmlContent: (row.html_content as string) ?? '',
+    manifest: fallbackManifest.data,
   };
 }
 

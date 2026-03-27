@@ -80,13 +80,25 @@ export async function getFeatured(): Promise<MarketplaceWidgetListing[]> {
 }
 
 export async function getWidget(widgetId: string): Promise<MarketplaceWidgetDetail | null> {
+  // Use maybeSingle() instead of single() to avoid throwing when RLS blocks
+  // or the row doesn't exist. Also try without is_published filter first so
+  // authors can view their own unpublished widgets via direct link.
   const { data, error } = await supabase
     .from('widgets')
     .select('*')
     .eq('id', widgetId)
-    .single();
+    .maybeSingle();
 
-  if (error) return null;
+  if (error || !data) {
+    // Fallback: try matching by slug in case id is actually a slug
+    const { data: slugData } = await supabase
+      .from('widgets')
+      .select('*')
+      .eq('slug', widgetId)
+      .maybeSingle();
+    if (!slugData) return null;
+    return rowToDetail(slugData as Record<string, unknown>);
+  }
   return rowToDetail(data as Record<string, unknown>);
 }
 

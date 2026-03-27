@@ -21,8 +21,8 @@ export interface FeaturedSectionProps {
   renderAction?: (widget: MarketplaceWidgetListing) => React.ReactNode;
 }
 
-const CARD_WIDTH = 320;
-const CARD_GAP = 16;
+const CARD_WIDTH = 260;
+const CARD_GAP = 14;
 const AUTO_ADVANCE_MS = 6000;
 
 const arrowStyle: React.CSSProperties = {
@@ -89,49 +89,26 @@ export const FeaturedSection: React.FC<FeaturedSectionProps> = ({
     scrollToIndex(activeIndex + 1);
   }, [activeIndex, scrollToIndex]);
 
-  // Auto-advance
+  // Auto-advance carousel
   useEffect(() => {
     if (featured.length <= 1) return;
-
     autoAdvanceRef.current = setInterval(() => {
       if (pausedRef.current) return;
       setActiveIndex((prev) => {
-        const next = (prev + 1) % featured.length;
-        const el = scrollRef.current;
-        if (el) {
-          el.scrollTo({
-            left: next * (CARD_WIDTH + CARD_GAP),
-            behavior: 'smooth',
-          });
-        }
+        const next = prev >= featured.length - 1 ? 0 : prev + 1;
+        scrollToIndex(next);
         return next;
       });
     }, AUTO_ADVANCE_MS);
-
     return () => {
       if (autoAdvanceRef.current) clearInterval(autoAdvanceRef.current);
     };
-  }, [featured.length]);
-
-  const handleMouseEnter = useCallback(() => { pausedRef.current = true; }, []);
-  const handleMouseLeave = useCallback(() => { pausedRef.current = false; }, []);
-
-  // Sync activeIndex on manual scroll
-  const handleScroll = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const scrollLeft = el.scrollLeft;
-    const index = Math.round(scrollLeft / (CARD_WIDTH + CARD_GAP));
-    setActiveIndex(Math.max(0, Math.min(index, featured.length - 1)));
-  }, [featured.length]);
+  }, [featured.length, scrollToIndex]);
 
   if (loading) {
     return (
-      <div style={{ marginBottom: '24px' }}>
-        <h2 style={sectionHeading}>Featured</h2>
-        <div style={{ color: themeVar('--sn-text-muted'), fontSize: '14px' }}>
-          Loading featured widgets...
-        </div>
+      <div style={{ marginBottom: '24px', padding: '40px', textAlign: 'center', color: themeVar('--sn-text-muted') }}>
+        Loading featured...
       </div>
     );
   }
@@ -139,44 +116,28 @@ export const FeaturedSection: React.FC<FeaturedSectionProps> = ({
   if (featured.length === 0) return null;
 
   return (
-    <div
-      data-testid="featured-section"
-      style={{ marginBottom: '32px', position: 'relative' }}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-    >
-      <h2 style={sectionHeading}>Featured</h2>
-
-      {/* Carousel container */}
-      <div style={{ position: 'relative' }}>
-        {/* Previous arrow */}
+    <div style={{ marginBottom: '28px' }}>
+      <h2 style={{ ...sectionHeading, fontSize: '16px', margin: '0 0 12px' }}>Featured</h2>
+      <div
+        style={{ position: 'relative' }}
+        onMouseEnter={() => { pausedRef.current = true; }}
+        onMouseLeave={() => { pausedRef.current = false; }}
+      >
+        {/* Left arrow */}
         {activeIndex > 0 && (
           <button
             type="button"
-            onClick={handlePrev}
             aria-label="Previous"
-            style={{ ...arrowStyle, left: '-12px' }}
+            onClick={(e) => { e.stopPropagation(); handlePrev(); }}
+            style={{ ...arrowStyle, left: '-18px' }}
           >
-            &#8249;
+            ‹
           </button>
         )}
 
-        {/* Next arrow */}
-        {activeIndex < featured.length - 1 && (
-          <button
-            type="button"
-            onClick={handleNext}
-            aria-label="Next"
-            style={{ ...arrowStyle, right: '-12px' }}
-          >
-            &#8250;
-          </button>
-        )}
-
-        {/* Scrollable track */}
+        {/* Scrollable card row */}
         <div
           ref={scrollRef}
-          onScroll={handleScroll}
           style={{
             display: 'flex',
             gap: `${CARD_GAP}px`,
@@ -184,17 +145,13 @@ export const FeaturedSection: React.FC<FeaturedSectionProps> = ({
             scrollSnapType: 'x mandatory',
             scrollbarWidth: 'none',
             msOverflowStyle: 'none',
-            paddingBottom: '4px',
+            padding: '4px 0',
           }}
         >
-          <style>{`[data-testid="featured-section"] div::-webkit-scrollbar { display: none; }`}</style>
           {featured.map((widget) => (
             <div
               key={widget.id}
-              style={{
-                flex: `0 0 ${CARD_WIDTH}px`,
-                scrollSnapAlign: 'start',
-              }}
+              style={{ flex: `0 0 ${CARD_WIDTH}px`, scrollSnapAlign: 'start' }}
             >
               <WidgetCard
                 id={widget.id}
@@ -215,33 +172,38 @@ export const FeaturedSection: React.FC<FeaturedSectionProps> = ({
             </div>
           ))}
         </div>
+
+        {/* Right arrow */}
+        {activeIndex < featured.length - 1 && (
+          <button
+            type="button"
+            aria-label="Next"
+            onClick={(e) => { e.stopPropagation(); handleNext(); }}
+            style={{ ...arrowStyle, right: '-18px' }}
+          >
+            ›
+          </button>
+        )}
       </div>
 
       {/* Dot indicators */}
       {featured.length > 1 && (
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'center',
-            gap: '6px',
-            marginTop: '12px',
-          }}
-        >
-          {featured.map((widget, i) => (
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', marginTop: '12px' }}>
+          {featured.map((_, i) => (
             <button
-              key={widget.id}
+              key={i}
               type="button"
+              aria-label={`Go to slide ${i + 1}`}
               onClick={() => scrollToIndex(i)}
-              aria-label={`Go to featured widget ${i + 1}`}
               style={{
-                width: i === activeIndex ? '20px' : '8px',
+                width: '8px',
                 height: '8px',
-                borderRadius: '4px',
+                borderRadius: '50%',
                 border: 'none',
-                background: i === activeIndex ? themeVar('--sn-accent') : themeVar('--sn-border'),
-                cursor: 'pointer',
                 padding: 0,
-                transition: `width 200ms ${ANIMATION_EASING.spring}, background 200ms`,
+                cursor: 'pointer',
+                background: i === activeIndex ? themeVar('--sn-accent') : themeVar('--sn-border'),
+                transition: `background 150ms ${ANIMATION_EASING.smooth}`,
               }}
             />
           ))}

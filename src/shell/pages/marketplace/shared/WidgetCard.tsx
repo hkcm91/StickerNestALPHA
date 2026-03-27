@@ -63,8 +63,8 @@ export const WidgetCard: React.FC<WidgetCardProps> = ({
         ...cardStyle,
         opacity: isDeprecated ? 0.6 : 1,
         position: 'relative',
-        transform: hovered ? 'scale(1.02) translateY(-2px)' : 'scale(1) translateY(0)',
-        boxShadow: hovered ? '0 8px 24px rgba(0, 0, 0, 0.3)' : 'none',
+        transform: hovered ? 'translateY(-2px)' : 'translateY(0)',
+        boxShadow: hovered ? '0 4px 16px rgba(0, 0, 0, 0.2)' : 'none',
         borderColor: hovered ? themeVar('--sn-accent') : undefined,
         transition: `transform ${ANIMATION_DURATION.fast} ${ANIMATION_EASING.spring}, box-shadow ${ANIMATION_DURATION.fast} ${ANIMATION_EASING.spring}, border-color ${ANIMATION_DURATION.fast} ${ANIMATION_EASING.spring}`,
       }}
@@ -73,10 +73,10 @@ export const WidgetCard: React.FC<WidgetCardProps> = ({
         <img
           src={thumbnailUrl}
           alt={name}
-          style={{ width: '100%', height: '140px', objectFit: 'cover' }}
+          style={{ width: '100%', height: '120px', objectFit: 'cover' }}
         />
       ) : (
-        <WidgetThumbnail name={name} category={category} />
+        <WidgetThumbnail name={name} category={category} height={120} />
       )}
 
       {isDeprecated && (
@@ -146,36 +146,34 @@ export const WidgetCard: React.FC<WidgetCardProps> = ({
                 <span>({ratingCount})</span>
               </>
             ) : (
-              <span
-                style={{
-                  padding: '1px 6px',
-                  borderRadius: '8px',
-                  fontSize: '10px',
-                  fontWeight: 600,
-                  background: themeVar('--sn-accent'),
-                  color: '#fff',
-                }}
-              >
-                New
-              </span>
-            )}
-            {installCount > 0 && (
-              <span style={{ marginLeft: 4 }}>
-                {installCount.toLocaleString()} installs
-              </span>
+              <span>No ratings</span>
             )}
           </span>
-          {!isFree && (
-            <PriceTag isFree={isFree} priceCents={priceCents} currency={currency} style={{ fontSize: '12px' }} />
-          )}
+          <span>
+            <PriceTag isFree={isFree} priceCents={priceCents} currency={currency} />
+          </span>
         </div>
 
-        {action && (
-          <div style={{ marginTop: '8px' }} onClick={(e) => e.stopPropagation()}>
-            {action}
-          </div>
-        )}
+        <div
+          style={{
+            fontSize: '11px',
+            color: themeVar('--sn-text-muted'),
+            marginTop: '4px',
+          }}
+        >
+          {installCount.toLocaleString()} installs
+        </div>
       </div>
+
+      {action && (
+        <div
+          style={{ padding: '0 12px 12px' }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {action}
+        </div>
+      )}
     </div>
   );
 };
+        

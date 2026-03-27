@@ -43,8 +43,8 @@ function shouldShowTabs(pathname: string): boolean {
 
 const tabBarStyle: React.CSSProperties = {
   display: 'flex',
-  gap: '4px',
-  padding: '0 24px',
+  gap: '2px',
+  padding: '0 40px',
   borderBottom: `1px solid ${themeVar('--sn-border')}`,
   background: themeVar('--sn-bg'),
   maxWidth: '1100px',
@@ -53,8 +53,8 @@ const tabBarStyle: React.CSSProperties = {
 
 function tabStyle(isActive: boolean): React.CSSProperties {
   return {
-    padding: '10px 16px',
-    fontSize: '14px',
+    padding: '10px 14px',
+    fontSize: '13px',
     fontWeight: isActive ? 600 : 400,
     color: isActive ? themeVar('--sn-text') : themeVar('--sn-text-muted'),
     textDecoration: 'none',
@@ -76,6 +76,10 @@ export const MarketplaceRoot: React.FC = () => {
 
   return (
     <>
+      {/* Hide scrollbar on marketplace pages (WebKit + Firefox) */}
+      <style>{`
+        [data-marketplace-scroll]::-webkit-scrollbar { display: none; }
+      `}</style>
       {showTabs && (
         <nav data-testid="marketplace-tabs" style={tabBarStyle}>
           {visibleTabs.map((tab) => {
@@ -107,3 +111,4 @@ export const MarketplaceRoot: React.FC = () => {
     </>
   );
 };
+   

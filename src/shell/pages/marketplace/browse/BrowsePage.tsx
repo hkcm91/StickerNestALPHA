@@ -8,7 +8,7 @@
  * @layer L6
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { useAuthStore } from '../../../../kernel/stores/auth/auth.store';
@@ -16,6 +16,7 @@ import { useWidgetStore } from '../../../../kernel/stores/widget/widget.store';
 import { createMarketplaceAPI } from '../../../../marketplace/api/marketplace-api';
 import type { MarketplaceWidgetListing, PaginatedResult } from '../../../../marketplace/api/types';
 import { createInstallFlowService } from '../../../../marketplace/install/install-flow';
+import { themeVar } from '../../../theme/theme-vars';
 import { InstallButton, type InstallState, type UninstallState } from '../shared/InstallButton';
 import { pageStyle, PAGE_SIZE, type SortBy } from '../styles';
 
@@ -41,6 +42,14 @@ export const BrowsePage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [installStatus, setInstallStatus] = useState<Record<string, InstallState>>({});
   const [uninstallStatus, setUninstallStatus] = useState<Record<string, UninstallState>>({});
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showToast = useCallback((message: string, type: 'success' | 'error') => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setToast({ message, type });
+    toastTimerRef.current = setTimeout(() => setToast(null), 4000);
+  }, []);
 
   const updateParam = useCallback(
     (key: string, value: string) => {
@@ -106,11 +115,17 @@ export const BrowsePage: React.FC = () => {
           ...prev,
           [widgetId]: result.success ? 'installed' : 'error',
         }));
+        if (result.success) {
+          showToast('Widget installed! Find it in your canvas Asset Panel.', 'success');
+        } else {
+          showToast('Installation failed. Please try again.', 'error');
+        }
       } catch {
         setInstallStatus((prev) => ({ ...prev, [widgetId]: 'error' }));
+        showToast('Installation failed. Please try again.', 'error');
       }
     },
-    [userId, installService],
+    [userId, installService, showToast],
   );
 
   const handleUninstall = useCallback(
@@ -123,11 +138,17 @@ export const BrowsePage: React.FC = () => {
           ...prev,
           [widgetId]: result.success ? 'uninstalled' : 'error',
         }));
+        if (result.success) {
+          showToast('Widget uninstalled.', 'success');
+        } else {
+          showToast('Uninstall failed. Please try again.', 'error');
+        }
       } catch {
         setUninstallStatus((prev) => ({ ...prev, [widgetId]: 'error' }));
+        showToast('Uninstall failed. Please try again.', 'error');
       }
     },
-    [userId, installService],
+    [userId, installService, showToast],
   );
 
   const isInstalled = useCallback(
@@ -168,23 +189,27 @@ export const BrowsePage: React.FC = () => {
   );
 
   return (
-    <div data-testid="page-marketplace" style={pageStyle}>
-      <h1 style={{ margin: '0 0 20px', fontSize: '24px' }}>Marketplace</h1>
+    <div data-testid="page-marketplace" data-marketplace-scroll style={pageStyle}>
+      {/* Header row: title + search inline */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '28px', flexWrap: 'wrap' }}>
+        <h1 style={{ margin: 0, fontSize: '22px', fontWeight: 700, whiteSpace: 'nowrap' }}>Marketplace</h1>
+        <div style={{ flex: 1, minWidth: '260px' }}>
+          <SearchBar
+            query={query}
+            category={category}
+            sortBy={sortBy}
+            onQueryChange={setQuery}
+            onCategoryChange={setCategory}
+            onSortChange={setSortBy}
+            onSearch={handleSearch}
+          />
+        </div>
+      </div>
 
       <FeaturedSection
         api={api}
         onWidgetClick={handleWidgetClick}
         renderAction={renderAction}
-      />
-
-      <SearchBar
-        query={query}
-        category={category}
-        sortBy={sortBy}
-        onQueryChange={setQuery}
-        onCategoryChange={setCategory}
-        onSortChange={setSortBy}
-        onSearch={handleSearch}
       />
 
       <WidgetGrid
@@ -195,6 +220,31 @@ export const BrowsePage: React.FC = () => {
         onWidgetClick={handleWidgetClick}
         renderAction={renderAction}
       />
+
+      {/* Toast notification */}
+      {toast && (
+        <div
+          data-testid="marketplace-toast"
+          onClick={() => setToast(null)}
+          style={{
+            position: 'fixed',
+            bottom: '24px',
+            right: '24px',
+            padding: '12px 20px',
+            borderRadius: '8px',
+            background: toast.type === 'success' ? themeVar('--sn-accent') : '#dc2626',
+            color: '#fff',
+            fontSize: '14px',
+            fontWeight: 500,
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+            zIndex: 9999,
+            cursor: 'pointer',
+            animation: 'slideInRight 200ms ease-out',
+          }}
+        >
+          {toast.message}
+        </div>
+      )}
     </div>
   );
 };

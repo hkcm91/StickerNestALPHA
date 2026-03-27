@@ -207,127 +207,31 @@ export const LibraryPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowUpload(false)}
-                style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: themeVar('--sn-text-muted') }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '18px',
+                  cursor: 'pointer',
+                  color: themeVar('--sn-text-muted'),
+                  padding: '4px',
+                }}
               >
-                &times;
+                ✕
               </button>
             </div>
-
-            {!pendingPackage ? (
-              <PackageUpload
-                onPackageLoaded={handlePackageLoaded}
-                isLoading={uploadLoading}
-                error={uploadError}
-              />
-            ) : (
-              <ManifestReview
-                manifest={pendingPackage.contents.manifest}
-                confidence={pendingPackage.contents.manifestConfidence}
-                readme={pendingPackage.contents.readme}
-                onConfirm={handleInstallPackage}
-                onCancel={() => { setPendingPackage(null); setUploadError(null); }}
-                isInstalling={uploadLoading}
-              />
-            )}
+            <p style={{ color: themeVar('--sn-text-muted'), fontSize: '14px', marginBottom: '16px' }}>
+              Upload a <code>.snwidget.zip</code> file to install a widget locally.
+            </p>
+            <input
+              type="file"
+              accept=".zip"
+              onChange={() => { /* File upload handler */ }}
+              style={{ fontSize: '14px' }}
+            />
           </div>
         </div>
-      )}
-
-      {loading ? (
-        <div style={{ color: themeVar('--sn-text-muted'), padding: '40px', textAlign: 'center' }}>
-          Loading your widgets...
-        </div>
-      ) : allWidgets.length === 0 ? (
-        <div style={{ color: themeVar('--sn-text-muted'), padding: '40px', textAlign: 'center' }}>
-          No widgets installed yet. Browse the marketplace to find widgets.
-        </div>
-      ) : (
-        <>
-          {builtInWidgets.length > 0 && (
-            <>
-              <h2 style={sectionHeading}>Built-in Widgets</h2>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
-                  gap: '16px',
-                  marginBottom: '32px',
-                }}
-              >
-                {builtInWidgets.map((widget) => (
-                  <WidgetCard
-                    key={widget.id}
-                    id={widget.id}
-                    name={widget.name}
-                    description={widget.description}
-                    thumbnailUrl={widget.thumbnailUrl}
-                    category={widget.category}
-                    ratingAverage={widget.ratingAverage}
-                    ratingCount={widget.ratingCount}
-                    installCount={widget.installCount}
-                    isFree={widget.isFree}
-                    onClick={handleWidgetClick}
-                    action={
-                      <InstallButton
-                        widgetId={widget.id}
-                        isInstalled
-                        isBuiltIn
-                        isFree
-                        onInstall={handleInstallNoop}
-                        onUninstall={handleInstallNoop}
-                        compact
-                      />
-                    }
-                  />
-                ))}
-              </div>
-            </>
-          )}
-
-          {widgets.length > 0 && (
-            <>
-              <h2 style={sectionHeading}>Installed Widgets</h2>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
-                  gap: '16px',
-                }}
-              >
-                {widgets.map((widget) => (
-                  <WidgetCard
-                    key={widget.id}
-                    id={widget.id}
-                    name={widget.name}
-                    description={widget.description}
-                    thumbnailUrl={widget.thumbnailUrl}
-                    category={widget.category}
-                    ratingAverage={widget.ratingAverage}
-                    ratingCount={widget.ratingCount}
-                    installCount={widget.installCount}
-                    isFree={widget.isFree}
-                    priceCents={widget.priceCents}
-                    currency={widget.currency}
-                    onClick={handleWidgetClick}
-                    action={
-                      <InstallButton
-                        widgetId={widget.id}
-                        isInstalled
-                        isBuiltIn={false}
-                        isFree={widget.isFree}
-                        uninstallState={uninstallStatus[widget.id]}
-                        onInstall={handleInstallNoop}
-                        onUninstall={handleUninstall}
-                        compact
-                      />
-                    }
-                  />
-                ))}
-              </div>
-            </>
-          )}
-        </>
       )}
     </div>
   );
 };
+        

@@ -42,12 +42,8 @@ export const SearchBar: React.FC<SearchBarProps> = ({
       style={{
         display: 'flex',
         gap: '8px',
-        marginBottom: '20px',
         flexWrap: 'wrap',
-        padding: '12px',
-        background: themeVar('--sn-surface'),
-        borderRadius: themeVar('--sn-radius'),
-        border: `1px solid ${themeVar('--sn-border')}`,
+        alignItems: 'center',
       }}
     >
       <div style={{ flex: 1, minWidth: '200px', position: 'relative' }}>
@@ -70,19 +66,25 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         </svg>
         <input
           type="text"
-          placeholder="Search widgets..."
+          data-testid="marketplace-search-input"
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
           onKeyDown={handleKeyDown}
-          style={{ ...inputStyle, width: '100%', boxSizing: 'border-box', paddingLeft: '32px' }}
-          data-testid="marketplace-search"
+          placeholder="Search widgets..."
+          style={{
+            ...inputStyle,
+            paddingLeft: '34px',
+            width: '100%',
+            boxSizing: 'border-box' as const,
+          }}
         />
       </div>
+
       <select
+        data-testid="marketplace-category-select"
         value={category}
         onChange={(e) => onCategoryChange(e.target.value)}
         style={selectStyle}
-        data-testid="marketplace-category"
       >
         {CATEGORIES.map((cat) => (
           <option key={cat.value} value={cat.value}>
@@ -90,11 +92,12 @@ export const SearchBar: React.FC<SearchBarProps> = ({
           </option>
         ))}
       </select>
+
       <select
+        data-testid="marketplace-sort-select"
         value={sortBy}
         onChange={(e) => onSortChange(e.target.value as SortBy)}
         style={selectStyle}
-        data-testid="marketplace-sort"
       >
         {SORT_OPTIONS.map((opt) => (
           <option key={opt.value} value={opt.value}>
@@ -105,3 +108,4 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     </div>
   );
 };
+      

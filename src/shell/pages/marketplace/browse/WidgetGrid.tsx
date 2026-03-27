@@ -51,11 +51,11 @@ export const WidgetGrid: React.FC<WidgetGridProps> = ({
 
   return (
     <>
-      <h2 style={{ ...sectionHeading, display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+      <h2 style={{ ...sectionHeading, display: 'flex', alignItems: 'baseline', gap: '8px', fontSize: '16px', margin: '0 0 14px' }}>
         All Widgets
         {totalCount > 0 && (
-          <span style={{ fontSize: '14px', fontWeight: 400, color: themeVar('--sn-text-muted') }}>
-            ({totalCount})
+          <span style={{ fontSize: '13px', fontWeight: 400, color: themeVar('--sn-text-muted') }}>
+            {totalCount}
           </span>
         )}
       </h2>
@@ -63,8 +63,8 @@ export const WidgetGrid: React.FC<WidgetGridProps> = ({
         data-testid="marketplace-grid"
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
-          gap: '16px',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+          gap: '14px',
         }}
       >
         {results?.items.map((widget) => (
@@ -112,13 +112,13 @@ export const WidgetGrid: React.FC<WidgetGridProps> = ({
               color: themeVar('--sn-text-muted'),
             }}
           >
-            Page {page} of {totalPages}
+            Page {page} of {Math.ceil((results?.total ?? 0) / (results?.pageSize ?? 1))}
           </span>
           <button
             type="button"
             onClick={() => onPageChange(page + 1)}
-            disabled={!results.hasMore}
-            style={{ ...btnSecondary, opacity: !results.hasMore ? 0.5 : 1 }}
+            disabled={!results?.hasMore}
+            style={{ ...btnSecondary, opacity: !results?.hasMore ? 0.5 : 1 }}
           >
             Next
           </button>

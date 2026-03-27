@@ -31,23 +31,28 @@ export type SortBy = (typeof SORT_OPTIONS)[number]['value'];
 
 export const pageStyle: React.CSSProperties = {
   minHeight: '100%',
-  padding: '24px',
+  height: '100%',
+  padding: '32px 40px 64px',
   boxSizing: 'border-box',
   background: themeVar('--sn-bg'),
   color: themeVar('--sn-text'),
   fontFamily: themeVar('--sn-font-family'),
   maxWidth: '1100px',
   margin: '0 auto',
+  overflowY: 'auto',
+  scrollbarWidth: 'none', /* Firefox */
+  msOverflowStyle: 'none', /* IE/Edge */
 };
 
 export const inputStyle: React.CSSProperties = {
-  padding: '8px 12px',
+  padding: '9px 12px',
   border: `1px solid ${themeVar('--sn-border')}`,
-  borderRadius: '6px',
+  borderRadius: '8px',
   background: themeVar('--sn-surface'),
   color: themeVar('--sn-text'),
-  fontSize: '14px',
+  fontSize: '13px',
   fontFamily: 'inherit',
+  outline: 'none',
 };
 
 export const selectStyle: React.CSSProperties = { ...inputStyle, cursor: 'pointer' };
@@ -84,7 +89,7 @@ export const btnDanger: React.CSSProperties = {
 
 export const cardStyle: React.CSSProperties = {
   border: `1px solid ${themeVar('--sn-border')}`,
-  borderRadius: themeVar('--sn-radius'),
+  borderRadius: '10px',
   background: themeVar('--sn-surface'),
   overflow: 'hidden',
   cursor: 'pointer',
