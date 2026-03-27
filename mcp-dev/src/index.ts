@@ -18,6 +18,7 @@ import {
   ReadResourceRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
+import { ARTIFACT_TOOL_DEFS, isArtifactTool, handleArtifactTool } from './artifact-tools.js';
 
 // ============================================================================
 // Type Definitions (matching kernel schemas)
@@ -2766,6 +2767,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         required: ['userId', 'entityId', 'changes'],
       },
     },
+    ...ARTIFACT_TOOL_DEFS,
   ],
 }));
 
@@ -2773,6 +2775,11 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
   const a = args ?? {};
+
+  // Route artifact tools to their dedicated handler
+  if (isArtifactTool(name)) {
+    return handleArtifactTool(name, a, { scene, viewport, widgets, ui });
+  }
 
   try {
     switch (name) {

@@ -4595,4 +4595,102 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
       })();
     </script>
   `,
+
+  'sn.builtin.notion-viewer': `
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: var(--sn-font-family, system-ui, sans-serif); background: var(--sn-bg, #1a1a2e); color: var(--sn-text, #e5e7eb); padding: 16px; }
+      h2 { font-size: 1.1em; margin-bottom: 12px; color: var(--sn-text, #e5e7eb); }
+      .status { font-size: 0.85em; color: var(--sn-text-muted, #9ca3af); margin-bottom: 12px; }
+      .db-list { list-style: none; }
+      .db-item { padding: 10px 12px; margin-bottom: 6px; background: var(--sn-surface, #16213e); border: 1px solid var(--sn-border, #334155); border-radius: var(--sn-radius, 6px); cursor: pointer; transition: background 0.15s; }
+      .db-item:hover { background: color-mix(in srgb, var(--sn-accent, #6366f1) 15%, var(--sn-surface, #16213e)); }
+      .db-title { font-weight: 600; }
+      .db-meta { font-size: 0.8em; color: var(--sn-text-muted, #9ca3af); margin-top: 4px; }
+      .error { color: #f87171; font-size: 0.85em; }
+      .btn { padding: 6px 14px; background: var(--sn-accent, #6366f1); color: #fff; border: none; border-radius: var(--sn-radius, 6px); cursor: pointer; font-size: 0.85em; margin-top: 8px; }
+      .btn:hover { opacity: 0.9; }
+      .loading { text-align: center; padding: 24px; }
+      .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid var(--sn-border, #334155); border-top-color: var(--sn-accent, #6366f1); border-radius: 50%; animation: spin 0.6s linear infinite; }
+      @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+    <div id="app">
+      <h2>Notion Databases</h2>
+      <div id="status" class="status">Connecting...</div>
+      <ul id="db-list" class="db-list"></ul>
+      <div id="error" class="error" style="display:none;"></div>
+      <button id="refresh" class="btn" style="display:none;">Refresh</button>
+    </div>
+    <script>
+      (function() {
+        var statusEl = document.getElementById('status');
+        var listEl = document.getElementById('db-list');
+        var errorEl = document.getElementById('error');
+        var refreshBtn = document.getElementById('refresh');
+
+        StickerNest.register({
+          id: 'sn.builtin.notion-viewer',
+          name: 'Notion Database Viewer',
+          version: '1.0.0',
+          permissions: ['integrations'],
+          events: { emits: ['notion.db.selected'], subscribes: [] },
+          config: {}
+        });
+
+        function showError(msg) {
+          errorEl.textContent = msg;
+          errorEl.style.display = 'block';
+          statusEl.textContent = 'Error';
+          refreshBtn.style.display = 'inline-block';
+        }
+
+        function clearError() {
+          errorEl.style.display = 'none';
+          refreshBtn.style.display = 'none';
+        }
+
+        async function loadDatabases() {
+          clearError();
+          statusEl.textContent = 'Loading...';
+          listEl.innerHTML = '<li class="loading"><span class="spinner"></span></li>';
+
+          try {
+            var result = await StickerNest.integration('notion').query({
+              action: 'list_databases'
+            });
+
+            listEl.innerHTML = '';
+
+            if (!result || !result.databases || result.databases.length === 0) {
+              statusEl.textContent = 'No databases found.';
+              refreshBtn.style.display = 'inline-block';
+              return;
+            }
+
+            statusEl.textContent = result.databases.length + ' database' + (result.databases.length !== 1 ? 's' : '') + ' found';
+            refreshBtn.style.display = 'inline-block';
+
+            result.databases.forEach(function(db) {
+              var li = document.createElement('li');
+              li.className = 'db-item';
+              li.innerHTML = '<div class="db-title">' + (db.title || 'Untitled') + '</div>' +
+                '<div class="db-meta">' + (db.property_count || 0) + ' properties</div>';
+              li.addEventListener('click', function() {
+                StickerNest.emit('notion.db.selected', { databaseId: db.id, title: db.title });
+              });
+              listEl.appendChild(li);
+            });
+          } catch (err) {
+            listEl.innerHTML = '';
+            showError(err.message || 'Failed to load databases');
+          }
+        }
+
+        refreshBtn.addEventListener('click', loadDatabases);
+
+        loadDatabases();
+        StickerNest.ready();
+      })();
+    </script>
+  `,
 };

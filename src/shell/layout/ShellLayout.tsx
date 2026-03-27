@@ -5,7 +5,7 @@
  * @layer L6
  */
 
-import React from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 
 import { useUIStore } from '../../kernel/stores/ui/ui.store';
 import { DockerLayer } from '../components/docker';
@@ -24,7 +24,9 @@ export interface ShellLayoutProps {
   renderDockerWidget?: (widgetInstanceId: string) => React.ReactNode;
 }
 
-const SIDEBAR_WIDTH = 280;
+const SIDEBAR_DEFAULT = 280;
+const SIDEBAR_MIN = 200;
+const SIDEBAR_MAX = 480;
 const TRAY_Z = 50;
 const TAB_WIDTH = 28;
 const TAB_HEIGHT = 80;
@@ -63,6 +65,45 @@ export const ShellLayout: React.FC<ShellLayoutProps> = ({
   const hasLeft = sidebarLeft != null;
   const hasRight = sidebarRight != null;
 
+  // Resizable panel widths (local state, not persisted)
+  const [leftWidth, setLeftWidth] = useState(SIDEBAR_DEFAULT);
+  const [rightWidth, setRightWidth] = useState(SIDEBAR_DEFAULT);
+  const isResizing = useRef(false);
+
+  const startResize = useCallback(
+    (side: 'left' | 'right', startX: number) => {
+      const startWidth = side === 'left' ? leftWidth : rightWidth;
+      const setWidth = side === 'left' ? setLeftWidth : setRightWidth;
+      const direction = side === 'left' ? 1 : -1;
+      isResizing.current = true;
+
+      const onMouseMove = (e: MouseEvent) => {
+        e.preventDefault();
+        const delta = (e.clientX - startX) * direction;
+        const newWidth = Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, startWidth + delta));
+        setWidth(newWidth);
+      };
+      const onMouseUp = () => {
+        isResizing.current = false;
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      };
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    },
+    [leftWidth, rightWidth],
+  );
+
+  // Close panels on backdrop click (click-outside dismiss)
+  const handleBackdropClick = useCallback(() => {
+    if (leftOpen) toggleLeft();
+    if (rightOpen) toggleRight();
+  }, [leftOpen, rightOpen, toggleLeft, toggleRight]);
+
   return (
     <div
       data-testid="shell-layout"
@@ -78,9 +119,9 @@ export const ShellLayout: React.FC<ShellLayoutProps> = ({
         fontFamily: themeVar('--sn-font-family'),
       }}
     >
-      {/* Top bar */}
+      {/* Top bar — overflow:visible so toolbar tray dropdown is not clipped */}
       {topbar && (
-        <div data-testid="shell-topbar" style={{ minHeight: 0, minWidth: 0, overflow: 'hidden' }}>
+        <div data-testid="shell-topbar" style={{ minHeight: 0, minWidth: 0, overflow: 'visible', position: 'relative', zIndex: 60 }}>
           {topbar}
         </div>
       )}
@@ -103,6 +144,19 @@ export const ShellLayout: React.FC<ShellLayoutProps> = ({
           <DockerLayer renderWidget={renderDockerWidget} />
         )}
 
+        {/* Click-outside dismiss overlay — behind panels, above canvas */}
+        {(leftOpen || rightOpen) && (
+          <div
+            data-testid="panel-backdrop"
+            onClick={handleBackdropClick}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              zIndex: TRAY_Z - 1,
+            }}
+          />
+        )}
+
         {/* Left tray overlay */}
         {hasLeft && (
           <>
@@ -113,7 +167,7 @@ export const ShellLayout: React.FC<ShellLayoutProps> = ({
               style={{
                 position: 'absolute',
                 top: '50%',
-                left: leftOpen ? SIDEBAR_WIDTH : 0,
+                left: leftOpen ? leftWidth : 0,
                 transform: 'translateY(-50%)',
                 zIndex: TRAY_Z + 1,
                 width: TAB_WIDTH,
@@ -128,7 +182,7 @@ export const ShellLayout: React.FC<ShellLayoutProps> = ({
                 justifyContent: 'center',
                 padding: 0,
                 boxShadow: '2px 0 8px rgba(0,0,0,0.08)',
-                transition: TAB_TRANSITION_LEFT,
+                transition: isResizing.current ? 'none' : TAB_TRANSITION_LEFT,
                 color: themeVar('--sn-text-muted'),
                 fontSize: '11px',
                 writingMode: 'vertical-rl',
@@ -148,7 +202,7 @@ export const ShellLayout: React.FC<ShellLayoutProps> = ({
                 top: 0,
                 left: 0,
                 bottom: 0,
-                width: SIDEBAR_WIDTH,
+                width: leftWidth,
                 zIndex: TRAY_Z,
                 background: themeVar('--sn-surface-glass'),
                 backdropFilter: 'blur(20px)',
@@ -161,6 +215,23 @@ export const ShellLayout: React.FC<ShellLayoutProps> = ({
               }}
             >
               {sidebarLeft}
+              {/* Resize handle — right edge */}
+              <div
+                data-testid="resize-handle-left"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  startResize('left', e.clientX);
+                }}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  right: 0,
+                  width: 4,
+                  height: '100%',
+                  cursor: 'col-resize',
+                  zIndex: 1,
+                }}
+              />
             </div>
           </>
         )}
@@ -175,7 +246,7 @@ export const ShellLayout: React.FC<ShellLayoutProps> = ({
               style={{
                 position: 'absolute',
                 top: '50%',
-                right: rightOpen ? SIDEBAR_WIDTH : 0,
+                right: rightOpen ? rightWidth : 0,
                 transform: 'translateY(-50%)',
                 zIndex: TRAY_Z + 1,
                 width: TAB_WIDTH,
@@ -190,7 +261,7 @@ export const ShellLayout: React.FC<ShellLayoutProps> = ({
                 justifyContent: 'center',
                 padding: 0,
                 boxShadow: '-2px 0 8px rgba(0,0,0,0.08)',
-                transition: TAB_TRANSITION_RIGHT,
+                transition: isResizing.current ? 'none' : TAB_TRANSITION_RIGHT,
                 color: themeVar('--sn-text-muted'),
                 fontSize: '11px',
                 writingMode: 'vertical-rl',
@@ -210,7 +281,7 @@ export const ShellLayout: React.FC<ShellLayoutProps> = ({
                 top: 0,
                 right: 0,
                 bottom: 0,
-                width: SIDEBAR_WIDTH,
+                width: rightWidth,
                 zIndex: TRAY_Z,
                 background: themeVar('--sn-surface-glass'),
                 backdropFilter: 'blur(20px)',
@@ -223,6 +294,23 @@ export const ShellLayout: React.FC<ShellLayoutProps> = ({
               }}
             >
               {sidebarRight}
+              {/* Resize handle — left edge */}
+              <div
+                data-testid="resize-handle-right"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  startResize('right', e.clientX);
+                }}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: 4,
+                  height: '100%',
+                  cursor: 'col-resize',
+                  zIndex: 1,
+                }}
+              />
             </div>
           </>
         )}

@@ -251,7 +251,6 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
     [viewportStore],
   );
 
-  const spatialMode = useUIStore((s) => s.spatialMode);
   const focusMode = useUIStore((s) => s.focusMode);
 
   return (

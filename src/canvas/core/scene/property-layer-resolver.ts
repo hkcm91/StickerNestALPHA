@@ -26,6 +26,8 @@ import {
   Object3DEntitySchema,
   ArtboardEntitySchema,
   FolderEntitySchema,
+  VideoEntitySchema,
+  ConnectorEntitySchema,
 } from '@sn/types';
 
 /**
@@ -88,6 +90,8 @@ const entityTypeSchemaMap: Record<CanvasEntityType, { shape: Record<string, unkn
   object3d: Object3DEntitySchema,
   artboard: ArtboardEntitySchema,
   folder: FolderEntitySchema,
+  video: VideoEntitySchema,
+  connector: ConnectorEntitySchema,
 };
 
 /** Cached valid key sets per entity type */

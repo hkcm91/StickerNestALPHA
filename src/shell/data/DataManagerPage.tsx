@@ -368,33 +368,41 @@ export const DataManagerPage: React.FC = () => {
 // Styles
 // =============================================================================
 
+const SN_SPRING = 'cubic-bezier(0.16, 1, 0.3, 1)';
+const SN_GLASS_BORDER = 'rgba(78,123,142,0.08)';
+
 const styles: Record<string, React.CSSProperties> = {
   page: {
     display: 'flex',
     flexDirection: 'column',
     height: '100%',
-    background: 'var(--sn-bg, #fff)',
+    background: 'var(--sn-bg-ground, #110E14)',
+    fontFamily: "'Outfit', sans-serif",
+    color: 'var(--sn-text, #E8E6ED)',
   },
   tabBar: {
     display: 'flex',
     gap: '4px',
     padding: '12px 16px',
-    borderBottom: '1px solid var(--sn-border, #e5e7eb)',
-    background: 'var(--sn-surface, #f9fafb)',
+    borderBottom: ,
+    background: 'var(--sn-surface-glass, rgba(20,17,24,0.75))',
+    backdropFilter: 'blur(16px) saturate(1.2)',
+    WebkitBackdropFilter: 'blur(16px) saturate(1.2)',
   },
   tab: {
     padding: '8px 16px',
     border: 'none',
     borderRadius: 'var(--sn-radius, 6px)',
     background: 'transparent',
-    color: 'var(--sn-text-muted, #6b7280)',
+    color: 'var(--sn-text-muted, #7A7784)',
     fontSize: '14px',
     fontWeight: 500,
+    fontFamily: "'Outfit', sans-serif",
     cursor: 'pointer',
-    transition: 'all 0.15s ease',
+    transition: ,
   },
   tabActive: {
-    background: 'var(--sn-accent, #6366f1)',
+    background: 'var(--sn-accent, #3E7D94)',
     color: '#fff',
   },
   main: {

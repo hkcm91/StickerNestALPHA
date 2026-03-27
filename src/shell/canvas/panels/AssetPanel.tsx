@@ -300,22 +300,22 @@ export const AssetPanel: React.FC<AssetPanelProps> = ({ assets = DEFAULT_ASSETS 
   const { gateResource, blocked, clearBlocked } = useQuotaCheck();
 
   // Marketplace-installed widgets from widgetStore
-  const installedWidgets = useWidgetStore((s) =>
-    Object.values(s.registry).filter((w: WidgetRegistryEntry) => !w.isBuiltIn),
-  );
+  const installedRegistry = useWidgetStore((s) => s.registry);
 
   const installedWidgetAssets: AssetItem[] = useMemo(
     () =>
-      installedWidgets.map((w: WidgetRegistryEntry) => ({
-        id: w.widgetId,
-        name: w.manifest.name ?? w.widgetId,
-        type: 'widget' as const,
-        description: w.manifest.description ?? '',
-        tags: w.manifest.tags ?? [],
-        widgetType: 'installed',
-        metadata: { widgetId: w.widgetId },
-      })),
-    [installedWidgets],
+      Object.values(installedRegistry)
+        .filter((w: WidgetRegistryEntry) => !w.isBuiltIn)
+        .map((w: WidgetRegistryEntry) => ({
+          id: w.widgetId,
+          name: w.manifest.name ?? w.widgetId,
+          type: 'widget' as const,
+          description: w.manifest.description ?? '',
+          tags: w.manifest.tags ?? [],
+          widgetType: 'installed',
+          metadata: { widgetId: w.widgetId },
+        })),
+    [installedRegistry],
   );
 
   const [apiLoading, setApiLoading] = useState(false);

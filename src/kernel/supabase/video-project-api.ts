@@ -12,6 +12,11 @@ import type { TimelineData } from '@sn/types';
 
 import { supabase } from './client';
 
+// Video tables are not yet in the generated Supabase types.
+// Use an untyped reference until the next `supabase gen types` run.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const db = supabase as any;
+
 // =============================================================================
 // Types
 // =============================================================================
@@ -55,7 +60,7 @@ export async function createVideoProject(
   name: string,
   timelineData: TimelineData,
 ): Promise<VideoProjectRow> {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('video_projects')
     .insert({
       canvas_id: canvasId,
@@ -71,7 +76,7 @@ export async function createVideoProject(
 }
 
 export async function getVideoProject(projectId: string): Promise<VideoProjectRow | null> {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('video_projects')
     .select()
     .eq('id', projectId)
@@ -85,7 +90,7 @@ export async function getVideoProject(projectId: string): Promise<VideoProjectRo
 }
 
 export async function listVideoProjects(canvasId: string): Promise<VideoProjectRow[]> {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('video_projects')
     .select()
     .eq('canvas_id', canvasId)
@@ -99,7 +104,7 @@ export async function updateVideoProject(
   projectId: string,
   updates: Partial<Pick<VideoProjectRow, 'name' | 'status' | 'timeline_data' | 'thumbnail_url'>>,
 ): Promise<VideoProjectRow> {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('video_projects')
     .update(updates)
     .eq('id', projectId)
@@ -111,7 +116,7 @@ export async function updateVideoProject(
 }
 
 export async function deleteVideoProject(projectId: string): Promise<void> {
-  const { error } = await supabase
+  const { error } = await db
     .from('video_projects')
     .delete()
     .eq('id', projectId);
@@ -129,7 +134,7 @@ export async function createRenderJob(
   format: string,
   renderConfig?: Record<string, unknown>,
 ): Promise<RenderJobRow> {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('video_renders')
     .insert({
       project_id: projectId,
@@ -145,7 +150,7 @@ export async function createRenderJob(
 }
 
 export async function getRenderJob(renderJobId: string): Promise<RenderJobRow | null> {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('video_renders')
     .select()
     .eq('id', renderJobId)
@@ -159,7 +164,7 @@ export async function getRenderJob(renderJobId: string): Promise<RenderJobRow | 
 }
 
 export async function listRenderJobs(projectId: string): Promise<RenderJobRow[]> {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('video_renders')
     .select()
     .eq('project_id', projectId)
@@ -170,7 +175,7 @@ export async function listRenderJobs(projectId: string): Promise<RenderJobRow[]>
 }
 
 export async function cancelRenderJob(renderJobId: string): Promise<void> {
-  const { error } = await supabase
+  const { error } = await db
     .from('video_renders')
     .update({ status: 'cancelled' })
     .eq('id', renderJobId);

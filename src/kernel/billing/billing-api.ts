@@ -71,7 +71,60 @@ export async function getSubscription(): Promise<Subscription | null> {
 }
 
 /**
+ * Local fallback quotas used when the `tier_quotas` table is unavailable.
+ * These ensure the app remains functional during development or when
+ * the billing table has not been provisioned yet.
+ */
+const LOCAL_QUOTA_FALLBACKS: Record<string, TierQuota> = {
+  free: {
+    tier: 'free',
+    maxCanvases: 5,
+    maxStorageMb: 200,
+    maxWidgetsPerCanvas: 20,
+    maxCollaboratorsPerCanvas: 3,
+    canUseCustomDomain: false,
+    canUseIntegrations: true,
+    canPublishWidgets: false,
+    canSell: false,
+  },
+  creator: {
+    tier: 'creator',
+    maxCanvases: 25,
+    maxStorageMb: 2000,
+    maxWidgetsPerCanvas: 50,
+    maxCollaboratorsPerCanvas: 10,
+    canUseCustomDomain: true,
+    canUseIntegrations: true,
+    canPublishWidgets: true,
+    canSell: false,
+  },
+  pro: {
+    tier: 'pro',
+    maxCanvases: -1,
+    maxStorageMb: 10000,
+    maxWidgetsPerCanvas: -1,
+    maxCollaboratorsPerCanvas: 50,
+    canUseCustomDomain: true,
+    canUseIntegrations: true,
+    canPublishWidgets: true,
+    canSell: true,
+  },
+  enterprise: {
+    tier: 'enterprise',
+    maxCanvases: -1,
+    maxStorageMb: -1,
+    maxWidgetsPerCanvas: -1,
+    maxCollaboratorsPerCanvas: -1,
+    canUseCustomDomain: true,
+    canUseIntegrations: true,
+    canPublishWidgets: true,
+    canSell: true,
+  },
+};
+
+/**
  * Fetches the quota definition for a given tier.
+ * Falls back to local defaults when the `tier_quotas` table is unavailable.
  */
 export async function getTierQuota(
   tier: 'free' | 'creator' | 'pro' | 'enterprise',
@@ -82,7 +135,10 @@ export async function getTierQuota(
     .eq('tier', tier)
     .single()) as { data: TierQuotaRow | null; error: { message: string } | null };
 
-  if (error || !data) return null;
+  if (error || !data) {
+    // Use local fallback so the app works without the billing table
+    return LOCAL_QUOTA_FALLBACKS[tier] ?? null;
+  }
 
   return {
     tier: data.tier as TierQuota['tier'],
