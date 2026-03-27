@@ -45,10 +45,10 @@ interface TodoFormData {
 // =============================================================================
 
 const PRIORITY_CONFIG: Record<TodoPriority, { label: string; color: string; bg: string }> = {
-  low: { label: 'Low', color: '#6b7280', bg: '#f3f4f6' },
-  medium: { label: 'Medium', color: '#2563eb', bg: '#dbeafe' },
-  high: { label: 'High', color: '#d97706', bg: '#fef3c7' },
-  urgent: { label: 'Urgent', color: '#dc2626', bg: '#fee2e2' },
+  low: { label: 'Low', color: '#5AA878', bg: 'rgba(90,168,120,0.1)' },
+  medium: { label: 'Medium', color: '#4E7B8E', bg: 'rgba(78,123,142,0.1)' },
+  high: { label: 'High', color: '#E8806C', bg: 'rgba(232,128,108,0.1)' },
+  urgent: { label: 'Urgent', color: '#C85858', bg: 'rgba(200,88,88,0.15)' },
 };
 
 // =============================================================================
@@ -208,9 +208,9 @@ export const TodoManager: React.FC = () => {
     const now = new Date();
     const diffDays = Math.ceil((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
-    if (diffDays < 0) return { text: 'Overdue', color: '#dc2626' };
-    if (diffDays === 0) return { text: 'Today', color: '#d97706' };
-    if (diffDays === 1) return { text: 'Tomorrow', color: '#2563eb' };
+    if (diffDays < 0) return { text: 'Overdue', color: '#C85858' };
+    if (diffDays === 0) return { text: 'Today', color: '#E8806C' };
+    if (diffDays === 1) return { text: 'Tomorrow', color: '#4E7B8E' };
     return { text: d.toLocaleDateString(), color: '#6b7280' };
   };
 
@@ -412,16 +412,16 @@ const styles: Record<string, React.CSSProperties> = {
     margin: 0,
     fontSize: '24px',
     fontWeight: 600,
-    color: 'var(--sn-text, #111)',
+    color: 'var(--sn-text, #E8E6ED)',
   },
   subtitle: {
     margin: '4px 0 0',
     fontSize: '14px',
-    color: 'var(--sn-text-muted, #6b7280)',
+    color: 'var(--sn-text-muted, #7A7784)',
   },
   addBtn: {
     padding: '10px 20px',
-    background: 'var(--sn-accent, #2563eb)',
+    background: 'var(--sn-accent, #3E7D94)',
     color: '#fff',
     border: 'none',
     borderRadius: '8px',
@@ -436,8 +436,8 @@ const styles: Record<string, React.CSSProperties> = {
   },
   filterBtn: {
     padding: '8px 16px',
-    background: 'var(--sn-surface, #f9fafb)',
-    border: '1px solid var(--sn-border, #e5e7eb)',
+    background: 'var(--sn-surface-glass, rgba(20,17,24,0.75))',
+    border: '1px solid var(--sn-border, rgba(255,255,255,0.06))',
     borderRadius: '6px',
     fontSize: '14px',
     cursor: 'pointer',
@@ -538,7 +538,7 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'flex-start',
     gap: '16px',
     padding: '16px',
-    background: 'var(--sn-surface, #fff)',
+    background: 'var(--sn-surface-glass, rgba(20,17,24,0.75))',
     border: '1px solid var(--sn-border, #e5e7eb)',
     borderRadius: '12px',
   },

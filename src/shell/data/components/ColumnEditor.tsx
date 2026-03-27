@@ -264,11 +264,11 @@ export const ColumnEditor: React.FC<ColumnEditorProps> = ({
 // =============================================================================
 
 const styles: Record<string, React.CSSProperties> = {
-  overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
-  modal: { background: 'var(--sn-surface, #fff)', borderRadius: '12px', width: '440px', maxWidth: '90vw', display: 'flex', flexDirection: 'column' },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid var(--sn-border, #ddd)' },
-  title: { margin: 0, fontSize: '16px', fontWeight: 600, color: 'var(--sn-text, #111)' },
-  closeBtn: { background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: 'var(--sn-text-muted, #999)', padding: '4px 8px' },
+  overlay: { position: 'fixed', inset: 0, background: 'rgba(10,10,14,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
+  modal: { background: 'var(--sn-surface-glass, rgba(20,17,24,0.75))', borderRadius: '12px', width: '440px', maxWidth: '90vw', display: 'flex', flexDirection: 'column' },
+  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid var(--sn-border, rgba(255,255,255,0.06))' },
+  title: { margin: 0, fontSize: '16px', fontWeight: 600, color: 'var(--sn-text, #E8E6ED)' },
+  closeBtn: { background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: 'var(--sn-text-muted, #7A7784)', padding: '4px 8px' },
   body: { padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '14px' },
   label: { display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px', fontWeight: 600, color: 'var(--sn-text, #111)' },
   input: { padding: '8px 10px', border: '1px solid var(--sn-border, #ddd)', borderRadius: 'var(--sn-radius, 6px)', fontSize: '14px', background: 'var(--sn-bg, #fff)', color: 'var(--sn-text, #111)', fontWeight: 400 },
@@ -276,12 +276,12 @@ const styles: Record<string, React.CSSProperties> = {
   checkboxLabel: { display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--sn-text, #111)' },
   optionsSection: { display: 'flex', flexDirection: 'column', gap: '6px' },
   optionsList: { display: 'flex', flexWrap: 'wrap', gap: '4px' },
-  optionItem: { display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', background: 'var(--sn-bg, #f0f0f0)', borderRadius: '4px', fontSize: '12px' },
+  optionItem: { display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', background: 'var(--sn-surface-raised, #1A1A1F)', borderRadius: '4px', fontSize: '12px' },
   optionRemoveBtn: { background: 'none', border: 'none', cursor: 'pointer', fontSize: '10px', color: 'var(--sn-text-muted, #999)', padding: '0 2px' },
   optionInputRow: { display: 'flex', gap: '6px' },
-  addOptionBtn: { padding: '8px 12px', background: 'var(--sn-surface, #f8f9fa)', border: '1px solid var(--sn-border, #ddd)', borderRadius: 'var(--sn-radius, 6px)', cursor: 'pointer', fontSize: '13px' },
+  addOptionBtn: { padding: '8px 12px', background: 'var(--sn-surface-glass, rgba(20,17,24,0.75))', border: '1px solid var(--sn-border, #ddd)', borderRadius: 'var(--sn-radius, 6px)', cursor: 'pointer', fontSize: '13px' },
   footer: { display: 'flex', gap: '8px', padding: '14px 20px', borderTop: '1px solid var(--sn-border, #ddd)' },
   cancelBtn: { padding: '8px 16px', background: 'var(--sn-surface, #f8f9fa)', border: '1px solid var(--sn-border, #ddd)', borderRadius: 'var(--sn-radius, 6px)', cursor: 'pointer', fontSize: '13px' },
-  saveBtn: { padding: '8px 16px', background: 'var(--sn-accent, #2563eb)', color: '#fff', border: 'none', borderRadius: 'var(--sn-radius, 6px)', cursor: 'pointer', fontWeight: 600, fontSize: '13px' },
-  deleteBtn: { padding: '8px 16px', background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 'var(--sn-radius, 6px)', cursor: 'pointer', fontSize: '13px' },
+  saveBtn: { padding: '8px 16px', background: 'var(--sn-accent, #3E7D94)', color: '#fff', border: 'none', borderRadius: 'var(--sn-radius, 6px)', cursor: 'pointer', fontWeight: 600, fontSize: '13px' },
+  deleteBtn: { padding: '8px 16px', background: 'rgba(200,88,88,0.1)', color: '#dc2626', border: '1px solid rgba(200,88,88,0.2)', borderRadius: 'var(--sn-radius, 6px)', cursor: 'pointer', fontSize: '13px' },
 };

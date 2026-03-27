@@ -8,8 +8,8 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import type { CanvasPlatform, GridConfig, GridLineStyle, GridProjectionMode, ViewportConfig } from '@sn/types';
-import { CanvasDocumentEvents, GridEvents } from '@sn/types';
+import type { GridConfig, GridLineStyle, GridProjectionMode, ViewportConfig } from '@sn/types';
+import { GridEvents } from '@sn/types';
 
 import { DEFAULT_GRID_CONFIG } from '../../../canvas/core';
 import { bus } from '../../../kernel/bus';
@@ -23,43 +23,6 @@ import type { ViewportStore } from '../hooks/useViewport';
 
 import { CanvasSettingsDropdown } from './CanvasSettingsDropdown';
 import type { CanvasPositionConfig } from './CanvasSettingsDropdown';
-
-// ── Canvas Size Presets (by platform) ──────────────────────────────
-interface CanvasSizePreset {
-  label: string;
-  width: number;
-  height: number;
-}
-
-const PLATFORM_PRESETS: Record<CanvasPlatform, CanvasSizePreset[]> = {
-  web: [
-    { label: 'Desktop HD (1920×1080)', width: 1920, height: 1080 },
-    { label: 'Desktop (1440×900)', width: 1440, height: 900 },
-    { label: 'MacBook Pro 14" (1512×982)', width: 1512, height: 982 },
-    { label: 'MacBook Air 13" (1280×800)', width: 1280, height: 800 },
-    { label: 'HD (1280×720)', width: 1280, height: 720 },
-    { label: '4K (3840×2160)', width: 3840, height: 2160 },
-  ],
-  mobile: [
-    { label: 'iPhone 15 Pro (393×852)', width: 393, height: 852 },
-    { label: 'iPhone 15 Pro Max (430×932)', width: 430, height: 932 },
-    { label: 'iPhone SE (375×667)', width: 375, height: 667 },
-    { label: 'Pixel 8 (412×915)', width: 412, height: 915 },
-    { label: 'Samsung Galaxy S24 (360×780)', width: 360, height: 780 },
-    { label: 'iPad (820×1180)', width: 820, height: 1180 },
-    { label: 'iPad Mini (744×1133)', width: 744, height: 1133 },
-    { label: 'iPad Pro 12.9" (1024×1366)', width: 1024, height: 1366 },
-    { label: 'Android Tablet (800×1280)', width: 800, height: 1280 },
-  ],
-  desktop: [
-    { label: 'Full HD (1920×1080)', width: 1920, height: 1080 },
-    { label: 'QHD (2560×1440)', width: 2560, height: 1440 },
-    { label: '4K UHD (3840×2160)', width: 3840, height: 2160 },
-    { label: 'Ultrawide (2560×1080)', width: 2560, height: 1080 },
-    { label: 'MacBook Pro 16" (1728×1117)', width: 1728, height: 1117 },
-    { label: 'iMac 24" (4480×2520)', width: 4480, height: 2520 },
-  ],
-};
 
 export interface ToolbarProps {
   viewportStore: ViewportStore;
@@ -84,7 +47,6 @@ export interface ToolbarProps {
 }
 
 const DOCKER_LIBRARY_NAME = 'Docker Library';
-const HISTORY_WIDGET_INSTANCE_ID = '44444444-4444-4444-4444-444444444444';
 
 // ── Icons ────────────────────────────────────────────────────────
 
@@ -404,12 +366,6 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   const setCanvasInteractionMode = useUIStore((s) => s.setCanvasInteractionMode);
   const spatialMode = useUIStore((s) => s.spatialMode);
   const setSpatialMode = useUIStore((s) => s.setSpatialMode);
-  const canvasPlatform = useUIStore((s) => s.canvasPlatform);
-  const setCanvasPlatform = useUIStore((s) => s.setCanvasPlatform);
-  const setPlatformConfig = useUIStore((s) => s.setPlatformConfig);
-  const platformConfigs = useUIStore((s) => s.platformConfigs);
-  const artboardPreviewMode = useUIStore((s) => s.artboardPreviewMode);
-  const setArtboardPreviewMode = useUIStore((s) => s.setArtboardPreviewMode);
   const setFullscreenPreview = useUIStore((s) => s.setFullscreenPreview);
 
   const canUndo = useHistoryStore(selectCanUndo);

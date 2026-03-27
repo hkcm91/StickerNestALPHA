@@ -280,4 +280,15 @@ export function setupUIBusSubscriptions(): void {
     const current = useUIStore.getState().spatialMode;
     useUIStore.getState().setSpatialMode(current === '2d' ? '3d' : '2d');
   });
+
+  // Close sidebars when entering placement mode (widget, sticker, svg, lottie)
+  const PLACEMENT_TOOLS = ['widget', 'sticker', 'svg', 'lottie'];
+  bus.subscribe(CanvasEvents.TOOL_CHANGED, (event: BusEvent) => {
+    const payload = event.payload as { tool: string } | null;
+    if (payload && PLACEMENT_TOOLS.includes(payload.tool)) {
+      const state = useUIStore.getState();
+      if (state.sidebarLeftOpen) state.toggleSidebarLeft();
+      if (state.sidebarRightOpen) state.toggleSidebarRight();
+    }
+  });
 }

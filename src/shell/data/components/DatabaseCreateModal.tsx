@@ -6,6 +6,7 @@
  */
 
 import React, { useState } from 'react';
+
 import type { DataSourceType } from '@sn/types';
 
 export interface DatabaseCreateModalProps {
@@ -86,9 +87,9 @@ export const DatabaseCreateModal: React.FC<DatabaseCreateModalProps> = ({
 };
 
 const styles: Record<string, React.CSSProperties> = {
-  overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 },
-  modal: { background: 'var(--sn-surface, #fff)', borderRadius: '12px', width: '400px', maxWidth: '90vw', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid var(--sn-border, #ddd)' },
+  overlay: { position: 'fixed', inset: 0, background: 'rgba(10,10,14,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 },
+  modal: { background: 'var(--sn-surface-glass, rgba(20,17,24,0.75))', borderRadius: '12px', width: '400px', maxWidth: '90vw', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' },
+  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid var(--sn-border, rgba(255,255,255,0.06))' },
   title: { margin: 0, fontSize: '18px', fontWeight: 700 },
   closeBtn: { background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#999' },
   form: { padding: '20px' },
@@ -98,6 +99,6 @@ const styles: Record<string, React.CSSProperties> = {
   select: { width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--sn-border, #ddd)', fontSize: '14px' },
   footer: { display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '24px' },
   cancelBtn: { padding: '8px 16px', borderRadius: '6px', border: '1px solid var(--sn-border, #ddd)', background: 'none', cursor: 'pointer', fontSize: '14px' },
-  createBtn: { padding: '8px 16px', borderRadius: '6px', border: 'none', background: 'var(--sn-accent, #2563eb)', color: '#fff', cursor: 'pointer', fontSize: '14px', fontWeight: 600 },
+  createBtn: { padding: '8px 16px', borderRadius: '6px', border: 'none', background: 'var(--sn-accent, #3E7D94)', color: '#fff', cursor: 'pointer', fontSize: '14px', fontWeight: 600 },
   disabledBtn: { opacity: 0.5, cursor: 'not-allowed' },
 };

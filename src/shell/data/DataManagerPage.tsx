@@ -384,7 +384,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     gap: '4px',
     padding: '12px 16px',
-    borderBottom: ,
+    borderBottom: `1px solid ${SN_GLASS_BORDER}`,
     background: 'var(--sn-surface-glass, rgba(20,17,24,0.75))',
     backdropFilter: 'blur(16px) saturate(1.2)',
     WebkitBackdropFilter: 'blur(16px) saturate(1.2)',
@@ -399,7 +399,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 500,
     fontFamily: "'Outfit', sans-serif",
     cursor: 'pointer',
-    transition: ,
+    transition: 'all 0.2s ' + SN_SPRING,
   },
   tabActive: {
     background: 'var(--sn-accent, #3E7D94)',
