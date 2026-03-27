@@ -252,6 +252,4 @@ const styles: Record<string, React.CSSProperties> = {
   cardMeta: { display: 'flex', gap: '6px', marginBottom: '4px' },
   typeBadge: { fontSize: '11px', padding: '2px 6px', background: 'var(--sn-bg, #f0f0f0)', borderRadius: '4px', color: 'var(--sn-text-muted, #666)', textTransform: 'uppercase' as const },
   scopeBadge: { fontSize: '11px', padding: '2px 6px', background: 'var(--sn-bg, #f0f0f0)', borderRadius: '4px', color: 'var(--sn-text-muted, #666)' },
-  cardDesc: { fontSize: '13px', color: 'var(--sn-text-muted, #666)', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
-  cardDate: { fontSize: '12px', color: 'var(--sn-text-muted, #999)' },
-};
+  cardDesc: { fontSize: '13px', color: 'var(--sn-text-muted, #666)', marginBott

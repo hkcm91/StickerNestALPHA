@@ -88,7 +88,7 @@ export const cardStyle: React.CSSProperties = {
   background: themeVar('--sn-surface'),
   overflow: 'hidden',
   cursor: 'pointer',
-  transition: 'border-color 0.15s',
+  transition: 'transform 150ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 150ms cubic-bezier(0.16, 1, 0.3, 1), border-color 150ms cubic-bezier(0.16, 1, 0.3, 1)',
 };
 
 export const labelBuiltIn: React.CSSProperties = {
@@ -122,10 +122,4 @@ export const officialBadge: React.CSSProperties = {
 export const sectionHeading: React.CSSProperties = {
   margin: '0 0 16px',
   fontSize: '18px',
-  fontWeight: 600,
-};
-
-export const mutedText: React.CSSProperties = {
-  fontSize: '13px',
-  color: themeVar('--sn-text-muted'),
-};
+  fontW

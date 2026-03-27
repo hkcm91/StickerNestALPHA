@@ -1,0 +1,18 @@
+{
+  "id": "sample-quick-poll",
+  "name": "Quick Poll",
+  "version": "1.0.0",
+  "description": "Create instant polls with live results",
+  "entryPoint": "widget.html",
+  "category": "social",
+  "tags": ["poll", "voting", "social"],
+  "events": {
+    "emits": [{ "type": "poll.voted", "description": "Emitted when a vote is cast" }],
+    "subscribes": []
+  },
+  "config": {
+    "question": { "type": "string", "default": "What do you prefer?", "label": "Question" },
+    "options": { "type": "string", "default": "Option A, Option B, Option C", "label": "Options (comma-separated)" }
+  },
+  "permissions": []
+}

@@ -173,6 +173,4 @@ const styles: Record<string, React.CSSProperties> = {
   dbProps: { fontSize: '12px', color: 'var(--sn-text-muted, #999)' },
   footer: { display: 'flex', justifyContent: 'flex-end', gap: '8px', padding: '16px 24px', borderTop: '1px solid var(--sn-border, #ddd)' },
   cancelBtn: { padding: '8px 16px', background: 'var(--sn-surface-glass, rgba(20,17,24,0.75))', border: '1px solid var(--sn-border, #ddd)', borderRadius: 'var(--sn-radius, 6px)', cursor: 'pointer', fontSize: '14px' },
-  importBtn: { padding: '8px 16px', background: 'var(--sn-accent, #2563eb)', color: '#fff', border: 'none', borderRadius: 'var(--sn-radius, 6px)', cursor: 'pointer', fontWeight: 600, fontSize: '14px' },
-  importBtnDisabled: { opacity: 0.5, cursor: 'not-allowed' },
-};
+  importBtn: { padding: '8px 16px', background: 'var(--sn-accent, #2563eb)', color: '#fff', border: 'none', borderRadius: 'var(--sn-radius, 6px)', cursor: 'pointer',

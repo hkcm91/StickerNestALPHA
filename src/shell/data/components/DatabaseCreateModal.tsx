@@ -100,5 +100,4 @@ const styles: Record<string, React.CSSProperties> = {
   footer: { display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '24px' },
   cancelBtn: { padding: '8px 16px', borderRadius: '6px', border: '1px solid var(--sn-border, #ddd)', background: 'none', cursor: 'pointer', fontSize: '14px' },
   createBtn: { padding: '8px 16px', borderRadius: '6px', border: 'none', background: 'var(--sn-accent, #3E7D94)', color: '#fff', cursor: 'pointer', fontSize: '14px', fontWeight: 600 },
-  disabledBtn: { opacity: 0.5, cursor: 'not-allowed' },
-};
+  disabledBtn: {

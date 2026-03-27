@@ -578,24 +578,4 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
             />
           </CanvasViewportLayer>
 
-          {/* Layer 5: P10 — Context menu (fixed position, above everything) */}
-          <CanvasContextMenu
-            selectedIds={selectedIds}
-            interactionMode={rendererMode}
-          />
-
-          {/* Layer 6: Focus Mode overlay (above everything) */}
-          {focusMode?.active && (
-            <FocusOverlay
-              focusedEntityIds={focusMode.focusedEntityIds}
-              activeIndex={focusMode.activeIndex}
-              entities={entities}
-              widgetHtmlMap={widgetHtmlMap}
-              theme={theme}
-            />
-          )}
-        </>
-      )}
-    </div>
-  );
-};
+          {/* Layer 5: P10 — Conte

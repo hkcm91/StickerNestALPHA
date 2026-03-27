@@ -253,17 +253,4 @@ export const StickerRenderer: React.FC<StickerRendererProps> = ({
           loop
           muted
           playsInline
-          style={mediaStyle}
-          aria-label={entity.altText}
-        />
-      ) : (
-        <img
-          src={entity.assetUrl}
-          alt={entity.altText ?? ''}
-          style={mediaStyle}
-          draggable={false}
-        />
-      )}
-    </div>
-  );
-};
+          sty

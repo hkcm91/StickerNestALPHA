@@ -19,6 +19,7 @@ import { themeVar } from '../../../theme/theme-vars';
 import { InstallButton, type InstallState, type UninstallState } from '../shared/InstallButton';
 import { LicenseBadge } from '../shared/LicenseBadge';
 import { StarRating } from '../shared/StarRating';
+import { WidgetThumbnail } from '../shared/WidgetThumbnail';
 import { btnPrimary, btnSecondary, officialBadge, pageStyle, tagStyle } from '../styles';
 
 import { ReviewsSection } from './ReviewsSection';
@@ -148,17 +149,54 @@ export const DetailPage: React.FC = () => {
   if (!detail) {
     return (
       <div style={pageStyle}>
-        <button type="button" onClick={() => navigate('/marketplace')} style={{ ...btnSecondary, marginBottom: '16px' }}>
-          Back to Marketplace
-        </button>
-        <div style={{ color: themeVar('--sn-text-muted'), padding: '40px', textAlign: 'center' }}>
-          Widget not found.
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '80px 24px',
+            textAlign: 'center',
+          }}
+        >
+          {/* Search icon illustration */}
+          <svg width="64" height="64" viewBox="0 0 64 64" fill="none" style={{ marginBottom: '24px', opacity: 0.4 }}>
+            <circle cx="28" cy="28" r="20" stroke={themeVar('--sn-text-muted')} strokeWidth="3" fill="none" />
+            <line x1="43" y1="43" x2="58" y2="58" stroke={themeVar('--sn-text-muted')} strokeWidth="3" strokeLinecap="round" />
+            <line x1="20" y1="28" x2="36" y2="28" stroke={themeVar('--sn-text-muted')} strokeWidth="2" strokeLinecap="round" />
+          </svg>
+          <h2 style={{ margin: '0 0 8px', fontSize: '20px', fontWeight: 600 }}>
+            Widget not found
+          </h2>
+          <p style={{ color: themeVar('--sn-text-muted'), fontSize: '14px', margin: '0 0 24px', maxWidth: '360px' }}>
+            This widget may have been removed or the link may be incorrect.
+          </p>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button
+              type="button"
+              onClick={() => navigate('/marketplace')}
+              style={btnPrimary}
+            >
+              Browse Marketplace
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/marketplace?q=')}
+              style={btnSecondary}
+            >
+              Search for widgets
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
   const isOfficial = !!(detail.metadata as Record<string, unknown>)?.official;
+  const hasEvents = detail.manifest.events &&
+    ((detail.manifest.events.emits && detail.manifest.events.emits.length > 0) ||
+     (detail.manifest.events.subscribes && detail.manifest.events.subscribes.length > 0));
+  const hasPermissions = detail.manifest.permissions && detail.manifest.permissions.length > 0;
 
   return (
     <div data-testid="page-marketplace-detail" style={pageStyle}>
@@ -187,18 +225,12 @@ export const DetailPage: React.FC = () => {
             <div
               style={{
                 width: '100%',
-                aspectRatio: '16/10',
-                background: themeVar('--sn-surface'),
                 borderRadius: '8px',
                 border: `1px solid ${themeVar('--sn-border')}`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '48px',
-                color: themeVar('--sn-text-muted'),
+                overflow: 'hidden',
               }}
             >
-              W
+              <WidgetThumbnail name={detail.name} category={detail.category} height={175} />
             </div>
           )}
 
@@ -268,19 +300,21 @@ export const DetailPage: React.FC = () => {
             {isOfficial && <span style={{ ...officialBadge, fontSize: '11px', padding: '2px 8px', borderRadius: '10px' }}>Official</span>}
           </h1>
 
-          <div style={{ fontSize: '13px', color: themeVar('--sn-text-muted'), marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span>v{detail.version}</span>
+          <div style={{ fontSize: '13px', color: themeVar('--sn-text-muted'), marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <span>{isOfficial ? 'StickerNest' : `v${detail.version}`}</span>
             {detail.ratingAverage !== null && (
               <>
                 <StarRating value={detail.ratingAverage} size={14} />
                 <span>({detail.ratingCount} reviews)</span>
               </>
             )}
-            <span>{detail.installCount.toLocaleString()} installs</span>
+            {detail.installCount > 0 && (
+              <span>{detail.installCount.toLocaleString()} installs</span>
+            )}
           </div>
 
           {detail.description && (
-            <p style={{ lineHeight: 1.6, margin: '0 0 16px' }}>{detail.description}</p>
+            <p style={{ lineHeight: 1.6, margin: '0 0 16px', fontSize: '15px' }}>{detail.description}</p>
           )}
 
           {detail.tags.length > 0 && (
@@ -296,68 +330,29 @@ export const DetailPage: React.FC = () => {
             {detail.category && <span>Category: <strong>{detail.category}</strong></span>}
           </div>
 
-          {/* Event Contract */}
-          {detail.manifest.events && (
-            <div style={{ marginTop: '16px' }}>
-              <h3 style={{ fontSize: '14px', marginBottom: '8px' }}>Event Contract</h3>
-              <div
+          {/* Technical Details — collapsed by default */}
+          {(hasEvents || hasPermissions) && (
+            <details
+              style={{
+                marginTop: '16px',
+                borderRadius: '8px',
+                border: `1px solid ${themeVar('--sn-border')}`,
+                overflow: 'hidden',
+              }}
+            >
+              <summary
                 style={{
-                  fontSize: '13px',
-                  fontFamily: 'monospace',
+                  padding: '12px 16px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  color: themeVar('--sn-text-muted'),
                   background: themeVar('--sn-surface'),
-                  padding: '12px',
-                  borderRadius: '6px',
-                  border: `1px solid ${themeVar('--sn-border')}`,
+                  userSelect: 'none',
                 }}
               >
-                {detail.manifest.events.emits && detail.manifest.events.emits.length > 0 && (
-                  <div style={{ marginBottom: '8px' }}>
-                    <strong>Emits:</strong>{' '}
-                    {detail.manifest.events.emits
-                      .map((e: unknown) =>
-                        typeof e === 'string'
-                          ? e
-                          : ((e as Record<string, unknown>)?.name ??
-                             (e as Record<string, unknown>)?.type ??
-                             String(e)),
-                      )
-                      .join(', ')}
-                  </div>
-                )}
-                {detail.manifest.events.subscribes && detail.manifest.events.subscribes.length > 0 && (
-                  <div>
-                    <strong>Subscribes:</strong>{' '}
-                    {detail.manifest.events.subscribes
-                      .map((e: unknown) =>
-                        typeof e === 'string'
-                          ? e
-                          : ((e as Record<string, unknown>)?.name ??
-                             (e as Record<string, unknown>)?.type ??
-                             String(e)),
-                      )
-                      .join(', ')}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Permissions */}
-          {detail.manifest.permissions && detail.manifest.permissions.length > 0 && (
-            <div style={{ marginTop: '16px' }}>
-              <h3 style={{ fontSize: '14px', marginBottom: '8px' }}>Permissions</h3>
-              <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '13px' }}>
-                {detail.manifest.permissions.map((perm: string) => (
-                  <li key={perm}>{perm}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* Reviews */}
-          <ReviewsSection widgetId={detail.id} />
-        </div>
-      </div>
-    </div>
-  );
-};
+                Technical Details
+              </summary>
+              <div style={{ padding: '16px' }}>
+                {/* Event Contract */}
+      

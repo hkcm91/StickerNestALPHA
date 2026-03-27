@@ -144,38 +144,4 @@ export const WidgetCard: React.FC<WidgetCardProps> = ({
               <>
                 <StarRating value={ratingAverage} size={12} />
                 <span>({ratingCount})</span>
-              </>
-            ) : (
-              <span
-                style={{
-                  padding: '1px 6px',
-                  borderRadius: '8px',
-                  fontSize: '10px',
-                  fontWeight: 600,
-                  background: themeVar('--sn-accent'),
-                  color: '#fff',
-                }}
-              >
-                New
-              </span>
-            )}
-            {installCount > 0 && (
-              <span style={{ marginLeft: 4 }}>
-                {installCount.toLocaleString()} installs
-              </span>
-            )}
-          </span>
-          {!isFree && (
-            <PriceTag isFree={isFree} priceCents={priceCents} currency={currency} style={{ fontSize: '12px' }} />
-          )}
-        </div>
-
-        {action && (
-          <div style={{ marginTop: '8px' }} onClick={(e) => e.stopPropagation()}>
-            {action}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
+        

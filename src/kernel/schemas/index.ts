@@ -978,18 +978,3 @@ export {
   AIActionBatchJSONSchema,
   AICanvasContextJSONSchema,
 } from "./ai-action";
-
-// =============================================================================
-// Widget Package Schemas (.zip format, sample widget registry)
-// =============================================================================
-export {
-  // Schemas
-  WidgetPackageContentsSchema,
-  SampleWidgetEntrySchema,
-  // Types
-  type WidgetPackageContents,
-  type SampleWidgetEntry,
-  // JSON Schemas
-  WidgetPackageContentsJSONSchema,
-  SampleWidgetEntryJSONSchema,
-} from "./widget-package";

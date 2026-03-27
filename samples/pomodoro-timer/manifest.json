@@ -1,0 +1,21 @@
+{
+  "id": "sample-pomodoro-timer",
+  "name": "Pomodoro Timer",
+  "version": "1.0.0",
+  "description": "A productivity timer with configurable work/break intervals",
+  "entryPoint": "widget.html",
+  "category": "productivity",
+  "tags": ["timer", "productivity", "pomodoro"],
+  "events": {
+    "emits": [
+      { "type": "timer.started", "description": "Emitted when timer starts" },
+      { "type": "timer.completed", "description": "Emitted when a session completes" }
+    ],
+    "subscribes": []
+  },
+  "config": {
+    "workMinutes": { "type": "number", "default": 25, "label": "Work Duration (min)" },
+    "breakMinutes": { "type": "number", "default": 5, "label": "Break Duration (min)" }
+  },
+  "permissions": []
+}

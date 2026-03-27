@@ -130,7 +130,5 @@
       "mcp__stickernest-dev__canvas_add_entity",
       "mcp__stickernest-dev__docker_add_widget",
       "mcp__stickernest-dev__docker_list",
-      "Bash(git branch:*)"
-    ]
-  }
-}
+      "Bash(git branch:*)",
+      "Bash(cat .lintstagedrc*)"

@@ -109,21 +109,4 @@ export const WidgetGrid: React.FC<WidgetGridProps> = ({
             style={{
               padding: '8px 12px',
               fontSize: '14px',
-              color: themeVar('--sn-text-muted'),
-            }}
-          >
-            Page {page} of {totalPages}
-          </span>
-          <button
-            type="button"
-            onClick={() => onPageChange(page + 1)}
-            disabled={!results.hasMore}
-            style={{ ...btnSecondary, opacity: !results.hasMore ? 0.5 : 1 }}
-          >
-            Next
-          </button>
-        </div>
-      )}
-    </>
-  );
-};
+              color: themeVar

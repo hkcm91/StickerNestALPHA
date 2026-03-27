@@ -122,5 +122,4 @@ const styles: Record<string, React.CSSProperties> = {
   cardName: { fontWeight: 600, fontSize: '14px', color: 'var(--sn-text, #111)', marginBottom: '4px' },
   cardDesc: { fontSize: '12px', color: 'var(--sn-text-muted, #666)', marginBottom: '8px', lineHeight: 1.4 },
   cardColumns: { fontSize: '11px', color: 'var(--sn-text-muted, #999)', background: 'var(--sn-surface, #fff)', padding: '2px 8px', borderRadius: '10px' },
-  empty: { padding: '32px', textAlign: 'center' as const, color: 'var(--sn-text-muted, #666)' },
-};
+  emp

@@ -415,5 +415,4 @@ const styles: Record<string, React.CSSProperties> = {
   deleteRowBtn: { background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sn-text-muted, #ccc)', fontSize: '14px', padding: '2px 6px' },
   emptyTable: { textAlign: 'center' as const, padding: '32px', color: 'var(--sn-text-muted, #666)' },
   emptyColumns: { textAlign: 'center' as const, padding: '64px 32px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' },
-  emptyActions: { display: 'flex', gap: '12px', marginTop: '12px' },
-};
+  emptyAc

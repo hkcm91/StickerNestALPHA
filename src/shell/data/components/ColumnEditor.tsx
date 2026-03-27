@@ -283,5 +283,4 @@ const styles: Record<string, React.CSSProperties> = {
   footer: { display: 'flex', gap: '8px', padding: '14px 20px', borderTop: '1px solid var(--sn-border, #ddd)' },
   cancelBtn: { padding: '8px 16px', background: 'var(--sn-surface, #f8f9fa)', border: '1px solid var(--sn-border, #ddd)', borderRadius: 'var(--sn-radius, 6px)', cursor: 'pointer', fontSize: '13px' },
   saveBtn: { padding: '8px 16px', background: 'var(--sn-accent, #3E7D94)', color: '#fff', border: 'none', borderRadius: 'var(--sn-radius, 6px)', cursor: 'pointer', fontWeight: 600, fontSize: '13px' },
-  deleteBtn: { padding: '8px 16px', background: 'rgba(200,88,88,0.1)', color: '#dc2626', border: '1px solid rgba(200,88,88,0.2)', borderRadius: 'var(--sn-radius, 6px)', cursor: 'pointer', fontSize: '13px' },
-};
+  deleteBtn: { padding: '8px 16px', background: 'rgba(200,88,88,0.1)', color: '#dc2626', border: '1px solid r

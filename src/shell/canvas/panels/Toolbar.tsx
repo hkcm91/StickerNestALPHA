@@ -173,19 +173,41 @@ const XRGogglesIcon = () => (
   </svg>
 );
 
-const HistoryIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="10" />
-    <polyline points="12 6 12 12 16 14" />
-  </svg>
-);
-
-const LibraryIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-  </svg>
-);
+// ── New Icons for Tray Sections ──────────────────────────────────
+const StarIcon = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>);
+const ButtonIcon = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="8" width="18" height="8" rx="4" /><line x1="9" y1="12" x2="15" y2="12" /></svg>);
+const ImageIcon = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg>);
+const ThreeDCubeIcon = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" /></svg>);
+const CutIcon = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="6" cy="6" r="3" /><circle cx="6" cy="18" r="3" /><line x1="20" y1="4" x2="8.12" y2="15.88" /><line x1="14.47" y1="14.48" x2="20" y2="20" /><line x1="8.12" y1="8.12" x2="12" y2="12" /></svg>);
+const CopyIcon = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>);
+const PasteIcon = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><rect x="8" y="2" width="8" height="4" rx="1" /></svg>);
+const DistributeHIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="6" width="4" height="12" rx="1" /><rect x="10" y="4" width="4" height="16" rx="1" /><rect x="19" y="6" width="4" height="12" rx="1" /></svg>);
+const DistributeVIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="6" y="1" width="12" height="4" rx="1" /><rect x="4" y="10" width="16" height="4" rx="1" /><rect x="6" y="19" width="12" height="4" rx="1" /></svg>);
+const MatchSizeIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="8" height="16" rx="1" /><rect x="14" y="4" width="8" height="16" rx="1" /></svg>);
+const FlipHIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20" /><path d="M16 7h5l-5 10V7z" /><path d="M8 7H3l5 10V7z" /></svg>);
+const FlipVIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12h20" /><path d="M7 8V3l10 5H7z" /><path d="M7 16v5l10-5H7z" /></svg>);
+const RotateCCWIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" /></svg>);
+const RotateCWIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" /></svg>);
+const GalleryIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></svg>);
+const StickerIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15.5 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8.5L15.5 3z" /><polyline points="14 3 14 8 21 8" /></svg>);
+const ClearIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>);
+const DockIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><line x1="3" y1="15" x2="21" y2="15" /></svg>);
+const LayersIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2" /><polyline points="2 17 12 22 22 17" /><polyline points="2 12 12 17 22 12" /></svg>);
+const HierarchyIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="5" r="3" /><circle cx="6" cy="19" r="3" /><circle cx="18" cy="19" r="3" /><line x1="12" y1="8" x2="6" y2="16" /><line x1="12" y1="8" x2="18" y2="16" /></svg>);
+const DataIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3" /><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" /><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" /></svg>);
+const PropertiesIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>);
+const WidgetLabIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4" /></svg>);
+const SizeIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 3 21 3 21 9" /><polyline points="9 21 3 21 3 15" /><line x1="21" y1="3" x2="14" y2="10" /><line x1="3" y1="21" x2="10" y2="14" /></svg>);
+const SettingsIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="21" x2="4" y2="14" /><line x1="4" y1="10" x2="4" y2="3" /><line x1="12" y1="21" x2="12" y2="12" /><line x1="12" y1="8" x2="12" y2="3" /><line x1="20" y1="21" x2="20" y2="16" /><line x1="20" y1="12" x2="20" y2="3" /><line x1="1" y1="14" x2="7" y2="14" /><line x1="9" y1="8" x2="15" y2="8" /><line x1="17" y1="16" x2="23" y2="16" /></svg>);
+const SnapIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 3h16a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" /><path d="M12 8v8" /><path d="M8 12h8" /></svg>);
+const GuidesIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="2" x2="12" y2="22" /><line x1="2" y1="12" x2="22" y2="12" /></svg>);
+const GridIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><line x1="3" y1="9" x2="21" y2="9" /><line x1="3" y1="15" x2="21" y2="15" /><line x1="9" y1="3" x2="9" y2="21" /><line x1="15" y1="3" x2="15" y2="21" /></svg>);
+/** Vertical tray section */
+const TraySection: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (<div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}><TrayLabel>{label}</TrayLabel><div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>{children}</div></div>);
+/** Sub-label inside a tray section */
+const TraySubLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (<span style={{ fontSize: '9px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--sn-text-muted, #666)', marginTop: '2px' }}>{children}</span>);
+/** Vertical divider for tray sections */
+const TrayDivider: React.FC = () => (<div style={{ width: '1px', alignSelf: 'stretch', background: 'var(--sn-border, #e0e0e0)', margin: '0 4px' }} />);
 
 const CameraIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -498,46 +520,41 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     bus.emit('canvas.entity.ungroup', { entityIds: Array.from(selectedIds) });
   }, [selectedIds]);
 
-  // ── Grid controls ──────────────────────────────────────────────
+  // ── Clipboard ──────────────────────────────────────────────────
+  const handleCut = useCallback(() => { if (selectedIds.size === 0) return; bus.emit('canvas.clipboard.cut', { entityIds: Array.from(selectedIds) }); }, [selectedIds]);
+  const handleCopy = useCallback(() => { if (selectedIds.size === 0) return; bus.emit('canvas.clipboard.copy', { entityIds: Array.from(selectedIds) }); }, [selectedIds]);
+  const handlePaste = useCallback(() => { bus.emit('canvas.clipboard.paste', {}); }, []);
 
-  const handleGridToggle = useCallback(() => {
-    const newEnabled = !gridConfig.enabled;
-    bus.emit(GridEvents.CONFIG_CHANGED, { canvasId: '', config: { enabled: newEnabled } });
-    bus.emit(GridEvents.TOGGLED, { canvasId: '', enabled: newEnabled });
-  }, [gridConfig.enabled]);
+  // ── Arrange extras ─────────────────────────────────────────────
+  const handleDistributeH = useCallback(() => { if (selectedIds.size < 3) return; bus.emit('canvas.arrange.distributeH', { entityIds: Array.from(selectedIds) }); }, [selectedIds]);
+  const handleDistributeV = useCallback(() => { if (selectedIds.size < 3) return; bus.emit('canvas.arrange.distributeV', { entityIds: Array.from(selectedIds) }); }, [selectedIds]);
+  const handleMatchSize = useCallback(() => { if (selectedIds.size < 2) return; bus.emit('canvas.arrange.matchSize', { entityIds: Array.from(selectedIds) }); }, [selectedIds]);
+  const handleFlipH = useCallback(() => { if (selectedIds.size === 0) return; bus.emit('canvas.arrange.flipH', { entityIds: Array.from(selectedIds) }); }, [selectedIds]);
+  const handleFlipV = useCallback(() => { if (selectedIds.size === 0) return; bus.emit('canvas.arrange.flipV', { entityIds: Array.from(selectedIds) }); }, [selectedIds]);
 
-  const handleSnapModeChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-    bus.emit(GridEvents.CONFIG_CHANGED, { canvasId: '', config: { snapMode: e.target.value } });
-  }, []);
+  // ── Dropdown menu states ────────────────────────────────────────
+  const [arrangeOpen, setArrangeOpen] = useState(false);
+  const arrangeRef = useRef<HTMLDivElement>(null);
+  const [gridDropdownOpen, setGridDropdownOpen] = useState(false);
+  const gridDropdownRef = useRef<HTMLDivElement>(null);
+  const [canvasDropdownOpen, setCanvasDropdownOpen] = useState(false);
+  const canvasDropdownRef = useRef<HTMLDivElement>(null);
+  const [panelsOpen, setPanelsOpen] = useState(false);
+  const panelsRef = useRef<HTMLDivElement>(null);
 
-  const handleGridLinesToggle = useCallback(() => {
-    const newShow = !gridConfig.showGridLines;
-    bus.emit(GridEvents.CONFIG_CHANGED, { canvasId: '', config: { showGridLines: newShow } });
-  }, [gridConfig.showGridLines]);
-
-  const handleProjectionChange = useCallback(
-    (e: React.ChangeEvent<HTMLSelectElement>) => {
-      const projection = e.target.value as GridProjectionMode;
-      bus.emit(GridEvents.CONFIG_CHANGED, { canvasId: '', config: { projection } });
-    },
-    [],
-  );
-
-  // ── More Tools tray ────────────────────────────────────────────
-  const [trayOpen, setTrayOpen] = useState(false);
-  const trayRef = useRef<HTMLDivElement>(null);
-
-  // Dismiss tray on outside click
+  // Dismiss any dropdown on outside click
   useEffect(() => {
-    if (!trayOpen) return;
+    const anyOpen = arrangeOpen || gridDropdownOpen || canvasDropdownOpen || panelsOpen;
+    if (!anyOpen) return;
     const handleOutsideClick = (e: MouseEvent) => {
-      if (trayRef.current && !trayRef.current.contains(e.target as Node)) {
-        setTrayOpen(false);
-      }
+      if (arrangeOpen && arrangeRef.current && !arrangeRef.current.contains(e.target as Node)) setArrangeOpen(false);
+      if (gridDropdownOpen && gridDropdownRef.current && !gridDropdownRef.current.contains(e.target as Node)) setGridDropdownOpen(false);
+      if (canvasDropdownOpen && canvasDropdownRef.current && !canvasDropdownRef.current.contains(e.target as Node)) setCanvasDropdownOpen(false);
+      if (panelsOpen && panelsRef.current && !panelsRef.current.contains(e.target as Node)) setPanelsOpen(false);
     };
     document.addEventListener('mousedown', handleOutsideClick);
     return () => document.removeEventListener('mousedown', handleOutsideClick);
-  }, [trayOpen]);
+  }, [arrangeOpen, gridDropdownOpen, canvasDropdownOpen, panelsOpen]);
 
   // ── Grid customizer popover ─────────────────────────────────────
   const [gridCustomizerOpen, setGridCustomizerOpen] = useState(false);
@@ -576,8 +593,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
   const isEditMode = mode === 'edit';
 
-  // Select style for tray dropdowns
-  const traySelectStyle: React.CSSProperties = {
+  // Dropdown select style
+  const dropdownSelectStyle: React.CSSProperties = {
     height: '32px',
     padding: '0 6px',
     border: '1px solid var(--sn-border, #e0e0e0)',
@@ -589,79 +606,71 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     fontFamily: 'inherit',
   };
 
+  // Popover style for dropdown menus
+  const popoverStyle: React.CSSProperties = {
+    position: 'absolute',
+    top: '100%',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    marginTop: '8px',
+    background: 'var(--sn-surface-glass, rgba(30, 30, 36, 0.85))',
+    backdropFilter: 'blur(20px)',
+    WebkitBackdropFilter: 'blur(20px)',
+    border: '1px solid var(--sn-border, rgba(255,255,255,0.08))',
+    borderRadius: 'var(--sn-radius, 6px)',
+    padding: '8px',
+    display: 'flex',
+    gap: '6px',
+    flexWrap: 'wrap',
+    minWidth: '180px',
+    zIndex: 100,
+    boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+  };
+
+  // Dropdown button style
+  const dropdownBtnStyle = (open: boolean): React.CSSProperties => ({
+    ...smallBtnBase,
+    gap: '4px',
+    padding: '0 10px',
+    minWidth: 'auto',
+    background: open ? 'var(--sn-surface-raised, #1E1E24)' : 'transparent',
+    fontSize: '11px',
+    fontWeight: 500,
+  });
+
   return (
-    <div ref={trayRef} data-testid="canvas-toolbar" style={{ position: 'relative' }}>
-      {/* ═══ PRIMARY TOOLBAR ═══ */}
+    <div data-testid="canvas-toolbar" style={{ position: 'relative' }}>
+      {/* ═══ UNIFIED TOOLBAR ═══ */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
           gap: '4px',
-          padding: '0 12px',
-          background: 'var(--sn-surface-glass, rgba(255,255,255,0.75))',
+          padding: '4px 12px',
+          background: 'var(--sn-surface-glass, rgba(30, 30, 36, 0.85))',
           backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
-          borderBottom: '1px solid var(--sn-border, #e0e0e0)',
-          height: '48px',
-          fontFamily: 'var(--sn-font-family, system-ui)',
-          fontSize: '13px',
-          userSelect: 'none',
+          borderBottom: '1px solid var(--sn-border, rgba(255,255,255,0.08))',
+          minHeight: '44px',
+          fontFamily: 'var(--sn-font-family, Inter, system-ui, sans-serif)',
+          color: 'var(--sn-text, #e0e0e0)',
+          position: 'relative',
+          zIndex: 50,
         }}
       >
-        {/* Canvas name + Save */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-          {canvasName !== undefined && (
-            isRenaming ? (
-              <input
-                ref={renameInputRef}
-                data-testid="canvas-name-input"
-                value={renameDraft}
-                onChange={(e) => setRenameDraft(e.target.value)}
-                onBlur={() => {
-                  if (renameDraft.trim() && onRename) onRename(renameDraft.trim());
-                  setIsRenaming(false);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    if (renameDraft.trim() && onRename) onRename(renameDraft.trim());
-                    setIsRenaming(false);
-                  } else if (e.key === 'Escape') {
-                    setIsRenaming(false);
-                  }
-                }}
-                style={{
-                  fontWeight: 600,
-                  fontSize: '13px',
-                  fontFamily: 'inherit',
-                  border: '1px solid var(--sn-accent, #6366f1)',
-                  borderRadius: '4px',
-                  padding: '2px 6px',
-                  background: 'var(--sn-bg, #fff)',
-                  color: 'var(--sn-text, #1a1a2e)',
-                  outline: 'none',
-                  width: '160px',
-                  height: '28px',
-                }}
-              />
-            ) : (
-              <div
-                data-testid="canvas-name"
-                onDoubleClick={() => {
-                  setRenameDraft(canvasName);
-                  setIsRenaming(true);
-                  setTimeout(() => renameInputRef.current?.select(), 0);
-                }}
-                title="Double-click to rename"
-                style={{
-                  fontWeight: 600,
-                  fontSize: '13px',
-                  cursor: 'pointer',
-                  maxWidth: '180px',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}
-              >
+        {/* Canvas name + save */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginRight: '8px' }}>
+          {typeof canvasName === 'string' ? (
+            <div
+              data-testid="canvas-name"
+              title={canvasName}
+              style={{ fontSize: '13px', fontWeight: 600, maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+            >
+              {canvasName}
+            </div>
+          ) : (
+            canvasName && (
+              <div data-testid="canvas-name" style={{ fontSize: '13px', fontWeight: 600, maxWidth: '120px' }}>
                 {canvasName}
               </div>
             )
@@ -690,45 +699,180 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           <Divider />
         </div>
 
-        {/* Primary tool buttons — labeled, edit mode only */}
+        {/* ── All tool buttons (edit mode only) ── */}
         {isEditMode && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }} data-testid="toolbar-tools">
-            <div style={{ display: 'flex', gap: '2px' }}>
-              {PRIMARY_TOOLS.map((tool) => (
-                <LabeledToolBtn
-                  key={tool.id}
-                  testId={`tool-${tool.id}`}
-                  icon={tool.icon}
-                  label={tool.label}
-                  active={activeTool === tool.id}
-                  onClick={() => handleToolClick(tool.id)}
-                  title={`${tool.label}${tool.shortcut ? ` (${tool.shortcut})` : ''}`}
-                />
-              ))}
-            </div>
-
-            <Divider />
-
-            <div style={{ display: 'flex', gap: '2px' }}>
-              <button onClick={handleUndo} disabled={!canUndo} title="Undo (Ctrl+Z)" style={{ ...smallBtnBase, opacity: canUndo ? 1 : 0.4 }}>
-                <UndoIcon />
-              </button>
-              <button onClick={handleRedo} disabled={!canRedo} title="Redo (Ctrl+Shift+Z)" style={{ ...smallBtnBase, opacity: canRedo ? 1 : 0.4 }}>
-                <RedoIcon />
-              </button>
-            </div>
+          <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
+            {TOOLS.map((t) => (
+              <LabeledToolBtn
+                key={t.id}
+                testId={`tool-${t.id}`}
+                icon={t.icon}
+                label={t.label}
+                active={activeTool === t.id}
+                onClick={() => handleToolClick(t.id)}
+                title={`${t.label} (${t.shortcut})`}
+              />
+            ))}
           </div>
         )}
 
-        {/* Spacer */}
-        <div style={{ flex: 1 }} />
+        {isEditMode && <Divider />}
 
-        {/* Presence avatars */}
-        <PresenceAvatarBar />
+        {/* Undo / Redo */}
+        {isEditMode && (
+          <div style={{ display: 'flex', gap: '2px' }}>
+            <button data-testid="undo-btn" onClick={handleUndo} title="Undo (Ctrl+Z)" style={smallBtnBase} disabled={!canUndo}><UndoIcon /></button>
+            <button data-testid="redo-btn" onClick={handleRedo} title="Redo (Ctrl+Shift+Z)" style={smallBtnBase} disabled={!canRedo}><RedoIcon /></button>
+          </div>
+        )}
+
+        {isEditMode && <Divider />}
+
+        {/* ── Arrange dropdown ── */}
+        {isEditMode && (
+          <div ref={arrangeRef} style={{ position: 'relative' }}>
+            <button
+              data-testid="arrange-dropdown-btn"
+              onClick={() => setArrangeOpen((p) => !p)}
+              title="Arrange tools"
+              style={dropdownBtnStyle(arrangeOpen)}
+            >
+              Arrange <ChevronDownIcon open={arrangeOpen} />
+            </button>
+            {arrangeOpen && (
+              <div style={popoverStyle}>
+                <LabeledToolBtn testId="align-left" icon={<AlignLeftIcon />} label="Left" active={false} onClick={() => handleAlign('left')} title="Align Left" />
+                <LabeledToolBtn testId="align-center-h" icon={<AlignCenterHIcon />} label="Center H" active={false} onClick={() => handleAlign('centerH')} title="Align Center (H)" />
+                <LabeledToolBtn testId="align-right" icon={<AlignRightIcon />} label="Right" active={false} onClick={() => handleAlign('right')} title="Align Right" />
+                <LabeledToolBtn testId="align-top" icon={<AlignTopIcon />} label="Top" active={false} onClick={() => handleAlign('top')} title="Align Top" />
+                <LabeledToolBtn testId="align-center-v" icon={<AlignCenterVIcon />} label="Center V" active={false} onClick={() => handleAlign('centerV')} title="Align Center (V)" />
+                <LabeledToolBtn testId="align-bottom" icon={<AlignBottomIcon />} label="Bottom" active={false} onClick={() => handleAlign('bottom')} title="Align Bottom" />
+                <Divider />
+                <button data-testid="group-btn" onClick={handleGroup} title="Group" style={{ ...smallBtnBase, padding: '0 10px', width: 'auto', fontSize: '11px' }}>Group</button>
+                <button data-testid="ungroup-btn" onClick={handleUngroup} title="Ungroup" style={{ ...smallBtnBase, padding: '0 10px', width: 'auto', fontSize: '11px' }}>Ungroup</button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Grid dropdown ── */}
+        {isEditMode && (
+          <div ref={gridDropdownRef} style={{ position: 'relative' }}>
+            <button
+              data-testid="grid-dropdown-btn"
+              onClick={() => setGridDropdownOpen((p) => !p)}
+              title="Grid settings"
+              style={dropdownBtnStyle(gridDropdownOpen)}
+            >
+              Grid <ChevronDownIcon open={gridDropdownOpen} />
+            </button>
+            {gridDropdownOpen && (
+              <div style={{ ...popoverStyle, flexDirection: 'column', gap: '8px', minWidth: '220px' }}>
+                {/* Grid toggle + snap */}
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                  <LabeledToolBtn testId="grid-toggle" icon={<span style={{ fontSize: '14px' }}>#</span>} label="Grid" active={gridVisible} onClick={handleGridToggle} title="Toggle Grid (G)" />
+                  <select data-testid="snap-mode" value={snapMode} onChange={(e) => handleSnapModeChange(e as any)} style={dropdownSelectStyle}>
+                    <option value="none">No Snap</option>
+                    <option value="grid">Snap Grid</option>
+                    <option value="entity">Snap Entity</option>
+                  </select>
+                  <select data-testid="projection-mode" value={projection} onChange={(e) => handleProjectionChange(e as any)} style={dropdownSelectStyle}>
+                    <option value="flat">Flat</option>
+                    <option value="isometric">Isometric</option>
+                  </select>
+                </div>
+                {/* Grid appearance */}
+                <div ref={gridCustomizerRef} style={{ position: 'relative' }}>
+                  <button data-testid="grid-customizer-toggle" onClick={() => setGridCustomizerOpen(!gridCustomizerOpen)} title="Grid style" style={{ ...(gridCustomizerOpen ? smallBtnActive : smallBtnBase), padding: '0 8px', width: 'auto', fontSize: '11px', gap: '4px' }}>Style <ChevronDownIcon open={gridCustomizerOpen} /></button>
+                  {gridCustomizerOpen && (
+                    <div style={{ ...popoverStyle, flexDirection: 'column', gap: '6px', minWidth: '200px', left: 0, transform: 'none' }}>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        {(['solid', 'dashed', 'dotted'] as GridLineStyle[]).map((s) => (
+                          <button key={s} data-testid={`grid-style-${s}`} onClick={() => handleGridStyleChange(s)} style={{ ...(gridLineStyle === s ? smallBtnActive : smallBtnBase), fontSize: '10px', padding: '0 6px', width: 'auto' }}>{s}</button>
+                        ))}
+                      </div>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--sn-text-muted, #6b7280)' }}>
+                        Color <input data-testid="grid-color" type="color" value={gridLineColor} onChange={handleGridColorChange} style={{ width: '24px', height: '24px', padding: 0, border: 'none', background: 'none', cursor: 'pointer' }} />
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--sn-text-muted, #6b7280)' }}>
+                        Opacity <input data-testid="grid-opacity" type="range" min="0" max="1" step="0.05" value={gridLineOpacity} onChange={handleGridOpacityChange} style={{ width: '80px' }} /> {Math.round(gridLineOpacity * 100)}%
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--sn-text-muted, #6b7280)' }}>
+                        Weight <input data-testid="grid-weight" type="range" min="0.5" max="4" step="0.5" value={gridLineWidth} onChange={handleGridWeightChange} style={{ width: '80px' }} /> {gridLineWidth}px
+                      </label>
+                      {gridLineStyle === 'dotted' && (
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--sn-text-muted, #6b7280)' }}>
+                          Dot Size <input data-testid="grid-dot-size" type="range" min="1" max="6" step="0.5" value={dotSize} onChange={handleGridDotSizeChange} style={{ width: '80px' }} /> {dotSize}px
+                        </label>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Canvas dropdown ── */}
+        {isEditMode && (
+          <div ref={canvasDropdownRef} style={{ position: 'relative' }}>
+            <button
+              data-testid="canvas-dropdown-btn"
+              onClick={() => setCanvasDropdownOpen((p) => !p)}
+              title="Canvas settings"
+              style={dropdownBtnStyle(canvasDropdownOpen)}
+            >
+              Canvas <ChevronDownIcon open={canvasDropdownOpen} />
+            </button>
+            {canvasDropdownOpen && (
+              <div style={{ ...popoverStyle, flexDirection: 'column', gap: '8px', minWidth: '260px' }}>
+                {/* Platform / size */}
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <select data-testid="platform-select" value={spatialMode === '3d' ? '3d' : platform} onChange={(e) => handlePlatformChange(e as any)} style={dropdownSelectStyle}>
+                    <option value="desktop">Desktop</option>
+                    <option value="tablet">Tablet</option>
+                    <option value="mobile">Mobile</option>
+                    <option value="custom">Custom</option>
+                    <option value="3d">3D / VR</option>
+                  </select>
+                  <select data-testid="preset-select" value={activePreset} onChange={(e) => handlePresetChange(e as any)} style={dropdownSelectStyle}>
+                    {Object.keys(PLATFORM_PRESETS[platform] || {}).map((p) => (
+                      <option key={p} value={p}>{p}</option>
+                    ))}
+                  </select>
+                </div>
+                {/* Spatial mode */}
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                  <select data-testid="spatial-mode" value={spatialMode} onChange={(e) => handleSpatialModeChange(e as any)} style={dropdownSelectStyle}>
+                    <option value="2d">2D Canvas</option>
+                    <option value="3d">3D Scene</option>
+                    <option value="vr">VR (WebXR)</option>
+                  </select>
+                  {spatialMode === 'vr' && (
+                    <button data-testid="enter-xr-btn" onClick={handleEnterXR} title="Enter VR" style={{ ...smallBtnBase, padding: '0 10px', width: 'auto', fontSize: '11px' }}>
+                      <XRIcon /> Enter VR
+                    </button>
+                  )}
+                </div>
+                {/* Artboard preview */}
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                  <LabeledToolBtn testId="artboard-preview-toggle" icon={<ArtboardIcon />} label="Artboard" active={artboardPreview} onClick={handleArtboardPreviewToggle} title="Toggle Artboard Preview" />
+                </div>
+                {/* Canvas settings */}
+                <div style={{ position: 'relative' }}>
+                  <LabeledToolBtn testId="canvas-settings-btn" icon={<SettingsIcon />} label="Settings" active={settingsOpen} onClick={() => setSettingsOpen(!settingsOpen)} title="Canvas Settings" />
+                  <CanvasSettingsDropdown isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} anchorRef={settingsButtonRef} viewportConfig={viewportConfig} borderRadius={borderRadius} canvasPosition={canvasPosition} />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        <Divider />
 
         {/* Zoom controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }} data-testid="toolbar-zoom">
-          <button data-testid="zoom-out" onClick={handleZoomOut} title="Zoom out" style={smallBtnBase}>-</button>
+        <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
+          <button data-testid="zoom-out" onClick={handleZoomOut} title="Zoom out" style={smallBtnBase}>−</button>
           <button
             data-testid="zoom-reset"
             onClick={handleZoomReset}
@@ -744,17 +888,39 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
         {/* Thumbnail capture */}
         {isEditMode && (
-          <>
-            <Divider />
+          <button
+            data-testid="capture-thumbnail"
+            onClick={handleCaptureThumbnail}
+            title="Capture Thumbnail"
+            style={smallBtnBase}
+          >
+            <CameraIcon />
+          </button>
+        )}
+
+        {isEditMode && <Divider />}
+
+        {/* ── Panels dropdown ── */}
+        {isEditMode && (
+          <div ref={panelsRef} style={{ position: 'relative' }}>
             <button
-              data-testid="capture-thumbnail"
-              onClick={handleCaptureThumbnail}
-              title="Capture Thumbnail"
-              style={smallBtnBase}
+              data-testid="panels-dropdown-btn"
+              onClick={() => setPanelsOpen((p) => !p)}
+              title="Toggle panels"
+              style={dropdownBtnStyle(panelsOpen)}
             >
-              <CameraIcon />
+              Panels <ChevronDownIcon open={panelsOpen} />
             </button>
-          </>
+            {panelsOpen && (
+              <div style={popoverStyle}>
+                <LabeledToolBtn testId="panel-gallery" icon={<GalleryIcon />} label="Gallery" active={!!panels['gallery']} onClick={() => handlePanelToggle('gallery')} title="Gallery" />
+                <LabeledToolBtn testId="panel-stickers" icon={<StickerIcon />} label="Stickers" active={!!panels['stickers']} onClick={() => handlePanelToggle('stickers')} title="Stickers" />
+                <LabeledToolBtn testId="panel-clear" icon={<ClearIcon />} label="Clear" active={false} onClick={handleClearCanvas} title="Clear Canvas" />
+                <LabeledToolBtn testId="panel-dock" icon={<DockIcon />} label="Dock" active={false} onClick={handleDockerClick} title="Docker Library" />
+                <LabeledToolBtn testId="panel-layers" icon={<LayersIcon />} label="Layers" active={!!panels['layers']} onClick={() => handlePanelToggle('layers')} title="Layers" />
+              </div>
+            )}
+          </div>
         )}
 
         <Divider />
@@ -790,202 +956,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             <FullscreenIcon />
           </button>
         </div>
-
-        {/* More Tools toggle */}
-        {isEditMode && (
-          <>
-            <Divider />
-            <button
-              data-testid="more-tools-toggle"
-              onClick={() => setTrayOpen((p) => !p)}
-              title={trayOpen ? 'Hide tools' : 'More tools'}
-              style={{
-                ...smallBtnBase,
-                gap: '4px',
-                padding: '0 10px',
-                minWidth: 'auto',
-                background: trayOpen ? 'var(--sn-surface-raised, #1E1E24)' : 'transparent',
-                fontSize: '11px',
-                fontWeight: 500,
-              }}
-            >
-              MORE TOOLS
-              <ChevronDownIcon open={trayOpen} />
-            </button>
-          </>
-        )}
       </div>
-
-      {/* ═══ PULL-DOWN TRAY ═══ */}
-      {isEditMode && (
-        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 40, overflow: 'hidden', pointerEvents: trayOpen ? 'auto' : 'none' }}>
-          <div
-            data-testid="toolbar-tray"
-            style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              alignItems: 'center',
-              gap: '12px',
-              padding: '8px 16px',
-              background: 'var(--sn-surface-glass, rgba(255,255,255,0.75))',
-              backdropFilter: 'blur(20px)',
-              WebkitBackdropFilter: 'blur(20px)',
-              borderBottom: '1px solid var(--sn-border, #e0e0e0)',
-              boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
-              fontFamily: 'var(--sn-font-family, system-ui)',
-              fontSize: '12px',
-              userSelect: 'none',
-              transform: trayOpen ? 'translateY(0)' : 'translateY(-100%)',
-              transition: `transform 0.35s ${TOOLBAR_SPRING}`,
-            }}
-          >
-            {/* Extra Tools */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <TrayLabel>Tools</TrayLabel>
-              {TRAY_TOOLS.map((tool) => (
-                <LabeledToolBtn
-                  key={tool.id}
-                  testId={`tool-${tool.id}`}
-                  icon={tool.icon}
-                  label={tool.label}
-                  active={activeTool === tool.id}
-                  onClick={() => handleToolClick(tool.id)}
-                  title={`${tool.label}${tool.shortcut ? ` (${tool.shortcut})` : ''}`}
-                />
-              ))}
-            </div>
-
-            <Divider />
-
-            {/* Grid */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }} data-testid="toolbar-grid">
-              <TrayLabel>Grid</TrayLabel>
-              <button data-testid="grid-toggle" onClick={handleGridToggle} title={gridConfig.enabled ? 'Hide grid (G)' : 'Show grid (G)'} style={{ ...(gridConfig.enabled ? smallBtnActive : smallBtnBase), padding: '0 8px', width: 'auto' }}>Grid</button>
-              {gridConfig.enabled && <button data-testid="grid-lines-toggle" onClick={handleGridLinesToggle} title={gridConfig.showGridLines ? 'Hide grid lines' : 'Show grid lines'} style={{ ...(gridConfig.showGridLines ? smallBtnActive : smallBtnBase), padding: '0 8px', width: 'auto' }}>Lines</button>}
-              <select data-testid="snap-mode" value={gridConfig.snapMode ?? 'none'} onChange={handleSnapModeChange} title="Snap mode" style={traySelectStyle}>
-                <option value="none">No Snap</option>
-                <option value="center">Center</option>
-                <option value="corner">Corner</option>
-                <option value="edge">Edge</option>
-              </select>
-              {gridConfig.enabled && (
-                <select data-testid="grid-projection" value={gridConfig.projection} onChange={handleProjectionChange} title="Grid projection" style={traySelectStyle}>
-                  <option value="orthogonal">Square</option>
-                  <option value="isometric">Isometric</option>
-                  <option value="triangular">Triangular</option>
-                  <option value="hexagonal">Hexagonal</option>
-                </select>
-              )}
-              {gridConfig.enabled && (
-                <div ref={gridCustomizerRef} style={{ position: 'relative' }}>
-                  <button data-testid="grid-customizer-toggle" onClick={() => setGridCustomizerOpen(!gridCustomizerOpen)} title="Grid appearance" style={{ ...(gridCustomizerOpen ? smallBtnActive : smallBtnBase), padding: '0 6px', width: 'auto', fontSize: '11px' }}>{'\u2699'}</button>
-                  {gridCustomizerOpen && (
-                    <div data-testid="grid-customizer-popover" style={{ position: 'absolute', top: '100%', right: 0, marginTop: 4, padding: '10px 12px', background: 'var(--sn-surface, #fff)', border: '1px solid var(--sn-border, #e0e0e0)', borderRadius: 'var(--sn-radius, 6px)', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 100, minWidth: 180, display: 'flex', flexDirection: 'column', gap: 8, fontSize: '11px', fontFamily: 'inherit', color: 'var(--sn-text, #1a1a2e)' }}>
-                      <div>
-                        <div style={{ marginBottom: 4, fontWeight: 600 }}>Style</div>
-                        <div style={{ display: 'flex', gap: 4 }}>
-                          {(['line', 'dot', 'cross'] as GridLineStyle[]).map((style) => (
-                            <button key={style} data-testid={`grid-style-${style}`} onClick={() => handleGridStyleChange(style)} style={{ ...(gridConfig.gridLineStyle === style || (!gridConfig.gridLineStyle && style === 'line') ? smallBtnActive : smallBtnBase), padding: '2px 8px', fontSize: '11px', textTransform: 'capitalize' }}>{style}</button>
-                          ))}
-                        </div>
-                      </div>
-                      <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span>Color</span>
-                        <input data-testid="grid-color-picker" type="color" value={gridConfig.gridLineColor?.startsWith('#') ? gridConfig.gridLineColor : '#ffffff'} onChange={handleGridColorChange} style={{ width: 28, height: 22, padding: 0, border: '1px solid var(--sn-border, #e0e0e0)', borderRadius: 3, cursor: 'pointer' }} />
-                      </label>
-                      <label style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Opacity</span><span style={{ color: 'var(--sn-text-muted, #888)' }}>{((gridConfig.gridLineOpacity ?? 0.1) * 100).toFixed(0)}%</span></div>
-                        <input data-testid="grid-opacity-slider" type="range" min="0" max="1" step="0.05" value={gridConfig.gridLineOpacity ?? 0.1} onChange={handleGridOpacityChange} style={{ width: '100%', cursor: 'pointer' }} />
-                      </label>
-                      <label style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Weight</span><span style={{ color: 'var(--sn-text-muted, #888)' }}>{gridConfig.gridLineWidth ?? 1}px</span></div>
-                        <input data-testid="grid-weight-slider" type="range" min="0.5" max="4" step="0.5" value={gridConfig.gridLineWidth ?? 1} onChange={handleGridWeightChange} style={{ width: '100%', cursor: 'pointer' }} />
-                      </label>
-                      {gridConfig.gridLineStyle === 'dot' && (
-                        <label style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Dot Size</span><span style={{ color: 'var(--sn-text-muted, #888)' }}>{gridConfig.dotSize ?? 1.5}px</span></div>
-                          <input data-testid="grid-dot-size-slider" type="range" min="0.5" max="6" step="0.5" value={gridConfig.dotSize ?? 1.5} onChange={handleGridDotSizeChange} style={{ width: '100%', cursor: 'pointer' }} />
-                        </label>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <Divider />
-
-            {/* Alignment */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <TrayLabel>Align</TrayLabel>
-              <button onClick={() => handleAlign('left')} disabled={selectedIds.size < 2} title="Align Left" style={{ ...smallBtnBase, opacity: selectedIds.size < 2 ? 0.4 : 1 }}><AlignLeftIcon /></button>
-              <button onClick={() => handleAlign('centerH')} disabled={selectedIds.size < 2} title="Center H" style={{ ...smallBtnBase, opacity: selectedIds.size < 2 ? 0.4 : 1 }}><AlignCenterHIcon /></button>
-              <button onClick={() => handleAlign('right')} disabled={selectedIds.size < 2} title="Align Right" style={{ ...smallBtnBase, opacity: selectedIds.size < 2 ? 0.4 : 1 }}><AlignRightIcon /></button>
-              <button onClick={() => handleAlign('top')} disabled={selectedIds.size < 2} title="Align Top" style={{ ...smallBtnBase, opacity: selectedIds.size < 2 ? 0.4 : 1 }}><AlignTopIcon /></button>
-              <button onClick={() => handleAlign('centerV')} disabled={selectedIds.size < 2} title="Center V" style={{ ...smallBtnBase, opacity: selectedIds.size < 2 ? 0.4 : 1 }}><AlignCenterVIcon /></button>
-              <button onClick={() => handleAlign('bottom')} disabled={selectedIds.size < 2} title="Align Bottom" style={{ ...smallBtnBase, opacity: selectedIds.size < 2 ? 0.4 : 1 }}><AlignBottomIcon /></button>
-            </div>
-
-            <Divider />
-
-            {/* Grouping */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <TrayLabel>Group</TrayLabel>
-              <button onClick={handleGroup} disabled={selectedIds.size < 2} title="Group (Ctrl+G)" style={{ ...smallBtnBase, padding: '0 8px', width: 'auto', opacity: selectedIds.size < 2 ? 0.4 : 1 }}>Group</button>
-              <button onClick={handleUngroup} disabled={selectedIds.size === 0} title="Ungroup (Ctrl+Shift+G)" style={{ ...smallBtnBase, padding: '0 8px', width: 'auto', opacity: selectedIds.size === 0 ? 0.4 : 1 }}>Ungroup</button>
-              <button
-                onClick={() => {
-                  if (selectedIds.size === 0) return;
-                  useUIStore.getState().enterFocusMode(Array.from(selectedIds));
-                }}
-                disabled={selectedIds.size === 0}
-                title="Focus Mode (F)"
-                style={{ ...smallBtnBase, padding: '0 8px', width: 'auto', opacity: selectedIds.size === 0 ? 0.4 : 1 }}
-              >
-                Focus
-              </button>
-            </div>
-
-            <Divider />
-
-            {/* Canvas settings */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <TrayLabel>Canvas</TrayLabel>
-              <select data-testid="platform-select" value={canvasPlatform} onChange={handlePlatformChange} title="Platform" style={traySelectStyle}>
-                <option value="web">Web</option>
-                <option value="mobile">Mobile</option>
-                <option value="desktop">Desktop</option>
-              </select>
-              <select data-testid="canvas-size-preset" value={PLATFORM_PRESETS[canvasPlatform].find((p) => p.width === (platformConfigs[canvasPlatform]?.width ?? viewportConfig?.width) && p.height === (platformConfigs[canvasPlatform]?.height ?? viewportConfig?.height))?.label ?? '__current__'} onChange={handlePresetChange} title="Canvas size" style={{ ...traySelectStyle, maxWidth: '180px' }}>
-                {!PLATFORM_PRESETS[canvasPlatform].find((p) => p.width === (platformConfigs[canvasPlatform]?.width ?? viewportConfig?.width) && p.height === (platformConfigs[canvasPlatform]?.height ?? viewportConfig?.height)) && (
-                  <option value="__current__">{viewportConfig?.width && viewportConfig?.height ? `Custom (${viewportConfig.width}\u00D7${viewportConfig.height})` : 'Custom'}</option>
-                )}
-                {PLATFORM_PRESETS[canvasPlatform].map((preset) => <option key={preset.label} value={preset.label}>{preset.label}</option>)}
-              </select>
-              <select data-testid="spatial-mode-select" value={spatialMode} onChange={handleSpatialModeChange} title="Spatial Mode" style={traySelectStyle}>
-                <option value="2d">2D</option>
-                <option value="3d">3D</option>
-                <option value="vr">VR</option>
-                <option value="ar">AR</option>
-              </select>
-              {spatialMode !== '2d' && <button onClick={handleEnterXR} title={`Enter WebXR (${spatialMode.toUpperCase()})`} style={smallBtnBase}><XRGogglesIcon /></button>}
-              <button onClick={handleArtboardPreviewToggle} title={artboardPreviewMode ? 'Exit Artboard Preview' : 'Artboard Preview'} style={{ ...(artboardPreviewMode ? smallBtnActive : smallBtnBase), padding: '0 8px', width: 'auto', fontSize: '11px' }}>Artboard</button>
-            </div>
-
-            <Divider />
-
-            {/* Docker + History + Settings */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <button onClick={handleDockerClick} title="Docker Library" style={{ ...smallBtnBase, gap: '4px', padding: '0 8px', minWidth: 'auto' }}><LibraryIcon /><span style={{ fontSize: '11px' }}>Library</span></button>
-              <button onClick={handleHistoryClick} title="History" style={{ ...smallBtnBase, gap: '4px', padding: '0 8px', minWidth: 'auto' }}><HistoryIcon /><span style={{ fontSize: '11px' }}>History</span></button>
-              <div style={{ position: 'relative' }}>
-                <button ref={settingsButtonRef} data-testid="canvas-settings-btn" onClick={() => setSettingsOpen(!settingsOpen)} title="Canvas Settings" style={{ ...smallBtnBase, padding: '0 8px', width: 'auto', borderColor: settingsOpen ? 'var(--sn-accent, #6366f1)' : undefined, background: settingsOpen ? 'var(--sn-accent, #6366f1)' : undefined, color: settingsOpen ? '#fff' : undefined }}>Settings</button>
-                <CanvasSettingsDropdown isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} anchorRef={settingsButtonRef} viewportConfig={viewportConfig} borderRadius={borderRadius} canvasPosition={canvasPosition} />
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
+                                                                                                                                                                                                                                                                                                                           

@@ -287,7 +287,4 @@ export type TimelineData = z.infer<typeof TimelineDataSchema>;
 export const CompositionSettingsJSONSchema = CompositionSettingsSchema.toJSONSchema();
 export const TimelineTrackJSONSchema = TimelineTrackSchema.toJSONSchema();
 export const TimelineClipJSONSchema = TimelineClipSchema.toJSONSchema();
-export const TimelineKeyframeJSONSchema = TimelineKeyframeSchema.toJSONSchema();
-export const PropertyTrackJSONSchema = PropertyTrackSchema.toJSONSchema();
-export const TimelineMarkerJSONSchema = TimelineMarkerSchema.toJSONSchema();
-export const TimelineDataJSONSchema = TimelineDataSchema.toJSONSchema();
+export const Time

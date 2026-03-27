@@ -8,8 +8,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import type { WidgetManifest, WidgetPackageContents } from '@sn/types';
+
 import { useAuthStore } from '../../../../kernel/stores/auth/auth.store';
 import { useWidgetStore } from '../../../../kernel/stores/widget/widget.store';
+import { extractWidgetPackage } from '../../../../runtime/package/extractor';
+import { generateManifestFromHtml } from '../../../../runtime/ai/manifest-generator';
 import { createMarketplaceAPI } from '../../../../marketplace/api/marketplace-api';
 import type { MarketplaceWidgetListing } from '../../../../marketplace/api/types';
 import { createInstallFlowService } from '../../../../marketplace/install/install-flow';
@@ -17,6 +21,8 @@ import { themeVar } from '../../../theme/theme-vars';
 import { InstallButton, type UninstallState } from '../shared/InstallButton';
 import { WidgetCard } from '../shared/WidgetCard';
 import { btnSecondary, pageStyle, sectionHeading } from '../styles';
+import { PackageUpload } from '../shared/PackageUpload';
+import { ManifestReview } from '../shared/ManifestReview';
 
 export const LibraryPage: React.FC = () => {
   const api = useMemo(() => createMarketplaceAPI(), []);
@@ -143,6 +149,7 @@ export const LibraryPage: React.FC = () => {
                     name={widget.name}
                     description={widget.description}
                     thumbnailUrl={widget.thumbnailUrl}
+                    category={widget.category}
                     ratingAverage={widget.ratingAverage}
                     ratingCount={widget.ratingCount}
                     installCount={widget.installCount}
@@ -182,6 +189,7 @@ export const LibraryPage: React.FC = () => {
                     name={widget.name}
                     description={widget.description}
                     thumbnailUrl={widget.thumbnailUrl}
+                    category={widget.category}
                     ratingAverage={widget.ratingAverage}
                     ratingCount={widget.ratingCount}
                     installCount={widget.installCount}
@@ -193,21 +201,4 @@ export const LibraryPage: React.FC = () => {
                       <InstallButton
                         widgetId={widget.id}
                         isInstalled
-                        isBuiltIn={false}
-                        isFree={widget.isFree}
-                        uninstallState={uninstallStatus[widget.id]}
-                        onInstall={handleInstallNoop}
-                        onUninstall={handleUninstall}
-                        compact
-                      />
-                    }
-                  />
-                ))}
-              </div>
-            </>
-          )}
-        </>
-      )}
-    </div>
-  );
-};
+                        isBu
