@@ -18,6 +18,12 @@
       "runtimeExecutable": "node",
       "runtimeArgs": ["node_modules/vite/bin/vite.js", "preview"],
       "port": 4173
+    },
+    {
+      "name": "mcp-http",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["tsx", "mcp-dev/src/http-server.ts"],
+      "port": 3100
     }
   ]
 }

@@ -23,6 +23,9 @@ import {
   ListResourcesRequestSchema,
   ReadResourceRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
+import { initBroadcaster, broadcast, type StateProvider } from './state-broadcaster.js';
+import { generateCanvasPage, type CanvasPageState } from './canvas-page.js';
+import { generateThemeCss, getThemeTokens, entityToHtml } from './renderer.js';
 
 const PORT = Number(process.env.MCP_HTTP_PORT) || 3100;
 
@@ -130,16 +133,158 @@ async function main() {
     setTimeout(resolve, 2000);
   });
 
+  // ---------------------------------------------------------------------------
+  // Canvas state fetching (calls MCP tools on child process)
+  // ---------------------------------------------------------------------------
+
+  async function fetchCanvasState(): Promise<CanvasPageState> {
+    try {
+      const [entitiesResult, viewportResult, uiResult, widgetResult] = await Promise.all([
+        sendToChild('tools/call', { name: 'canvas_list_entities', arguments: {} }),
+        sendToChild('tools/call', { name: 'viewport_get', arguments: {} }),
+        sendToChild('tools/call', { name: 'ui_get', arguments: {} }),
+        sendToChild('tools/call', { name: 'widget_list', arguments: {} }),
+      ]);
+
+      const parseText = (result: unknown): unknown => {
+        const r = result as { content?: Array<{ text?: string }> };
+        const text = r?.content?.[0]?.text ?? '{}';
+        try { return JSON.parse(text); } catch { return {}; }
+      };
+
+      const entitiesParsed = parseText(entitiesResult);
+      const viewportData = parseText(viewportResult) as Record<string, unknown>;
+      const uiData = parseText(uiResult) as Record<string, unknown>;
+      const widgetsParsed = parseText(widgetResult);
+
+      // canvas_list_entities returns a raw array; widget_list returns a raw array
+      const entities = Array.isArray(entitiesParsed) ? entitiesParsed : [];
+      const widgetInstances = Array.isArray(widgetsParsed) ? widgetsParsed : [];
+
+      // Fetch widget HTML for all widget entities
+      const widgetHtmlMap: Record<string, string> = {};
+      const widgetIds = new Set<string>();
+      for (const e of entities) {
+        if ((e as any).type === 'widget' && (e as any).widgetId) {
+          widgetIds.add((e as any).widgetId);
+        }
+      }
+      if (widgetIds.size > 0) {
+        const htmlResults = await Promise.all(
+          Array.from(widgetIds).map(async (wid) => {
+            try {
+              const r = await sendToChild('tools/call', { name: 'widget_edit_html', arguments: { widgetId: wid } });
+              const text = (r as any)?.content?.[0]?.text;
+              if (text && !(r as any)?.isError) return { wid, html: text };
+            } catch {}
+            return null;
+          })
+        );
+        for (const r of htmlResults) {
+          if (r) widgetHtmlMap[r.wid] = r.html;
+        }
+      }
+
+      return {
+        entities: entities as CanvasPageState['entities'],
+        viewport: {
+          offset: { x: ((viewportData.offset as any)?.x ?? 0), y: ((viewportData.offset as any)?.y ?? 0) },
+          zoom: (viewportData.zoom as number) ?? 1,
+          width: (viewportData.width as number) ?? 800,
+          height: (viewportData.height as number) ?? 600,
+        },
+        widgetHtmlMap,
+        widgetInstances: widgetInstances as CanvasPageState['widgetInstances'],
+        theme: (uiData.theme as string) ?? 'midnight-aurora',
+        selectedIds: [],
+      };
+    } catch (err) {
+      console.error('[canvas] Failed to fetch state:', err);
+      return {
+        entities: [], viewport: { offset: { x: 0, y: 0 }, zoom: 1, width: 800, height: 600 },
+        widgetHtmlMap: {}, widgetInstances: [], theme: 'midnight-aurora', selectedIds: [],
+      };
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // State-change broadcasting
+  // ---------------------------------------------------------------------------
+
+  const STATE_CHANGING_TOOLS = new Set([
+    'canvas_add_entity', 'canvas_update_entity', 'canvas_remove_entity',
+    'canvas_clear', 'canvas_group', 'canvas_ungroup', 'canvas_reorder',
+    'canvas_setup_commerce',
+    'widget_create_html', 'widget_set_html', 'widget_edit_html',
+    'widget_create', 'widget_remove', 'widget_set_state',
+    'viewport_pan', 'viewport_zoom', 'viewport_reset', 'viewport_transform',
+    'ui_set_theme', 'ui_set_interaction_mode', 'ui_set_tool',
+    'selection_select', 'selection_add', 'selection_remove',
+    'selection_clear', 'selection_toggle',
+    'document_set_background', 'document_set_name',
+  ]);
+
+  async function broadcastCanvasUpdate(toolName: string): Promise<void> {
+    try {
+      const state = await fetchCanvasState();
+      const themeTokens = getThemeTokens(state.theme);
+      const sorted = [...state.entities].sort((a: any, b: any) => a.zIndex - b.zIndex);
+      const instanceMap = new Map(state.widgetInstances.map((i: any) => [i.id, i]));
+      const canvasHtml = sorted
+        .map((e: any) => entityToHtml(e, state.widgetHtmlMap, instanceMap, themeTokens))
+        .join('\n');
+
+      let scope: 'full' | 'entity' | 'viewport' | 'theme' | 'selection' | 'widget' = 'full';
+      if (toolName.startsWith('viewport_')) scope = 'viewport';
+      else if (toolName.startsWith('selection_')) scope = 'selection';
+      else if (toolName === 'ui_set_theme') scope = 'theme';
+      else if (toolName.startsWith('widget_')) scope = 'widget';
+      else if (toolName.startsWith('canvas_')) scope = 'entity';
+
+      if (scope === 'viewport') {
+        broadcast(scope, { panX: state.viewport.offset.x, panY: state.viewport.offset.y, zoom: state.viewport.zoom });
+      } else if (scope === 'selection') {
+        broadcast(scope, { selectedIds: state.selectedIds });
+      } else if (scope === 'theme') {
+        broadcast(scope, { themeCss: generateThemeCss(state.theme) });
+      } else {
+        broadcast(scope, { canvasHtml, entityCount: state.entities.length, themeCss: generateThemeCss(state.theme) });
+      }
+    } catch (err) {
+      console.error('[broadcast] Failed:', err);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
   // Create HTTP server
+  // ---------------------------------------------------------------------------
   const httpServer = createServer(async (req, res) => {
     // CORS headers
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-API-Key');
 
     if (req.method === 'OPTIONS') {
       res.writeHead(204);
       res.end();
+      return;
+    }
+
+    // Parse URL path
+    const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
+
+    // GET /canvas — serve live canvas HTML page
+    if (req.method === 'GET' && url.pathname === '/canvas') {
+      try {
+        const state = await fetchCanvasState();
+        const html = generateCanvasPage(state, PORT);
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.end(html);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        res.writeHead(500, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.end(`<html><body><h1>Error loading canvas</h1><pre>${message}</pre></body></html>`);
+      }
       return;
     }
 
@@ -169,6 +314,11 @@ async function main() {
       const result = await sendToChild(parsed.method, parsed.params ?? {});
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ jsonrpc: '2.0', id: parsed.id, result }));
+
+      // Broadcast state updates after successful state-changing tool calls
+      if (parsed.method === 'tools/call' && STATE_CHANGING_TOOLS.has((parsed.params as any)?.name)) {
+        broadcastCanvasUpdate((parsed.params as any).name).catch(() => {});
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -176,13 +326,31 @@ async function main() {
     }
   });
 
+  // Initialize WebSocket broadcaster for live canvas updates
+  const provider: StateProvider = {
+    getFullState: () => ({}),
+    async getFullStateAsync() {
+      const state = await fetchCanvasState();
+      const themeTokens = getThemeTokens(state.theme);
+      const sorted = [...state.entities].sort((a, b) => a.zIndex - b.zIndex);
+      const instanceMap = new Map(state.widgetInstances.map((i: any) => [i.id, i]));
+      const canvasHtml = sorted
+        .map((e: any) => entityToHtml(e, state.widgetHtmlMap, instanceMap, themeTokens))
+        .join('\n');
+      return {
+        canvasHtml,
+        entityCount: state.entities.length,
+        themeCss: generateThemeCss(state.theme),
+      };
+    },
+  };
+  initBroadcaster(httpServer, provider);
+
   httpServer.listen(PORT, () => {
     console.log(`\n  MCP HTTP Server running on http://localhost:${PORT}`);
+    console.log(`  Live Canvas: http://localhost:${PORT}/canvas`);
+    console.log(`  WebSocket: ws://localhost:${PORT}/ws`);
     console.log(`  Proxying to stickernest-dev MCP server (stdio)\n`);
-    console.log(`  Add this to the MCP Explorer widget:`);
-    console.log(`    Name: stickernest-dev`);
-    console.log(`    URL:  http://localhost:${PORT}`);
-    console.log(`    Auth: None\n`);
   });
 }
 
