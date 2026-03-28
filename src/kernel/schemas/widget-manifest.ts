@@ -51,6 +51,8 @@ export const WidgetPermissionSchema = z.enum([
   'mcp',
   /** Permission to create/modify/delete canvas entities */
   'canvas-write',
+  /** Access to gallery asset management APIs */
+  'gallery',
 ]);
 
 export type WidgetPermission = z.infer<typeof WidgetPermissionSchema>;
