@@ -11,9 +11,12 @@ import type React from 'react';
 
 import { AiAgentWidget } from './ai-agent/ai-agent.widget';
 import { AICanvasAgentWidget } from './ai-canvas-agent/ai-canvas-agent.widget';
+import { GalleryWidget } from './gallery/gallery.widget';
+import { GreenScreenRemoverWidget } from './green-screen-remover/green-screen-remover.widget';
 import { ImageGeneratorWidget } from './image-generator/image-generator.widget';
 import { KanbanWidget } from './kanban/kanban.widget';
 import { PathfinderWidget } from './pathfinder/pathfinder.widget';
+import { SharedBeaconWidget } from './shared-beacon/shared-beacon.widget';
 import { TodoListWidget } from './todo-list/todo-list.widget';
 
 /**
@@ -23,7 +26,10 @@ export const BUILT_IN_WIDGET_COMPONENTS: Record<string, React.ComponentType<any>
   'sn.builtin.ai-agent': AiAgentWidget,
   'sn.builtin.ai-canvas-agent': AICanvasAgentWidget,
   'sn.builtin.image-generator': ImageGeneratorWidget,
+  'sn.builtin.green-screen-remover': GreenScreenRemoverWidget,
   'sn.builtin.kanban': KanbanWidget,
   'sn.builtin.pathfinder': PathfinderWidget,
   'sn.builtin.todo-list': TodoListWidget,
+  'sn.builtin.gallery': GalleryWidget,
+  'sn.builtin.shared-beacon': SharedBeaconWidget,
 };
