@@ -105,6 +105,48 @@ describe('validateWidgetMessage', () => {
     expect(result).not.toBeNull();
   });
 
+  it('accepts GALLERY_LIST message', () => {
+    const result = validateWidgetMessage({
+      type: 'GALLERY_LIST',
+      requestId: 'req-1',
+      limit: 20,
+      offset: 0,
+    });
+    expect(result).not.toBeNull();
+    expect(result!.type).toBe('GALLERY_LIST');
+  });
+
+  it('accepts GALLERY_UPLOAD message', () => {
+    const result = validateWidgetMessage({
+      type: 'GALLERY_UPLOAD',
+      requestId: 'req-1',
+      imageUrl: 'https://example.com/image.png',
+      name: 'test-image',
+    });
+    expect(result).not.toBeNull();
+    expect(result!.type).toBe('GALLERY_UPLOAD');
+  });
+
+  it('accepts GALLERY_DELETE message', () => {
+    const result = validateWidgetMessage({
+      type: 'GALLERY_DELETE',
+      requestId: 'req-1',
+      assetId: 'asset-123',
+    });
+    expect(result).not.toBeNull();
+    expect(result!.type).toBe('GALLERY_DELETE');
+  });
+
+  it('accepts GALLERY_GET message', () => {
+    const result = validateWidgetMessage({
+      type: 'GALLERY_GET',
+      requestId: 'req-1',
+      assetId: 'asset-123',
+    });
+    expect(result).not.toBeNull();
+    expect(result!.type).toBe('GALLERY_GET');
+  });
+
   // Rejection cases
 
   it('rejects null input', () => {
