@@ -22,6 +22,7 @@ import type { WidgetBridge } from './bridge/bridge';
 import { handleCanvasWriteMessage } from './bridge/canvas-write-handler';
 import { handleDataSourceMessage } from './bridge/datasource-handler';
 import { handleEntityMessage } from './bridge/entity-handler';
+import { handleGalleryMessage } from './bridge/gallery-handler';
 import type { ThemeTokens } from './bridge/message-types';
 import { getSharedCrossCanvasRouter, isValidChannelName } from './cross-canvas/cross-canvas-router';
 import type { CrossCanvasRouter } from './cross-canvas/cross-canvas-router';
@@ -169,6 +170,36 @@ const WidgetIframe: React.FC<WidgetFrameProps> = (props) => {
             config,
             theme,
           });
+
+          // Auto-sync: if widget has cross-canvas permission and declared channels,
+          // auto-subscribe to those channels so they sync immediately on mount
+          if (hasCrossCanvasPermission(widgetId)) {
+            const entry = useWidgetStore.getState().registry[widgetId];
+            const declaredChannels = entry?.manifest?.crossCanvasChannels ?? [];
+            for (const ch of declaredChannels) {
+              const channelName = ch.channel;
+              if (
+                (ch.direction === 'subscribe' || ch.direction === 'both') &&
+                isValidChannelName(channelName) &&
+                !crossCanvasUnsubsRef.current.has(channelName)
+              ) {
+                const unsub = getOrCreateRouter().subscribe(channelName, (payload) => {
+                  bridge.send({ type: 'CROSS_CANVAS_EVENT', channel: channelName, payload });
+                  bus.emit('crossCanvas.event.received', { instanceId, channel: channelName, payload });
+                });
+                crossCanvasUnsubsRef.current.set(channelName, unsub);
+                bus.emit('crossCanvas.channel.subscribed', { instanceId, channel: channelName });
+                console.debug(`[WidgetFrame][${instanceId}] auto-synced cross-canvas channel: "${channelName}"`);
+              }
+            }
+            if (declaredChannels.length > 0) {
+              bus.emit('crossCanvas.widget.status', {
+                instanceId,
+                channels: [...crossCanvasUnsubsRef.current.keys()],
+                active: crossCanvasUnsubsRef.current.size > 0,
+              });
+            }
+          }
           break;
 
         case 'REGISTER': {
@@ -194,7 +225,9 @@ const WidgetIframe: React.FC<WidgetFrameProps> = (props) => {
                   config: { fields: [] },
                   size: { defaultWidth: 300, defaultHeight: 200, aspectLocked: false },
                   entry: 'index.html',
-                  crossCanvasChannels: [],
+                  crossCanvasChannels: Array.isArray((manifest as Record<string, unknown>).crossCanvasChannels)
+                    ? (manifest as Record<string, unknown>).crossCanvasChannels as { channel: string; direction: 'emit' | 'subscribe' | 'both' }[]
+                    : [],
                   spatialSupport: false,
                 },
                 htmlContent: '',
@@ -442,6 +475,7 @@ const WidgetIframe: React.FC<WidgetFrameProps> = (props) => {
           // Delegate to dedicated handlers (Canvas Write, Entity, DataSource, MCP, AI)
           if (!handleCanvasWriteMessage(message, { widgetId, instanceId, bridge })
             && !handleEntityMessage(message, { widgetId, instanceId, bridge })
+            && !handleGalleryMessage(message, { widgetId, instanceId, bridge })
             && !handleDataSourceMessage(message, { widgetId, instanceId, bridge })
             && !handleMcpMessage(message, { widgetId, instanceId, bridge })) {
             handleAiCompletionMessage(message, { widgetId, instanceId, bridge });
