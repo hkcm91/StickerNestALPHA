@@ -76,10 +76,6 @@ export const MarketplaceRoot: React.FC = () => {
 
   return (
     <>
-      {/* Hide scrollbar on marketplace pages (WebKit + Firefox) */}
-      <style>{`
-        [data-marketplace-scroll]::-webkit-scrollbar { display: none; }
-      `}</style>
       {showTabs && (
         <nav data-testid="marketplace-tabs" style={tabBarStyle}>
           {visibleTabs.map((tab) => {

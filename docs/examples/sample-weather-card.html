@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="A minimal weather display card with animated conditions and temperature">
+  <title>Weather Card</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: var(--sn-font-family, 'Inter', system-ui, sans-serif);
+      background: var(--sn-bg, #0a0a0a);
+      color: var(--sn-text, #e0e0e0);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .weather-card {
+      padding: 28px 32px;
+      border-radius: var(--sn-radius, 12px);
+      background: var(--sn-surface, #141414);
+      border: 1px solid var(--sn-border, #2a2a2a);
+      min-width: 260px;
+      text-align: center;
+    }
+    .location {
+      font-size: 13px;
+      color: var(--sn-text-muted, #888);
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+    .condition-icon {
+      font-size: 56px;
+      line-height: 1.2;
+      margin: 8px 0;
+      animation: float 3s ease-in-out infinite;
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+    .temp {
+      font-size: 48px;
+      font-weight: 700;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .condition-text {
+      font-size: 15px;
+      color: var(--sn-text-muted, #888);
+      margin-bottom: 16px;
+    }
+    .details {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      padding-top: 16px;
+      border-top: 1px solid var(--sn-border, #2a2a2a);
+    }
+    .detail-item {
+      text-align: center;
+    }
+    .detail-label {
+      font-size: 11px;
+      color: var(--sn-text-muted, #888);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .detail-value {
+      font-size: 15px;
+      font-weight: 600;
+      margin-top: 2px;
+    }
+    .forecast {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--sn-border, #2a2a2a);
+    }
+    .forecast-day {
+      text-align: center;
+      font-size: 12px;
+    }
+    .forecast-day .icon { font-size: 20px; margin: 4px 0; }
+    .forecast-day .label { color: var(--sn-text-muted, #888); }
+    .forecast-day .temp-range { font-weight: 600; font-size: 11px; }
+    .updated {
+      font-size: 10px;
+      color: var(--sn-text-muted, #888);
+      margin-top: 12px;
+      opacity: 0.6;
+    }
+  </style>
+</head>
+<body>
+  <div class="weather-card">
+    <div class="location" id="location">San Francisco, CA</div>
+    <div class="condition-icon" id="condIcon">&#9925;</div>
+    <div class="temp" id="temp">68&deg;</div>
+    <div class="condition-text" id="condText">Partly Cloudy</div>
+
+    <div class="details">
+      <div class="detail-item">
+        <div class="detail-label">Humidity</div>
+        <div class="detail-value" id="humidity">62%</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">Wind</div>
+        <div class="detail-value" id="wind">12 mph</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">UV</div>
+        <div class="detail-value" id="uv">4</div>
+      </div>
+    </div>
+
+    <div class="forecast" id="forecast">
+      <div class="forecast-day">
+        <div class="label">Tue</div>
+        <div class="icon">&#9728;&#65039;</div>
+        <div class="temp-range">72/58</div>
+      </div>
+      <div class="forecast-day">
+        <div class="label">Wed</div>
+        <div class="icon">&#9925;</div>
+        <div class="temp-range">65/54</div>
+      </div>
+      <div class="forecast-day">
+        <div class="label">Thu</div>
+        <div class="icon">&#127783;&#65039;</div>
+        <div class="temp-range">59/50</div>
+      </div>
+      <div class="forecast-day">
+        <div class="label">Fri</div>
+        <div class="icon">&#9728;&#65039;</div>
+        <div class="temp-range">70/56</div>
+      </div>
+    </div>
+
+    <div class="updated" id="updated">Updated just now</div>
+  </div>
+
+  <script>
+    StickerNest.register({
+      id: 'weather-card',
+      name: 'Weather Card',
+      version: '1.0.0',
+      description: 'A minimal weather display with conditions, details, and forecast',
+      category: 'utilities',
+      tags: ['weather', 'dashboard', 'info'],
+      license: 'MIT',
+      config: [
+        { key: 'location', type: 'string', label: 'Location', default: 'San Francisco, CA' },
+        { key: 'units', type: 'select', label: 'Units', options: ['F', 'C'], default: 'F' },
+      ],
+    });
+
+    // Simulated weather data (in real use, would call an integration)
+    const conditions = [
+      { icon: '\u2600\uFE0F', text: 'Sunny', temp: 75, humidity: 45, wind: 8, uv: 7 },
+      { icon: '\u26C5', text: 'Partly Cloudy', temp: 68, humidity: 62, wind: 12, uv: 4 },
+      { icon: '\u2601\uFE0F', text: 'Overcast', temp: 61, humidity: 78, wind: 15, uv: 2 },
+      { icon: '\uD83C\uDF27\uFE0F', text: 'Light Rain', temp: 55, humidity: 88, wind: 18, uv: 1 },
+    ];
+
+    let currentIdx = 1; // Start at Partly Cloudy
+
+    function updateWeather() {
+      const c = conditions[currentIdx];
+      document.getElementById('condIcon').textContent = c.icon;
+      document.getElementById('temp').innerHTML = c.temp + '&deg;';
+      document.getElementById('condText').textContent = c.text;
+      document.getElementById('humidity').textContent = c.humidity + '%';
+      document.getElementById('wind').textContent = c.wind + ' mph';
+      document.getElementById('uv').textContent = c.uv;
+      document.getElementById('updated').textContent = 'Updated ' + new Date().toLocaleTimeString();
+
+      StickerNest.emit('weather.updated', { condition: c.text, temp: c.temp });
+    }
+
+    // Cycle through conditions every 30 seconds for demo
+    setInterval(() => {
+      currentIdx = (currentIdx + 1) % conditions.length;
+      updateWeather();
+    }, 30000);
+
+    // Allow config changes
+    StickerNest.getConfig().then((config) => {
+      if (config && config.location) {
+        document.getElementById('location').textContent = config.location;
+      }
+    });
+
+    StickerNest.onThemeChange(() => {});
+    StickerNest.ready();
+  </script>
+</body>
+</html>

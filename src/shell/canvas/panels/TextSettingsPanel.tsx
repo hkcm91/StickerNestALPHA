@@ -40,8 +40,8 @@ export const TextSettingsPanel: React.FC<TextSettingsPanelProps> = ({ entities }
       data-testid="text-settings-panel"
       style={{
         padding: '12px',
-        borderTop: '1px solid var(--sn-border, #e0e0e0)',
-        color: 'var(--sn-text-muted, #6b7280)',
+        borderTop: '1px solid var(--sn-border, rgba(255,255,255,0.06))',
+        color: 'var(--sn-text-muted, #7A7784)',
         fontFamily: 'var(--sn-font-family, system-ui)',
         fontSize: '12px',
       }}

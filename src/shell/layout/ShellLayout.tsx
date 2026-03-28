@@ -30,6 +30,8 @@ const SIDEBAR_MAX = 480;
 const TRAY_Z = 50;
 const TAB_WIDTH = 28;
 const TAB_HEIGHT = 80;
+/** Height reserved for the floating toolbar island (12px padding + 56px bar) */
+const TOPBAR_CLEARANCE = 68;
 
 /** Spring easing — Principle 4: "Spring physics, not CSS ease" */
 const SPRING = 'cubic-bezier(0.16, 1, 0.3, 1)';
@@ -108,9 +110,7 @@ export const ShellLayout: React.FC<ShellLayoutProps> = ({
     <div
       data-testid="shell-layout"
       style={{
-        display: 'grid',
-        gridTemplateRows: topbar ? 'auto 1fr' : '1fr',
-        gridTemplateColumns: '1fr',
+        position: 'relative',
         width: '100%',
         height: '100%',
         overflow: 'hidden',
@@ -119,20 +119,30 @@ export const ShellLayout: React.FC<ShellLayoutProps> = ({
         fontFamily: themeVar('--sn-font-family'),
       }}
     >
-      {/* Top bar — overflow:visible so toolbar tray dropdown is not clipped */}
+      {/* Top bar — floating island overlay, positioned above canvas */}
       {topbar && (
-        <div data-testid="shell-topbar" style={{ minHeight: 0, minWidth: 0, overflow: 'visible', position: 'relative', zIndex: 60 }}>
+        <div data-testid="shell-topbar" style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 60,
+          pointerEvents: 'none',
+          overflow: 'visible',
+        }}>
           {topbar}
         </div>
       )}
 
-      {/* Main content area with overlay trays */}
+      {/* Main content area — starts below the floating toolbar */}
       <div
         data-testid="shell-main"
         style={{
-          position: 'relative',
-          minHeight: 0,
-          minWidth: 0,
+          position: 'absolute',
+          top: topbar ? TOPBAR_CLEARANCE : 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
           overflow: 'hidden',
         }}
       >
@@ -163,6 +173,7 @@ export const ShellLayout: React.FC<ShellLayoutProps> = ({
             {/* Left toggle tab */}
             <button
               data-testid="tray-tab-left"
+              className="sn-glass sn-lift-on-hover sn-neo"
               onClick={toggleLeft}
               style={{
                 position: 'absolute',
@@ -172,16 +183,13 @@ export const ShellLayout: React.FC<ShellLayoutProps> = ({
                 zIndex: TRAY_Z + 1,
                 width: TAB_WIDTH,
                 height: TAB_HEIGHT,
-                border: `1px solid ${themeVar('--sn-border')}`,
                 borderLeft: 'none',
-                borderRadius: '0 6px 6px 0',
-                background: themeVar('--sn-surface'),
+                borderRadius: '0 8px 8px 0',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 padding: 0,
-                boxShadow: '2px 0 8px rgba(0,0,0,0.08)',
                 transition: isResizing.current ? 'none' : TAB_TRANSITION_LEFT,
                 color: themeVar('--sn-text-muted'),
                 fontSize: '11px',
@@ -191,12 +199,13 @@ export const ShellLayout: React.FC<ShellLayoutProps> = ({
                 fontFamily: themeVar('--sn-font-family'),
               }}
             >
-              {leftOpen ? '\u25C0' : 'Assets'}
+              {leftOpen ? '\u25C0' : <span className="sn-chrome-text">Assets</span>}
             </button>
 
             {/* Left tray panel */}
             <div
               data-testid="shell-sidebar-left"
+              className="sn-glass-heavy sn-holo-border"
               style={{
                 position: 'absolute',
                 top: 0,
@@ -204,11 +213,7 @@ export const ShellLayout: React.FC<ShellLayoutProps> = ({
                 bottom: 0,
                 width: leftWidth,
                 zIndex: TRAY_Z,
-                background: themeVar('--sn-surface-glass'),
-                backdropFilter: 'blur(20px)',
-                WebkitBackdropFilter: 'blur(20px)',
                 borderRight: `1px solid ${themeVar('--sn-border')}`,
-                boxShadow: '2px 0 12px rgba(0,0,0,0.1)',
                 transform: leftOpen ? 'translateX(0)' : 'translateX(-100%)',
                 transition: PANEL_TRANSITION,
                 overflow: 'hidden auto',
@@ -242,6 +247,7 @@ export const ShellLayout: React.FC<ShellLayoutProps> = ({
             {/* Right toggle tab */}
             <button
               data-testid="tray-tab-right"
+              className="sn-glass sn-lift-on-hover sn-neo"
               onClick={toggleRight}
               style={{
                 position: 'absolute',
@@ -251,16 +257,13 @@ export const ShellLayout: React.FC<ShellLayoutProps> = ({
                 zIndex: TRAY_Z + 1,
                 width: TAB_WIDTH,
                 height: TAB_HEIGHT,
-                border: `1px solid ${themeVar('--sn-border')}`,
                 borderRight: 'none',
-                borderRadius: '6px 0 0 6px',
-                background: themeVar('--sn-surface'),
+                borderRadius: '8px 0 0 8px',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 padding: 0,
-                boxShadow: '-2px 0 8px rgba(0,0,0,0.08)',
                 transition: isResizing.current ? 'none' : TAB_TRANSITION_RIGHT,
                 color: themeVar('--sn-text-muted'),
                 fontSize: '11px',
@@ -270,12 +273,13 @@ export const ShellLayout: React.FC<ShellLayoutProps> = ({
                 fontFamily: themeVar('--sn-font-family'),
               }}
             >
-              {rightOpen ? '\u25B6' : 'Props'}
+              {rightOpen ? '\u25B6' : <span className="sn-chrome-text">Props</span>}
             </button>
 
             {/* Right tray panel */}
             <div
               data-testid="shell-sidebar-right"
+              className="sn-glass-heavy sn-holo-border"
               style={{
                 position: 'absolute',
                 top: 0,
@@ -283,11 +287,7 @@ export const ShellLayout: React.FC<ShellLayoutProps> = ({
                 bottom: 0,
                 width: rightWidth,
                 zIndex: TRAY_Z,
-                background: themeVar('--sn-surface-glass'),
-                backdropFilter: 'blur(20px)',
-                WebkitBackdropFilter: 'blur(20px)',
                 borderLeft: `1px solid ${themeVar('--sn-border')}`,
-                boxShadow: '-2px 0 12px rgba(0,0,0,0.1)',
                 transform: rightOpen ? 'translateX(0)' : 'translateX(100%)',
                 transition: PANEL_TRANSITION,
                 overflow: 'hidden auto',

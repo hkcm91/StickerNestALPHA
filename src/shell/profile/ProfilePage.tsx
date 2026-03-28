@@ -30,11 +30,11 @@ import {
 } from '../../kernel/social-graph';
 import type { PublicCanvas } from '../../kernel/social-graph';
 import { useAuthStore } from '../../kernel/stores/auth/auth.store';
-import { listLocalCanvases, deleteLocalCanvas } from '../canvas';
-import type { LocalCanvasSummary } from '../canvas';
+import { deleteLocalCanvas } from '../canvas';
 
 import { CanvasGallerySection } from './CanvasGallerySection';
 import { FollowersPanel } from './FollowersPanel';
+import { UserSearchSection } from './UserSearchSection';
 
 // ---------------------------------------------------------------------------
 // Sub-components
@@ -190,38 +190,14 @@ export const ProfilePage: React.FC = () => {
       const isOwn = currentUser?.id != null && p.userId === currentUser.id;
 
       if (isOwn) {
-        // Own profile: load canvases from localStorage (primary storage)
-        // and merge with any Supabase canvases
+        // Own profile: load canvases from Supabase (cloud storage)
         const [ownResult, sharedResult] = await Promise.all([
           getUserCanvases(p.userId, currentUser!.id, { limit: 100 }),
           getSharedCanvases(p.userId, { limit: 100 }),
         ]);
 
-        // Also load locally-persisted canvases
-        const localCanvases = listLocalCanvases();
-        const localAsPubCanvas: PublicCanvas[] = localCanvases.map((lc) => ({
-          id: lc.id,
-          name: lc.name,
-          slug: lc.slug,
-          description: null,
-          thumbnailUrl: null,
-          ownerId: p.userId,
-          tags: [],
-          memberCount: 0,
-          isPublic: false,
-          createdAt: lc.createdAt,
-          updatedAt: lc.updatedAt,
-        }));
-
         if (!cancelled) {
-          // Merge: Supabase canvases + localStorage canvases, deduplicate by slug
-          const supabaseCanvases = ownResult.success ? ownResult.data.items : [];
-          const seen = new Set(supabaseCanvases.map((c) => c.slug));
-          const merged = [
-            ...supabaseCanvases,
-            ...localAsPubCanvas.filter((c) => !seen.has(c.slug)),
-          ];
-          setOwnedCanvases(merged);
+          setOwnedCanvases(ownResult.success ? ownResult.data.items : []);
           if (sharedResult.success) setSharedCanvases(sharedResult.data.items);
         }
       } else {
@@ -548,6 +524,9 @@ export const ProfilePage: React.FC = () => {
           onClose={() => setFollowersPanel(null)}
         />
       )}
+
+      {/* User Search (own profile only) */}
+      {isOwnProfile && <UserSearchSection />}
 
       {/* Canvas Gallery Section */}
       <CanvasGallerySection

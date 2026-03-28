@@ -19,6 +19,8 @@ export async function publish(
   html: string,
   manifest: WidgetManifest,
   thumbnail: Blob | null,
+  reviewStatus?: string,
+  securityScan?: Record<string, unknown> | null,
 ): Promise<{ widgetId: string }> {
   let thumbnailUrl: string | null = null;
 
@@ -58,6 +60,8 @@ export async function publish(
       install_count: 0,
       rating_average: null,
       rating_count: 0,
+      review_status: reviewStatus ?? "approved",
+      security_scan: securityScan ?? null,
       metadata: {},
     })
     .select('id')

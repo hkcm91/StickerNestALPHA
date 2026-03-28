@@ -9,8 +9,10 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
-import type { ThemeName, ViewportConfig } from '@sn/types';
-import { CanvasDocumentEvents } from '@sn/types';
+import type { GridConfig, GridLineStyle, GridProjectionMode, ThemeName, ViewportConfig } from '@sn/types';
+import { CanvasDocumentEvents, GridEvents } from '@sn/types';
+
+import { DEFAULT_GRID_CONFIG } from '../../../canvas/core';
 
 import { bus } from '../../../kernel/bus';
 import { useUIStore } from '../../../kernel/stores/ui/ui.store';
@@ -34,6 +36,8 @@ export interface CanvasSettingsDropdownProps {
   borderRadius?: number;
   /** Current canvas position in workspace */
   canvasPosition?: CanvasPositionConfig;
+  /** Current grid configuration */
+  gridConfig?: GridConfig;
 }
 
 export type CanvasHorizontalAlign = 'left' | 'center' | 'right';
@@ -79,16 +83,15 @@ const CANVAS_SIZE_PRESETS: CanvasSizePreset[] = [
 // Styles
 // =============================================================================
 
+/** CSS classes for the dropdown: sn-glass-heavy sn-neo sn-holo-border */
+const DROPDOWN_CLASSES = 'sn-glass-heavy sn-neo sn-holo-border';
+
 const dropdownStyle: React.CSSProperties = {
   position: 'absolute',
   top: '100%',
   left: 0,
   marginTop: '4px',
   zIndex: 1000,
-  background: 'var(--sn-surface, #ffffff)',
-  border: '1px solid var(--sn-border, #e5e7eb)',
-  borderRadius: 'var(--sn-radius, 8px)',
-  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)',
   minWidth: '320px',
   maxHeight: '480px',
   overflowY: 'auto',
@@ -98,7 +101,7 @@ const dropdownStyle: React.CSSProperties = {
 
 const sectionStyle: React.CSSProperties = {
   padding: '12px 16px',
-  borderBottom: '1px solid var(--sn-border, #e5e7eb)',
+  borderBottom: '1px solid var(--sn-border, rgba(255,255,255,0.06))',
 };
 
 const sectionTitleStyle: React.CSSProperties = {
@@ -106,24 +109,24 @@ const sectionTitleStyle: React.CSSProperties = {
   fontWeight: 600,
   textTransform: 'uppercase',
   letterSpacing: '0.5px',
-  color: 'var(--sn-text-muted, #6b7280)',
+  color: 'var(--sn-text-muted, #7A7784)',
   marginBottom: '10px',
 };
 
 const labelStyle: React.CSSProperties = {
   display: 'block',
   fontSize: '12px',
-  color: 'var(--sn-text, #1a1a2e)',
+  color: 'var(--sn-text, #E8E6ED)',
   marginBottom: '4px',
 };
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
   padding: '6px 8px',
-  border: '1px solid var(--sn-border, #e5e7eb)',
+  border: '1px solid var(--sn-border, rgba(255,255,255,0.06))',
   borderRadius: 'var(--sn-radius, 4px)',
-  background: 'var(--sn-bg, #f9fafb)',
-  color: 'var(--sn-text, #1a1a2e)',
+  background: 'var(--sn-bg, rgba(10,10,14,0.5))',
+  color: 'var(--sn-text, #E8E6ED)',
   fontSize: '12px',
   fontFamily: 'inherit',
   boxSizing: 'border-box',
@@ -143,14 +146,16 @@ const toggleBtnStyle = (active: boolean): React.CSSProperties => ({
   flex: 1,
   padding: '6px 10px',
   border: '1px solid',
-  borderColor: active ? 'var(--sn-accent, #6366f1)' : 'var(--sn-border, #e5e7eb)',
+  borderColor: active ? 'var(--sn-accent, #3E7D94)' : 'var(--sn-border, rgba(255,255,255,0.06))',
   borderRadius: 'var(--sn-radius, 4px)',
-  background: active ? 'var(--sn-accent, #6366f1)' : 'transparent',
-  color: active ? '#fff' : 'var(--sn-text, #1a1a2e)',
+  background: active ? 'var(--sn-accent, #3E7D94)' : 'transparent',
+  color: active ? '#fff' : 'var(--sn-text, #E8E6ED)',
   cursor: 'pointer',
   fontSize: '11px',
   fontFamily: 'inherit',
   fontWeight: 500,
+  boxShadow: active ? '0 0 8px var(--sn-accent-glow, rgba(78,123,142,0.4))' : 'none',
+  transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
 });
 
 
@@ -187,9 +192,39 @@ export const CanvasSettingsDropdown: React.FC<CanvasSettingsDropdownProps> = ({
   anchorRef,
   viewportConfig,
   borderRadius: initialBorderRadius = 0,
-  canvasPosition: initialCanvasPosition = { horizontal: 'center', vertical: 'center', topOffset: 40 },
+  canvasPosition: initialCanvasPosition = { horizontal: 'center', vertical: 'center', topOffset: 24 },
+  gridConfig: gridConfigProp = DEFAULT_GRID_CONFIG,
 }) => {
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // ─── Grid State ────────────────────────────────────────────────────────────
+  const [grid, setGrid] = useState<GridConfig>(gridConfigProp);
+
+  useEffect(() => {
+    setGrid(gridConfigProp);
+  }, [gridConfigProp]);
+
+  // Stay in sync with grid bus events from Toolbar toggle or other sources
+  useEffect(() => {
+    const unsubConfig = bus.subscribe(
+      GridEvents.CONFIG_CHANGED,
+      (event: { payload: { config: Partial<GridConfig> } }) => {
+        setGrid((prev) => ({ ...prev, ...event.payload.config }));
+      },
+    );
+    const unsubToggle = bus.subscribe(
+      GridEvents.TOGGLED,
+      (event: { payload: { enabled: boolean } }) => {
+        setGrid((prev) => ({ ...prev, enabled: event.payload.enabled }));
+      },
+    );
+    return () => { unsubConfig(); unsubToggle(); };
+  }, []);
+
+  const emitGridChange = useCallback((partial: Partial<GridConfig>) => {
+    setGrid((prev) => ({ ...prev, ...partial }));
+    bus.emit(GridEvents.CONFIG_CHANGED, { canvasId: '', config: partial });
+  }, []);
 
   // ─── Canvas Size State ──────────────────────────────────────────────────────
   const [canvasWidth, setCanvasWidth] = useState<number | undefined>(
@@ -320,6 +355,7 @@ export const CanvasSettingsDropdown: React.FC<CanvasSettingsDropdownProps> = ({
   return (
     <div
       ref={dropdownRef}
+      className={DROPDOWN_CLASSES}
       data-testid="canvas-settings-dropdown"
       style={dropdownStyle}
     >
@@ -476,7 +512,7 @@ export const CanvasSettingsDropdown: React.FC<CanvasSettingsDropdownProps> = ({
         </div>
       </div>
       {/* Border Radius Section */}
-      <div style={{ ...sectionStyle, borderBottom: 'none' }}>
+      <div style={sectionStyle}>
         <div style={sectionTitleStyle}>Border Radius</div>
         <div style={rangeContainerStyle}>
           <input
@@ -495,8 +531,102 @@ export const CanvasSettingsDropdown: React.FC<CanvasSettingsDropdownProps> = ({
             onChange={(e) => handleBorderRadiusChange(parseInt(e.target.value, 10) || 0)}
             style={{ ...inputStyle, width: '60px' }}
           />
-          <span style={{ fontSize: '11px', color: 'var(--sn-text-muted, #6b7280)' }}>px</span>
+          <span style={{ fontSize: '11px', color: 'var(--sn-text-muted, #7A7784)' }}>px</span>
         </div>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          GRID SETTINGS SECTION
+          ═══════════════════════════════════════════════════════════════════════ */}
+      <div style={sectionStyle}>
+        <div style={sectionTitleStyle}>Grid Settings</div>
+
+        {/* Grid Lines toggle */}
+        <div style={{ marginBottom: '10px' }}>
+          <label style={labelStyle}>Grid Lines</label>
+          <div style={buttonGroupStyle}>
+            <button type="button" style={toggleBtnStyle(grid.showGridLines)} onClick={() => emitGridChange({ showGridLines: true, enabled: true })}>On</button>
+            <button type="button" style={toggleBtnStyle(!grid.showGridLines)} onClick={() => emitGridChange({ showGridLines: false })}>Off</button>
+          </div>
+        </div>
+
+        {/* Snap Mode + Projection */}
+        <div style={rowStyle}>
+          <div style={fieldStyle}>
+            <label style={labelStyle}>Snap Mode</label>
+            <select style={selectStyle} value={grid.snapMode} onChange={(e) => emitGridChange({ snapMode: e.target.value as GridConfig['snapMode'] })}>
+              <option value="none">None</option>
+              <option value="center">Center</option>
+              <option value="corner">Corner</option>
+              <option value="edge">Edge</option>
+            </select>
+          </div>
+          <div style={fieldStyle}>
+            <label style={labelStyle}>Projection</label>
+            <select style={selectStyle} value={grid.projection} onChange={(e) => emitGridChange({ projection: e.target.value as GridProjectionMode })}>
+              <option value="orthogonal">Square</option>
+              <option value="isometric">Isometric</option>
+              <option value="hexagonal">Hexagonal</option>
+              <option value="triangular">Triangular</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Cell Size + Line Style */}
+        <div style={rowStyle}>
+          <div style={fieldStyle}>
+            <label style={labelStyle}>Cell Size</label>
+            <input type="number" min="8" max="256" value={grid.cellSize} onChange={(e) => emitGridChange({ cellSize: Math.max(8, Math.min(256, parseInt(e.target.value, 10) || 64)) })} style={inputStyle} />
+          </div>
+          <div style={fieldStyle}>
+            <label style={labelStyle}>Line Style</label>
+            <select style={selectStyle} value={grid.gridLineStyle} onChange={(e) => emitGridChange({ gridLineStyle: e.target.value as GridLineStyle })}>
+              <option value="line">Line</option>
+              <option value="dot">Dot</option>
+              <option value="cross">Cross</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Color */}
+        <div style={{ marginBottom: '10px' }}>
+          <label style={labelStyle}>Line Color</label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <input
+              type="color"
+              value={grid.gridLineColor?.startsWith('#') ? grid.gridLineColor : '#ffffff'}
+              onChange={(e) => emitGridChange({ gridLineColor: e.target.value })}
+              style={{ width: '32px', height: '28px', padding: 0, border: '1px solid var(--sn-border, rgba(255,255,255,0.06))', borderRadius: '4px', cursor: 'pointer', background: 'transparent' }}
+            />
+            <span style={{ fontSize: '11px', color: 'var(--sn-text-muted, #7A7784)' }}>{grid.gridLineColor}</span>
+          </div>
+        </div>
+
+        {/* Opacity */}
+        <div style={{ marginBottom: '10px' }}>
+          <label style={labelStyle}>Opacity: {((grid.gridLineOpacity ?? 0.1) * 100).toFixed(0)}%</label>
+          <div style={rangeContainerStyle}>
+            <input type="range" min="0" max="1" step="0.05" value={grid.gridLineOpacity ?? 0.1} onChange={(e) => emitGridChange({ gridLineOpacity: Number(e.target.value) })} style={rangeStyle} />
+          </div>
+        </div>
+
+        {/* Weight */}
+        <div style={{ marginBottom: '10px' }}>
+          <label style={labelStyle}>Line Weight: {grid.gridLineWidth ?? 1}px</label>
+          <div style={rangeContainerStyle}>
+            <input type="range" min="0.5" max="4" step="0.5" value={grid.gridLineWidth ?? 1} onChange={(e) => emitGridChange({ gridLineWidth: Number(e.target.value) })} style={rangeStyle} />
+          </div>
+        </div>
+
+        {/* Dot Size — only when style is 'dot' */}
+        {grid.gridLineStyle === 'dot' && (
+          <div style={{ marginBottom: '10px' }}>
+            <label style={labelStyle}>Dot Size: {grid.dotSize ?? 1.5}px</label>
+            <div style={rangeContainerStyle}>
+              <input type="range" min="0.5" max="6" step="0.5" value={grid.dotSize ?? 1.5} onChange={(e) => emitGridChange({ dotSize: Number(e.target.value) })} style={rangeStyle} />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════════
@@ -524,10 +654,10 @@ export const CanvasSettingsDropdown: React.FC<CanvasSettingsDropdownProps> = ({
                   alignItems: 'center',
                   gap: '6px',
                   padding: '6px 10px',
-                  border: isActive ? '2px solid var(--sn-accent)' : '1px solid var(--sn-border, #e5e7eb)',
+                  border: isActive ? '2px solid var(--sn-accent)' : '1px solid var(--sn-border, rgba(255,255,255,0.06))',
                   borderRadius: 'var(--sn-radius, 6px)',
                   background: isActive ? 'var(--sn-accent)' : 'transparent',
-                  color: isActive ? '#fff' : 'var(--sn-text, #1a1a2e)',
+                  color: isActive ? '#fff' : 'var(--sn-text, #E8E6ED)',
                   cursor: 'pointer',
                   fontSize: '11px',
                   fontFamily: 'inherit',

@@ -58,7 +58,7 @@ function getBuiltinResults(): PaletteResult[] {
       category: "setting",
       icon: "◐",
       action: () => {
-        const THEMES = ['midnight-aurora', 'crystal-light', 'bubbles-sky', 'autumn-fireflies', 'high-contrast'] as const;
+        const THEMES = ['midnight-aurora', 'crystal-light', 'bubbles-sky', 'autumn-fireflies', 'high-contrast', 'ember'] as const;
         const current = useUIStore.getState().theme;
         const idx = THEMES.indexOf(current);
         const next = THEMES[(idx + 1) % THEMES.length];
@@ -81,6 +81,13 @@ function getBuiltinResults(): PaletteResult[] {
       category: "action",
       icon: "⬡",
       action: () => bus.emit("shell.navigate", { path: "/lab" }),
+    },
+    {
+      id: "send-widget",
+      label: "Send widget to friend",
+      category: "action",
+      icon: "→",
+      action: () => bus.emit("shell.sendWidget.open", {}),
     },
     {
       id: "undo",
@@ -217,17 +224,14 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       }}
     >
       <div
+        className="sn-liquid-glass sn-neo sn-holo-border"
         onClick={(e) => e.stopPropagation()}
         style={{
           width: 480,
           maxWidth: "calc(100vw - 32px)",
-          background: "color-mix(in srgb, var(--sn-surface-raised, #1A1A1F) 96%, transparent)",
           borderRadius: 18,
-          border: "1px solid var(--sn-border-hover, rgba(255,255,255,0.08))",
-          boxShadow: "0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,0,0,0.15)",
           animation: "sn-search-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) both",
           overflow: "hidden",
-          backdropFilter: "blur(24px) saturate(1.3)",
         }}
       >
         {/* Input area */}

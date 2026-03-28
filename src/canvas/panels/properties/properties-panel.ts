@@ -24,8 +24,8 @@ export interface EntityProperties {
 
 export interface PropertiesController {
   getProperties(entities: CanvasEntity[]): EntityProperties;
-  updateProperty(entityIds: string[], key: string, value: unknown): void;
-  updateConfig(entityId: string, configKey: string, value: unknown): void;
+  updateProperty(entityIds: string[], key: string, value: unknown, entities?: CanvasEntity[]): void;
+  updateConfig(entityId: string, configKey: string, value: unknown, previousValue?: unknown): void;
   isActiveInMode(): boolean;
 }
 
@@ -69,8 +69,8 @@ export function createPropertiesController(): PropertiesController {
       }
     },
 
-    updateConfig(entityId: string, configKey: string, value: unknown) {
-      bus.emit(CanvasEvents.ENTITY_CONFIG_UPDATED, { id: entityId, key: configKey, value });
+    updateConfig(entityId: string, configKey: string, value: unknown, previousValue?: unknown) {
+      bus.emit(CanvasEvents.ENTITY_CONFIG_UPDATED, { id: entityId, key: configKey, value, previousValue });
     },
 
     isActiveInMode(): boolean {

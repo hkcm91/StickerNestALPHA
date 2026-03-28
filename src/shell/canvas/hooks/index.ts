@@ -27,6 +27,7 @@ export {
   ensureLocalCanvas,
   getLocalCanvasBySlug,
   listLocalCanvases,
+  clearAllLocalCanvases,
   slugifyCanvasName,
 } from './usePersistence';
 export type { SaveStatus, PersistenceState, LocalCanvasSummary } from './usePersistence';

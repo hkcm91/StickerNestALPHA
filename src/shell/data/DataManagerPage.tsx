@@ -34,6 +34,7 @@ import {
 import { useAuthStore } from '../../kernel/stores/auth/auth.store';
 import { useUIStore } from '../../kernel/stores/ui/ui.store';
 
+import { PanelSlide } from '../components/PanelSlide';
 import { AIAssistant } from './components/AIAssistant';
 import { ColumnEditor } from './components/ColumnEditor';
 import { DatabaseCreateModal } from './components/DatabaseCreateModal';
@@ -62,6 +63,12 @@ type Modal =
   | { type: 'ai'; dataSourceId?: string };
 
 // =============================================================================
+// Constants
+// =============================================================================
+
+const SN_SPRING = 'cubic-bezier(0.16, 1, 0.3, 1)';
+
+// =============================================================================
 // Component
 // =============================================================================
 
@@ -73,6 +80,7 @@ export const DataManagerPage: React.FC = () => {
   const [modal, setModal] = useState<Modal>(null);
   const [showAIPanel, setShowAIPanel] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [hoveredTab, setHoveredTab] = useState<Tab | null>(null);
 
   const refresh = useCallback(() => setRefreshKey((k: number) => k + 1), []);
 
@@ -143,7 +151,6 @@ export const DataManagerPage: React.FC = () => {
       if (result.success) {
         setModal(null);
         addToast({ id: crypto.randomUUID(), type: 'success', message: `Template "${template.name}" applied` });
-        // Navigate to the new database (need to load it)
         const { readDataSource } = await import('../../kernel/datasource');
         const ds = await readDataSource(result.data.dataSourceId, user.id);
         if (ds.success) goToDetail(ds.data);
@@ -176,14 +183,12 @@ export const DataManagerPage: React.FC = () => {
       const dsId = modal.dataSourceId;
 
       if (modal.column) {
-        // Update existing
         await updateColumn(dsId, column.id, {
           name: column.name,
           type: column.type,
           config: column.config,
         }, user.id);
       } else {
-        // Add new
         await addColumn(dsId, column, user.id);
       }
       setModal(null);
@@ -232,8 +237,6 @@ export const DataManagerPage: React.FC = () => {
 
   const handleQueryResult = useCallback(
     (result: AINaturalLanguageQueryResponse) => {
-      // In a full implementation this would update the active view's filters/sorts.
-      // For now we log the result.
       // eslint-disable-next-line no-console
       console.log('[DataManager] AI query result:', result);
     },
@@ -250,6 +253,14 @@ export const DataManagerPage: React.FC = () => {
     [user, view, refresh, addToast],
   );
 
+  // --- Tab style helpers ---
+
+  const getTabStyle = (tab: Tab): React.CSSProperties => ({
+    ...styles.tab,
+    ...(activeTab === tab ? styles.tabActive : {}),
+    ...(hoveredTab === tab && activeTab !== tab ? styles.tabHover : {}),
+  });
+
   // --- Render ---
 
   const currentDsId = view.type === 'detail' ? view.dataSource.id : undefined;
@@ -259,10 +270,9 @@ export const DataManagerPage: React.FC = () => {
       {/* Tab Navigation */}
       <div style={styles.tabBar}>
         <button
-          style={{
-            ...styles.tab,
-            ...(activeTab === 'databases' ? styles.tabActive : {}),
-          }}
+          style={getTabStyle('databases')}
+          onMouseEnter={() => setHoveredTab('databases')}
+          onMouseLeave={() => setHoveredTab(null)}
           onClick={() => {
             setActiveTab('databases');
             setView({ type: 'list' });
@@ -271,64 +281,66 @@ export const DataManagerPage: React.FC = () => {
           Databases
         </button>
         <button
-          style={{
-            ...styles.tab,
-            ...(activeTab === 'todos' ? styles.tabActive : {}),
-          }}
+          style={getTabStyle('todos')}
+          onMouseEnter={() => setHoveredTab('todos')}
+          onMouseLeave={() => setHoveredTab(null)}
           onClick={() => setActiveTab('todos')}
         >
           Todos
         </button>
       </div>
 
-      <div style={styles.main}>
-        {activeTab === 'todos' ? (
-          <TodoManager />
-        ) : view.type === 'list' ? (
-          <DatabaseList
-            key={refreshKey}
-            onSelect={goToDetail}
-            onCreate={() => setModal({ type: 'create' })}
-            onRename={handleRename}
-            onDelete={handleDelete}
-            onImportNotion={() => setModal({ type: 'notion' })}
-            onUseTemplate={() => setModal({ type: 'template' })}
-          />
-        ) : (
-          <TableView
-            key={`${view.dataSource.id}-${refreshKey}`}
-            dataSourceId={view.dataSource.id}
-            onBack={goToList}
-            onOpenAI={() => setShowAIPanel((v: boolean) => !v)}
-            onColumnEdit={(col: TableColumn) =>
-              setModal({
-                type: 'column-edit',
-                column: col,
-                dataSourceId: view.dataSource.id,
-              })
-            }
-            onAddColumn={() =>
-              setModal({
-                type: 'column-edit',
-                dataSourceId: view.dataSource.id,
-              })
-            }
-          />
-        )}
-      </div>
+      {/* Main content area + AI sidebar */}
+      <div style={styles.contentRow}>
+        <div style={styles.main}>
+          {activeTab === 'todos' ? (
+            <TodoManager />
+          ) : view.type === 'list' ? (
+            <DatabaseList
+              key={refreshKey}
+              onSelect={goToDetail}
+              onCreate={() => setModal({ type: 'create' })}
+              onRename={handleRename}
+              onDelete={handleDelete}
+              onImportNotion={() => setModal({ type: 'notion' })}
+              onUseTemplate={() => setModal({ type: 'template' })}
+            />
+          ) : (
+            <TableView
+              key={`${view.dataSource.id}-${refreshKey}`}
+              dataSourceId={view.dataSource.id}
+              onBack={goToList}
+              onOpenAI={() => setShowAIPanel((v: boolean) => !v)}
+              onColumnEdit={(col: TableColumn) =>
+                setModal({
+                  type: 'column-edit',
+                  column: col,
+                  dataSourceId: view.dataSource.id,
+                })
+              }
+              onAddColumn={() =>
+                setModal({
+                  type: 'column-edit',
+                  dataSourceId: view.dataSource.id,
+                })
+              }
+            />
+          )}
+        </div>
 
-      {/* AI Sidebar */}
-      {showAIPanel && (
-        <AIAssistant
-          dataSourceId={currentDsId}
-          onSchemaGenerated={handleSchemaGenerated}
-          onColumnSuggested={handleColumnSuggested}
-          onQueryResult={handleQueryResult}
-          onDataExtracted={handleDataExtracted}
-          onAutofillComplete={refresh}
-          onClose={() => setShowAIPanel(false)}
-        />
-      )}
+        {/* AI Sidebar — curtain slide panel */}
+        <PanelSlide open={showAIPanel} width={380} side="right">
+          <AIAssistant
+            dataSourceId={currentDsId}
+            onSchemaGenerated={handleSchemaGenerated}
+            onColumnSuggested={handleColumnSuggested}
+            onQueryResult={handleQueryResult}
+            onDataExtracted={handleDataExtracted}
+            onAutofillComplete={refresh}
+            onClose={() => setShowAIPanel(false)}
+          />
+        </PanelSlide>
+      </div>
 
       {/* Modals */}
       {modal?.type === 'create' && (
@@ -368,9 +380,6 @@ export const DataManagerPage: React.FC = () => {
 // Styles
 // =============================================================================
 
-const SN_SPRING = 'cubic-bezier(0.16, 1, 0.3, 1)';
-const SN_GLASS_BORDER = 'rgba(78,123,142,0.08)';
-
 const styles: Record<string, React.CSSProperties> = {
   page: {
     display: 'flex',
@@ -384,26 +393,38 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     gap: '4px',
     padding: '12px 16px',
-    borderBottom: `1px solid ${SN_GLASS_BORDER}`,
-    background: 'var(--sn-surface-glass, rgba(20,17,24,0.75))',
-    backdropFilter: 'blur(16px) saturate(1.2)',
-    WebkitBackdropFilter: 'blur(16px) saturate(1.2)',
+    borderBottom: '1px solid rgba(78,123,142,0.08)',
+    background: 'var(--sn-surface-glass, rgba(20,17,24,0.82))',
+    backdropFilter: 'blur(40px) saturate(1.3)',
+    WebkitBackdropFilter: 'blur(40px) saturate(1.3)',
+    flexShrink: 0,
   },
   tab: {
     padding: '8px 16px',
     border: 'none',
-    borderRadius: 'var(--sn-radius, 6px)',
+    borderBottom: '2px solid transparent',
+    borderRadius: '0',
     background: 'transparent',
     color: 'var(--sn-text-muted, #7A7784)',
     fontSize: '14px',
     fontWeight: 500,
     fontFamily: "'Outfit', sans-serif",
     cursor: 'pointer',
-    transition: 'all 0.2s ' + SN_SPRING,
+    transition: `all 300ms ${SN_SPRING}`,
   },
   tabActive: {
-    background: 'var(--sn-accent, #3E7D94)',
     color: '#fff',
+    borderBottomColor: 'var(--sn-accent, #3E7D94)',
+    boxShadow: '0 2px 8px rgba(62,125,148,0.25)',
+  },
+  tabHover: {
+    color: 'var(--sn-text, #E8E6ED)',
+    transform: 'translateY(-1px)',
+  },
+  contentRow: {
+    display: 'flex',
+    flex: 1,
+    overflow: 'hidden',
   },
   main: {
     flex: 1,

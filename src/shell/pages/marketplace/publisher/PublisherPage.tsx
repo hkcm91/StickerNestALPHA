@@ -12,7 +12,9 @@ import { useAuthStore } from '../../../../kernel/stores/auth/auth.store';
 import type { MarketplaceWidgetListing } from '../../../../marketplace/api/types';
 import { createPublisherDashboard } from '../../../../marketplace/publisher/publisher-dashboard';
 import { themeVar } from '../../../theme/theme-vars';
+import { SecurityBadge } from '../shared/SecurityBadge';
 import { StarRating } from '../shared/StarRating';
+import { UploadFlow } from '../shared/UploadFlow';
 import { btnPrimary, btnSecondary, pageStyle, sectionHeading } from '../styles';
 
 export const PublisherPage: React.FC = () => {
@@ -25,6 +27,7 @@ export const PublisherPage: React.FC = () => {
 
   const [widgets, setWidgets] = useState<MarketplaceWidgetListing[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showUpload, setShowUpload] = useState(false);
 
   useEffect(() => {
     if (!dashboard) return;
@@ -73,6 +76,9 @@ export const PublisherPage: React.FC = () => {
         <div style={{ display: 'flex', gap: '8px' }}>
           <button type="button" onClick={() => navigate('/marketplace')} style={btnSecondary}>
             Marketplace
+          </button>
+          <button type="button" onClick={() => setShowUpload(true)} style={btnSecondary}>
+            Upload Widget
           </button>
           <button type="button" onClick={() => navigate('/lab')} style={btnPrimary}>
             Open Lab
@@ -221,6 +227,9 @@ export const PublisherPage: React.FC = () => {
                       Deprecated
                     </span>
                   )}
+                  {widget.reviewStatus && widget.reviewStatus !== 'approved' && (
+                    <SecurityBadge reviewStatus={widget.reviewStatus} size="small" />
+                  )}
                 </div>
                 <div style={{ fontSize: '12px', color: themeVar('--sn-text-muted') }}>
                   v{widget.version} · {widget.installCount.toLocaleString()} installs
@@ -234,6 +243,64 @@ export const PublisherPage: React.FC = () => {
               </span>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Upload Widget Modal */}
+      {showUpload && userId && (
+        <div
+          data-testid="upload-modal-overlay"
+          onClick={() => setShowUpload(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '520px',
+              maxHeight: '80vh',
+              overflow: 'auto',
+              padding: '24px',
+              borderRadius: '12px',
+              background: themeVar('--sn-surface'),
+              border: `1px solid ${themeVar('--sn-border')}`,
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h2 style={{ margin: 0, fontSize: '18px' }}>Upload Widget</h2>
+              <button
+                type="button"
+                onClick={() => setShowUpload(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: themeVar('--sn-text-muted'),
+                  fontSize: '18px',
+                  cursor: 'pointer',
+                  padding: '4px',
+                }}
+              >
+                x
+              </button>
+            </div>
+            <UploadFlow
+              authorId={userId}
+              onComplete={() => {
+                setShowUpload(false);
+                // Refresh widget list
+                if (dashboard) {
+                  dashboard.getMyWidgets().then(setWidgets).catch(() => {});
+                }
+              }}
+            />
+          </div>
         </div>
       )}
     </div>

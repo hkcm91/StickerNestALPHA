@@ -58,6 +58,8 @@ export function createResizeTool(
             id: targetEntityId,
             position: result.position,
             size: result.size,
+            previousPosition: bounds.position,
+            previousSize: { width: bounds.width, height: bounds.height },
           });
         }
       }

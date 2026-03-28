@@ -143,8 +143,6 @@ export const FeaturedSection: React.FC<FeaturedSectionProps> = ({
             gap: `${CARD_GAP}px`,
             overflowX: 'auto',
             scrollSnapType: 'x mandatory',
-            scrollbarWidth: 'none',
-            msOverflowStyle: 'none',
             padding: '4px 0',
           }}
         >

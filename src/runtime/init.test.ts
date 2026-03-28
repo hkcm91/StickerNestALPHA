@@ -111,7 +111,7 @@ describe('initRuntime', () => {
 
     const store = useWidgetStore.getState();
     // All built-in widgets (including commerce, cross-canvas, AI agent, etc.)
-    expect(store.registerWidget).toHaveBeenCalledTimes(22);
+    expect(store.registerWidget).toHaveBeenCalledTimes(25);
   });
 
   it('sets up bus subscriptions for widget events', () => {
@@ -140,7 +140,7 @@ describe('initRuntime', () => {
 
     // Built-in widgets should only be registered once
     const store = useWidgetStore.getState();
-    expect(store.registerWidget).toHaveBeenCalledTimes(22);
+    expect(store.registerWidget).toHaveBeenCalledTimes(25);
   });
 });
 

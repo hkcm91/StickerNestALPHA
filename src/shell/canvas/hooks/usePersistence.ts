@@ -179,6 +179,18 @@ export function deleteLocalCanvas(slug: string): void {
   localStorage.removeItem(getStorageKey(slug));
 }
 
+/**
+ * Remove all locally-persisted canvases from localStorage.
+ * Used during beta migration to move fully to cloud storage.
+ */
+export function clearAllLocalCanvases(): void {
+  const index = readCanvasIndex();
+  for (const item of index.items) {
+    localStorage.removeItem(getStorageKey(item.slug));
+  }
+  localStorage.removeItem(STORAGE_INDEX_KEY);
+}
+
 export function duplicateLocalCanvas(slug: string): LocalCanvasSummary | null {
   const index = readCanvasIndex();
   const source = index.items.find((item) => item.slug === slug);
@@ -442,6 +454,8 @@ export function usePersistence(
       bus.subscribe(CanvasEvents.ENTITY_CREATED, scheduleSave),
       bus.subscribe(CanvasEvents.ENTITY_UPDATED, scheduleSave),
       bus.subscribe(CanvasEvents.ENTITY_DELETED, scheduleSave),
+      bus.subscribe(CanvasEvents.ENTITY_MOVED, scheduleSave),
+      bus.subscribe(CanvasEvents.ENTITY_RESIZED, scheduleSave),
       bus.subscribe(CanvasEvents.ENTITY_CONFIG_UPDATED, scheduleSave),
       bus.subscribe(CanvasEvents.ENTITY_GROUPED, scheduleSave),
       bus.subscribe(CanvasEvents.ENTITY_UNGROUPED, scheduleSave),

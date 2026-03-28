@@ -40,7 +40,7 @@ type BackgroundType = 'solid' | 'gradient' | 'image';
 
 const DEFAULT_GRADIENT_STOPS: GradientStop[] = [
   { offset: 0, color: '#ffffff' },
-  { offset: 1, color: '#6366f1' },
+  { offset: 1, color: '#3E7D94' },
 ];
 
 export interface PerCornerRadius {
@@ -172,7 +172,7 @@ function displayValue(val: PropertyValue<unknown>): string {
 
 const labelStyle: React.CSSProperties = {
   fontSize: '11px',
-  color: 'var(--sn-text-muted, #6b7280)',
+  color: 'var(--sn-text-muted, #7A7784)',
   fontWeight: 500,
   textTransform: 'uppercase',
   letterSpacing: '0.5px',
@@ -180,10 +180,10 @@ const labelStyle: React.CSSProperties = {
 
 const valueStyle: React.CSSProperties = {
   fontSize: '13px',
-  color: 'var(--sn-text, #1a1a2e)',
+  color: 'var(--sn-text, #E8E6ED)',
   padding: '4px 8px',
-  background: 'var(--sn-bg, #f8f9fa)',
-  border: '1px solid var(--sn-border, #e0e0e0)',
+  background: 'var(--sn-bg, rgba(10,10,14,0.5))',
+  border: '1px solid var(--sn-border, rgba(255,255,255,0.06))',
   borderRadius: 'var(--sn-radius, 6px)',
   fontFamily: 'var(--sn-font-family, system-ui)',
   width: '100%',
@@ -210,17 +210,17 @@ const sectionTitleStyle: React.CSSProperties = {
   fontWeight: 600,
   textTransform: 'uppercase',
   letterSpacing: '0.5px',
-  color: 'var(--sn-text-muted, #6b7280)',
+  color: 'var(--sn-text-muted, #7A7784)',
   marginBottom: '10px',
 };
 
 const bgInputStyle: React.CSSProperties = {
   width: '100%',
   padding: '6px 8px',
-  border: '1px solid var(--sn-border, #e5e7eb)',
+  border: '1px solid var(--sn-border, rgba(255,255,255,0.06))',
   borderRadius: 'var(--sn-radius, 4px)',
-  background: 'var(--sn-bg, #f9fafb)',
-  color: 'var(--sn-text, #1a1a2e)',
+  background: 'var(--sn-bg, rgba(10,10,14,0.5))',
+  color: 'var(--sn-text, #E8E6ED)',
   fontSize: '12px',
   fontFamily: 'inherit',
   boxSizing: 'border-box',
@@ -235,21 +235,23 @@ const toggleBtnStyle = (active: boolean): React.CSSProperties => ({
   flex: 1,
   padding: '6px 10px',
   border: '1px solid',
-  borderColor: active ? 'var(--sn-accent, #6366f1)' : 'var(--sn-border, #e5e7eb)',
+  borderColor: active ? 'var(--sn-accent, #3E7D94)' : 'var(--sn-border, rgba(255,255,255,0.06))',
   borderRadius: 'var(--sn-radius, 4px)',
-  background: active ? 'var(--sn-accent, #6366f1)' : 'transparent',
-  color: active ? '#fff' : 'var(--sn-text, #1a1a2e)',
+  background: active ? 'var(--sn-accent, #3E7D94)' : 'transparent',
+  color: active ? '#fff' : 'var(--sn-text, #E8E6ED)',
   cursor: 'pointer',
   fontSize: '11px',
   fontFamily: 'inherit',
   fontWeight: 500,
+  boxShadow: active ? '0 0 8px var(--sn-accent-glow, rgba(78,123,142,0.4))' : 'none',
+  transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
 });
 
 const colorSwatchStyle = (color: string): React.CSSProperties => ({
   width: '32px',
   height: '32px',
   borderRadius: 'var(--sn-radius, 4px)',
-  border: '1px solid var(--sn-border, #e5e7eb)',
+  border: '1px solid var(--sn-border, rgba(255,255,255,0.06))',
   background: color,
   cursor: 'pointer',
   flexShrink: 0,
@@ -275,12 +277,12 @@ const gradientStopRowStyle: React.CSSProperties = {
 };
 
 const uploadAreaStyle: React.CSSProperties = {
-  border: '2px dashed var(--sn-border, #e5e7eb)',
+  border: '2px dashed var(--sn-border, rgba(255,255,255,0.06))',
   borderRadius: 'var(--sn-radius, 6px)',
   padding: '20px',
   textAlign: 'center',
   cursor: 'pointer',
-  background: 'var(--sn-bg, #f9fafb)',
+  background: 'var(--sn-bg, rgba(10,10,14,0.5))',
   transition: 'border-color 0.15s, background 0.15s',
 };
 
@@ -291,7 +293,7 @@ const CANVAS_DOCKER_NAME = 'Canvas Docker';
 // =============================================================================
 
 const sectionDividerStyle: React.CSSProperties = {
-  borderTop: '1px solid var(--sn-border, #e5e7eb)',
+  borderTop: '1px solid var(--sn-border, rgba(255,255,255,0.06))',
   margin: '4px 0',
 };
 
@@ -302,10 +304,10 @@ const sectionDividerStyle: React.CSSProperties = {
 const linkBtnStyle = (linked: boolean): React.CSSProperties => ({
   padding: '4px 6px',
   border: '1px solid',
-  borderColor: linked ? 'var(--sn-accent, #6366f1)' : 'var(--sn-border, #e5e7eb)',
+  borderColor: linked ? 'var(--sn-accent, #3E7D94)' : 'var(--sn-border, rgba(255,255,255,0.06))',
   borderRadius: 'var(--sn-radius, 4px)',
-  background: linked ? 'var(--sn-accent, #6366f1)' : 'transparent',
-  color: linked ? '#fff' : 'var(--sn-text-muted, #6b7280)',
+  background: linked ? 'var(--sn-accent, #3E7D94)' : 'transparent',
+  color: linked ? '#fff' : 'var(--sn-text-muted, #7A7784)',
   cursor: 'pointer',
   fontSize: '11px',
   fontFamily: 'inherit',
@@ -387,7 +389,7 @@ const CanvasPropertySettings: React.FC<{
   const [strokeOpacity, setStrokeOpacity] = useState(initialStroke.opacity);
   const [strokeGradientEnabled, setStrokeGradientEnabled] = useState(initialStroke.gradient?.enabled ?? false);
   const [strokeGradientStops, setStrokeGradientStops] = useState<GradientStop[]>(
-    initialStroke.gradient?.stops ?? [{ offset: 0, color: '#6366f1' }, { offset: 1, color: '#ec4899' }],
+    initialStroke.gradient?.stops ?? [{ offset: 0, color: '#3E7D94' }, { offset: 1, color: '#ec4899' }],
   );
   const [strokeGradientAngle, setStrokeGradientAngle] = useState(initialStroke.gradient?.angle ?? 0);
 
@@ -586,7 +588,7 @@ const CanvasPropertySettings: React.FC<{
   const bgLabelStyle: React.CSSProperties = {
     display: 'block',
     fontSize: '12px',
-    color: 'var(--sn-text, #1a1a2e)',
+    color: 'var(--sn-text, #E8E6ED)',
     marginBottom: '4px',
   };
 
@@ -711,7 +713,7 @@ const CanvasPropertySettings: React.FC<{
                 />
                 {gradientStops.length > 2 && (
                   <button
-                    style={{ padding: '4px 8px', border: 'none', background: 'transparent', color: 'var(--sn-text-muted, #6b7280)', cursor: 'pointer', fontSize: '14px', lineHeight: 1 }}
+                    style={{ padding: '4px 8px', border: 'none', background: 'transparent', color: 'var(--sn-text-muted, #7A7784)', cursor: 'pointer', fontSize: '14px', lineHeight: 1 }}
                     onClick={() => setGradientStops((prev) => prev.filter((_, i) => i !== index))}
                     title="Remove stop"
                   >
@@ -724,10 +726,10 @@ const CanvasPropertySettings: React.FC<{
               data-testid="bg-add-stop"
               style={{
                 padding: '6px 12px',
-                border: '1px dashed var(--sn-border, #e5e7eb)',
+                border: '1px dashed var(--sn-border, rgba(255,255,255,0.06))',
                 borderRadius: 'var(--sn-radius, 4px)',
                 background: 'transparent',
-                color: 'var(--sn-text-muted, #6b7280)',
+                color: 'var(--sn-text-muted, #7A7784)',
                 cursor: 'pointer',
                 fontSize: '11px',
                 fontFamily: 'inherit',
@@ -766,7 +768,7 @@ const CanvasPropertySettings: React.FC<{
                   }}
                   style={{ display: 'none' }}
                 />
-                <div style={{ color: 'var(--sn-text-muted, #6b7280)' }}>
+                <div style={{ color: 'var(--sn-text-muted, #7A7784)' }}>
                   Click to upload or drag image
                 </div>
               </label>
@@ -778,7 +780,7 @@ const CanvasPropertySettings: React.FC<{
                     height: '80px',
                     borderRadius: 'var(--sn-radius, 4px)',
                     background: `url(${imageUrl}) center/cover no-repeat`,
-                    border: '1px solid var(--sn-border, #e5e7eb)',
+                    border: '1px solid var(--sn-border, rgba(255,255,255,0.06))',
                     marginBottom: '8px',
                   }}
                 />
@@ -959,7 +961,7 @@ const CanvasPropertySettings: React.FC<{
             onChange={(e) => setAllRadius(parseInt(e.target.value, 10) || 0)}
             style={{ ...bgInputStyle, width: '60px' }}
           />
-          <span style={{ fontSize: '11px', color: 'var(--sn-text-muted, #6b7280)' }}>px</span>
+          <span style={{ fontSize: '11px', color: 'var(--sn-text-muted, #7A7784)' }}>px</span>
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
@@ -970,7 +972,7 @@ const CanvasPropertySettings: React.FC<{
             ['BR', radiusBR, setRadiusBR],
           ] as const).map(([label, val, setter]) => (
             <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span style={{ fontSize: '10px', color: 'var(--sn-text-muted, #6b7280)', width: '18px' }}>{label}</span>
+              <span style={{ fontSize: '10px', color: 'var(--sn-text-muted, #7A7784)', width: '18px' }}>{label}</span>
               <input
                 type="number"
                 min="0"
@@ -1072,7 +1074,7 @@ const CanvasPropertySettings: React.FC<{
                     )}
                   </div>
                 ))}
-                <button style={{ padding: '4px 10px', border: '1px dashed var(--sn-border, #e5e7eb)', borderRadius: 'var(--sn-radius, 4px)', background: 'transparent', color: 'var(--sn-text-muted)', cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit', width: '100%', marginTop: '2px' }}
+                <button style={{ padding: '4px 10px', border: '1px dashed var(--sn-border, rgba(255,255,255,0.06))', borderRadius: 'var(--sn-radius, 4px)', background: 'transparent', color: 'var(--sn-text-muted)', cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit', width: '100%', marginTop: '2px' }}
                   onClick={() => setStrokeGradientStops(prev => [...prev.slice(0, -1), { offset: 0.5, color: '#888888' }, prev[prev.length - 1]])}>
                   + Add Stop
                 </button>
@@ -1117,11 +1119,11 @@ const CanvasPropertySettings: React.FC<{
                   const file = e.target.files?.[0];
                   if (file) setWsBgImageUrl(URL.createObjectURL(file));
                 }} style={{ display: 'none' }} />
-                <div style={{ color: 'var(--sn-text-muted, #6b7280)' }}>Click to upload image</div>
+                <div style={{ color: 'var(--sn-text-muted, #7A7784)' }}>Click to upload image</div>
               </label>
             ) : (
               <div>
-                <div style={{ width: '100%', height: '60px', borderRadius: 'var(--sn-radius, 4px)', background: `url(${wsBgImageUrl}) center/cover no-repeat`, border: '1px solid var(--sn-border, #e5e7eb)', marginBottom: '6px' }} />
+                <div style={{ width: '100%', height: '60px', borderRadius: 'var(--sn-radius, 4px)', background: `url(${wsBgImageUrl}) center/cover no-repeat`, border: '1px solid var(--sn-border, rgba(255,255,255,0.06))', marginBottom: '6px' }} />
                 <div style={{ display: 'flex', gap: '4px' }}>
                   <input type="text" value={wsBgImageUrl} onChange={(e) => setWsBgImageUrl(e.target.value)} placeholder="Image URL" style={{ ...bgInputStyle, flex: 1 }} />
                   <button style={{ ...bgInputStyle, width: 'auto', padding: '4px 8px', cursor: 'pointer' }} onClick={() => setWsBgImageUrl('')}>×</button>
@@ -1275,7 +1277,7 @@ const CanvasPropertySettings: React.FC<{
         <div style={rangeContainerStyle}>
           <input type="range" min="0" max="100" value={padTop} onChange={(e) => setAllPadding(parseInt(e.target.value, 10))} style={rangeStyle} />
           <input type="number" min="0" max="100" value={padTop} onChange={(e) => setAllPadding(parseInt(e.target.value, 10) || 0)} style={{ ...bgInputStyle, width: '60px' }} />
-          <span style={{ fontSize: '11px', color: 'var(--sn-text-muted, #6b7280)' }}>px</span>
+          <span style={{ fontSize: '11px', color: 'var(--sn-text-muted, #7A7784)' }}>px</span>
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
@@ -1286,7 +1288,7 @@ const CanvasPropertySettings: React.FC<{
             ['Left', padLeft, setPadLeft],
           ] as [string, number, (v: number) => void][]).map(([label, val, setter]) => (
             <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span style={{ fontSize: '10px', color: 'var(--sn-text-muted, #6b7280)', width: '32px' }}>{label}</span>
+              <span style={{ fontSize: '10px', color: 'var(--sn-text-muted, #7A7784)', width: '32px' }}>{label}</span>
               <input type="number" min="0" max="100" value={val} onChange={(e) => setter(parseInt(e.target.value, 10) || 0)} style={{ ...bgInputStyle, flex: 1 }} />
             </div>
           ))}
@@ -1392,8 +1394,8 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ entities, view
         style={{
           fontWeight: 600,
           fontSize: '14px',
-          color: 'var(--sn-text, #1a1a2e)',
-          borderBottom: '1px solid var(--sn-border, #e0e0e0)',
+          color: 'var(--sn-text, #E8E6ED)',
+          borderBottom: '1px solid var(--sn-border, rgba(255,255,255,0.06))',
           paddingBottom: '8px',
         }}
       >

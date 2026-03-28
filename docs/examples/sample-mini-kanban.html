@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="A compact kanban board with drag-and-drop task management">
+  <title>Mini Kanban</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: var(--sn-font-family, 'Inter', system-ui, sans-serif);
+      background: var(--sn-bg, #0a0a0a);
+      color: var(--sn-text, #e0e0e0);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .kanban {
+      padding: 20px;
+      border-radius: var(--sn-radius, 12px);
+      background: var(--sn-surface, #141414);
+      border: 1px solid var(--sn-border, #2a2a2a);
+      width: 420px;
+    }
+    .kanban-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .kanban-title { font-size: 16px; font-weight: 700; }
+    .task-count {
+      font-size: 12px;
+      color: var(--sn-text-muted, #888);
+    }
+    .columns {
+      display: flex;
+      gap: 10px;
+    }
+    .column {
+      flex: 1;
+      min-width: 0;
+    }
+    .col-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 8px;
+      padding: 0 4px;
+    }
+    .col-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    .col-dot.todo { background: #6b7280; }
+    .col-dot.doing { background: #f59e0b; }
+    .col-dot.done { background: #22c55e; }
+    .col-name {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--sn-text-muted, #888);
+    }
+    .col-count {
+      font-size: 10px;
+      color: var(--sn-text-muted, #888);
+      background: var(--sn-bg, #0a0a0a);
+      padding: 1px 6px;
+      border-radius: 8px;
+    }
+    .task-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-height: 120px;
+      padding: 6px;
+      border-radius: 8px;
+      background: var(--sn-bg, #0a0a0a);
+      border: 1px solid transparent;
+      transition: border-color 0.15s;
+    }
+    .task-list.drag-over { border-color: var(--sn-accent, #6366f1); }
+    .task-card {
+      padding: 8px 10px;
+      border-radius: 6px;
+      background: var(--sn-surface, #141414);
+      border: 1px solid var(--sn-border, #2a2a2a);
+      font-size: 13px;
+      cursor: grab;
+      transition: transform 0.1s, box-shadow 0.1s;
+      user-select: none;
+    }
+    .task-card:active { cursor: grabbing; }
+    .task-card.dragging {
+      opacity: 0.5;
+      transform: scale(0.95);
+    }
+    .task-card .task-text { margin-bottom: 4px; word-break: break-word; }
+    .task-card .task-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .task-tag {
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    .tag-bug { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+    .tag-feature { background: rgba(99, 102, 241, 0.15); color: #6366f1; }
+    .tag-chore { background: rgba(107, 114, 128, 0.15); color: #9ca3af; }
+    .delete-btn {
+      background: none;
+      border: none;
+      color: var(--sn-text-muted, #888);
+      font-size: 14px;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.15s;
+      padding: 0 2px;
+    }
+    .task-card:hover .delete-btn { opacity: 1; }
+    .delete-btn:hover { color: #ef4444; }
+    .add-task {
+      display: flex;
+      gap: 6px;
+      margin-top: 12px;
+    }
+    .add-input {
+      flex: 1;
+      padding: 7px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--sn-border, #2a2a2a);
+      background: var(--sn-bg, #0a0a0a);
+      color: var(--sn-text, #e0e0e0);
+      font-size: 12px;
+      font-family: inherit;
+      outline: none;
+    }
+    .add-input:focus { border-color: var(--sn-accent, #6366f1); }
+    .add-submit {
+      padding: 7px 12px;
+      border: none;
+      border-radius: 6px;
+      background: var(--sn-accent, #6366f1);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="kanban">
+    <div class="kanban-header">
+      <div class="kanban-title">Kanban</div>
+      <div class="task-count" id="taskCount">0 tasks</div>
+    </div>
+
+    <div class="columns">
+      <div class="column" data-col="todo">
+        <div class="col-header">
+          <div class="col-dot todo"></div>
+          <span class="col-name">To Do</span>
+          <span class="col-count" id="countTodo">0</span>
+        </div>
+        <div class="task-list" id="listTodo" data-col="todo"></div>
+      </div>
+      <div class="column" data-col="doing">
+        <div class="col-header">
+          <div class="col-dot doing"></div>
+          <span class="col-name">Doing</span>
+          <span class="col-count" id="countDoing">0</span>
+        </div>
+        <div class="task-list" id="listDoing" data-col="doing"></div>
+      </div>
+      <div class="column" data-col="done">
+        <div class="col-header">
+          <div class="col-dot done"></div>
+          <span class="col-name">Done</span>
+          <span class="col-count" id="countDone">0</span>
+        </div>
+        <div class="task-list" id="listDone" data-col="done"></div>
+      </div>
+    </div>
+
+    <div class="add-task">
+      <input class="add-input" id="addInput" type="text" placeholder="Add a task..." maxlength="80" />
+      <button class="add-submit" id="addBtn">Add</button>
+    </div>
+  </div>
+
+  <script>
+    StickerNest.register({
+      id: 'mini-kanban',
+      name: 'Mini Kanban',
+      version: '1.0.0',
+      description: 'A compact kanban board with drag-and-drop task management',
+      category: 'productivity',
+      tags: ['kanban', 'tasks', 'project', 'board', 'productivity'],
+      license: 'MIT',
+    });
+
+    const tags = ['bug', 'feature', 'chore'];
+    let tasks = [
+      { id: '1', text: 'Fix login bug', tag: 'bug', col: 'todo' },
+      { id: '2', text: 'Add dark mode', tag: 'feature', col: 'doing' },
+      { id: '3', text: 'Update docs', tag: 'chore', col: 'done' },
+    ];
+    let draggedId = null;
+
+    function detectTag(text) {
+      const lower = text.toLowerCase();
+      if (lower.includes('bug') || lower.includes('fix')) return 'bug';
+      if (lower.includes('add') || lower.includes('feat') || lower.includes('new')) return 'feature';
+      return 'chore';
+    }
+
+    function render() {
+      ['todo', 'doing', 'done'].forEach(col => {
+        const list = document.getElementById('list' + col.charAt(0).toUpperCase() + col.slice(1));
+        const colTasks = tasks.filter(t => t.col === col);
+        document.getElementById('count' + col.charAt(0).toUpperCase() + col.slice(1)).textContent = colTasks.length;
+
+        list.innerHTML = colTasks.map(t => `
+          <div class="task-card" draggable="true" data-id="${t.id}">
+            <div class="task-text">${t.text}</div>
+            <div class="task-meta">
+              <span class="task-tag tag-${t.tag}">${t.tag}</span>
+              <button class="delete-btn" data-id="${t.id}" title="Delete">&times;</button>
+            </div>
+          </div>
+        `).join('');
+
+        // Drag events on cards
+        list.querySelectorAll('.task-card').forEach(card => {
+          card.addEventListener('dragstart', (e) => {
+            draggedId = card.dataset.id;
+            card.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+          });
+          card.addEventListener('dragend', () => {
+            card.classList.remove('dragging');
+            draggedId = null;
+          });
+        });
+
+        // Delete buttons
+        list.querySelectorAll('.delete-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            tasks = tasks.filter(t => t.id !== btn.dataset.id);
+            save();
+            render();
+          });
+        });
+
+        // Drop zone
+        list.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          list.classList.add('drag-over');
+        });
+        list.addEventListener('dragleave', () => {
+          list.classList.remove('drag-over');
+        });
+        list.addEventListener('drop', (e) => {
+          e.preventDefault();
+          list.classList.remove('drag-over');
+          if (!draggedId) return;
+          const task = tasks.find(t => t.id === draggedId);
+          if (task && task.col !== col) {
+            task.col = col;
+            StickerNest.emit('kanban.moved', { taskId: task.id, text: task.text, from: task.col, to: col });
+            save();
+            render();
+          }
+        });
+      });
+
+      document.getElementById('taskCount').textContent = tasks.length + ' task' + (tasks.length !== 1 ? 's' : '');
+    }
+
+    function save() {
+      StickerNest.setState('tasks', tasks);
+    }
+
+    document.getElementById('addBtn').addEventListener('click', () => {
+      const input = document.getElementById('addInput');
+      const text = input.value.trim();
+      if (!text) return;
+      tasks.push({ id: Date.now().toString(), text, tag: detectTag(text), col: 'todo' });
+      input.value = '';
+      save();
+      render();
+      StickerNest.emit('kanban.added', { text });
+    });
+
+    document.getElementById('addInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') document.getElementById('addBtn').click();
+    });
+
+    // Restore
+    StickerNest.getState('tasks').then((saved) => {
+      if (Array.isArray(saved) && saved.length > 0) tasks = saved;
+      render();
+    }).catch(() => render());
+
+    StickerNest.onThemeChange(() => {});
+    StickerNest.ready();
+  </script>
+</body>
+</html>

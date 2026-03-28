@@ -45,16 +45,14 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   // Styles
   // ---------------------------------------------------------------------------
 
+  const CARD_CLASSES = 'sn-glass-heavy sn-neo sn-holo-border';
+
   const cardStyle: React.CSSProperties = {
     position: 'fixed',
     bottom: '32px',
     right: '32px',
     zIndex: 9000,
     width: '320px',
-    background: themeVar('--sn-surface-raised'),
-    border: `1px solid ${themeVar('--sn-border')}`,
-    borderRadius: themeVar('--sn-radius'),
-    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.18)',
     fontFamily: themeVar('--sn-font-family'),
     color: themeVar('--sn-text'),
     overflow: 'hidden',
@@ -141,7 +139,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   // ---------------------------------------------------------------------------
 
   return (
-    <div style={cardStyle} role="dialog" aria-modal="false" aria-label="Onboarding tour" data-testid="onboarding-wizard">
+    <div className={CARD_CLASSES} style={cardStyle} role="dialog" aria-modal="false" aria-label="Onboarding tour" data-testid="onboarding-wizard">
       {/* Progress bar */}
       <div style={progressBarContainerStyle}>
         <div style={progressBarFillStyle} />

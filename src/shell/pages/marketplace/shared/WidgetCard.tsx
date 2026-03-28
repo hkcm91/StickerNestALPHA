@@ -11,7 +11,10 @@ import { ANIMATION_DURATION, ANIMATION_EASING } from '../../../theme/animation-t
 import { themeVar } from '../../../theme/theme-vars';
 import { cardStyle, officialBadge } from '../styles';
 
+import type { ReviewStatus } from '@sn/types';
+
 import { PriceTag } from './PriceTag';
+import { SecurityBadge } from './SecurityBadge';
 import { StarRating } from './StarRating';
 import { WidgetThumbnail } from './WidgetThumbnail';
 
@@ -29,6 +32,7 @@ export interface WidgetCardProps {
   currency?: string;
   isOfficial?: boolean;
   isDeprecated?: boolean;
+  reviewStatus?: ReviewStatus;
   onClick: (widgetId: string) => void;
   /** Optional action slot rendered below the card body (e.g., InstallButton). */
   action?: React.ReactNode;
@@ -48,6 +52,7 @@ export const WidgetCard: React.FC<WidgetCardProps> = ({
   currency,
   isOfficial,
   isDeprecated,
+  reviewStatus,
   onClick,
   action,
 }) => {
@@ -56,6 +61,7 @@ export const WidgetCard: React.FC<WidgetCardProps> = ({
   return (
     <div
       data-testid="marketplace-widget-card"
+      className="sn-glass sn-neo sn-lift-on-hover sn-holo-border"
       onClick={() => onClick(id)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -63,10 +69,6 @@ export const WidgetCard: React.FC<WidgetCardProps> = ({
         ...cardStyle,
         opacity: isDeprecated ? 0.6 : 1,
         position: 'relative',
-        transform: hovered ? 'translateY(-2px)' : 'translateY(0)',
-        boxShadow: hovered ? '0 4px 16px rgba(0, 0, 0, 0.2)' : 'none',
-        borderColor: hovered ? themeVar('--sn-accent') : undefined,
-        transition: `transform ${ANIMATION_DURATION.fast} ${ANIMATION_EASING.spring}, box-shadow ${ANIMATION_DURATION.fast} ${ANIMATION_EASING.spring}, border-color ${ANIMATION_DURATION.fast} ${ANIMATION_EASING.spring}`,
       }}
     >
       {thumbnailUrl ? (
@@ -79,21 +81,33 @@ export const WidgetCard: React.FC<WidgetCardProps> = ({
         <WidgetThumbnail name={name} category={category} height={120} />
       )}
 
-      {isDeprecated && (
+      {(isDeprecated || (reviewStatus && reviewStatus !== 'approved')) && (
         <div
           style={{
             position: 'absolute',
             top: 8,
             right: 8,
-            padding: '2px 8px',
-            borderRadius: '6px',
-            fontSize: '10px',
-            fontWeight: 600,
-            background: '#6b7280',
-            color: '#fff',
+            display: 'flex',
+            gap: '4px',
           }}
         >
-          Deprecated
+          {isDeprecated && (
+            <span
+              style={{
+                padding: '2px 8px',
+                borderRadius: '6px',
+                fontSize: '10px',
+                fontWeight: 600,
+                background: '#6b7280',
+                color: '#fff',
+              }}
+            >
+              Deprecated
+            </span>
+          )}
+          {reviewStatus && reviewStatus !== 'approved' && (
+            <SecurityBadge reviewStatus={reviewStatus} size="small" />
+          )}
         </div>
       )}
 

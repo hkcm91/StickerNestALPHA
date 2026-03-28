@@ -35,6 +35,9 @@ export interface MarketplaceWidgetListing {
   stripePriceId: string | null;
   /** Arbitrary metadata (e.g. { official: true, builtIn: true, rendering: "inline" }) */
   metadata: Record<string, unknown>;
+  reviewStatus: 'pending' | 'approved' | 'flagged' | 'rejected';
+  securityFlags: number;
+  securityScan: { passed: boolean; score: number; flags: Array<{ severity: string; rule: string; message: string; line?: number }> } | null;
   createdAt: string;
   updatedAt: string;
 }

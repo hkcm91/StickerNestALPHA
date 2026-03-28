@@ -13,6 +13,8 @@ import React, { useCallback, useRef, useState } from "react";
 export interface CursorGlowProps {
   /** Whether the glow is enabled (disable in preview mode, VR, etc.) */
   enabled?: boolean;
+  /** Callback with normalized mouse position (0-1) for parallax */
+  onMouseNormalized?: (nx: number, ny: number) => void;
 }
 
 /**
@@ -20,7 +22,7 @@ export interface CursorGlowProps {
  * Uses CSS transitions for deliberate lag — not requestAnimationFrame.
  * Positioned absolutely; mount inside the canvas workspace container.
  */
-export const CursorGlow: React.FC<CursorGlowProps> = ({ enabled = true }) => {
+export const CursorGlow: React.FC<CursorGlowProps> = ({ enabled = true, onMouseNormalized }) => {
   const [pos, setPos] = useState({ x: 50, y: 50 });
   const [visible, setVisible] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -29,13 +31,13 @@ export const CursorGlow: React.FC<CursorGlowProps> = ({ enabled = true }) => {
     (e: React.MouseEvent) => {
       if (!enabled || !containerRef.current) return;
       const rect = containerRef.current.getBoundingClientRect();
-      setPos({
-        x: ((e.clientX - rect.left) / rect.width) * 100,
-        y: ((e.clientY - rect.top) / rect.height) * 100,
-      });
+      const nx = (e.clientX - rect.left) / rect.width;
+      const ny = (e.clientY - rect.top) / rect.height;
+      setPos({ x: nx * 100, y: ny * 100 });
       if (!visible) setVisible(true);
+      onMouseNormalized?.(nx, ny);
     },
-    [enabled, visible],
+    [enabled, visible, onMouseNormalized],
   );
 
   const handleMouseLeave = useCallback(() => {
@@ -58,20 +60,38 @@ export const CursorGlow: React.FC<CursorGlowProps> = ({ enabled = true }) => {
       }}
       data-testid="cursor-glow-layer"
     >
-      {/* Large ambient glow — follows with deliberate lag */}
+      {/* Outer ambient glow — large, faint, follows with heavy lag */}
       <div
         style={{
           position: "absolute",
-          width: 280,
-          height: 280,
+          width: 500,
+          height: 500,
           borderRadius: "50%",
           background:
-            "radial-gradient(circle, color-mix(in srgb, var(--sn-accent, #4E7B8E) 5%, transparent), transparent)",
+            "radial-gradient(circle, var(--sn-glow, rgba(232,128,108,0.08)), transparent 70%)",
           left: `${pos.x}%`,
           top: `${pos.y}%`,
           transform: "translate(-50%, -50%)",
           transition:
-            "left 0.8s cubic-bezier(0.16, 1, 0.3, 1), top 0.8s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.5s ease",
+            "left 1.2s cubic-bezier(0.16, 1, 0.3, 1), top 1.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.5s ease",
+          filter: "blur(60px)",
+          opacity: visible ? 0.7 : 0,
+        }}
+      />
+      {/* Inner focused glow — tighter, warmer, slightly less lag */}
+      <div
+        style={{
+          position: "absolute",
+          width: 340,
+          height: 340,
+          borderRadius: "50%",
+          background:
+            "radial-gradient(circle, var(--sn-glow, rgba(232,128,108,0.08)), transparent 65%)",
+          left: `${pos.x}%`,
+          top: `${pos.y}%`,
+          transform: "translate(-50%, -50%)",
+          transition:
+            "left 0.9s cubic-bezier(0.16, 1, 0.3, 1), top 0.9s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.5s ease",
           filter: "blur(40px)",
           opacity: visible ? 1 : 0,
         }}

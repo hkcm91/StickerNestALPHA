@@ -30,7 +30,7 @@ export const DatabaseCreateModal: React.FC<DatabaseCreateModalProps> = ({
 
   return (
     <div data-testid="create-database-modal" style={styles.overlay}>
-      <div style={styles.modal}>
+      <div className="sn-glass-heavy sn-neo sn-holo-border" style={styles.modal}>
         <div style={styles.header}>
           <h2 style={styles.title}>New Database</h2>
           <button onClick={onClose} style={styles.closeBtn}>×</button>
@@ -88,17 +88,17 @@ export const DatabaseCreateModal: React.FC<DatabaseCreateModalProps> = ({
 
 const styles: Record<string, React.CSSProperties> = {
   overlay: { position: 'fixed', inset: 0, background: 'rgba(10,10,14,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 },
-  modal: { background: 'var(--sn-surface-glass, rgba(20,17,24,0.75))', borderRadius: '12px', width: '400px', maxWidth: '90vw', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' },
+  modal: { borderRadius: '12px', width: '400px', maxWidth: '90vw' },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid var(--sn-border, rgba(255,255,255,0.06))' },
-  title: { margin: 0, fontSize: '18px', fontWeight: 700 },
-  closeBtn: { background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#999' },
+  title: { margin: 0, fontSize: '18px', fontWeight: 700, color: 'var(--sn-text, #E8E6ED)' },
+  closeBtn: { background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: 'var(--sn-text-muted, #7A7784)' },
   form: { padding: '20px' },
   field: { marginBottom: '16px' },
-  label: { display: 'block', fontSize: '14px', fontWeight: 600, marginBottom: '6px' },
-  input: { width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--sn-border, #ddd)', fontSize: '14px', boxSizing: 'border-box' },
-  select: { width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--sn-border, #ddd)', fontSize: '14px' },
+  label: { display: 'block', fontSize: '14px', fontWeight: 600, marginBottom: '6px', color: 'var(--sn-text, #E8E6ED)' },
+  input: { width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--sn-border, rgba(255,255,255,0.06))', fontSize: '14px', boxSizing: 'border-box' as const, background: 'var(--sn-surface-glass, rgba(20,17,24,0.5))', color: 'var(--sn-text, #E8E6ED)', outline: 'none' },
+  select: { width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--sn-border, rgba(255,255,255,0.06))', fontSize: '14px', background: 'var(--sn-surface-glass, rgba(20,17,24,0.5))', color: 'var(--sn-text, #E8E6ED)' },
   footer: { display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '24px' },
-  cancelBtn: { padding: '8px 16px', borderRadius: '6px', border: '1px solid var(--sn-border, #ddd)', background: 'none', cursor: 'pointer', fontSize: '14px' },
-  createBtn: { padding: '8px 16px', borderRadius: '6px', border: 'none', background: 'var(--sn-accent, #3E7D94)', color: '#fff', cursor: 'pointer', fontSize: '14px', fontWeight: 600 },
+  cancelBtn: { padding: '8px 16px', borderRadius: '6px', border: '1px solid var(--sn-border, rgba(255,255,255,0.06))', background: 'none', cursor: 'pointer', fontSize: '14px', color: 'var(--sn-text-muted, #7A7784)' },
+  createBtn: { padding: '8px 16px', borderRadius: '6px', border: 'none', background: 'var(--sn-accent, #3E7D94)', color: '#fff', cursor: 'pointer', fontSize: '14px', fontWeight: 600, boxShadow: '0 0 8px rgba(62,125,148,0.2)' },
   disabledBtn: { opacity: 0.5, cursor: 'not-allowed' },
 };

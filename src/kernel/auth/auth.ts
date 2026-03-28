@@ -8,6 +8,7 @@ import type { AuthError, OAuthResponse, Session, User } from '@supabase/supabase
 import { KernelEvents } from '@sn/types';
 
 import { bus } from '../bus';
+import { getProfile, createProfile } from '../social-graph/profiles';
 import { useAuthStore } from '../stores/auth';
 import type { AuthUser } from '../stores/auth';
 import { supabase } from '../supabase';
@@ -95,6 +96,17 @@ async function handleAuthChange(user: User | null, session: Session | null): Pro
     const tier = await fetchUserTier(user.id);
     store.setUser(mapUser(user, tier));
     store.setSession(mapSession(session));
+
+    // Auto-create profile if one doesn't exist yet
+    const profileResult = await getProfile(user.id);
+    if (!profileResult.success) {
+      const displayName = user.user_metadata?.display_name
+        ?? user.user_metadata?.full_name
+        ?? user.email?.split('@')[0]
+        ?? 'User';
+      const username = user.email?.split('@')[0]?.replace(/[^a-zA-Z0-9_-]/g, '') ?? `user-${user.id.slice(0, 8)}`;
+      await createProfile(user.id, displayName, username);
+    }
 
     bus.emit(KernelEvents.AUTH_STATE_CHANGED, {
       user: mapUser(user, tier),

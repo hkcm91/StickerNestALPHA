@@ -366,11 +366,11 @@ describe('UpdateCanvasDocumentInputSchema', () => {
 });
 
 describe('DEFAULT_BACKGROUND', () => {
-  it('should be a valid solid white background', () => {
+  it('should be a valid transparent background', () => {
     expect(DEFAULT_BACKGROUND.type).toBe('solid');
     if (DEFAULT_BACKGROUND.type === 'solid') {
-      expect(DEFAULT_BACKGROUND.color).toBe('#ffffff');
-      expect(DEFAULT_BACKGROUND.opacity).toBe(1);
+      expect(DEFAULT_BACKGROUND.color).toBe('transparent');
+      expect(DEFAULT_BACKGROUND.opacity).toBe(0);
     }
   });
 });

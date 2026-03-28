@@ -665,3 +665,88 @@ export async function updateCanvasThumbnail(
 
   return { success: true, data: { thumbnailUrl } };
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Slug Validation & Update
+// ─────────────────────────────────────────────────────────────────────────────
+
+const SLUG_REGEX = /^[a-z0-9][a-z0-9-]{1,58}[a-z0-9]$/;
+const RESERVED_SLUGS = new Set(['new', 'demo', 'claude-lab', 'alice-art-shop']);
+
+/**
+ * Validate a canvas slug for format and reserved words.
+ * Returns `{ valid: true }` or `{ valid: false, error: '...' }`.
+ */
+export function validateSlug(slug: string): { valid: boolean; error?: string } {
+  if (slug.length < 3) {
+    return { valid: false, error: 'Slug must be at least 3 characters.' };
+  }
+  if (slug.length > 60) {
+    return { valid: false, error: 'Slug must be 60 characters or fewer.' };
+  }
+  if (!SLUG_REGEX.test(slug)) {
+    return { valid: false, error: 'Slug must be lowercase letters, numbers, and hyphens. Cannot start or end with a hyphen.' };
+  }
+  if (RESERVED_SLUGS.has(slug)) {
+    return { valid: false, error: `"${slug}" is reserved and cannot be used.` };
+  }
+  return { valid: true };
+}
+
+/**
+ * Update the slug on a canvas. Pass `null` to clear the slug.
+ * Caller must be the canvas owner.
+ */
+export async function updateCanvasSlug(
+  canvasId: string,
+  slug: string | null,
+  callerId: string,
+): Promise<SocialResult<{ slug: string | null }>> {
+  // Validate format (skip if clearing)
+  if (slug !== null) {
+    const validation = validateSlug(slug);
+    if (!validation.valid) {
+      return {
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: validation.error! },
+      };
+    }
+  }
+
+  const ownerId = await getCanvasOwnerId(canvasId);
+  if (!ownerId) {
+    return {
+      success: false,
+      error: { code: 'NOT_FOUND', message: 'Canvas not found.' },
+    };
+  }
+  if (ownerId !== callerId) {
+    return {
+      success: false,
+      error: { code: 'PERMISSION_DENIED', message: 'Only canvas owner can update slug.' },
+    };
+  }
+
+  const { error } = (await supabase
+    .from('canvases')
+    .update({ slug } as Record<string, unknown>)
+    .eq('id', canvasId)) as QueryResult<null>;
+
+  if (error) {
+    // Supabase unique constraint violation
+    if (error.message?.includes('unique') || error.message?.includes('duplicate') || (error as Record<string, unknown>).code === '23505') {
+      return {
+        success: false,
+        error: { code: 'ALREADY_EXISTS', message: 'This slug is already taken.' },
+      };
+    }
+    return {
+      success: false,
+      error: { code: 'UNKNOWN', message: error.message },
+    };
+  }
+
+  bus.emit(SocialGraphEvents.CANVAS_SLUG_UPDATED, { canvasId, slug, updatedBy: callerId });
+
+  return { success: true, data: { slug } };
+}

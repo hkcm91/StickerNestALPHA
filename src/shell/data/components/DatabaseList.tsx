@@ -11,6 +11,13 @@ import type { DataSource, DataSourceType } from '@sn/types';
 
 import { listDataSources } from '../../../kernel/datasource';
 import { useAuthStore } from '../../../kernel/stores/auth/auth.store';
+import { GlassPanel } from '../../components/GlassPanel';
+
+// =============================================================================
+// Constants
+// =============================================================================
+
+const SN_SPRING = 'cubic-bezier(0.16, 1, 0.3, 1)';
 
 // =============================================================================
 // Types
@@ -42,6 +49,9 @@ export const DatabaseList: React.FC<DatabaseListProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<DataSourceType | 'all'>('all');
+  const [focusedSearch, setFocusedSearch] = useState(false);
+  const [hoveredBtn, setHoveredBtn] = useState<string | null>(null);
+  const [pressedCard, setPressedCard] = useState<string | null>(null);
 
   const loadDatabases = useCallback(async () => {
     if (!user) return;
@@ -96,21 +106,36 @@ export const DatabaseList: React.FC<DatabaseListProps> = ({
           <button
             data-testid="btn-create-database"
             onClick={onCreate}
-            style={styles.primaryBtn}
+            style={{
+              ...styles.primaryBtn,
+              ...(hoveredBtn === 'create' ? styles.primaryBtnHover : {}),
+            }}
+            onMouseEnter={() => setHoveredBtn('create')}
+            onMouseLeave={() => setHoveredBtn(null)}
           >
             + New Database
           </button>
           <button
             data-testid="btn-import-notion"
             onClick={onImportNotion}
-            style={styles.secondaryBtn}
+            style={{
+              ...styles.glassBtn,
+              ...(hoveredBtn === 'notion' ? styles.glassBtnHover : {}),
+            }}
+            onMouseEnter={() => setHoveredBtn('notion')}
+            onMouseLeave={() => setHoveredBtn(null)}
           >
             Import from Notion
           </button>
           <button
             data-testid="btn-use-template"
             onClick={onUseTemplate}
-            style={styles.secondaryBtn}
+            style={{
+              ...styles.glassBtn,
+              ...(hoveredBtn === 'template' ? styles.glassBtnHover : {}),
+            }}
+            onMouseEnter={() => setHoveredBtn('template')}
+            onMouseLeave={() => setHoveredBtn(null)}
           >
             Use Template
           </button>
@@ -125,7 +150,12 @@ export const DatabaseList: React.FC<DatabaseListProps> = ({
           placeholder="Search databases..."
           value={search}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
-          style={styles.searchInput}
+          onFocus={() => setFocusedSearch(true)}
+          onBlur={() => setFocusedSearch(false)}
+          style={{
+            ...styles.searchInput,
+            ...(focusedSearch ? styles.searchInputFocus : {}),
+          }}
         />
         <select
           data-testid="filter-type"
@@ -158,51 +188,61 @@ export const DatabaseList: React.FC<DatabaseListProps> = ({
       ) : (
         <div style={styles.grid}>
           {filtered.map((ds: DataSource) => (
-            <div
+            <GlassPanel
               key={ds.id}
               data-testid={`database-card-${ds.id}`}
+              flashlight
+              grain
               onClick={() => onSelect(ds)}
-              style={styles.card}
+              onMouseDown={() => setPressedCard(ds.id)}
+              onMouseUp={() => setPressedCard(null)}
+              style={{
+                ...styles.card,
+                ...(pressedCard === ds.id ? styles.cardActive : {}),
+                cursor: 'pointer',
+              }}
             >
-              <div style={styles.cardIcon}>
-                {ds.metadata?.icon || typeIcon(ds.type)}
-              </div>
-              <div style={styles.cardContent}>
-                <div style={styles.cardHeaderRow}>
-                  <div style={styles.cardName}>
-                    {ds.metadata?.name || 'Untitled'}
+              <div style={styles.cardInner}>
+                <div style={styles.cardIcon}>
+                  {ds.metadata?.icon || typeIcon(ds.type)}
+                </div>
+                <div style={styles.cardContent}>
+                  <div style={styles.cardHeaderRow}>
+                    <div style={styles.cardName}>
+                      {ds.metadata?.name || 'Untitled'}
+                    </div>
+                    <div style={styles.cardActions}>
+                      <button
+                        data-testid={`btn-rename-${ds.id}`}
+                        onClick={(e) => handleRename(e, ds.id, ds.metadata?.name || '')}
+                        style={styles.iconBtn}
+                        title="Rename"
+                      >
+                        &#9998;
+                      </button>
+                      <button
+                        data-testid={`btn-delete-${ds.id}`}
+                        onClick={(e) => handleDelete(e, ds.id, ds.metadata?.name || 'Untitled')}
+                        style={styles.iconBtnDelete}
+                        title="Delete"
+                      >
+                        &#215;
+                      </button>
+                    </div>
                   </div>
-                  <div style={styles.cardActions}>
-                    <button
-                      data-testid={`btn-rename-${ds.id}`}
-                      onClick={(e) => handleRename(e, ds.id, ds.metadata?.name || '')}
-                      style={styles.iconBtn}
-                      title="Rename"
-                    >
-                      ✎
-                    </button>
-                    <button
-                      data-testid={`btn-delete-${ds.id}`}
-                      onClick={(e) => handleDelete(e, ds.id, ds.metadata?.name || 'Untitled')}
-                      style={styles.iconBtnDelete}
-                      title="Delete"
-                    >
-                      ×
-                    </button>
+                  <div style={styles.cardMeta}>
+                    <span style={styles.typeBadge}>{ds.type}</span>
+                    <span style={styles.scopeBadge}>{ds.scope}</span>
+                  </div>
+                  {ds.metadata?.description && (
+                    <div style={styles.cardDesc}>{ds.metadata.description}</div>
+                  )}
+                  <div style={styles.cardDate}>
+                    Updated {new Date(ds.updatedAt).toLocaleDateString()}
                   </div>
                 </div>
-                <div style={styles.cardMeta}>
-                  <span style={styles.typeBadge}>{ds.type}</span>
-                  <span style={styles.scopeBadge}>{ds.scope}</span>
-                </div>
-                {ds.metadata?.description && (
-                  <div style={styles.cardDesc}>{ds.metadata.description}</div>
-                )}
-                <div style={styles.cardDate}>
-                  Updated {new Date(ds.updatedAt).toLocaleDateString()}
-                </div>
               </div>
-            </div>
+            </GlassPanel>
           ))}
         </div>
       )}
@@ -223,35 +263,217 @@ function typeIcon(type: DataSourceType): string {
 }
 
 // =============================================================================
-// Styles (inline for L6 shell components — no external CSS dependency)
+// Styles
 // =============================================================================
 
 const styles: Record<string, React.CSSProperties> = {
-  container: { padding: '24px', maxWidth: '1200px', margin: '0 auto' },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' },
-  title: { fontSize: '24px', fontWeight: 300, margin: 0, color: 'var(--sn-text, #E8E6ED)', fontFamily: "'Outfit', sans-serif" },
-  actions: { display: 'flex', gap: '8px', flexWrap: 'wrap' },
-  primaryBtn: { padding: '8px 16px', background: 'var(--sn-accent, #3E7D94)', color: '#fff', border: 'none', borderRadius: 'var(--sn-radius, 6px)', cursor: 'pointer', fontWeight: 600, fontSize: '14px' },
-  secondaryBtn: { padding: '8px 16px', background: 'var(--sn-surface-glass, rgba(20,17,24,0.75))', color: 'var(--sn-text, #111)', border: '1px solid var(--sn-border, rgba(255,255,255,0.06))', borderRadius: 'var(--sn-radius, 6px)', cursor: 'pointer', fontSize: '14px' },
-  filterBar: { display: 'flex', gap: '12px', marginBottom: '20px' },
-  searchInput: { flex: 1, padding: '8px 12px', border: '1px solid var(--sn-border, #ddd)', borderRadius: 'var(--sn-radius, 6px)', fontSize: '14px', background: 'var(--sn-surface-glass, rgba(20,17,24,0.75))', color: 'var(--sn-text, #111)' },
-  typeSelect: { padding: '8px 12px', border: '1px solid var(--sn-border, #ddd)', borderRadius: 'var(--sn-radius, 6px)', fontSize: '14px', background: 'var(--sn-surface, #fff)', color: 'var(--sn-text, #111)' },
-  loading: { textAlign: 'center' as const, padding: '48px', color: 'var(--sn-text-muted, #7A7784)' },
-  empty: { textAlign: 'center' as const, padding: '48px' },
-  emptyText: { fontSize: '16px', color: 'var(--sn-text, #111)', marginBottom: '8px' },
-  emptyHint: { fontSize: '14px', color: 'var(--sn-text-muted, #666)' },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' },
-  card: { display: 'flex', gap: '12px', padding: '16px', background: 'var(--sn-surface, #fff)', border: '1px solid var(--sn-border, #ddd)', borderRadius: 'var(--sn-radius, 6px)', cursor: 'pointer', textAlign: 'left' as const, width: '100%', transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)', fontFamily: 'inherit' },
-  cardIcon: { width: '40px', height: '40px', borderRadius: '8px', background: 'var(--sn-surface-raised, #1A1A1F)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', fontWeight: 700, flexShrink: 0 },
-  cardContent: { flex: 1, minWidth: 0 },
-  cardHeaderRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' },
-  cardName: { fontWeight: 600, fontSize: '15px', color: 'var(--sn-text, #111)', flex: 1, marginRight: '8px' },
-  cardActions: { display: 'flex', gap: '4px' },
-  iconBtn: { background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', fontSize: '14px', color: 'var(--sn-text-muted, #7A7784)', transition: 'color 0.2s cubic-bezier(0.16, 1, 0.3, 1)' },
-  iconBtnDelete: { background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', fontSize: '18px', color: 'var(--sn-text-muted, #999)', transition: 'color 0.1s', lineHeight: 1 },
-  cardMeta: { display: 'flex', gap: '6px', marginBottom: '4px' },
-  typeBadge: { fontSize: '11px', padding: '2px 6px', background: 'var(--sn-bg, #f0f0f0)', borderRadius: '4px', color: 'var(--sn-text-muted, #666)', textTransform: 'uppercase' as const },
-  scopeBadge: { fontSize: '11px', padding: '2px 6px', background: 'var(--sn-bg, #f0f0f0)', borderRadius: '4px', color: 'var(--sn-text-muted, #666)' },
-  cardDesc: { fontSize: '13px', color: 'var(--sn-text-muted, #666)', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
-  cardDate: { fontSize: '12px', color: 'var(--sn-text-muted, #999)' },
+  container: {
+    padding: '24px',
+    maxWidth: '1200px',
+    margin: '0 auto',
+  },
+  header: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '24px',
+    flexWrap: 'wrap',
+    gap: '12px',
+  },
+  title: {
+    fontSize: '24px',
+    fontWeight: 400,
+    margin: 0,
+    color: 'var(--sn-text, #E8E6ED)',
+    fontFamily: "'Outfit', sans-serif",
+  },
+  actions: {
+    display: 'flex',
+    gap: '8px',
+    flexWrap: 'wrap',
+  },
+  primaryBtn: {
+    padding: '8px 16px',
+    background: 'linear-gradient(145deg, var(--sn-accent, #3E7D94), #2E6070)',
+    color: '#fff',
+    border: 'none',
+    borderRadius: 'var(--sn-radius, 6px)',
+    cursor: 'pointer',
+    fontWeight: 600,
+    fontSize: '14px',
+    boxShadow: '0 0 12px rgba(62,125,148,0.25), inset 0 1px 0 rgba(255,255,255,0.1)',
+    transition: `all 300ms ${SN_SPRING}`,
+  },
+  primaryBtnHover: {
+    transform: 'translateY(-2px)',
+    boxShadow: '0 0 20px rgba(62,125,148,0.35), 0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.15)',
+  },
+  glassBtn: {
+    padding: '8px 16px',
+    background: 'var(--sn-surface-glass, rgba(20,17,24,0.75))',
+    backdropFilter: 'blur(12px) saturate(1.2)',
+    WebkitBackdropFilter: 'blur(12px) saturate(1.2)',
+    color: 'var(--sn-text, #E8E6ED)',
+    border: '1px solid var(--sn-border, rgba(255,255,255,0.06))',
+    borderRadius: 'var(--sn-radius, 6px)',
+    cursor: 'pointer',
+    fontSize: '14px',
+    transition: `all 300ms ${SN_SPRING}`,
+  },
+  glassBtnHover: {
+    borderColor: 'rgba(78,123,142,0.25)',
+    transform: 'translateY(-1px)',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+  },
+  filterBar: {
+    display: 'flex',
+    gap: '12px',
+    marginBottom: '20px',
+  },
+  searchInput: {
+    flex: 1,
+    padding: '8px 12px',
+    border: '1px solid var(--sn-border, rgba(255,255,255,0.06))',
+    borderRadius: 'var(--sn-radius, 6px)',
+    fontSize: '14px',
+    background: 'var(--sn-surface-glass, rgba(20,17,24,0.75))',
+    backdropFilter: 'blur(12px)',
+    WebkitBackdropFilter: 'blur(12px)',
+    color: 'var(--sn-text, #E8E6ED)',
+    outline: 'none',
+    transition: `all 300ms ${SN_SPRING}`,
+  },
+  searchInputFocus: {
+    borderColor: 'rgba(62,125,148,0.4)',
+    boxShadow: '0 0 0 2px rgba(62,125,148,0.15)',
+  },
+  typeSelect: {
+    padding: '8px 12px',
+    border: '1px solid var(--sn-border, rgba(255,255,255,0.06))',
+    borderRadius: 'var(--sn-radius, 6px)',
+    fontSize: '14px',
+    background: 'var(--sn-surface-glass, rgba(20,17,24,0.75))',
+    color: 'var(--sn-text, #E8E6ED)',
+  },
+  loading: {
+    textAlign: 'center' as const,
+    padding: '48px',
+    color: 'var(--sn-text-muted, #7A7784)',
+  },
+  empty: {
+    textAlign: 'center' as const,
+    padding: '64px 48px',
+  },
+  emptyText: {
+    fontSize: '16px',
+    color: 'var(--sn-text, #E8E6ED)',
+    marginBottom: '8px',
+  },
+  emptyHint: {
+    fontSize: '14px',
+    color: 'var(--sn-text-muted, #7A7784)',
+  },
+  grid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+    gap: '16px',
+  },
+  card: {
+    padding: 0,
+    transition: `all 300ms ${SN_SPRING}`,
+  },
+  cardActive: {
+    transform: 'scale(0.995)',
+  },
+  cardInner: {
+    display: 'flex',
+    gap: '12px',
+    padding: '16px',
+  },
+  cardIcon: {
+    width: '40px',
+    height: '40px',
+    borderRadius: '8px',
+    background: 'rgba(78,123,142,0.12)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '18px',
+    fontWeight: 700,
+    flexShrink: 0,
+    color: 'var(--sn-accent, #3E7D94)',
+  },
+  cardContent: {
+    flex: 1,
+    minWidth: 0,
+  },
+  cardHeaderRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: '4px',
+  },
+  cardName: {
+    fontWeight: 600,
+    fontSize: '15px',
+    color: 'var(--sn-text, #E8E6ED)',
+    flex: 1,
+    marginRight: '8px',
+  },
+  cardActions: {
+    display: 'flex',
+    gap: '4px',
+  },
+  iconBtn: {
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    padding: '2px 4px',
+    fontSize: '14px',
+    color: 'var(--sn-text-muted, #7A7784)',
+    transition: `color 200ms ${SN_SPRING}`,
+  },
+  iconBtnDelete: {
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    padding: '2px 4px',
+    fontSize: '18px',
+    color: 'var(--sn-text-muted, #7A7784)',
+    transition: 'color 0.1s',
+    lineHeight: 1,
+  },
+  cardMeta: {
+    display: 'flex',
+    gap: '6px',
+    marginBottom: '4px',
+  },
+  typeBadge: {
+    fontSize: '11px',
+    padding: '2px 6px',
+    background: 'rgba(20,17,24,0.5)',
+    borderRadius: '4px',
+    color: 'var(--sn-text-muted, #7A7784)',
+    textTransform: 'uppercase' as const,
+  },
+  scopeBadge: {
+    fontSize: '11px',
+    padding: '2px 6px',
+    background: 'rgba(20,17,24,0.5)',
+    borderRadius: '4px',
+    color: 'var(--sn-text-muted, #7A7784)',
+  },
+  cardDesc: {
+    fontSize: '13px',
+    color: 'var(--sn-text-muted, #7A7784)',
+    marginBottom: '4px',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap' as const,
+  },
+  cardDate: {
+    fontSize: '12px',
+    color: 'var(--sn-text-muted, #7A7784)',
+    fontFamily: "'DM Mono', monospace",
+  },
 };

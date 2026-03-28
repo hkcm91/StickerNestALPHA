@@ -2,7 +2,7 @@
  * SampleCard — card component for a single sample widget entry.
  *
  * Shows name, difficulty badge, description, feature tags,
- * and Download / Install action buttons.
+ * and Download / Try Upload action buttons.
  *
  * @module shell/pages/marketplace/samples
  * @layer L6
@@ -21,7 +21,7 @@ import { btnPrimary, btnSecondary, cardStyle, mutedText, tagStyle } from '../sty
 
 export interface SampleCardProps {
   sample: SampleWidgetEntry;
-  onInstall: (data: ArrayBuffer) => void;
+  onTryUpload: (file: File) => void;
   onError: (msg: string) => void;
 }
 
@@ -58,38 +58,61 @@ const DifficultyBadge: React.FC<{ difficulty: Difficulty }> = ({ difficulty }) =
 };
 
 // ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/** Resolve the download URL — prefer htmlUrl, fall back to zipUrl. */
+function getDownloadUrl(sample: SampleWidgetEntry): string | null {
+  return sample.htmlUrl ?? sample.zipUrl ?? null;
+}
+
+function getFilename(sample: SampleWidgetEntry): string {
+  if (sample.htmlUrl) return `${sample.id}.html`;
+  return `${sample.id}.zip`;
+}
+
+function getMimeType(sample: SampleWidgetEntry): string {
+  if (sample.htmlUrl) return 'text/html';
+  return 'application/zip';
+}
+
+// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export const SampleCard: React.FC<SampleCardProps> = ({ sample, onInstall, onError }) => {
+export const SampleCard: React.FC<SampleCardProps> = ({ sample, onTryUpload, onError }) => {
   const [isDownloading, setIsDownloading] = useState(false);
-  const [isInstalling, setIsInstalling] = useState(false);
+  const [isPrepping, setIsPrepping] = useState(false);
 
-  const fetchZip = useCallback(async (): Promise<ArrayBuffer | null> => {
+  const fetchFile = useCallback(async (): Promise<ArrayBuffer | null> => {
+    const url = getDownloadUrl(sample);
+    if (!url) {
+      onError('No download URL available for this sample.');
+      return null;
+    }
     try {
-      const resp = await fetch(sample.zipUrl);
+      const resp = await fetch(url);
       if (!resp.ok) {
-        throw new Error(`Failed to fetch package (HTTP ${resp.status})`);
+        throw new Error(`Failed to fetch sample (HTTP ${resp.status})`);
       }
       return await resp.arrayBuffer();
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'Failed to fetch package.');
+      onError(err instanceof Error ? err.message : 'Failed to fetch sample.');
       return null;
     }
-  }, [sample.zipUrl, onError]);
+  }, [sample, onError]);
 
   const handleDownload = useCallback(async () => {
     setIsDownloading(true);
     try {
-      const buffer = await fetchZip();
+      const buffer = await fetchFile();
       if (!buffer) return;
 
-      // Trigger browser download
-      const blob = new Blob([buffer], { type: 'application/zip' });
+      const blob = new Blob([buffer], { type: getMimeType(sample) });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${sample.id}.zip`;
+      a.download = getFilename(sample);
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -97,19 +120,22 @@ export const SampleCard: React.FC<SampleCardProps> = ({ sample, onInstall, onErr
     } finally {
       setIsDownloading(false);
     }
-  }, [fetchZip, sample.id]);
+  }, [fetchFile, sample]);
 
-  const handleInstall = useCallback(async () => {
-    setIsInstalling(true);
+  const handleTryUpload = useCallback(async () => {
+    setIsPrepping(true);
     try {
-      const buffer = await fetchZip();
-      if (buffer) {
-        onInstall(buffer);
-      }
+      const buffer = await fetchFile();
+      if (!buffer) return;
+
+      const filename = getFilename(sample);
+      const mimeType = getMimeType(sample);
+      const file = new File([buffer], filename, { type: mimeType });
+      onTryUpload(file);
     } finally {
-      setIsInstalling(false);
+      setIsPrepping(false);
     }
-  }, [fetchZip, onInstall]);
+  }, [fetchFile, sample, onTryUpload]);
 
   // ---------------------------------------------------------------------------
   // Styles
@@ -153,6 +179,8 @@ export const SampleCard: React.FC<SampleCardProps> = ({ sample, onInstall, onErr
     marginTop: '12px',
   };
 
+  const busy = isDownloading || isPrepping;
+
   return (
     <div style={{ ...cardStyle, cursor: 'default' }} data-testid="sample-card">
       {/* Header: name + difficulty badge */}
@@ -180,30 +208,30 @@ export const SampleCard: React.FC<SampleCardProps> = ({ sample, onInstall, onErr
         <button
           type="button"
           onClick={handleDownload}
-          disabled={isDownloading || isInstalling}
+          disabled={busy}
           style={{
             ...btnSecondary,
             fontSize: '12px',
             padding: '5px 12px',
-            opacity: isDownloading || isInstalling ? 0.6 : 1,
+            opacity: busy ? 0.6 : 1,
           }}
           data-testid="sample-download-btn"
         >
-          {isDownloading ? 'Downloading…' : 'Download .zip'}
+          {isDownloading ? 'Downloading\u2026' : 'Download'}
         </button>
         <button
           type="button"
-          onClick={handleInstall}
-          disabled={isInstalling || isDownloading}
+          onClick={handleTryUpload}
+          disabled={busy}
           style={{
             ...btnPrimary,
             fontSize: '12px',
             padding: '5px 12px',
-            opacity: isInstalling || isDownloading ? 0.6 : 1,
+            opacity: busy ? 0.6 : 1,
           }}
-          data-testid="sample-install-btn"
+          data-testid="sample-try-upload-btn"
         >
-          {isInstalling ? 'Installing…' : 'Install'}
+          {isPrepping ? 'Preparing\u2026' : 'Try Upload'}
         </button>
       </div>
     </div>

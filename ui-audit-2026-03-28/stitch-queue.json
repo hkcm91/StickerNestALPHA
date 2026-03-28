@@ -1,0 +1,75 @@
+{
+  "design_direction": "Futuristic spatial OS — glassmorphism panels, layered depth with noise texture, ambient glow on interactive elements, micro-animations on all transitions, geometric heading typography (Space Grotesk / Satoshi), rich illustrated empty states, consistent card system across all surfaces",
+  "queue": [
+    {
+      "id": "F003+F006",
+      "type": "full-page",
+      "screenshot_id": "ss_4392c58aa",
+      "prompt_context": "Redesign the StickerNest canvas editor. The current version has a minimal floating toolbar with no visible tools and an empty canvas with no onboarding. Create a futuristic spatial editor with: (1) a glassmorphism floating tool palette on the left with icons for select, pen, shape, text, sticker, widget tools, (2) a redesigned top toolbar with editable canvas name, tool options, collaboration avatars, and share button, (3) a centered onboarding overlay for empty canvases with 'Add your first widget' prompt and template suggestions, (4) subtle animated dot grid on the canvas background. Dark theme with teal/purple accent palette.",
+      "priority": 1
+    },
+    {
+      "id": "F004+F005",
+      "type": "component",
+      "screenshot_id": "ss_4392c58aa",
+      "prompt_context": "Redesign the canvas side panels (Canvas Docker on right, Assets panel on left, Properties panel on right). Current panels are plain bordered rectangles with nearly invisible tab handles. Create glassmorphism floating panels with: (1) frosted glass background with subtle blur, (2) icon-based tab handles that expand on hover, (3) widget cards inside Docker showing thumbnails and labels, (4) smooth slide-in animation feel. The panels should feel like holographic displays in a spatial OS.",
+      "priority": 2
+    },
+    {
+      "id": "F001",
+      "type": "full-page",
+      "screenshot_id": "ss_6232wxk2j",
+      "prompt_context": "Redesign the StickerNest dashboard/home screen. Current version shows four plain cards on a dark background with no real content. Create a rich spatial OS home screen with: (1) hero section with recent canvases as live thumbnail cards with glassmorphism treatment, (2) quick-action bar (New Canvas, New Widget, Browse Marketplace), (3) activity feed showing recent edits and collaborator activity, (4) featured templates section, (5) usage stats mini-widget. Animated mesh gradient background with noise texture. Dark theme with teal/purple accents.",
+      "priority": 3
+    },
+    {
+      "id": "F007+F008",
+      "type": "full-page",
+      "screenshot_id": "ss_24243jobb",
+      "prompt_context": "Redesign the StickerNest Databases page. Current version has broken icon rendering (text overflowing icon containers) and inconsistent card layout. Create a clean data management view with: (1) glassmorphism database cards with proper Lucide icons per type (doc, table, note, folder), (2) clear primary CTA for '+ New Database' with accent glow, (3) secondary actions grouped in a dropdown, (4) search with filter chips, (5) grid/list view toggle. Consistent card hover states with elevation shadow.",
+      "priority": 4
+    },
+    {
+      "id": "F009+F010+F011",
+      "type": "full-page",
+      "screenshot_id": "ss_46359zr6e",
+      "prompt_context": "Redesign the StickerNest Widget Lab. Current version has a utilitarian entity sidebar, bland pipeline empty state, and under-emphasized AI generation bar. Create a creative IDE environment with: (1) colorful category-grouped entity palette with hover previews, (2) pipeline canvas with animated placeholder nodes and guided onboarding, (3) prominent AI generation panel at bottom with gradient-border input, animated placeholder examples, and expandable panel mode, (4) glassmorphism panels throughout. The Lab should feel like a futuristic creative workstation.",
+      "priority": 5
+    },
+    {
+      "id": "F013+F014",
+      "type": "full-page",
+      "screenshot_id": "ss_3587k69qc",
+      "prompt_context": "Redesign the StickerNest Marketplace browse page. Current version has functional widget cards with letter-placeholder thumbnails. Create an app-store-quality marketplace with: (1) featured carousel with non-overlapping navigation, (2) widget cards with richer placeholder thumbnails (abstract widget previews), hover elevation with glass overlay showing quick-install action, (3) category pills or sidebar, (4) search with autocomplete suggestions. Premium spatial OS marketplace feel.",
+      "priority": 6
+    },
+    {
+      "id": "F017",
+      "type": "full-page",
+      "screenshot_id": "ss_74394mwbq",
+      "prompt_context": "Redesign the StickerNest Settings page. Current version is sparse with a top tab bar and centered narrow column. Create a modern settings layout with: (1) left sidebar tab navigation filling horizontal space, (2) rich usage visualizations (donut charts, progress bars with labels), (3) plan info card with upgrade CTA, (4) Sign Out moved to user menu (not standalone button). Glassmorphism section cards.",
+      "priority": 7
+    },
+    {
+      "id": "F015",
+      "type": "full-page",
+      "screenshot_id": "ss_2730yn3ca",
+      "prompt_context": "Redesign the StickerNest user profile page. Current version has a generic purple banner and basic social stats. Create a spatial creator profile with: (1) customizable banner area with canvas showcase, (2) animated stat counters for Followers/Following/Posts/Canvases, (3) featured canvases grid with live previews, (4) activity timeline. The profile should celebrate the creator's spatial work.",
+      "priority": 8
+    },
+    {
+      "id": "F018",
+      "type": "full-page",
+      "screenshot_id": "ss_03808vdi2",
+      "prompt_context": "Redesign the StickerNest Messages page. Current version has a plain conversation list with 'Unknown User' labels and a basic empty state. Create a modern messaging interface with: (1) conversation list with user avatars, online status indicators, unread badges, and hover states, (2) 'New Message' button, (3) illustrated empty state when no conversation is selected, (4) glassmorphism panels for both list and chat views.",
+      "priority": 9
+    },
+    {
+      "id": "F002+F019+F020",
+      "type": "component",
+      "screenshot_id": "ss_6232wxk2j",
+      "prompt_context": "Redesign the StickerNest global navigation bar and background treatment. Current nav is flat text links with small icons. Create: (1) frosted glass navigation bar with subtle blur, (2) gradient underline/glow for active state, (3) icon+label pairs for right-side actions with tooltips, (4) animated mesh gradient background with noise texture overlay for all pages, (5) distinctive heading typography using a geometric sans-serif font.",
+      "priority": 10
+    }
+  ]
+}

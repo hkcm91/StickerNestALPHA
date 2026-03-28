@@ -13,6 +13,8 @@
 // Each built-in must use the same SDK interface as sandboxed widgets.
 // No privileged internal APIs — this ensures portability.
 
+export { ActivityFeedWidget } from './activity-feed/activity-feed.widget';
+export { activityFeedManifest } from './activity-feed/activity-feed.widget';
 export { AICanvasAgentWidget } from './ai-canvas-agent/ai-canvas-agent.widget';
 export { aiCanvasAgentManifest } from './ai-canvas-agent/ai-canvas-agent.widget';
 export { ImageGeneratorWidget } from './image-generator/image-generator.widget';
@@ -29,7 +31,5 @@ export { GalleryWidget } from './gallery/gallery.widget';
 export { galleryManifest } from './gallery/gallery.widget';
 export { GreenScreenRemoverWidget } from './green-screen-remover/green-screen-remover.widget';
 export { greenScreenRemoverManifest } from './green-screen-remover/green-screen-remover.widget';
-export { SharedBeaconWidget } from './shared-beacon/shared-beacon.widget';
-export { sharedBeaconManifest } from './shared-beacon/shared-beacon.widget';
 export { BUILT_IN_WIDGET_HTML } from './built-in-html';
 export { BUILT_IN_WIDGET_COMPONENTS } from './built-in-components';

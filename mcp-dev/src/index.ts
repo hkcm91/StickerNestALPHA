@@ -19,6 +19,7 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 import { ARTIFACT_TOOL_DEFS, isArtifactTool, handleArtifactTool } from './artifact-tools.js';
+import * as marketplaceDb from './marketplace-supabase.js';
 
 // ============================================================================
 // Type Definitions (matching kernel schemas)
@@ -2345,6 +2346,199 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       inputSchema: { type: 'object', properties: {} },
     },
 
+    // ── Marketplace Tools (backed by cloud Supabase) ───────────────────
+    {
+      name: 'marketplace_publish',
+      description: 'Publish a widget to the marketplace from HTML content + manifest',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          authorId: { type: 'string', description: 'Author user ID' },
+          htmlContent: { type: 'string', description: 'Widget HTML content (single-file HTML)' },
+          manifest: {
+            type: 'object',
+            description: 'Widget manifest',
+            properties: {
+              id: { type: 'string', description: 'Widget identifier (alphanumeric, dashes, dots)' },
+              name: { type: 'string', description: 'Widget display name (1-50 chars)' },
+              version: { type: 'string', description: 'Semantic version (e.g. 1.0.0)' },
+              description: { type: 'string' },
+              author: { type: 'object', properties: { name: { type: 'string' }, email: { type: 'string' }, url: { type: 'string' } } },
+              license: { type: 'string', enum: ['MIT', 'Apache-2.0', 'GPL-3.0', 'BSD-3-Clause', 'proprietary', 'no-fork'] },
+              tags: { type: 'array', items: { type: 'string' } },
+              category: { type: 'string', enum: ['productivity', 'data', 'social', 'utilities', 'games', 'media', 'commerce', 'other'] },
+              permissions: { type: 'array', items: { type: 'string' } },
+              entry: { type: 'string' },
+              spatialSupport: { type: 'boolean' },
+            },
+            required: ['id', 'name', 'version'],
+          },
+          isFree: { type: 'boolean', description: 'Whether widget is free (default: true)' },
+          priceCents: { type: 'number', description: 'Price in cents for paid widgets' },
+          currency: { type: 'string', description: 'ISO 4217 currency code (default: usd)' },
+          thumbnailUrl: { type: 'string', description: 'Thumbnail URL for marketplace listing' },
+          iconUrl: { type: 'string', description: 'Icon URL for marketplace listing' },
+        },
+        required: ['authorId', 'htmlContent', 'manifest'],
+      },
+    },
+    {
+      name: 'marketplace_list',
+      description: 'List marketplace widgets with optional filters',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          category: { type: 'string', description: 'Filter by category' },
+          authorId: { type: 'string', description: 'Filter by author' },
+          isPublished: { type: 'boolean', description: 'Filter by published status' },
+          isDeprecated: { type: 'boolean', description: 'Filter by deprecated status' },
+        },
+      },
+    },
+    {
+      name: 'marketplace_get',
+      description: 'Get full marketplace widget details by ID (includes HTML content and manifest)',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', description: 'Widget ID' },
+        },
+        required: ['id'],
+      },
+    },
+    {
+      name: 'marketplace_get_by_slug',
+      description: 'Get full marketplace widget details by slug',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          slug: { type: 'string', description: 'Widget slug' },
+        },
+        required: ['slug'],
+      },
+    },
+    {
+      name: 'marketplace_search',
+      description: 'Search marketplace widgets (published, non-deprecated only)',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          query: { type: 'string', description: 'Search query (matches name, description, tags)' },
+          category: { type: 'string', description: 'Filter by category' },
+          tags: { type: 'array', items: { type: 'string' }, description: 'Filter by tags (OR match)' },
+          sortBy: { type: 'string', enum: ['rating', 'installs', 'newest'], description: 'Sort order' },
+          page: { type: 'number', description: 'Page number (default: 1)' },
+          pageSize: { type: 'number', description: 'Page size (default: 20)' },
+        },
+      },
+    },
+    {
+      name: 'marketplace_update',
+      description: 'Update a marketplace widget with new HTML + manifest (creates a new version)',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          widgetId: { type: 'string', description: 'Widget ID to update' },
+          htmlContent: { type: 'string', description: 'Updated widget HTML content' },
+          manifest: {
+            type: 'object',
+            description: 'Updated widget manifest',
+            properties: {
+              id: { type: 'string' },
+              name: { type: 'string' },
+              version: { type: 'string' },
+              description: { type: 'string' },
+              license: { type: 'string' },
+              tags: { type: 'array', items: { type: 'string' } },
+              category: { type: 'string' },
+              permissions: { type: 'array', items: { type: 'string' } },
+            },
+            required: ['id', 'name', 'version'],
+          },
+          changelog: { type: 'string', description: 'Changelog entry for this version' },
+        },
+        required: ['widgetId', 'htmlContent', 'manifest'],
+      },
+    },
+    {
+      name: 'marketplace_deprecate',
+      description: 'Deprecate a marketplace widget (hide from discovery, existing installs still work)',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          widgetId: { type: 'string', description: 'Widget ID to deprecate' },
+        },
+        required: ['widgetId'],
+      },
+    },
+    {
+      name: 'marketplace_delete',
+      description: 'Delete a marketplace widget permanently',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          widgetId: { type: 'string', description: 'Widget ID to delete' },
+        },
+        required: ['widgetId'],
+      },
+    },
+    {
+      name: 'marketplace_install',
+      description: 'Install a marketplace widget for a user. Returns the widget HTML and manifest.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          userId: { type: 'string', description: 'User ID' },
+          widgetId: { type: 'string', description: 'Widget ID to install' },
+        },
+        required: ['userId', 'widgetId'],
+      },
+    },
+    {
+      name: 'marketplace_uninstall',
+      description: 'Uninstall a marketplace widget for a user',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          userId: { type: 'string', description: 'User ID' },
+          widgetId: { type: 'string', description: 'Widget ID to uninstall' },
+        },
+        required: ['userId', 'widgetId'],
+      },
+    },
+    {
+      name: 'marketplace_get_installed',
+      description: 'Get all installed marketplace widgets for a user',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          userId: { type: 'string', description: 'User ID' },
+        },
+        required: ['userId'],
+      },
+    },
+    {
+      name: 'marketplace_version_history',
+      description: 'Get version history for a marketplace widget',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          widgetId: { type: 'string', description: 'Widget ID' },
+        },
+        required: ['widgetId'],
+      },
+    },
+    {
+      name: 'marketplace_stats',
+      description: 'Get marketplace statistics (total widgets, published, deprecated, installations)',
+      inputSchema: { type: 'object', properties: {} },
+    },
+    {
+      name: 'marketplace_clear',
+      description: 'Clear all marketplace data — DISABLED when connected to cloud Supabase',
+      inputSchema: { type: 'object', properties: {} },
+    },
+
     // ── Universal Test Canvas ──────────────────────────────────────────
     {
       name: 'canvas_setup_commerce',
@@ -3162,6 +3356,147 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         commerce.clear();
         bus.emit('commerce.cleared', {});
         return { content: [{ type: 'text', text: 'Commerce data cleared' }] };
+      }
+
+      // ── Marketplace (cloud Supabase) ─────────────────────────────────
+      case 'marketplace_publish': {
+        try {
+          const result = await marketplaceDb.publish(
+            a.authorId as string,
+            a.htmlContent as string,
+            a.manifest as Record<string, unknown>,
+            { thumbnailUrl: a.thumbnailUrl as string, iconUrl: a.iconUrl as string, isFree: a.isFree as boolean, priceCents: a.priceCents as number, currency: a.currency as string },
+          );
+          bus.emit('marketplace.widget.published', { widgetId: result.id, authorId: result.authorId, slug: result.slug });
+          return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+        } catch (err) {
+          return { content: [{ type: 'text', text: JSON.stringify({ error: String(err) }, null, 2) }], isError: true };
+        }
+      }
+      case 'marketplace_list': {
+        try {
+          const items = await marketplaceDb.list({
+            category: a.category as string,
+            authorId: a.authorId as string,
+            isPublished: a.isPublished as boolean,
+            isDeprecated: a.isDeprecated as boolean,
+          });
+          return { content: [{ type: 'text', text: JSON.stringify(items, null, 2) }] };
+        } catch (err) {
+          return { content: [{ type: 'text', text: JSON.stringify({ error: String(err) }, null, 2) }], isError: true };
+        }
+      }
+      case 'marketplace_get': {
+        try {
+          const widget = await marketplaceDb.getWidget(a.id as string);
+          return { content: [{ type: 'text', text: widget ? JSON.stringify(widget, null, 2) : 'Widget not found' }] };
+        } catch (err) {
+          return { content: [{ type: 'text', text: JSON.stringify({ error: String(err) }, null, 2) }], isError: true };
+        }
+      }
+      case 'marketplace_get_by_slug': {
+        try {
+          const widget = await marketplaceDb.getWidgetBySlug(a.slug as string);
+          return { content: [{ type: 'text', text: widget ? JSON.stringify(widget, null, 2) : 'Widget not found' }] };
+        } catch (err) {
+          return { content: [{ type: 'text', text: JSON.stringify({ error: String(err) }, null, 2) }], isError: true };
+        }
+      }
+      case 'marketplace_search': {
+        try {
+          const results = await marketplaceDb.search({
+            query: a.query as string,
+            category: a.category as string,
+            tags: a.tags as string[],
+            sortBy: a.sortBy as string,
+            page: a.page as number,
+            pageSize: a.pageSize as number,
+          });
+          return { content: [{ type: 'text', text: JSON.stringify(results, null, 2) }] };
+        } catch (err) {
+          return { content: [{ type: 'text', text: JSON.stringify({ error: String(err) }, null, 2) }], isError: true };
+        }
+      }
+      case 'marketplace_update': {
+        try {
+          const updated = await marketplaceDb.updateWidget(
+            a.widgetId as string,
+            a.htmlContent as string,
+            a.manifest as Record<string, unknown>,
+            a.changelog as string,
+          );
+          if (updated) {
+            bus.emit('marketplace.widget.updated', { widgetId: updated.id, version: updated.version });
+          }
+          return { content: [{ type: 'text', text: updated ? JSON.stringify(updated, null, 2) : 'Widget not found or invalid manifest' }] };
+        } catch (err) {
+          return { content: [{ type: 'text', text: JSON.stringify({ error: String(err) }, null, 2) }], isError: true };
+        }
+      }
+      case 'marketplace_deprecate': {
+        try {
+          await marketplaceDb.deprecateWidget(a.widgetId as string);
+          bus.emit('marketplace.widget.deprecated', { widgetId: a.widgetId });
+          return { content: [{ type: 'text', text: 'Widget deprecated' }] };
+        } catch (err) {
+          return { content: [{ type: 'text', text: JSON.stringify({ error: String(err) }, null, 2) }], isError: true };
+        }
+      }
+      case 'marketplace_delete': {
+        try {
+          await marketplaceDb.deleteWidget(a.widgetId as string);
+          bus.emit('marketplace.widget.deleted', { widgetId: a.widgetId });
+          return { content: [{ type: 'text', text: 'Widget deleted' }] };
+        } catch (err) {
+          return { content: [{ type: 'text', text: JSON.stringify({ error: String(err) }, null, 2) }], isError: true };
+        }
+      }
+      case 'marketplace_install': {
+        try {
+          const result = await marketplaceDb.install(a.userId as string, a.widgetId as string);
+          if (result) {
+            bus.emit('marketplace.widget.installed', { userId: a.userId, widgetId: a.widgetId });
+          }
+          return { content: [{ type: 'text', text: result ? JSON.stringify(result, null, 2) : 'Widget not found or not published' }] };
+        } catch (err) {
+          return { content: [{ type: 'text', text: JSON.stringify({ error: String(err) }, null, 2) }], isError: true };
+        }
+      }
+      case 'marketplace_uninstall': {
+        try {
+          await marketplaceDb.uninstall(a.userId as string, a.widgetId as string);
+          bus.emit('marketplace.widget.uninstalled', { userId: a.userId, widgetId: a.widgetId });
+          return { content: [{ type: 'text', text: 'Widget uninstalled' }] };
+        } catch (err) {
+          return { content: [{ type: 'text', text: JSON.stringify({ error: String(err) }, null, 2) }], isError: true };
+        }
+      }
+      case 'marketplace_get_installed': {
+        try {
+          const installed = await marketplaceDb.getInstalledWidgets(a.userId as string);
+          return { content: [{ type: 'text', text: JSON.stringify(installed, null, 2) }] };
+        } catch (err) {
+          return { content: [{ type: 'text', text: JSON.stringify({ error: String(err) }, null, 2) }], isError: true };
+        }
+      }
+      case 'marketplace_version_history': {
+        try {
+          const versions = await marketplaceDb.getVersionHistory(a.widgetId as string);
+          return { content: [{ type: 'text', text: JSON.stringify(versions, null, 2) }] };
+        } catch (err) {
+          return { content: [{ type: 'text', text: JSON.stringify({ error: String(err) }, null, 2) }], isError: true };
+        }
+      }
+      case 'marketplace_stats': {
+        try {
+          const s = await marketplaceDb.stats();
+          return { content: [{ type: 'text', text: JSON.stringify(s, null, 2) }] };
+        } catch (err) {
+          return { content: [{ type: 'text', text: JSON.stringify({ error: String(err) }, null, 2) }], isError: true };
+        }
+      }
+      case 'marketplace_clear': {
+        return { content: [{ type: 'text', text: 'marketplace_clear is disabled when connected to cloud Supabase. Use marketplace_delete to remove individual widgets.' }] };
       }
 
       // ── Universal Test Canvas ────────────────────────────────────────

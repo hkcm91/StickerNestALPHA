@@ -177,6 +177,67 @@ const KEYFRAMES_CSS = `
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
+   Obsidian — Holographic shift for chrome/accent borders
+   ═══════════════════════════════════════════════════════════════════════ */
+
+@keyframes sn-holographic-shift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Obsidian — Ambient orb drift (slow, organic movement)
+   ═══════════════════════════════════════════════════════════════════════ */
+
+@keyframes sn-orb-drift-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25%      { transform: translate(30px, -20px) scale(1.05); }
+  50%      { transform: translate(-10px, 15px) scale(0.95); }
+  75%      { transform: translate(20px, 10px) scale(1.02); }
+}
+
+@keyframes sn-orb-drift-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25%      { transform: translate(-25px, 12px) scale(0.97); }
+  50%      { transform: translate(18px, -18px) scale(1.04); }
+  75%      { transform: translate(-8px, -25px) scale(0.98); }
+}
+
+@keyframes sn-orb-drift-3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%      { transform: translate(22px, 18px) scale(1.03); }
+  66%      { transform: translate(-15px, -12px) scale(0.96); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Obsidian — Adaptive lift (hover state intensification)
+   ═══════════════════════════════════════════════════════════════════════ */
+
+@keyframes sn-lift {
+  from { transform: translateY(0) scale(1); box-shadow: var(--sn-shadow-neo); }
+  to   { transform: translateY(-2px) scale(1.008); box-shadow: var(--sn-shadow-neo), 0 8px 24px rgba(0,0,0,0.3); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Obsidian — Liquid glass refraction shimmer
+   ═══════════════════════════════════════════════════════════════════════ */
+
+@keyframes sn-refraction {
+  0%, 100% { opacity: 0.5; transform: translateX(-100%) skewX(-15deg); }
+  50%      { opacity: 0.8; transform: translateX(100%) skewX(-15deg); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Obsidian — Breathing scale for living UI feel
+   ═══════════════════════════════════════════════════════════════════════ */
+
+@keyframes sn-breathe-subtle {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.008); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
    Accessibility — respect user motion preferences
    ═══════════════════════════════════════════════════════════════════════ */
 

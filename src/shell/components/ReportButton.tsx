@@ -117,7 +117,7 @@ export const ReportButton: React.FC<ReportButtonProps> = ({
             {submitted ? (
               <div style={{ textAlign: 'center', padding: 20 }}>
                 <div style={{ fontSize: 24, marginBottom: 8 }}>Thank you</div>
-                <p style={{ color: 'var(--sn-text-muted, #6b7280)', fontSize: 14 }}>
+                <p style={{ color: 'var(--sn-text-muted, #7A7784)', fontSize: 14 }}>
                   Your report has been submitted and will be reviewed.
                 </p>
               </div>
@@ -140,7 +140,7 @@ export const ReportButton: React.FC<ReportButtonProps> = ({
                     style={{
                       width: '100%',
                       padding: '8px 12px',
-                      border: '1px solid var(--sn-border, #e5e7eb)',
+                      border: '1px solid var(--sn-border, rgba(255,255,255,0.06))',
                       borderRadius: 6,
                       fontSize: 14,
                       background: 'var(--sn-bg, #f9fafb)',
@@ -165,7 +165,7 @@ export const ReportButton: React.FC<ReportButtonProps> = ({
                     style={{
                       width: '100%',
                       padding: '8px 12px',
-                      border: '1px solid var(--sn-border, #e5e7eb)',
+                      border: '1px solid var(--sn-border, rgba(255,255,255,0.06))',
                       borderRadius: 6,
                       fontSize: 14,
                       fontFamily: 'inherit',
@@ -181,7 +181,7 @@ export const ReportButton: React.FC<ReportButtonProps> = ({
                     onClick={() => setIsOpen(false)}
                     style={{
                       padding: '8px 16px',
-                      border: '1px solid var(--sn-border, #e5e7eb)',
+                      border: '1px solid var(--sn-border, rgba(255,255,255,0.06))',
                       borderRadius: 6,
                       background: 'transparent',
                       cursor: 'pointer',

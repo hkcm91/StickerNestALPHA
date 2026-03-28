@@ -130,6 +130,99 @@ describe('CanvasContextMenu', () => {
     expect(screen.queryByTestId('canvas-context-menu')).toBeNull();
   });
 
+  it('shows "Send to friend" for widget entities', () => {
+    const getEntityInfo = (id: string) => ({
+      id,
+      type: 'widget',
+      widgetId: 'test-widget-123',
+    });
+
+    render(
+      <CanvasContextMenu
+        selectedIds={new Set(['widget-entity-1'])}
+        interactionMode="edit"
+        getEntityInfo={getEntityInfo}
+      />,
+    );
+
+    act(() => {
+      bus.emit('canvas.contextmenu.requested', {
+        x: 100,
+        y: 200,
+        entityId: 'widget-entity-1',
+      });
+    });
+
+    expect(screen.getByTestId('context-menu-item-sendToFriend')).toBeTruthy();
+  });
+
+  it('does not show "Send to friend" for non-widget entities', () => {
+    const getEntityInfo = (id: string) => ({
+      id,
+      type: 'sticker',
+    });
+
+    render(
+      <CanvasContextMenu
+        selectedIds={new Set(['sticker-entity-1'])}
+        interactionMode="edit"
+        getEntityInfo={getEntityInfo}
+      />,
+    );
+
+    act(() => {
+      bus.emit('canvas.contextmenu.requested', {
+        x: 100,
+        y: 200,
+        entityId: 'sticker-entity-1',
+      });
+    });
+
+    expect(screen.queryByTestId('context-menu-item-sendToFriend')).toBeNull();
+  });
+
+  it('emits bus event when "Send to friend" is clicked', () => {
+    const emitSpy = vi.spyOn(bus, 'emit');
+    const getEntityInfo = (id: string) => ({
+      id,
+      type: 'widget',
+      widgetId: 'test-widget-123',
+    });
+
+    render(
+      <CanvasContextMenu
+        selectedIds={new Set(['widget-entity-1'])}
+        interactionMode="edit"
+        getEntityInfo={getEntityInfo}
+      />,
+    );
+
+    act(() => {
+      bus.emit('canvas.contextmenu.requested', {
+        x: 100,
+        y: 200,
+        entityId: 'widget-entity-1',
+      });
+    });
+
+    // Advance past the setTimeout(10ms)
+    act(() => {
+      vi.advanceTimersByTime(20);
+    });
+
+    const sendItem = screen.getByTestId('context-menu-item-sendToFriend');
+    act(() => {
+      sendItem.click();
+    });
+
+    expect(emitSpy).toHaveBeenCalledWith('shell.sendWidget.requested', {
+      widgetId: 'test-widget-123',
+      entityId: 'widget-entity-1',
+    });
+
+    emitSpy.mockRestore();
+  });
+
   it('uses glass surface styling with backdrop blur', () => {
     render(
       <CanvasContextMenu selectedIds={new Set()} interactionMode="edit" />,

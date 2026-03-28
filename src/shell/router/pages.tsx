@@ -15,6 +15,7 @@ import { initCanvasCore, teardownCanvasCore, project2Dto3D } from '../../canvas/
 import type { SceneGraph } from '../../canvas/core';
 // Canvas sub-layer init/teardown loaded via dynamic import (L6 boundary rule allows dynamic imports only)
 import { bus } from '../../kernel/bus';
+import { signOut } from '../../kernel/auth';
 import { useAuthStore, selectIsAuthenticated } from '../../kernel/stores/auth/auth.store';
 import { useCanvasStore } from '../../kernel/stores/canvas/canvas.store';
 import { useDockerStore } from '../../kernel/stores/docker';
@@ -41,6 +42,7 @@ import {
 import type { LocalCanvasSummary } from '../canvas';
 import { HistoryPanel } from '../canvas/panels';
 import type { CanvasPositionConfig } from '../canvas/panels/CanvasSettingsDropdown';
+import { CanvasResizeFrame } from '../canvas/components/CanvasResizeFrame';
 import { seedDemoEntities, seedCommerceCanvas, seedClaudeLabCanvas } from '../canvas/seedDemoEntities';
 import { captureAndUploadThumbnail } from '../canvas/utils/thumbnail-capture';
 import { StickerSettingsModal, LoginForm } from '../components';
@@ -60,7 +62,7 @@ const DEFAULT_DOCKER_WIDGET_ID = 'wgt-clock';
 const DEFAULT_DOCKER_WIDGET_INSTANCE_ID = '33333333-3333-4333-8333-333333333333';
 const DEFAULT_DOCKER_WIDGET_ENTITY_ID = 'ddc00000-0000-4000-a000-000000000001';
 const DEMO_CANVAS_ID = '00000000-0000-4000-8000-000000000001';
-const DEFAULT_CANVAS_TOP_SPACING = 40;
+const DEFAULT_CANVAS_TOP_SPACING = 24;
 
 /** Parse hex color to RGB components */
 function hexToRgb(hex: string): { r: number; g: number; b: number } {
@@ -586,6 +588,10 @@ export const CanvasPage: React.FC = () => {
     vertical: 'center',
     topOffset: DEFAULT_CANVAS_TOP_SPACING,
   });
+
+  // Canvas resize frame state (activated by double-clicking a bounded canvas)
+  const [resizeFrameActive, setResizeFrameActive] = useState(false);
+  const canvasBoundedRef = useRef<HTMLDivElement>(null);
 
   const canvasKey = normalizedSlug || 'untitled';
   const canvasId = canvasSummary?.id ?? DEMO_CANVAS_ID;
@@ -1311,7 +1317,15 @@ export const CanvasPage: React.FC = () => {
           }}
         >
           <div
+            ref={canvasBoundedRef}
+            onDoubleClick={(e) => {
+              if (viewportConfig.sizeMode === 'bounded') {
+                e.stopPropagation();
+                setResizeFrameActive(true);
+              }
+            }}
             style={{
+              position: 'relative',
               width:
                 viewportConfig.sizeMode === 'bounded' && viewportConfig.width
                   ? `${viewportConfig.width}px`
@@ -1373,6 +1387,17 @@ export const CanvasPage: React.FC = () => {
               theme={widgetTheme}
             />
           </div>
+          {/* Resize frame overlay — activated by double-clicking a bounded canvas.
+              Rendered as sibling so handles aren't clipped by canvas overflow:hidden. */}
+          {resizeFrameActive && viewportConfig.sizeMode === 'bounded' && (
+            <CanvasResizeFrame
+              isActive={resizeFrameActive}
+              width={viewportConfig.width ?? 1920}
+              height={viewportConfig.height ?? 1080}
+              onDismiss={() => setResizeFrameActive(false)}
+              canvasRef={canvasBoundedRef}
+            />
+          )}
         </div>
       </ShellLayout>
 
@@ -1453,17 +1478,38 @@ export const CanvasPage: React.FC = () => {
             inset: 0,
             zIndex: 9999,
             background: themeVar('--sn-bg'),
-            overflow: 'hidden',
+            overflow: 'auto',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
           }}
         >
-          <CanvasWorkspace
-            sceneGraph={sceneGraph}
-            dashboardSlug={canvasKey}
-            maxArtboardsPerDashboard={DEFAULT_ARTBOARD_LIMIT_PER_DASHBOARD}
-            widgetHtmlMap={widgetHtmlMap}
-            background={viewportConfig.background}
-            theme={widgetTheme}
-          />
+          <div
+            style={{
+              width:
+                viewportConfig.sizeMode === 'bounded' && viewportConfig.width
+                  ? `${viewportConfig.width}px`
+                  : '100%',
+              height:
+                viewportConfig.sizeMode === 'bounded' && viewportConfig.height
+                  ? `${viewportConfig.height}px`
+                  : '100%',
+              flexShrink: 0,
+              borderRadius: typeof borderRadius === 'number'
+                ? `${borderRadius}px`
+                : `${borderRadius.topLeft}px ${borderRadius.topRight}px ${borderRadius.bottomRight}px ${borderRadius.bottomLeft}px`,
+              overflow: 'hidden',
+            }}
+          >
+            <CanvasWorkspace
+              sceneGraph={sceneGraph}
+              dashboardSlug={canvasKey}
+              maxArtboardsPerDashboard={DEFAULT_ARTBOARD_LIMIT_PER_DASHBOARD}
+              widgetHtmlMap={widgetHtmlMap}
+              background={viewportConfig.background}
+              theme={widgetTheme}
+            />
+          </div>
 
           {/* Exit fullscreen button */}
           <button
@@ -1514,6 +1560,7 @@ export const MarketplacePage: React.FC = () => (
 
 export const SettingsPage: React.FC = () => {
   const [tab, setTab] = React.useState<'billing' | 'integrations' | 'commerce' | 'purchases' | 'security'>('billing');
+  const navigate = useNavigate();
 
   const tabBtnStyle = (active: boolean): React.CSSProperties => ({
     padding: '8px 16px',
@@ -1543,6 +1590,28 @@ export const SettingsPage: React.FC = () => {
         {tab === 'purchases' && <MyPurchasesSectionLazy />}
         {tab === 'security' && <SecuritySectionLazy />}
       </Suspense>
+
+      <div style={{ marginTop: 48, paddingTop: 24, borderTop: '1px solid var(--sn-border, #e5e7eb)' }}>
+        <button
+          data-testid="btn-sign-out"
+          onClick={async () => {
+            await signOut();
+            navigate('/login', { replace: true });
+          }}
+          style={{
+            padding: '10px 24px',
+            borderRadius: 'var(--sn-radius, 8px)',
+            fontSize: 14,
+            fontWeight: 600,
+            cursor: 'pointer',
+            border: 'none',
+            background: '#EF4444',
+            color: '#fff',
+          }}
+        >
+          Sign Out
+        </button>
+      </div>
     </div>
   );
 };

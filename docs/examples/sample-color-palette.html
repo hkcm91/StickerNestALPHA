@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Generate and save beautiful color palettes with one click">
+  <title>Color Palette Generator</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: var(--sn-font-family, 'Inter', system-ui, sans-serif);
+      background: var(--sn-bg, #0a0a0a);
+      color: var(--sn-text, #e0e0e0);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .palette-gen {
+      padding: 24px;
+      border-radius: var(--sn-radius, 12px);
+      background: var(--sn-surface, #141414);
+      border: 1px solid var(--sn-border, #2a2a2a);
+      width: 320px;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .title { font-size: 16px; font-weight: 700; }
+    .gen-btn {
+      padding: 7px 16px;
+      border: none;
+      border-radius: var(--sn-radius, 8px);
+      background: var(--sn-accent, #6366f1);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.15s;
+    }
+    .gen-btn:hover { opacity: 0.85; }
+    .gen-btn:active { transform: scale(0.96); }
+    .swatches {
+      display: flex;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 12px;
+      height: 120px;
+    }
+    .swatch {
+      flex: 1;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding-bottom: 8px;
+      cursor: pointer;
+      transition: flex 0.3s;
+      position: relative;
+    }
+    .swatch:hover { flex: 1.4; }
+    .swatch-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: #fff;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .swatch:hover .swatch-label { opacity: 1; }
+    .copied-toast {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.8);
+      color: #fff;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      opacity: 0;
+      transition: opacity 0.2s;
+      pointer-events: none;
+    }
+    .copied-toast.show { opacity: 1; }
+    .harmony-row {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+    .harmony-btn {
+      flex: 1;
+      padding: 6px;
+      border: 1px solid var(--sn-border, #2a2a2a);
+      border-radius: 6px;
+      background: transparent;
+      color: var(--sn-text-muted, #888);
+      font-size: 11px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .harmony-btn.active {
+      border-color: var(--sn-accent, #6366f1);
+      color: var(--sn-accent, #6366f1);
+      background: rgba(99, 102, 241, 0.08);
+    }
+    .saved-section {
+      border-top: 1px solid var(--sn-border, #2a2a2a);
+      padding-top: 12px;
+    }
+    .saved-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--sn-text-muted, #888);
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .save-btn {
+      font-size: 11px;
+      padding: 3px 10px;
+      border: 1px solid var(--sn-border, #2a2a2a);
+      border-radius: 6px;
+      background: transparent;
+      color: var(--sn-text, #e0e0e0);
+      font-family: inherit;
+      cursor: pointer;
+    }
+    .save-btn:hover { border-color: var(--sn-accent, #6366f1); }
+    .saved-palettes {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 100px;
+      overflow-y: auto;
+    }
+    .saved-row {
+      display: flex;
+      height: 24px;
+      border-radius: 4px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+    .saved-row:hover { transform: scale(1.02); }
+    .saved-color { flex: 1; }
+    .empty-saved {
+      font-size: 12px;
+      color: var(--sn-text-muted, #888);
+      text-align: center;
+      padding: 8px;
+      opacity: 0.6;
+    }
+  </style>
+</head>
+<body>
+  <div class="palette-gen">
+    <div class="header">
+      <div class="title">Palette</div>
+      <button class="gen-btn" id="generateBtn">Generate</button>
+    </div>
+
+    <div class="harmony-row" id="harmonyRow">
+      <button class="harmony-btn active" data-mode="random">Random</button>
+      <button class="harmony-btn" data-mode="warm">Warm</button>
+      <button class="harmony-btn" data-mode="cool">Cool</button>
+      <button class="harmony-btn" data-mode="pastel">Pastel</button>
+      <button class="harmony-btn" data-mode="mono">Mono</button>
+    </div>
+
+    <div class="swatches" id="swatches"></div>
+
+    <div class="saved-section">
+      <div class="saved-title">
+        <span>Saved Palettes</span>
+        <button class="save-btn" id="saveBtn">Save Current</button>
+      </div>
+      <div class="saved-palettes" id="savedPalettes">
+        <div class="empty-saved">No saved palettes yet</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    StickerNest.register({
+      id: 'color-palette',
+      name: 'Color Palette Generator',
+      version: '1.0.0',
+      description: 'Generate and save beautiful color palettes',
+      category: 'utilities',
+      tags: ['color', 'palette', 'design', 'generator'],
+      license: 'MIT',
+    });
+
+    let currentColors = [];
+    let savedPalettes = [];
+    let mode = 'random';
+
+    function hslToHex(h, s, l) {
+      s /= 100; l /= 100;
+      const a = s * Math.min(l, 1 - l);
+      const f = n => {
+        const k = (n + h / 30) % 12;
+        const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+        return Math.round(255 * color).toString(16).padStart(2, '0');
+      };
+      return '#' + f(0) + f(8) + f(4);
+    }
+
+    function generate() {
+      const colors = [];
+      let baseHue = Math.random() * 360;
+
+      for (let i = 0; i < 5; i++) {
+        let h, s, l;
+        switch (mode) {
+          case 'warm':
+            h = (baseHue % 60) + Math.random() * 60; // 0-60 range
+            s = 60 + Math.random() * 30;
+            l = 40 + Math.random() * 30;
+            break;
+          case 'cool':
+            h = 180 + Math.random() * 120; // 180-300 range
+            s = 50 + Math.random() * 30;
+            l = 35 + Math.random() * 30;
+            break;
+          case 'pastel':
+            h = Math.random() * 360;
+            s = 40 + Math.random() * 30;
+            l = 70 + Math.random() * 15;
+            break;
+          case 'mono':
+            h = baseHue;
+            s = 30 + Math.random() * 40;
+            l = 20 + i * 15 + Math.random() * 5;
+            break;
+          default:
+            h = Math.random() * 360;
+            s = 50 + Math.random() * 40;
+            l = 30 + Math.random() * 40;
+        }
+        colors.push(hslToHex(h, s, l));
+      }
+
+      currentColors = colors;
+      renderSwatches();
+      StickerNest.emit('palette.generated', { colors, mode });
+    }
+
+    function renderSwatches() {
+      const container = document.getElementById('swatches');
+      container.innerHTML = currentColors.map(c => `
+        <div class="swatch" style="background:${c}" data-color="${c}">
+          <span class="swatch-label">${c.toUpperCase()}</span>
+          <span class="copied-toast">Copied!</span>
+        </div>
+      `).join('');
+
+      container.querySelectorAll('.swatch').forEach(s => {
+        s.addEventListener('click', () => {
+          const color = s.dataset.color;
+          navigator.clipboard.writeText(color).catch(() => {});
+          const toast = s.querySelector('.copied-toast');
+          toast.classList.add('show');
+          setTimeout(() => toast.classList.remove('show'), 1000);
+        });
+      });
+    }
+
+    function renderSaved() {
+      const container = document.getElementById('savedPalettes');
+      if (savedPalettes.length === 0) {
+        container.innerHTML = '<div class="empty-saved">No saved palettes yet</div>';
+        return;
+      }
+      container.innerHTML = savedPalettes.map((palette, idx) => `
+        <div class="saved-row" data-idx="${idx}">
+          ${palette.map(c => `<div class="saved-color" style="background:${c}"></div>`).join('')}
+        </div>
+      `).join('');
+
+      container.querySelectorAll('.saved-row').forEach(row => {
+        row.addEventListener('click', () => {
+          currentColors = [...savedPalettes[parseInt(row.dataset.idx)]];
+          renderSwatches();
+        });
+      });
+    }
+
+    // Harmony mode buttons
+    document.getElementById('harmonyRow').addEventListener('click', (e) => {
+      const btn = e.target.closest('.harmony-btn');
+      if (!btn) return;
+      document.querySelectorAll('.harmony-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      mode = btn.dataset.mode;
+      generate();
+    });
+
+    document.getElementById('generateBtn').addEventListener('click', generate);
+
+    document.getElementById('saveBtn').addEventListener('click', () => {
+      if (currentColors.length === 0) return;
+      savedPalettes.unshift([...currentColors]);
+      if (savedPalettes.length > 10) savedPalettes = savedPalettes.slice(0, 10);
+      StickerNest.setState('saved', savedPalettes);
+      renderSaved();
+    });
+
+    // Spacebar to generate
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && e.target.tagName !== 'INPUT') {
+        e.preventDefault();
+        generate();
+      }
+    });
+
+    // Restore
+    StickerNest.getState('saved').then((saved) => {
+      if (Array.isArray(saved)) savedPalettes = saved;
+      renderSaved();
+    }).catch(() => renderSaved());
+
+    generate();
+    StickerNest.onThemeChange(() => {});
+    StickerNest.ready();
+  </script>
+</body>
+</html>

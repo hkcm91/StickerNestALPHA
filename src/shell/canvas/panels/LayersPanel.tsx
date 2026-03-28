@@ -162,13 +162,13 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({ entities }) => {
           padding: '8px 12px',
           fontWeight: 600,
           fontSize: '12px',
-          color: 'var(--sn-text-muted, #6b7280)',
+          color: 'var(--sn-text-muted, #7A7784)',
           textTransform: 'uppercase',
           letterSpacing: '0.5px',
-          borderBottom: '1px solid var(--sn-border, #e0e0e0)',
+          borderBottom: '1px solid var(--sn-border, rgba(255,255,255,0.06))',
         }}
       >
-        Layers ({layers.length})
+        <span className="sn-chrome-text">Layers ({layers.length})</span>
       </div>
 
       {/* Layer rows */}
@@ -178,7 +178,7 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({ entities }) => {
             style={{
               padding: '16px',
               textAlign: 'center',
-              color: 'var(--sn-text-muted, #6b7280)',
+              color: 'var(--sn-text-muted, #7A7784)',
               fontSize: '12px',
             }}
           >
@@ -201,10 +201,10 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({ entities }) => {
                   padding: '4px 8px',
                   cursor: 'pointer',
                   background: isSelected
-                    ? 'var(--sn-accent, #6366f1)15'
+                    ? 'var(--sn-accent, #3E7D94)15'
                     : 'transparent',
                   borderLeft: isSelected
-                    ? '2px solid var(--sn-accent, #6366f1)'
+                    ? '2px solid var(--sn-accent, #3E7D94)'
                     : '2px solid transparent',
                   opacity: layer.visible ? 1 : 0.5,
                 }}
@@ -214,8 +214,8 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({ entities }) => {
                   style={{
                     fontSize: '10px',
                     fontWeight: 600,
-                    color: 'var(--sn-text-muted, #6b7280)',
-                    background: 'var(--sn-bg, #f8f9fa)',
+                    color: 'var(--sn-text-muted, #7A7784)',
+                    background: 'var(--sn-bg, rgba(10,10,14,0.5))',
                     padding: '1px 4px',
                     borderRadius: '3px',
                     minWidth: '28px',
@@ -238,7 +238,7 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({ entities }) => {
                       flex: 1,
                       fontSize: '12px',
                       padding: '1px 4px',
-                      border: '1px solid var(--sn-accent, #6366f1)',
+                      border: '1px solid var(--sn-accent, #3E7D94)',
                       borderRadius: '3px',
                       outline: 'none',
                       fontFamily: 'inherit',
@@ -254,7 +254,7 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({ entities }) => {
                     style={{
                       flex: 1,
                       fontSize: '12px',
-                      color: 'var(--sn-text, #1a1a2e)',
+                      color: 'var(--sn-text, #E8E6ED)',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',

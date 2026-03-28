@@ -1,26 +1,58 @@
 [
   {
-    "id": "sample-pomodoro-timer",
+    "id": "click-counter",
+    "name": "Click Counter",
+    "description": "A minimal click counter \u2014 the Hello World of StickerNest widgets",
+    "difficulty": "beginner",
+    "features": ["state", "events", "theme"],
+    "htmlUrl": "/samples/click-counter.html"
+  },
+  {
+    "id": "pomodoro-timer",
     "name": "Pomodoro Timer",
-    "description": "A productivity timer with configurable work/break intervals",
+    "description": "A 25/5 minute productivity timer with circular progress and session tracking",
     "difficulty": "beginner",
-    "features": ["state", "events", "config", "theme"],
-    "zipUrl": "/samples/pomodoro-timer.zip"
+    "features": ["state", "events", "theme", "config"],
+    "htmlUrl": "/samples/pomodoro-timer.html"
   },
   {
-    "id": "sample-markdown-viewer",
-    "name": "Markdown Viewer",
-    "description": "Renders markdown content with live preview",
+    "id": "weather-card",
+    "name": "Weather Card",
+    "description": "A minimal weather display with animated conditions and forecast",
     "difficulty": "beginner",
-    "features": ["datasource", "config", "theme", "state"],
-    "zipUrl": "/samples/markdown-viewer.zip"
+    "features": ["config", "events", "theme"],
+    "htmlUrl": "/samples/weather-card.html"
   },
   {
-    "id": "sample-quick-poll",
-    "name": "Quick Poll",
-    "description": "Create instant polls with live results",
+    "id": "mood-journal",
+    "name": "Mood Journal",
+    "description": "Daily mood tracker with emoji picker, notes, and entry history",
     "difficulty": "intermediate",
-    "features": ["datasource", "events", "config", "theme", "state"],
-    "zipUrl": "/samples/quick-poll.zip"
+    "features": ["state", "events", "theme"],
+    "htmlUrl": "/samples/mood-journal.html"
+  },
+  {
+    "id": "habit-tracker",
+    "name": "Habit Tracker",
+    "description": "Track daily habits with streaks, week grid, and completion stats",
+    "difficulty": "intermediate",
+    "features": ["state", "events", "theme"],
+    "htmlUrl": "/samples/habit-tracker.html"
+  },
+  {
+    "id": "color-palette",
+    "name": "Color Palette Generator",
+    "description": "Generate and save color palettes with 5 harmony modes",
+    "difficulty": "intermediate",
+    "features": ["state", "events", "theme"],
+    "htmlUrl": "/samples/color-palette.html"
+  },
+  {
+    "id": "mini-kanban",
+    "name": "Mini Kanban",
+    "description": "A 3-column drag-and-drop kanban board with auto-tagging",
+    "difficulty": "advanced",
+    "features": ["state", "events", "theme"],
+    "htmlUrl": "/samples/mini-kanban.html"
   }
 ]

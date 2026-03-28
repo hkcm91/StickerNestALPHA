@@ -39,6 +39,7 @@ export interface CanvasGallerySectionProps {
   onCreateCanvas?: () => void;
   onDuplicateCanvas?: (canvas: PublicCanvas) => void;
   onDeleteCanvas?: (canvas: PublicCanvas) => void;
+  onSetSlug?: (canvas: PublicCanvas, slug: string | null) => void;
 }
 
 export const CanvasGallerySection: React.FC<CanvasGallerySectionProps> = ({
@@ -48,6 +49,7 @@ export const CanvasGallerySection: React.FC<CanvasGallerySectionProps> = ({
   onCreateCanvas,
   onDuplicateCanvas,
   onDeleteCanvas,
+  onSetSlug,
 }) => {
   const navigate = useNavigate();
   const [activeFilter, setActiveFilter] = useState<CanvasFilter>('all');
@@ -324,6 +326,7 @@ export const CanvasGallerySection: React.FC<CanvasGallerySectionProps> = ({
                   isOwnProfile={isOwnProfile}
                   onDuplicate={onDuplicateCanvas}
                   onDelete={onDeleteCanvas}
+                  onSetSlug={onSetSlug}
                 />
               ))}
             </div>

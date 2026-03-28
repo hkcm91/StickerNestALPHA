@@ -1,0 +1,1503 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StickerNest V5 — Design System: Obsidian Edition</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&family=Newsreader:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════════════
+   FOUNDATION: CSS Custom Properties — The Token System
+   ═══════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* === DARK: Obsidian Charcoal (Default) === */
+  --sn-bg: #0C0C10;
+  --sn-bg-ground: #08080B;
+  --sn-surface: rgba(22, 22, 28, 0.72);
+  --sn-surface-raised: #1A1A22;
+  --sn-surface-glass: rgba(22, 22, 28, 0.55);
+  --sn-surface-glass-heavy: rgba(22, 22, 28, 0.82);
+  --sn-surface-elevated: rgba(30, 30, 40, 0.80);
+
+  /* Accent: Warm coral → holographic shift */
+  --sn-accent: #E8806C;
+  --sn-accent-light: #F09A88;
+  --sn-accent-muted: rgba(232, 128, 108, 0.18);
+  --sn-accent-glow: rgba(232, 128, 108, 0.12);
+
+  /* Secondary accent: Storm teal */
+  --sn-storm: #4E8E9A;
+  --sn-storm-light: #6AABB8;
+  --sn-storm-muted: rgba(78, 142, 154, 0.18);
+
+  /* Chrome / holographic */
+  --sn-chrome-start: #B8C4D4;
+  --sn-chrome-mid: #E8D8C8;
+  --sn-chrome-end: #A8B8D0;
+  --sn-holographic: linear-gradient(135deg, #E8806C 0%, #B8A0D8 25%, #6AABB8 50%, #E8806C 75%, #D4A074 100%);
+
+  /* Text */
+  --sn-text: #EDEBE6;
+  --sn-text-soft: #A8A4AE;
+  --sn-text-muted: rgba(237, 235, 230, 0.45);
+  --sn-text-faint: #3A3842;
+
+  /* Borders */
+  --sn-border: rgba(255, 255, 255, 0.08);
+  --sn-border-hover: rgba(255, 255, 255, 0.14);
+  --sn-border-accent: rgba(232, 128, 108, 0.25);
+
+  /* Semantic */
+  --sn-success: #5AA878;
+  --sn-warning: #D4A04C;
+  --sn-error: #C85858;
+
+  /* Spatial */
+  --sn-blur-surface: 20px;
+  --sn-blur-heavy: 40px;
+  --sn-radius: 14px;
+  --sn-radius-sm: 8px;
+  --sn-radius-lg: 20px;
+  --sn-radius-xl: 28px;
+
+  /* Typography */
+  --sn-font: 'Outfit', system-ui, sans-serif;
+  --sn-font-serif: 'Newsreader', Georgia, serif;
+  --sn-font-mono: 'DM Mono', 'Fira Code', monospace;
+
+  /* Motion */
+  --sn-ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+  --sn-ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --sn-ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --sn-dur-fast: 150ms;
+  --sn-dur-normal: 300ms;
+  --sn-dur-slow: 500ms;
+  --sn-dur-gentle: 800ms;
+  --sn-dur-breathe: 6s;
+
+  /* Grain */
+  --sn-grain-opacity: 0.035;
+
+  /* Hex pattern */
+  --sn-hex-opacity: 0.04;
+  --sn-hex-size: 30px;
+}
+
+/* === LIGHT THEME === */
+[data-theme="light"] {
+  --sn-bg: #F5F2ED;
+  --sn-bg-ground: #EBE7E0;
+  --sn-surface: rgba(255, 254, 250, 0.72);
+  --sn-surface-raised: #FFFEFA;
+  --sn-surface-glass: rgba(255, 254, 250, 0.55);
+  --sn-surface-glass-heavy: rgba(255, 254, 250, 0.82);
+  --sn-surface-elevated: rgba(255, 255, 255, 0.88);
+  --sn-accent: #C8604A;
+  --sn-accent-light: #E8806C;
+  --sn-accent-muted: rgba(200, 96, 74, 0.12);
+  --sn-accent-glow: rgba(200, 96, 74, 0.08);
+  --sn-storm: #3A7A86;
+  --sn-storm-light: #4E8E9A;
+  --sn-storm-muted: rgba(58, 122, 134, 0.12);
+  --sn-chrome-start: #8A96A8;
+  --sn-chrome-mid: #B8A898;
+  --sn-chrome-end: #7888A0;
+  --sn-text: #1A1820;
+  --sn-text-soft: #5A5560;
+  --sn-text-muted: rgba(26, 24, 32, 0.40);
+  --sn-text-faint: #D0CCD4;
+  --sn-border: rgba(0, 0, 0, 0.08);
+  --sn-border-hover: rgba(0, 0, 0, 0.14);
+  --sn-border-accent: rgba(200, 96, 74, 0.20);
+  --sn-grain-opacity: 0.025;
+  --sn-hex-opacity: 0.03;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   RESET & BASE
+   ═══════════════════════════════════════════════════════════════════ */
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html {
+  font-family: var(--sn-font);
+  background: var(--sn-bg);
+  color: var(--sn-text);
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  min-height: 100vh;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   GRAIN TEXTURE — SVG feTurbulence overlay
+   ═══════════════════════════════════════════════════════════════════ */
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: var(--sn-grain-opacity);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  mix-blend-mode: overlay;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   HEXAGONAL PATTERN — CSS-only hex grid background
+   ═══════════════════════════════════════════════════════════════════ */
+
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: var(--sn-hex-opacity);
+  background-image:
+    linear-gradient(30deg, var(--sn-text) 12%, transparent 12.5%, transparent 87%, var(--sn-text) 87.5%, var(--sn-text)),
+    linear-gradient(150deg, var(--sn-text) 12%, transparent 12.5%, transparent 87%, var(--sn-text) 87.5%, var(--sn-text)),
+    linear-gradient(30deg, var(--sn-text) 12%, transparent 12.5%, transparent 87%, var(--sn-text) 87.5%, var(--sn-text)),
+    linear-gradient(150deg, var(--sn-text) 12%, transparent 12.5%, transparent 87%, var(--sn-text) 87.5%, var(--sn-text)),
+    linear-gradient(60deg, rgba(128,128,128,0.25) 25%, transparent 25.5%, transparent 75%, rgba(128,128,128,0.25) 75%, rgba(128,128,128,0.25)),
+    linear-gradient(60deg, rgba(128,128,128,0.25) 25%, transparent 25.5%, transparent 75%, rgba(128,128,128,0.25) 75%, rgba(128,128,128,0.25));
+  background-size: var(--sn-hex-size) calc(var(--sn-hex-size) * 1.732);
+  background-position:
+    0 0,
+    0 0,
+    calc(var(--sn-hex-size) / 2) calc(var(--sn-hex-size) * 0.866),
+    calc(var(--sn-hex-size) / 2) calc(var(--sn-hex-size) * 0.866),
+    0 0,
+    calc(var(--sn-hex-size) / 2) calc(var(--sn-hex-size) * 0.866);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   BREATHING AMBIENT BACKGROUND
+   ═══════════════════════════════════════════════════════════════════ */
+
+.ambient-field {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.ambient-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.15;
+  will-change: transform;
+}
+
+.ambient-orb:nth-child(1) {
+  width: 600px; height: 600px;
+  background: var(--sn-accent);
+  top: -10%; left: -5%;
+  animation: drift-1 25s ease-in-out infinite;
+}
+.ambient-orb:nth-child(2) {
+  width: 500px; height: 500px;
+  background: var(--sn-storm);
+  bottom: -15%; right: -8%;
+  animation: drift-2 30s ease-in-out infinite;
+}
+.ambient-orb:nth-child(3) {
+  width: 400px; height: 400px;
+  background: #B8A0D8;
+  top: 40%; left: 50%;
+  animation: drift-3 20s ease-in-out infinite;
+  opacity: 0.08;
+}
+
+@keyframes drift-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(60px, 30px) scale(1.05); }
+  66% { transform: translate(-20px, -40px) scale(0.95); }
+}
+@keyframes drift-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(-40px, -20px) scale(1.08); }
+  66% { transform: translate(30px, 50px) scale(0.92); }
+}
+@keyframes drift-3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(40px, -30px) scale(1.1); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   GLASS SURFACE — The core UI material
+   ═══════════════════════════════════════════════════════════════════ */
+
+.glass {
+  background: var(--sn-surface-glass);
+  backdrop-filter: blur(var(--sn-blur-surface)) saturate(1.3);
+  -webkit-backdrop-filter: blur(var(--sn-blur-surface)) saturate(1.3);
+  border: 1px solid var(--sn-border);
+  border-radius: var(--sn-radius);
+  transition: all var(--sn-dur-normal) var(--sn-ease-spring);
+}
+
+.glass:hover {
+  border-color: var(--sn-border-hover);
+  background: var(--sn-surface-glass-heavy);
+  box-shadow:
+    0 0 0 1px var(--sn-border-hover),
+    0 8px 32px rgba(0,0,0,0.2),
+    inset 0 1px 0 rgba(255,255,255,0.05);
+}
+
+.glass-heavy {
+  background: var(--sn-surface-glass-heavy);
+  backdrop-filter: blur(var(--sn-blur-heavy)) saturate(1.4);
+  -webkit-backdrop-filter: blur(var(--sn-blur-heavy)) saturate(1.4);
+  border: 1px solid var(--sn-border);
+  border-radius: var(--sn-radius);
+}
+
+/* Liquid glass — refraction edge highlight */
+.liquid-glass {
+  background: var(--sn-surface-glass);
+  backdrop-filter: blur(var(--sn-blur-surface)) saturate(1.5) brightness(1.05);
+  -webkit-backdrop-filter: blur(var(--sn-blur-surface)) saturate(1.5) brightness(1.05);
+  border: 1px solid var(--sn-border);
+  border-radius: var(--sn-radius-lg);
+  position: relative;
+  overflow: hidden;
+  transition: all var(--sn-dur-normal) var(--sn-ease-spring);
+}
+
+.liquid-glass::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    135deg,
+    rgba(255,255,255,0.08) 0%,
+    transparent 40%,
+    transparent 60%,
+    rgba(255,255,255,0.04) 100%
+  );
+  pointer-events: none;
+}
+
+.liquid-glass::after {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  pointer-events: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   HOLOGRAPHIC / CHROME ACCENTS
+   ═══════════════════════════════════════════════════════════════════ */
+
+.chrome-text {
+  background: linear-gradient(135deg, var(--sn-chrome-start), var(--sn-chrome-mid), var(--sn-chrome-end));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.holo-border {
+  position: relative;
+}
+
+.holo-border::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: var(--sn-holographic);
+  background-size: 300% 300%;
+  animation: holo-shift 8s linear infinite;
+  opacity: 0;
+  transition: opacity var(--sn-dur-normal) var(--sn-ease-smooth);
+  z-index: -1;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  padding: 1px;
+}
+
+.holo-border:hover::before {
+  opacity: 0.6;
+}
+
+@keyframes holo-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   BREATHING ANIMATIONS — Adaptive (intensify on hover)
+   ═══════════════════════════════════════════════════════════════════ */
+
+@keyframes breathe {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.008); opacity: 0.97; }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 8px 0 var(--sn-accent-glow); }
+  50% { box-shadow: 0 0 20px 4px var(--sn-accent-glow); }
+}
+
+@keyframes gradient-breathe {
+  0%, 100% { opacity: 0.12; }
+  50% { opacity: 0.18; }
+}
+
+.breathe {
+  animation: breathe var(--sn-dur-breathe) var(--sn-ease-smooth) infinite;
+}
+
+.breathe:hover {
+  animation-duration: 3s;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ADAPTIVE MOTION — Intensifies on interaction
+   ═══════════════════════════════════════════════════════════════════ */
+
+.adaptive-lift {
+  transition:
+    transform var(--sn-dur-normal) var(--sn-ease-spring),
+    box-shadow var(--sn-dur-normal) var(--sn-ease-spring);
+}
+
+.adaptive-lift:hover {
+  transform: translateY(-2px) scale(1.005);
+  box-shadow:
+    0 12px 40px rgba(0,0,0,0.25),
+    0 0 0 1px var(--sn-border-hover);
+}
+
+.adaptive-lift:active {
+  transform: translateY(0px) scale(0.995);
+  transition-duration: var(--sn-dur-fast);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   NEO-SKEUOMORPHIC DEPTH
+   ═══════════════════════════════════════════════════════════════════ */
+
+.neo-depth {
+  box-shadow:
+    0 1px 2px rgba(0,0,0,0.15),
+    0 4px 12px rgba(0,0,0,0.1),
+    inset 0 1px 0 rgba(255,255,255,0.05),
+    inset 0 -1px 0 rgba(0,0,0,0.1);
+}
+
+.neo-inset {
+  box-shadow:
+    inset 0 2px 4px rgba(0,0,0,0.2),
+    inset 0 -1px 0 rgba(255,255,255,0.05);
+  background: rgba(0,0,0,0.15);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   LAYOUT
+   ═══════════════════════════════════════════════════════════════════ */
+
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 24px;
+  position: relative;
+  z-index: 1;
+}
+
+.hero {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 80px 24px;
+  position: relative;
+}
+
+.section {
+  padding: 80px 0;
+  position: relative;
+  z-index: 1;
+}
+
+.section-header {
+  margin-bottom: 48px;
+}
+
+.section-title {
+  font-size: 2rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+}
+
+.section-subtitle {
+  font-size: 1rem;
+  color: var(--sn-text-soft);
+  font-weight: 300;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   TYPOGRAPHY
+   ═══════════════════════════════════════════════════════════════════ */
+
+.display {
+  font-size: clamp(3rem, 8vw, 5.5rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+}
+
+.headline {
+  font-size: clamp(1.5rem, 4vw, 2.5rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.body-serif {
+  font-family: var(--sn-font-serif);
+  font-size: 1.125rem;
+  line-height: 1.6;
+  color: var(--sn-text-soft);
+}
+
+.mono {
+  font-family: var(--sn-font-mono);
+  font-size: 0.8125rem;
+  letter-spacing: 0.02em;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   BUTTONS
+   ═══════════════════════════════════════════════════════════════════ */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: var(--sn-radius-sm);
+  font-family: var(--sn-font);
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: all var(--sn-dur-fast) var(--sn-ease-spring);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-primary {
+  background: var(--sn-accent);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(232, 128, 108, 0.25);
+}
+
+.btn-primary:hover {
+  background: var(--sn-accent-light);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(232, 128, 108, 0.35);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(232, 128, 108, 0.2);
+}
+
+.btn-glass {
+  background: var(--sn-surface-glass);
+  color: var(--sn-text);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--sn-border);
+}
+
+.btn-glass:hover {
+  background: var(--sn-surface-glass-heavy);
+  border-color: var(--sn-border-hover);
+  transform: translateY(-1px);
+}
+
+.btn-chrome {
+  background: linear-gradient(135deg, var(--sn-chrome-start), var(--sn-chrome-mid), var(--sn-chrome-end));
+  color: #1A1820;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.btn-chrome:hover {
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   CARDS
+   ═══════════════════════════════════════════════════════════════════ */
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.card {
+  padding: 28px;
+  position: relative;
+}
+
+.card-accent-line {
+  position: absolute;
+  top: 0;
+  left: 20px;
+  right: 20px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--sn-accent-muted), transparent);
+}
+
+.card-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.card-body {
+  font-size: 0.9375rem;
+  color: var(--sn-text-soft);
+  line-height: 1.55;
+}
+
+.card-tag {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 100px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background: var(--sn-accent-muted);
+  color: var(--sn-accent-light);
+  margin-top: 12px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   COLOR SWATCHES
+   ═══════════════════════════════════════════════════════════════════ */
+
+.swatch-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.swatch {
+  aspect-ratio: 1;
+  border-radius: var(--sn-radius);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 12px;
+  position: relative;
+  overflow: hidden;
+  transition: transform var(--sn-dur-normal) var(--sn-ease-spring);
+}
+
+.swatch:hover {
+  transform: scale(1.04);
+}
+
+.swatch-label {
+  font-size: 0.6875rem;
+  font-family: var(--sn-font-mono);
+  opacity: 0.8;
+}
+
+.swatch-value {
+  font-size: 0.625rem;
+  font-family: var(--sn-font-mono);
+  opacity: 0.5;
+  margin-top: 2px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   TOOLBAR DEMO
+   ═══════════════════════════════════════════════════════════════════ */
+
+.toolbar-demo {
+  display: flex;
+  justify-content: center;
+  padding: 40px 0;
+}
+
+.toolbar {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 6px;
+  border-radius: var(--sn-radius-lg);
+  animation: breathe var(--sn-dur-breathe) var(--sn-ease-smooth) infinite;
+}
+
+.toolbar-btn {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--sn-radius-sm);
+  border: none;
+  background: transparent;
+  color: var(--sn-text-soft);
+  cursor: pointer;
+  font-size: 1.125rem;
+  transition: all var(--sn-dur-fast) var(--sn-ease-spring);
+  position: relative;
+}
+
+.toolbar-btn:hover {
+  background: var(--sn-surface-glass);
+  color: var(--sn-text);
+  transform: scale(1.08);
+}
+
+.toolbar-btn.active {
+  background: var(--sn-accent-muted);
+  color: var(--sn-accent);
+}
+
+.toolbar-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--sn-accent);
+  animation: glow-pulse 3s ease-in-out infinite;
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 24px;
+  background: var(--sn-border);
+  margin: 0 4px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   PANEL DEMO
+   ═══════════════════════════════════════════════════════════════════ */
+
+.panel-demo {
+  display: grid;
+  grid-template-columns: 260px 1fr 280px;
+  gap: 16px;
+  min-height: 500px;
+}
+
+.panel {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--sn-border);
+}
+
+.panel-title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--sn-text-soft);
+}
+
+.layer-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--sn-radius-sm);
+  cursor: pointer;
+  transition: all var(--sn-dur-fast) var(--sn-ease-spring);
+  font-size: 0.875rem;
+}
+
+.layer-item:hover {
+  background: var(--sn-surface-glass);
+}
+
+.layer-item.selected {
+  background: var(--sn-accent-muted);
+  border: 1px solid var(--sn-border-accent);
+}
+
+.layer-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem;
+}
+
+.canvas-preview {
+  border-radius: var(--sn-radius);
+  background:
+    radial-gradient(circle at 30% 40%, var(--sn-accent-glow) 0%, transparent 50%),
+    radial-gradient(circle at 70% 60%, var(--sn-storm-muted) 0%, transparent 50%),
+    var(--sn-bg-ground);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.canvas-preview .floating-widget {
+  width: 180px;
+  height: 120px;
+  padding: 16px;
+  font-size: 0.8125rem;
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-8px) rotate(0.5deg); }
+}
+
+.prop-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  font-size: 0.8125rem;
+}
+
+.prop-label {
+  color: var(--sn-text-muted);
+}
+
+.prop-input {
+  background: rgba(0,0,0,0.15);
+  border: 1px solid var(--sn-border);
+  border-radius: 6px;
+  padding: 4px 8px;
+  color: var(--sn-text);
+  font-family: var(--sn-font-mono);
+  font-size: 0.75rem;
+  width: 100px;
+  text-align: right;
+  transition: border-color var(--sn-dur-fast) var(--sn-ease-smooth);
+}
+
+.prop-input:focus {
+  outline: none;
+  border-color: var(--sn-accent);
+  box-shadow: 0 0 0 3px var(--sn-accent-muted);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   THEME SWITCHER
+   ═══════════════════════════════════════════════════════════════════ */
+
+.theme-switch {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10000;
+  display: flex;
+  gap: 8px;
+}
+
+.theme-toggle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--sn-border);
+  background: var(--sn-surface-glass-heavy);
+  backdrop-filter: blur(20px);
+  color: var(--sn-text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  transition: all var(--sn-dur-normal) var(--sn-ease-spring);
+}
+
+.theme-toggle:hover {
+  transform: scale(1.1);
+  border-color: var(--sn-accent);
+  box-shadow: 0 0 16px var(--sn-accent-glow);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   MOTION DEMO — Interactive intensity
+   ═══════════════════════════════════════════════════════════════════ */
+
+.motion-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.motion-card {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.motion-orb {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: var(--sn-accent);
+  transition: all var(--sn-dur-normal) var(--sn-ease-spring);
+  box-shadow: 0 0 8px var(--sn-accent-glow);
+}
+
+.motion-card:hover .motion-orb {
+  transform: scale(1.15);
+  box-shadow: 0 0 30px rgba(232, 128, 108, 0.4);
+}
+
+.motion-card:active .motion-orb {
+  transform: scale(0.9);
+  transition-duration: var(--sn-dur-fast);
+}
+
+.motion-label {
+  font-size: 0.75rem;
+  color: var(--sn-text-muted);
+  font-family: var(--sn-font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   3D TILT — CSS perspective transform on hover
+   ═══════════════════════════════════════════════════════════════════ */
+
+.tilt-container {
+  perspective: 1000px;
+}
+
+.tilt-card {
+  transform-style: preserve-3d;
+  transition: transform var(--sn-dur-normal) var(--sn-ease-spring);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   TOAST / NOTIFICATION
+   ═══════════════════════════════════════════════════════════════════ */
+
+.toast {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  border-radius: var(--sn-radius);
+  font-size: 0.875rem;
+  animation: toast-arrive 0.5s var(--sn-ease-spring) forwards;
+}
+
+@keyframes toast-arrive {
+  from { opacity: 0; transform: translateY(10px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.toast-success {
+  background: rgba(90, 168, 120, 0.15);
+  border: 1px solid rgba(90, 168, 120, 0.25);
+  color: var(--sn-success);
+}
+
+.toast-warning {
+  background: rgba(212, 160, 76, 0.15);
+  border: 1px solid rgba(212, 160, 76, 0.25);
+  color: var(--sn-warning);
+}
+
+.toast-error {
+  background: rgba(200, 88, 88, 0.15);
+  border: 1px solid rgba(200, 88, 88, 0.25);
+  color: var(--sn-error);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   TOKEN TABLE
+   ═══════════════════════════════════════════════════════════════════ */
+
+.token-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+.token-table th {
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--sn-border);
+  color: var(--sn-text-muted);
+  font-weight: 500;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.token-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--sn-border);
+  vertical-align: middle;
+}
+
+.token-name {
+  font-family: var(--sn-font-mono);
+  color: var(--sn-accent);
+  font-size: 0.75rem;
+}
+
+.token-preview {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: inline-block;
+  vertical-align: middle;
+  border: 1px solid var(--sn-border);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ACCESSIBILITY
+   ═══════════════════════════════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .ambient-orb { display: none; }
+  body::before { animation: none; }
+}
+
+/* Focus visible */
+:focus-visible {
+  outline: 2px solid var(--sn-accent);
+  outline-offset: 2px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  .panel-demo { grid-template-columns: 1fr; }
+  .motion-grid { grid-template-columns: repeat(2, 1fr); }
+  .card-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- Ambient breathing background -->
+<div class="ambient-field">
+  <div class="ambient-orb"></div>
+  <div class="ambient-orb"></div>
+  <div class="ambient-orb"></div>
+</div>
+
+<!-- Theme Switcher -->
+<div class="theme-switch">
+  <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme" aria-label="Toggle light/dark theme">
+    <span id="theme-icon">☀</span>
+  </button>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     HERO
+     ═══════════════════════════════════════════════════════════════ -->
+<section class="hero">
+  <div style="margin-bottom: 20px;">
+    <span class="mono" style="color: var(--sn-text-muted); letter-spacing: 0.15em; text-transform: uppercase; font-size: 0.6875rem;">Design System v2.0 — Obsidian Edition</span>
+  </div>
+  <h1 class="display chrome-text" style="margin-bottom: 24px;">
+    Spatial<br>Operating<br>System
+  </h1>
+  <p class="body-serif" style="max-width: 520px; margin-bottom: 40px;">
+    A design language where interfaces breathe, surfaces refract light,
+    and every interaction responds with physical intelligence.
+  </p>
+  <div style="display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;">
+    <button class="btn btn-primary">Explore Tokens</button>
+    <button class="btn btn-glass">View Components</button>
+    <button class="btn btn-chrome">Chrome Accent</button>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     COLOR SYSTEM
+     ═══════════════════════════════════════════════════════════════ -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <h2 class="section-title">Color System</h2>
+      <p class="section-subtitle">Deep charcoals, warm corals, storm teals — 60/30/10 discipline</p>
+    </div>
+
+    <div class="swatch-grid">
+      <div class="swatch" style="background: var(--sn-bg);">
+        <span class="swatch-label" style="color: var(--sn-text-soft);">Background</span>
+        <span class="swatch-value" style="color: var(--sn-text-muted);">--sn-bg</span>
+      </div>
+      <div class="swatch" style="background: var(--sn-bg-ground);">
+        <span class="swatch-label" style="color: var(--sn-text-soft);">Ground</span>
+        <span class="swatch-value" style="color: var(--sn-text-muted);">--sn-bg-ground</span>
+      </div>
+      <div class="swatch" style="background: var(--sn-surface-raised);">
+        <span class="swatch-label" style="color: var(--sn-text-soft);">Surface</span>
+        <span class="swatch-value" style="color: var(--sn-text-muted);">--sn-surface-raised</span>
+      </div>
+      <div class="swatch" style="background: var(--sn-accent);">
+        <span class="swatch-label" style="color: #fff;">Accent</span>
+        <span class="swatch-value" style="color: rgba(255,255,255,0.7);">--sn-accent</span>
+      </div>
+      <div class="swatch" style="background: var(--sn-storm);">
+        <span class="swatch-label" style="color: #fff;">Storm</span>
+        <span class="swatch-value" style="color: rgba(255,255,255,0.7);">--sn-storm</span>
+      </div>
+      <div class="swatch" style="background: #B8A0D8;">
+        <span class="swatch-label" style="color: #1A1820;">Violet</span>
+        <span class="swatch-value" style="color: rgba(26,24,32,0.6);">--sn-violet</span>
+      </div>
+      <div class="swatch" style="background: var(--sn-success);">
+        <span class="swatch-label" style="color: #fff;">Success</span>
+        <span class="swatch-value" style="color: rgba(255,255,255,0.7);">--sn-success</span>
+      </div>
+      <div class="swatch" style="background: var(--sn-warning);">
+        <span class="swatch-label" style="color: #fff;">Warning</span>
+        <span class="swatch-value" style="color: rgba(255,255,255,0.7);">--sn-warning</span>
+      </div>
+      <div class="swatch" style="background: var(--sn-error);">
+        <span class="swatch-label" style="color: #fff;">Error</span>
+        <span class="swatch-value" style="color: rgba(255,255,255,0.7);">--sn-error</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     GLASS SURFACES
+     ═══════════════════════════════════════════════════════════════ -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <h2 class="section-title">Liquid Glass Surfaces</h2>
+      <p class="section-subtitle">Backdrop blur + saturation + refraction edge highlights — surfaces that live</p>
+    </div>
+
+    <div class="card-grid">
+      <div class="card glass adaptive-lift breathe">
+        <div class="card-accent-line"></div>
+        <div class="card-title">Standard Glass</div>
+        <div class="card-body">
+          backdrop-filter: blur(20px) saturate(1.3). The foundation surface for panels, cards, and floating UI. Subtle grain texture bleeds through.
+        </div>
+        <span class="card-tag">Glass</span>
+      </div>
+
+      <div class="card liquid-glass adaptive-lift" style="border-radius: var(--sn-radius-lg);">
+        <div class="card-title">Liquid Glass</div>
+        <div class="card-body">
+          Enhanced refraction with top-edge light line and internal gradient. Used for hero elements, feature cards, and premium surfaces. Inspired by Apple's WWDC 2025 material.
+        </div>
+        <span class="card-tag" style="background: var(--sn-storm-muted); color: var(--sn-storm-light);">Liquid</span>
+      </div>
+
+      <div class="card glass-heavy adaptive-lift holo-border" style="border-radius: var(--sn-radius);">
+        <div class="card-title">Holographic Edge</div>
+        <div class="card-body">
+          Heavy glass with holographic gradient border on hover. Y2K chrome meets modern glassmorphism. The border shifts through coral → violet → teal → coral.
+        </div>
+        <span class="card-tag" style="background: rgba(184,160,216,0.15); color: #B8A0D8;">Holo</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     TOOLBAR DEMO
+     ═══════════════════════════════════════════════════════════════ -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <h2 class="section-title">Canvas Chrome</h2>
+      <p class="section-subtitle">Floating toolbar with glass material, breathing dots, and adaptive response</p>
+    </div>
+
+    <div class="toolbar-demo">
+      <div class="toolbar glass-heavy neo-depth">
+        <button class="toolbar-btn active" title="Select">⎍</button>
+        <button class="toolbar-btn" title="Move">✥</button>
+        <button class="toolbar-btn" title="Pen">✎</button>
+        <div class="toolbar-divider"></div>
+        <button class="toolbar-btn" title="Rectangle">▢</button>
+        <button class="toolbar-btn" title="Ellipse">◯</button>
+        <button class="toolbar-btn" title="Line">╱</button>
+        <div class="toolbar-divider"></div>
+        <button class="toolbar-btn" title="Text">A</button>
+        <button class="toolbar-btn" title="Sticker">✦</button>
+        <button class="toolbar-btn" title="Widget">⬡</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     PANEL LAYOUT DEMO
+     ═══════════════════════════════════════════════════════════════ -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <h2 class="section-title">Panel Layout</h2>
+      <p class="section-subtitle">Layers panel · Canvas viewport · Properties inspector — all glass surfaces</p>
+    </div>
+
+    <div class="panel-demo">
+      <!-- Layers Panel -->
+      <div class="panel glass">
+        <div class="panel-header">
+          <span class="panel-title">Layers</span>
+          <span style="font-size: 0.75rem; color: var(--sn-text-muted);">6 items</span>
+        </div>
+        <div class="layer-item selected">
+          <div class="layer-icon" style="background: var(--sn-accent-muted); color: var(--sn-accent);">⬡</div>
+          <span>Weather Widget</span>
+        </div>
+        <div class="layer-item">
+          <div class="layer-icon" style="background: var(--sn-storm-muted); color: var(--sn-storm);">✦</div>
+          <span>Logo Sticker</span>
+        </div>
+        <div class="layer-item">
+          <div class="layer-icon" style="background: rgba(184,160,216,0.15); color: #B8A0D8;">📝</div>
+          <span>Sticky Note</span>
+        </div>
+        <div class="layer-item">
+          <div class="layer-icon" style="background: rgba(90,168,120,0.15); color: var(--sn-success);">⬡</div>
+          <span>Counter Widget</span>
+        </div>
+        <div class="layer-item" style="opacity: 0.4;">
+          <div class="layer-icon" style="background: var(--sn-surface-glass);">👁</div>
+          <span style="text-decoration: line-through;">Hidden Group</span>
+        </div>
+      </div>
+
+      <!-- Canvas Preview -->
+      <div class="canvas-preview">
+        <div class="floating-widget liquid-glass" style="text-align: center;">
+          <div style="font-size: 2rem; margin-bottom: 8px;">🌤</div>
+          <div style="font-weight: 600;">72°F</div>
+          <div style="font-size: 0.75rem; color: var(--sn-text-soft);">San Francisco</div>
+        </div>
+      </div>
+
+      <!-- Properties Panel -->
+      <div class="panel glass">
+        <div class="panel-header">
+          <span class="panel-title">Properties</span>
+          <span style="font-size: 0.75rem; color: var(--sn-accent);">Weather Widget</span>
+        </div>
+        <div class="prop-row">
+          <span class="prop-label">X</span>
+          <input class="prop-input" value="340" readonly>
+        </div>
+        <div class="prop-row">
+          <span class="prop-label">Y</span>
+          <input class="prop-input" value="220" readonly>
+        </div>
+        <div class="prop-row">
+          <span class="prop-label">Width</span>
+          <input class="prop-input" value="180" readonly>
+        </div>
+        <div class="prop-row">
+          <span class="prop-label">Height</span>
+          <input class="prop-input" value="120" readonly>
+        </div>
+        <div style="border-top: 1px solid var(--sn-border); margin-top: 8px; padding-top: 12px;">
+          <span class="panel-title" style="font-size: 0.6875rem;">Widget Config</span>
+        </div>
+        <div class="prop-row">
+          <span class="prop-label">City</span>
+          <input class="prop-input" value="SF" style="width: 80px;" readonly>
+        </div>
+        <div class="prop-row">
+          <span class="prop-label">Units</span>
+          <input class="prop-input" value="°F" style="width: 80px;" readonly>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     ADAPTIVE MOTION DEMO
+     ═══════════════════════════════════════════════════════════════ -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <h2 class="section-title">Adaptive Motion</h2>
+      <p class="section-subtitle">Subtle at rest, intensifies on interaction — the UI responds to you</p>
+    </div>
+
+    <div class="motion-grid">
+      <div class="motion-card glass adaptive-lift" style="border-radius: var(--sn-radius-lg);">
+        <div class="motion-orb" style="background: var(--sn-accent);"></div>
+        <span class="motion-label">Hover: Scale + Glow</span>
+      </div>
+      <div class="motion-card glass adaptive-lift" style="border-radius: var(--sn-radius-lg);">
+        <div class="motion-orb" style="background: var(--sn-storm); border-radius: 12px;"></div>
+        <span class="motion-label">Hover: Lift + Shadow</span>
+      </div>
+      <div class="motion-card glass adaptive-lift" style="border-radius: var(--sn-radius-lg);">
+        <div class="motion-orb" style="background: linear-gradient(135deg, var(--sn-accent), #B8A0D8, var(--sn-storm)); background-size: 200% 200%; animation: holo-shift 4s linear infinite;"></div>
+        <span class="motion-label">Holographic Shift</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     FEEDBACK TOASTS
+     ═══════════════════════════════════════════════════════════════ -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <h2 class="section-title">Feedback States</h2>
+      <p class="section-subtitle">Glass toasts with semantic color coding and spring-in animation</p>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 12px; max-width: 400px;">
+      <div class="toast toast-success glass">
+        <span>✓</span>
+        <span>Widget installed successfully</span>
+      </div>
+      <div class="toast toast-warning glass">
+        <span>⚠</span>
+        <span>Row changed — refreshed</span>
+      </div>
+      <div class="toast toast-error glass">
+        <span>✕</span>
+        <span>Permission denied: viewer role</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     TYPOGRAPHY
+     ═══════════════════════════════════════════════════════════════ -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <h2 class="section-title">Typography</h2>
+      <p class="section-subtitle">Outfit for UI, Newsreader for content, DM Mono for data</p>
+    </div>
+
+    <div class="card glass" style="padding: 40px; margin-bottom: 20px;">
+      <div class="display" style="margin-bottom: 24px;">Display Heading</div>
+      <div class="headline" style="margin-bottom: 16px;">Headline Text — Where Ideas Live</div>
+      <p style="font-size: 1rem; line-height: 1.6; color: var(--sn-text-soft); margin-bottom: 16px;">
+        Body text in Outfit. Clean, geometric, modern. Designed for readability at every scale. The spatial operating system treats typography as a first-class citizen.
+      </p>
+      <p class="body-serif" style="margin-bottom: 16px;">
+        <em>Serif text in Newsreader — used for long-form content, widget descriptions, and editorial surfaces. Adds warmth and personality to the technical foundation.</em>
+      </p>
+      <p class="mono" style="color: var(--sn-text-muted);">
+        mono: DM Mono — coordinates, values, code, tokens. { x: 340, y: 220, w: 180, h: 120 }
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     DESIGN PRINCIPLES
+     ═══════════════════════════════════════════════════════════════ -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <h2 class="section-title">Design Principles</h2>
+      <p class="section-subtitle">The rules behind the system</p>
+    </div>
+
+    <div class="card-grid">
+      <div class="card liquid-glass adaptive-lift">
+        <div class="card-title" style="color: var(--sn-accent);">01 — Breathe</div>
+        <div class="card-body">Nothing is static. Ambient background orbs drift, surfaces pulse, active states glow. The canvas is alive — but never distracting. Respect prefers-reduced-motion.</div>
+      </div>
+      <div class="card liquid-glass adaptive-lift">
+        <div class="card-title" style="color: var(--sn-storm-light);">02 — Respond</div>
+        <div class="card-body">Motion is adaptive. Subtle at rest, intensifies on hover, springs back on release. Every element telegraphs interactivity through physics, not decoration.</div>
+      </div>
+      <div class="card liquid-glass adaptive-lift">
+        <div class="card-title" style="color: #B8A0D8;">03 — Refract</div>
+        <div class="card-body">Surfaces are translucent, not opaque. Backdrop blur creates depth hierarchy. The hex pattern and grain texture bleed through glass — the canvas is always present.</div>
+      </div>
+      <div class="card liquid-glass adaptive-lift">
+        <div class="card-title" style="color: var(--sn-warning);">04 — Warm</div>
+        <div class="card-body">Deep charcoals, not pure black. Warm coral accents, not cold blue. This is a space you want to inhabit — Her aesthetic, not hospital lighting. Never "cute autumn AI."</div>
+      </div>
+      <div class="card liquid-glass adaptive-lift">
+        <div class="card-title" style="color: var(--sn-success);">05 — Chrome</div>
+        <div class="card-body">Y2K futurism: holographic borders, chrome text gradients, metallic shimmers. But surgical — reserved for emphasis, never wallpaper. The accent, not the palette.</div>
+      </div>
+      <div class="card liquid-glass adaptive-lift">
+        <div class="card-title" style="color: var(--sn-accent-light);">06 — Accessible</div>
+        <div class="card-body">WCAG AA minimum. prefers-reduced-motion kills all animation. Focus-visible rings on every interactive. High-contrast theme as escape hatch. Beauty serves function.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     3D TILT DEMO
+     ═══════════════════════════════════════════════════════════════ -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <h2 class="section-title">3D Depth</h2>
+      <p class="section-subtitle">CSS perspective transforms — hover for interactive parallax tilt</p>
+    </div>
+
+    <div style="display: flex; gap: 20px; flex-wrap: wrap; justify-content: center;">
+      <div class="tilt-container" style="width: 280px;">
+        <div class="tilt-card liquid-glass" style="padding: 32px; cursor: pointer;" onmousemove="tiltCard(event, this)" onmouseleave="resetTilt(this)">
+          <div style="font-size: 2.5rem; margin-bottom: 12px;">⬡</div>
+          <div class="card-title">Widget Card</div>
+          <div class="card-body" style="font-size: 0.8125rem;">Move your cursor across this card to see interactive 3D parallax tilt with neo-skeuomorphic depth.</div>
+        </div>
+      </div>
+      <div class="tilt-container" style="width: 280px;">
+        <div class="tilt-card liquid-glass" style="padding: 32px; cursor: pointer;" onmousemove="tiltCard(event, this)" onmouseleave="resetTilt(this)">
+          <div style="font-size: 2.5rem; margin-bottom: 12px;">✦</div>
+          <div class="card-title">Sticker Asset</div>
+          <div class="card-body" style="font-size: 0.8125rem;">Stickers and entities use the same depth system. Every surface lives in a shared spatial hierarchy.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     ANTI-PATTERNS
+     ═══════════════════════════════════════════════════════════════ -->
+<section class="section" style="padding-bottom: 120px;">
+  <div class="container">
+    <div class="section-header">
+      <h2 class="section-title" style="color: var(--sn-error);">Anti-Patterns</h2>
+      <p class="section-subtitle">What this design system actively rejects</p>
+    </div>
+
+    <div class="card glass" style="padding: 32px;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 24px;">
+        <div>
+          <div style="font-weight: 600; color: var(--sn-error); margin-bottom: 6px;">✕ Autumn AI Aesthetic</div>
+          <div style="font-size: 0.875rem; color: var(--sn-text-soft);">No pumpkin oranges, leaf browns, cozy cabin vibes. That entire palette is a AI cliche now.</div>
+        </div>
+        <div>
+          <div style="font-weight: 600; color: var(--sn-error); margin-bottom: 6px;">✕ Pure Black (#000)</div>
+          <div style="font-size: 0.875rem; color: var(--sn-text-soft);">Deep charcoal with warmth. #0C0C10 not #000000. Pure black flattens depth and kills glass effects.</div>
+        </div>
+        <div>
+          <div style="font-weight: 600; color: var(--sn-error); margin-bottom: 6px;">✕ Over-Rounded Corners</div>
+          <div style="font-size: 0.875rem; color: var(--sn-text-soft);">14px is our standard. No pill shapes on cards. No border-radius: 9999px on containers. Precision, not softness.</div>
+        </div>
+        <div>
+          <div style="font-weight: 600; color: var(--sn-error); margin-bottom: 6px;">✕ Pastel Everything</div>
+          <div style="font-size: 0.875rem; color: var(--sn-text-soft);">Accent colors have saturation and presence. Muted pastels read as timid. Coral is warm, not washed out.</div>
+        </div>
+        <div>
+          <div style="font-weight: 600; color: var(--sn-error); margin-bottom: 6px;">✕ Gradient Blob Backgrounds</div>
+          <div style="font-size: 0.875rem; color: var(--sn-text-soft);">Our ambient orbs are subtle (0.15 opacity) and move slowly. No homepage hero gradient meshes at full saturation.</div>
+        </div>
+        <div>
+          <div style="font-weight: 600; color: var(--sn-error); margin-bottom: 6px;">✕ Gratuitous Animation</div>
+          <div style="font-size: 0.875rem; color: var(--sn-text-soft);">Every motion has purpose. No bounce effects on load. No spinning logos. No parallax scrolling on landing pages.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+// Theme toggle
+function toggleTheme() {
+  const html = document.documentElement;
+  const current = html.getAttribute('data-theme');
+  const next = current === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  document.getElementById('theme-icon').textContent = next === 'dark' ? '☀' : '☾';
+}
+
+// 3D Tilt effect
+function tiltCard(e, el) {
+  const rect = el.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  const centerX = rect.width / 2;
+  const centerY = rect.height / 2;
+  const rotateX = ((y - centerY) / centerY) * -8;
+  const rotateY = ((x - centerX) / centerX) * 8;
+  el.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.02)`;
+  el.style.boxShadow = `
+    ${-rotateY * 2}px ${rotateX * 2}px 30px rgba(0,0,0,0.2),
+    inset 0 1px 0 rgba(255,255,255,0.08)
+  `;
+}
+
+function resetTilt(el) {
+  el.style.transform = 'perspective(800px) rotateX(0) rotateY(0) scale(1)';
+  el.style.boxShadow = '';
+}
+
+// Toolbar button interaction
+document.querySelectorAll('.toolbar-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.toolbar-btn').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+  });
+});
+</script>
+
+</body>
+</html>

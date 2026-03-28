@@ -9,8 +9,11 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import type { WidgetManifest, WidgetPackageContents } from '@sn/types';
+import { CanvasEvents } from '@sn/types';
 
+import { bus } from '../../../../kernel/bus';
 import { useAuthStore } from '../../../../kernel/stores/auth/auth.store';
+import { useCanvasStore } from '../../../../kernel/stores/canvas/canvas.store';
 import { useWidgetStore } from '../../../../kernel/stores/widget/widget.store';
 import { createMarketplaceAPI } from '../../../../marketplace/api/marketplace-api';
 import type { MarketplaceWidgetListing } from '../../../../marketplace/api/types';
@@ -118,6 +121,23 @@ export const LibraryPage: React.FC = () => {
   // Stub install handler (library only uninstalls)
   const handleInstallNoop = useCallback(async () => {}, []);
 
+  // Navigate to canvas and activate widget placement tool
+  const activeCanvasId = useCanvasStore((s) => s.activeCanvasId);
+  const handleAddToCanvas = useCallback(
+    (widgetId: string) => {
+      // Emit tool change so the canvas activates widget placement mode
+      bus.emit(CanvasEvents.TOOL_CHANGED, {
+        tool: 'widget',
+        widgetId,
+        metadata: { widgetId },
+      });
+      // Navigate to the canvas — the tool change persists in uiStore
+      const canvasPath = activeCanvasId ? `/canvas/${activeCanvasId}` : '/';
+      navigate(canvasPath);
+    },
+    [navigate, activeCanvasId],
+  );
+
   // Include built-in widgets from the registry
   const builtInWidgets = useMemo(() => {
     return Object.values(widgetRegistry)
@@ -176,6 +196,81 @@ export const LibraryPage: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {loading ? (
+        <p style={{ color: themeVar('--sn-text-muted') }}>Loading library...</p>
+      ) : allWidgets.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '48px 16px', color: themeVar('--sn-text-muted') }}>
+          <p style={{ fontSize: '16px', marginBottom: '8px' }}>No widgets installed yet.</p>
+          <button type="button" onClick={() => navigate('/marketplace')} style={btnSecondary}>
+            Browse Marketplace
+          </button>
+        </div>
+      ) : (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+            gap: '16px',
+          }}
+        >
+          {allWidgets.map((widget) => {
+            const isBuiltIn = !!(widget.metadata as Record<string, unknown>)?.builtIn;
+            return (
+              <WidgetCard
+                key={widget.id}
+                id={widget.id}
+                name={widget.name}
+                description={widget.description}
+                thumbnailUrl={widget.thumbnailUrl}
+                category={widget.category}
+                ratingAverage={widget.ratingAverage}
+                ratingCount={widget.ratingCount}
+                installCount={widget.installCount}
+                isFree={widget.isFree}
+                priceCents={widget.priceCents}
+                currency={widget.currency}
+                isOfficial={isBuiltIn}
+                isDeprecated={widget.isDeprecated}
+                onClick={handleWidgetClick}
+                action={
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button
+                      type="button"
+                      data-testid="add-to-canvas-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAddToCanvas(widget.id);
+                      }}
+                      style={{
+                        flex: 1,
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        border: 'none',
+                        background: themeVar('--sn-accent'),
+                        color: '#fff',
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Add to Canvas
+                    </button>
+                    {!isBuiltIn && (
+                      <InstallButton
+                        isInstalled={true}
+                        onInstall={handleInstallNoop}
+                        onUninstall={() => handleUninstall(widget.id)}
+                        uninstallState={uninstallStatus[widget.id]}
+                      />
+                    )}
+                  </div>
+                }
+              />
+            );
+          })}
+        </div>
+      )}
 
       {showUpload && (
         <div

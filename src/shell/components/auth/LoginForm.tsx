@@ -95,7 +95,7 @@ export const LoginForm: React.FC = () => {
   };
 
   return (
-    <div style={{ maxWidth: '400px', margin: '0 auto', padding: '40px 20px' }}>
+    <div className="sn-glass-heavy sn-neo sn-holo-border" style={{ maxWidth: '400px', margin: '0 auto', padding: '40px 20px', borderRadius: '12px' }}>
       <h2 style={{ marginBottom: '24px', textAlign: 'center' }}>
         {isSignUp ? 'Create an account' : 'Welcome back'}
       </h2>

@@ -253,6 +253,7 @@ export const DockerHeader: React.FC<DockerHeaderProps> = ({
           />
         ) : (
           <span
+            className="sn-chrome-text"
             onDoubleClick={handleDoubleClick}
             title="Double-click to rename"
             style={{
@@ -260,7 +261,6 @@ export const DockerHeader: React.FC<DockerHeaderProps> = ({
               fontSize: 13,
               fontWeight: 400,
               letterSpacing: '0.01em',
-              color: 'var(--sn-text-soft, #B8B5C0)',
               whiteSpace: 'nowrap',
               overflow: 'hidden',
               textOverflow: 'ellipsis',

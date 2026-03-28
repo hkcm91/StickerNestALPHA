@@ -1,6 +1,9 @@
 /**
  * SamplesPage — lists all curated sample widgets loaded from /samples/index.json.
  *
+ * Users can download sample widgets or try uploading them through the upload
+ * pipeline to learn the widget publishing flow.
+ *
  * @module shell/pages/marketplace/samples
  * @layer L6
  */
@@ -10,22 +13,10 @@ import React, { useCallback, useEffect, useState } from 'react';
 import type { SampleWidgetEntry } from '@sn/types';
 
 import { themeVar } from '../../../theme/theme-vars';
+import { UploadFlow } from '../shared/UploadFlow';
 import { mutedText, pageStyle, sectionHeading } from '../styles';
 
 import { SampleCard } from './SampleCard';
-
-// ---------------------------------------------------------------------------
-// Stub install service
-// ---------------------------------------------------------------------------
-
-/**
- * Stub: receives an ArrayBuffer and logs the install intent.
- * Replace with the real marketplace install flow when available.
- */
-async function installPackage(_data: ArrayBuffer): Promise<void> {
-  // TODO: wire to real install pipeline (Lab publish flow / Marketplace API)
-  console.log('[SamplesPage] installPackage stub — received', _data.byteLength, 'bytes');
-}
 
 // ---------------------------------------------------------------------------
 // Component
@@ -35,7 +26,11 @@ export const SamplesPage: React.FC = () => {
   const [samples, setSamples] = useState<SampleWidgetEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
-  const [installError, setInstallError] = useState<string | null>(null);
+  const [cardError, setCardError] = useState<string | null>(null);
+
+  // Upload flow modal state
+  const [showUpload, setShowUpload] = useState(false);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
 
   // Fetch sample index on mount
   useEffect(() => {
@@ -69,19 +64,18 @@ export const SamplesPage: React.FC = () => {
     return () => { cancelled = true; };
   }, []);
 
-  const handleInstall = useCallback(async (data: ArrayBuffer) => {
-    setInstallError(null);
-    try {
-      await installPackage(data);
-    } catch (err) {
-      setInstallError(
-        err instanceof Error ? err.message : 'Install failed. Please try again.',
-      );
-    }
+  const handleTryUpload = useCallback((file: File) => {
+    setUploadFile(file);
+    setShowUpload(true);
   }, []);
 
   const handleError = useCallback((msg: string) => {
-    setInstallError(msg);
+    setCardError(msg);
+  }, []);
+
+  const handleCloseUpload = useCallback(() => {
+    setShowUpload(false);
+    setUploadFile(null);
   }, []);
 
   // ---------------------------------------------------------------------------
@@ -114,6 +108,25 @@ export const SamplesPage: React.FC = () => {
     animation: 'sn-pulse 1.4s ease-in-out infinite',
   };
 
+  const modalOverlay: React.CSSProperties = {
+    position: 'fixed',
+    inset: 0,
+    background: 'rgba(0,0,0,0.6)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 9000,
+  };
+
+  const modalContent: React.CSSProperties = {
+    background: themeVar('--sn-surface'),
+    border: `1px solid ${themeVar('--sn-border')}`,
+    borderRadius: themeVar('--sn-radius'),
+    width: '480px',
+    maxHeight: '80vh',
+    overflow: 'auto',
+  };
+
   // ---------------------------------------------------------------------------
   // Render
   // ---------------------------------------------------------------------------
@@ -129,16 +142,16 @@ export const SamplesPage: React.FC = () => {
 
       <h2 style={sectionHeading}>Sample Widgets</h2>
       <p style={{ ...mutedText, marginBottom: '20px' }}>
-        Explore curated samples to learn StickerNest widget development.
+        Download sample widgets to learn the SDK, or click "Try Upload" to test the upload pipeline with a known-good widget.
       </p>
 
-      {/* Install error (non-fatal, stays dismissible) */}
-      {installError && (
+      {/* Card error (non-fatal, dismissible) */}
+      {cardError && (
         <div style={errorBoxStyle} data-testid="samples-install-error">
-          {installError}{' '}
+          {cardError}{' '}
           <button
             type="button"
-            onClick={() => setInstallError(null)}
+            onClick={() => setCardError(null)}
             style={{
               background: 'none',
               border: 'none',
@@ -185,10 +198,22 @@ export const SamplesPage: React.FC = () => {
             <SampleCard
               key={sample.id}
               sample={sample}
-              onInstall={handleInstall}
+              onTryUpload={handleTryUpload}
               onError={handleError}
             />
           ))}
+        </div>
+      )}
+
+      {/* Upload Flow Modal */}
+      {showUpload && (
+        <div style={modalOverlay} onClick={handleCloseUpload} data-testid="samples-upload-modal">
+          <div style={modalContent} onClick={(e) => e.stopPropagation()}>
+            <UploadFlow
+              initialFile={uploadFile ?? undefined}
+              onClose={handleCloseUpload}
+            />
+          </div>
         </div>
       )}
     </div>

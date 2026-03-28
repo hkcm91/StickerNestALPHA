@@ -10,6 +10,13 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuthStore } from '../../../kernel/stores/auth/auth.store';
 import { useUIStore } from '../../../kernel/stores/ui/ui.store';
 import { supabase } from '../../../kernel/supabase';
+import { GlassPanel } from '../../components/GlassPanel';
+
+// =============================================================================
+// Constants
+// =============================================================================
+
+const SN_SPRING = 'cubic-bezier(0.16, 1, 0.3, 1)';
 
 // =============================================================================
 // Types
@@ -144,7 +151,6 @@ export const TodoManager: React.FC = () => {
     };
 
     if (editingTodo) {
-      // Update
       const { error } = await supabase
         .from('todos')
         .update(payload)
@@ -158,7 +164,6 @@ export const TodoManager: React.FC = () => {
         loadTodos();
       }
     } else {
-      // Create
       const { error } = await supabase
         .from('todos')
         .insert({ ...payload, user_id: user.id });
@@ -211,7 +216,7 @@ export const TodoManager: React.FC = () => {
     if (diffDays < 0) return { text: 'Overdue', color: '#C85858' };
     if (diffDays === 0) return { text: 'Today', color: '#E8806C' };
     if (diffDays === 1) return { text: 'Tomorrow', color: '#4E7B8E' };
-    return { text: d.toLocaleDateString(), color: '#6b7280' };
+    return { text: d.toLocaleDateString(), color: 'var(--sn-text-muted, #7A7784)' };
   };
 
   // --- Render ---
@@ -254,48 +259,50 @@ export const TodoManager: React.FC = () => {
 
       {/* Form */}
       {showForm && (
-        <form onSubmit={handleSubmit} style={styles.form}>
-          <input
-            type="text"
-            placeholder="What needs to be done?"
-            value={formData.title}
-            onChange={(e) => setFormData((d) => ({ ...d, title: e.target.value }))}
-            style={styles.input}
-            autoFocus
-          />
-          <textarea
-            placeholder="Description (optional)"
-            value={formData.description}
-            onChange={(e) => setFormData((d) => ({ ...d, description: e.target.value }))}
-            style={styles.textarea}
-            rows={2}
-          />
-          <div style={styles.formRow}>
-            <select
-              value={formData.priority}
-              onChange={(e) => setFormData((d) => ({ ...d, priority: e.target.value as TodoPriority }))}
-              style={styles.select}
-            >
-              {Object.entries(PRIORITY_CONFIG).map(([key, { label }]) => (
-                <option key={key} value={key}>{label} Priority</option>
-              ))}
-            </select>
+        <GlassPanel static style={styles.form}>
+          <form onSubmit={handleSubmit}>
             <input
-              type="date"
-              value={formData.due_date}
-              onChange={(e) => setFormData((d) => ({ ...d, due_date: e.target.value }))}
-              style={styles.dateInput}
+              type="text"
+              placeholder="What needs to be done?"
+              value={formData.title}
+              onChange={(e) => setFormData((d) => ({ ...d, title: e.target.value }))}
+              style={styles.input}
+              autoFocus
             />
-          </div>
-          <div style={styles.formActions}>
-            <button type="button" onClick={resetForm} style={styles.cancelBtn}>
-              Cancel
-            </button>
-            <button type="submit" style={styles.submitBtn}>
-              {editingTodo ? 'Update' : 'Add'} Todo
-            </button>
-          </div>
-        </form>
+            <textarea
+              placeholder="Description (optional)"
+              value={formData.description}
+              onChange={(e) => setFormData((d) => ({ ...d, description: e.target.value }))}
+              style={styles.textarea}
+              rows={2}
+            />
+            <div style={styles.formRow}>
+              <select
+                value={formData.priority}
+                onChange={(e) => setFormData((d) => ({ ...d, priority: e.target.value as TodoPriority }))}
+                style={styles.select}
+              >
+                {Object.entries(PRIORITY_CONFIG).map(([key, { label }]) => (
+                  <option key={key} value={key}>{label} Priority</option>
+                ))}
+              </select>
+              <input
+                type="date"
+                value={formData.due_date}
+                onChange={(e) => setFormData((d) => ({ ...d, due_date: e.target.value }))}
+                style={styles.dateInput}
+              />
+            </div>
+            <div style={styles.formActions}>
+              <button type="button" onClick={resetForm} style={styles.cancelBtn}>
+                Cancel
+              </button>
+              <button type="submit" style={styles.submitBtn}>
+                {editingTodo ? 'Update' : 'Add'} Todo
+              </button>
+            </div>
+          </form>
+        </GlassPanel>
       )}
 
       {/* List */}
@@ -312,78 +319,82 @@ export const TodoManager: React.FC = () => {
             const priority = PRIORITY_CONFIG[todo.priority];
 
             return (
-              <div
+              <GlassPanel
                 key={todo.id}
+                static
                 style={{
                   ...styles.todoItem,
+                  borderLeft: `3px solid ${priority.color}`,
                   opacity: todo.is_completed ? 0.6 : 1,
                 }}
               >
-                {/* Checkbox */}
-                <button
-                  onClick={() => toggleComplete(todo)}
-                  style={{
-                    ...styles.checkbox,
-                    background: todo.is_completed ? '#10b981' : 'transparent',
-                    borderColor: todo.is_completed ? '#10b981' : '#d1d5db',
-                  }}
-                >
-                  {todo.is_completed && (
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="white">
-                      <path d="M10 3L4.5 8.5L2 6" stroke="white" strokeWidth="2" fill="none" />
-                    </svg>
-                  )}
-                </button>
+                <div style={styles.todoInner}>
+                  {/* Checkbox */}
+                  <button
+                    onClick={() => toggleComplete(todo)}
+                    style={{
+                      ...styles.checkbox,
+                      background: todo.is_completed ? '#5AA878' : 'transparent',
+                      borderColor: todo.is_completed ? '#5AA878' : 'var(--sn-border, rgba(255,255,255,0.15))',
+                    }}
+                  >
+                    {todo.is_completed && (
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="white">
+                        <path d="M10 3L4.5 8.5L2 6" stroke="white" strokeWidth="2" fill="none" />
+                      </svg>
+                    )}
+                  </button>
 
-                {/* Content */}
-                <div style={styles.todoContent}>
-                  <div style={styles.todoHeader}>
-                    <span
-                      style={{
-                        ...styles.todoTitle,
-                        textDecoration: todo.is_completed ? 'line-through' : 'none',
-                      }}
-                    >
-                      {todo.title}
-                    </span>
-                    <span
-                      style={{
-                        ...styles.priorityBadge,
-                        color: priority.color,
-                        background: priority.bg,
-                      }}
-                    >
-                      {priority.label}
-                    </span>
+                  {/* Content */}
+                  <div style={styles.todoContent}>
+                    <div style={styles.todoHeader}>
+                      <span
+                        style={{
+                          ...styles.todoTitle,
+                          textDecoration: todo.is_completed ? 'line-through' : 'none',
+                        }}
+                      >
+                        {todo.title}
+                      </span>
+                      <span
+                        style={{
+                          ...styles.priorityBadge,
+                          color: priority.color,
+                          background: priority.bg,
+                        }}
+                      >
+                        {priority.label}
+                      </span>
+                    </div>
+                    {todo.description && (
+                      <p style={styles.todoDesc}>{todo.description}</p>
+                    )}
+                    {due && (
+                      <span style={{ ...styles.dueDate, color: due.color }}>
+                        Due: {due.text}
+                      </span>
+                    )}
                   </div>
-                  {todo.description && (
-                    <p style={styles.todoDesc}>{todo.description}</p>
-                  )}
-                  {due && (
-                    <span style={{ ...styles.dueDate, color: due.color }}>
-                      Due: {due.text}
-                    </span>
-                  )}
-                </div>
 
-                {/* Actions */}
-                <div style={styles.todoActions}>
-                  <button
-                    onClick={() => openEditForm(todo)}
-                    style={styles.actionBtn}
-                    title="Edit"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(todo.id)}
-                    style={{ ...styles.actionBtn, color: '#dc2626' }}
-                    title="Delete"
-                  >
-                    Delete
-                  </button>
+                  {/* Actions */}
+                  <div style={styles.todoActions}>
+                    <button
+                      onClick={() => openEditForm(todo)}
+                      style={styles.actionBtn}
+                      title="Edit"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDelete(todo.id)}
+                      style={{ ...styles.actionBtn, color: '#C85858' }}
+                      title="Delete"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
-              </div>
+              </GlassPanel>
             );
           })}
         </div>
@@ -428,6 +439,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '14px',
     fontWeight: 500,
     cursor: 'pointer',
+    transition: `all 300ms ${SN_SPRING}`,
   },
   filters: {
     display: 'flex',
@@ -441,38 +453,44 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: '6px',
     fontSize: '14px',
     cursor: 'pointer',
-    color: 'var(--sn-text-muted, #6b7280)',
+    color: 'var(--sn-text-muted, #7A7784)',
+    transition: `all 300ms ${SN_SPRING}`,
   },
   filterBtnActive: {
-    background: 'var(--sn-accent, #2563eb)',
-    borderColor: 'var(--sn-accent, #2563eb)',
+    background: 'var(--sn-accent, #3E7D94)',
+    borderColor: 'var(--sn-accent, #3E7D94)',
     color: '#fff',
+    boxShadow: '0 0 8px rgba(62,125,148,0.25)',
   },
   form: {
-    background: 'var(--sn-surface, #f9fafb)',
-    border: '1px solid var(--sn-border, #e5e7eb)',
-    borderRadius: '12px',
     padding: '20px',
     marginBottom: '20px',
   },
   input: {
     width: '100%',
     padding: '12px',
-    border: '1px solid var(--sn-border, #e5e7eb)',
+    border: '1px solid var(--sn-border, rgba(255,255,255,0.06))',
     borderRadius: '8px',
     fontSize: '16px',
     marginBottom: '12px',
-    boxSizing: 'border-box',
+    boxSizing: 'border-box' as const,
+    background: 'var(--sn-surface-glass, rgba(20,17,24,0.5))',
+    color: 'var(--sn-text, #E8E6ED)',
+    outline: 'none',
   },
   textarea: {
     width: '100%',
     padding: '12px',
-    border: '1px solid var(--sn-border, #e5e7eb)',
+    border: '1px solid var(--sn-border, rgba(255,255,255,0.06))',
     borderRadius: '8px',
     fontSize: '14px',
     marginBottom: '12px',
-    resize: 'vertical',
-    boxSizing: 'border-box',
+    resize: 'vertical' as const,
+    boxSizing: 'border-box' as const,
+    background: 'var(--sn-surface-glass, rgba(20,17,24,0.5))',
+    color: 'var(--sn-text, #E8E6ED)',
+    fontFamily: "'Outfit', sans-serif",
+    outline: 'none',
   },
   formRow: {
     display: 'flex',
@@ -482,16 +500,20 @@ const styles: Record<string, React.CSSProperties> = {
   select: {
     flex: 1,
     padding: '10px',
-    border: '1px solid var(--sn-border, #e5e7eb)',
+    border: '1px solid var(--sn-border, rgba(255,255,255,0.06))',
     borderRadius: '8px',
     fontSize: '14px',
+    background: 'var(--sn-surface-glass, rgba(20,17,24,0.5))',
+    color: 'var(--sn-text, #E8E6ED)',
   },
   dateInput: {
     flex: 1,
     padding: '10px',
-    border: '1px solid var(--sn-border, #e5e7eb)',
+    border: '1px solid var(--sn-border, rgba(255,255,255,0.06))',
     borderRadius: '8px',
     fontSize: '14px',
+    background: 'var(--sn-surface-glass, rgba(20,17,24,0.5))',
+    color: 'var(--sn-text, #E8E6ED)',
   },
   formActions: {
     display: 'flex',
@@ -501,14 +523,15 @@ const styles: Record<string, React.CSSProperties> = {
   cancelBtn: {
     padding: '10px 20px',
     background: 'transparent',
-    border: '1px solid var(--sn-border, #e5e7eb)',
+    border: '1px solid var(--sn-border, rgba(255,255,255,0.06))',
     borderRadius: '8px',
     fontSize: '14px',
     cursor: 'pointer',
+    color: 'var(--sn-text-muted, #7A7784)',
   },
   submitBtn: {
     padding: '10px 20px',
-    background: 'var(--sn-accent, #2563eb)',
+    background: 'var(--sn-accent, #3E7D94)',
     color: '#fff',
     border: 'none',
     borderRadius: '8px',
@@ -518,15 +541,16 @@ const styles: Record<string, React.CSSProperties> = {
   },
   loading: {
     padding: '40px',
-    textAlign: 'center',
-    color: 'var(--sn-text-muted, #6b7280)',
+    textAlign: 'center' as const,
+    color: 'var(--sn-text-muted, #7A7784)',
   },
   empty: {
     padding: '60px 40px',
-    textAlign: 'center',
-    color: 'var(--sn-text-muted, #6b7280)',
-    background: 'var(--sn-surface, #f9fafb)',
+    textAlign: 'center' as const,
+    color: 'var(--sn-text-muted, #7A7784)',
+    background: 'var(--sn-surface-glass, rgba(20,17,24,0.5))',
     borderRadius: '12px',
+    border: '1px solid var(--sn-border, rgba(255,255,255,0.04))',
   },
   list: {
     display: 'flex',
@@ -534,13 +558,13 @@ const styles: Record<string, React.CSSProperties> = {
     gap: '12px',
   },
   todoItem: {
+    padding: 0,
+  },
+  todoInner: {
     display: 'flex',
     alignItems: 'flex-start',
     gap: '16px',
     padding: '16px',
-    background: 'var(--sn-surface-glass, rgba(20,17,24,0.75))',
-    border: '1px solid var(--sn-border, #e5e7eb)',
-    borderRadius: '12px',
   },
   checkbox: {
     width: '24px',
@@ -553,6 +577,8 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
     flexShrink: 0,
     marginTop: '2px',
+    background: 'none',
+    transition: `all 200ms ${SN_SPRING}`,
   },
   todoContent: {
     flex: 1,
@@ -562,12 +588,12 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     gap: '10px',
-    flexWrap: 'wrap',
+    flexWrap: 'wrap' as const,
   },
   todoTitle: {
     fontSize: '16px',
     fontWeight: 500,
-    color: 'var(--sn-text, #111)',
+    color: 'var(--sn-text, #E8E6ED)',
   },
   priorityBadge: {
     padding: '2px 8px',
@@ -578,13 +604,14 @@ const styles: Record<string, React.CSSProperties> = {
   todoDesc: {
     margin: '6px 0 0',
     fontSize: '14px',
-    color: 'var(--sn-text-muted, #6b7280)',
+    color: 'var(--sn-text-muted, #7A7784)',
   },
   dueDate: {
     display: 'inline-block',
     marginTop: '8px',
     fontSize: '12px',
     fontWeight: 500,
+    fontFamily: "'DM Mono', monospace",
   },
   todoActions: {
     display: 'flex',
@@ -594,10 +621,11 @@ const styles: Record<string, React.CSSProperties> = {
   actionBtn: {
     padding: '6px 12px',
     background: 'transparent',
-    border: '1px solid var(--sn-border, #e5e7eb)',
+    border: '1px solid var(--sn-border, rgba(255,255,255,0.06))',
     borderRadius: '6px',
     fontSize: '12px',
     cursor: 'pointer',
-    color: 'var(--sn-text-muted, #6b7280)',
+    color: 'var(--sn-text-muted, #7A7784)',
+    transition: `all 200ms ${SN_SPRING}`,
   },
 };

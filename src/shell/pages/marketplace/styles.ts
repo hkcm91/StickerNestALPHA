@@ -40,8 +40,6 @@ export const pageStyle: React.CSSProperties = {
   maxWidth: '1100px',
   margin: '0 auto',
   overflowY: 'auto',
-  scrollbarWidth: 'none', /* Firefox */
-  msOverflowStyle: 'none', /* IE/Edge */
 };
 
 export const inputStyle: React.CSSProperties = {

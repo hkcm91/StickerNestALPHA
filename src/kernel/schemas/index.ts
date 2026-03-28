@@ -286,6 +286,22 @@ export {
 } from "./pipeline";
 
 // =============================================================================
+// Marketplace Pipeline Template Schemas
+// =============================================================================
+export {
+  // Schemas
+  TemplateConfigFieldSchema,
+  TemplateRequiredWidgetSchema,
+  MarketplacePipelineTemplateSchema,
+  // Types
+  type TemplateConfigField,
+  type TemplateRequiredWidget,
+  type MarketplacePipelineTemplate,
+  // JSON Schemas
+  MarketplacePipelineTemplateJSONSchema,
+} from "./marketplace-pipeline-template";
+
+// =============================================================================
 // Pipeline Intelligence (Port Matching & Templates)
 // =============================================================================
 export {

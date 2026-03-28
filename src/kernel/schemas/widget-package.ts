@@ -49,7 +49,9 @@ export const SampleWidgetEntrySchema = z.object({
   /** List of SDK features or concepts demonstrated by this sample */
   features: z.array(z.string()),
   /** URL to the .zip package for this sample widget */
-  zipUrl: z.string(),
+  zipUrl: z.string().optional(),
+  /** URL to a single .html file for this sample widget */
+  htmlUrl: z.string().optional(),
 });
 
 export type SampleWidgetEntry = z.infer<typeof SampleWidgetEntrySchema>;

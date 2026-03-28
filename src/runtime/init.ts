@@ -29,7 +29,7 @@ import { createIframePool, DEFAULT_WARMUP_COUNT } from './pool/iframe-pool';
 import type { IframePool } from './pool/iframe-pool';
 import { createRateLimiter } from './security/rate-limiter';
 import type { RateLimiter } from './security/rate-limiter';
-import { aiAgentManifest, galleryManifest, greenScreenRemoverManifest, imageGeneratorManifest, kanbanManifest, sharedBeaconManifest, todoListManifest } from './widgets';
+import { aiAgentManifest, galleryManifest, greenScreenRemoverManifest, imageGeneratorManifest, kanbanManifest, todoListManifest } from './widgets';
 import { BUILT_IN_WIDGET_HTML } from './widgets/built-in-html';
 
 let initialized = false;
@@ -80,13 +80,6 @@ const BUILTIN_WIDGETS: WidgetRegistryEntry[] = [
     widgetId: 'sn.builtin.gallery',
     manifest: galleryManifest,
     htmlContent: '',
-    isBuiltIn: true,
-    installedAt: new Date().toISOString(),
-  },
-  {
-    widgetId: 'sn.builtin.shared-beacon',
-    manifest: sharedBeaconManifest,
-    htmlContent: '', // Not used for inline widgets
     isBuiltIn: true,
     installedAt: new Date().toISOString(),
   },

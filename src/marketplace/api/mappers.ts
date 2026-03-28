@@ -16,7 +16,7 @@ import type {
 } from './types';
 
 export const LISTING_COLUMNS =
-  'id,name,slug,description,version,author_id,thumbnail_url,icon_url,category,tags,license,is_published,is_deprecated,install_count,rating_average,rating_count,is_free,price_cents,currency,stripe_price_id,metadata,created_at,updated_at';
+  'id,name,slug,description,version,author_id,thumbnail_url,icon_url,category,tags,license,is_published,is_deprecated,install_count,rating_average,rating_count,is_free,price_cents,currency,stripe_price_id,metadata,review_status,security_scan,created_at,updated_at';
 
 export function rowToListing(row: Record<string, unknown>): MarketplaceWidgetListing {
   return {
@@ -41,6 +41,9 @@ export function rowToListing(row: Record<string, unknown>): MarketplaceWidgetLis
     currency: (row.currency as string) ?? 'usd',
     stripePriceId: (row.stripe_price_id as string | null) ?? null,
     metadata: (row.metadata as Record<string, unknown>) ?? {},
+    reviewStatus: (row.review_status as string as MarketplaceWidgetListing["reviewStatus"]) ?? "approved",
+    securityFlags: Array.isArray((row.security_scan as any)?.flags) ? (row.security_scan as any).flags.length : 0,
+    securityScan: row.security_scan && typeof row.security_scan === "object" ? row.security_scan as MarketplaceWidgetListing["securityScan"] : null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   };

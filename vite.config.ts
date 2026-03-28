@@ -259,6 +259,7 @@ export default defineConfig(({ mode }) => {
   Object.assign(process.env, env);
 
   return {
+    cacheDir: '/tmp/vite-cache',
     plugins: [react(), aiProxyPlugin()],
     base: process.env.GITHUB_ACTIONS ? '/StickerNest5.0/' : '/',
     resolve: {
