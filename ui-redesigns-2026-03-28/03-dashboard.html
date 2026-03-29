@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StickerNest Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-dark: #0a0a0f;
+      --surface: #1a1a2e;
+      --surface-light: #252541;
+      --accent-teal: #00e5c7;
+      --accent-purple: #a855f7;
+      --text-primary: #ffffff;
+      --text-secondary: #b0b0c0;
+      --border: rgba(255, 255, 255, 0.1);
+      --glow: rgba(0, 229, 199, 0.2);
+    }
+
+    body {
+      font-family: 'Space Grotesk', sans-serif;
+      background: var(--bg-dark);
+      color: var(--text-primary);
+      overflow-x: hidden;
+    }
+
+    /* Animated background */
+    .bg-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+    }
+
+    .mesh-gradient {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #0a0a0f 0%, #1a1a3f 25%, #2d1b4e 50%, #0a0a0f 75%, #0a0a0f 100%);
+      animation: gradientShift 8s ease infinite;
+    }
+
+    @keyframes gradientShift {
+      0%, 100% { filter: hue-rotate(0deg); }
+      50% { filter: hue-rotate(10deg); }
+    }
+
+    .noise {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      opacity: 0.03;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' /%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23noiseFilter)' /%3E%3C/svg%3E");
+      pointer-events: none;
+    }
+
+    /* Navigation bar */
+    .navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 72px;
+      backdrop-filter: blur(20px);
+      background: rgba(10, 10, 15, 0.8);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 32px;
+      z-index: 1000;
+    }
+
+    .logo {
+      font-size: 24px;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent-teal) 0%, var(--accent-purple) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 32px;
+      align-items: center;
+    }
+
+    .nav-link {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 14px;
+      transition: color 0.3s ease;
+    }
+
+    .nav-link:hover {
+      color: var(--accent-teal);
+    }
+
+    .user-profile {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent-teal), var(--accent-purple));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .user-profile:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 20px var(--glow);
+    }
+
+    /* Main content */
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 120px 32px 64px;
+    }
+
+    /* Hero section */
+    .hero {
+      margin-bottom: 64px;
+    }
+
+    .hero-title {
+      font-size: 48px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      background: linear-gradient(135deg, var(--accent-teal) 0%, var(--accent-purple) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-subtitle {
+      font-size: 16px;
+      color: var(--text-secondary);
+      margin-bottom: 32px;
+    }
+
+    /* Quick actions */
+    .quick-actions {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 48px;
+    }
+
+    .action-btn {
+      padding: 20px;
+      backdrop-filter: blur(20px);
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .action-btn:hover {
+      background: rgba(0, 229, 199, 0.1);
+      border-color: var(--accent-teal);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px var(--glow);
+    }
+
+    .action-icon {
+      width: 20px;
+      height: 20px;
+      fill: var(--accent-teal);
+    }
+
+    /* Canvas cards grid */
+    .section-title {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-title::before {
+      content: '';
+      width: 4px;
+      height: 24px;
+      background: linear-gradient(135deg, var(--accent-teal), var(--accent-purple));
+      border-radius: 2px;
+    }
+
+    .canvas-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+      margin-bottom: 48px;
+    }
+
+    .canvas-card {
+      position: relative;
+      height: 240px;
+      border-radius: 16px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(20px);
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      group: card;
+    }
+
+    .canvas-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--accent-teal);
+      box-shadow: 0 16px 48px rgba(0, 229, 199, 0.15);
+    }
+
+    .canvas-thumbnail {
+      width: 100%;
+      height: 160px;
+      background: linear-gradient(135deg, #1a3a3a 0%, #2a1a4a 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      color: var(--text-secondary);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .canvas-thumbnail::before {
+      content: '';
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), rgba(0, 229, 199, 0.1), transparent);
+      pointer-events: none;
+    }
+
+    .canvas-info {
+      padding: 12px 16px;
+    }
+
+    .canvas-name {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .canvas-meta {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    /* Activity feed */
+    .activity-feed {
+      backdrop-filter: blur(20px);
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 48px;
+    }
+
+    .activity-item {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      align-items: center;
+    }
+
+    .activity-item:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .activity-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent-teal), var(--accent-purple));
+      flex-shrink: 0;
+    }
+
+    .activity-text {
+      flex: 1;
+    }
+
+    .activity-user {
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .activity-action {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .activity-time {
+      font-size: 12px;
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+
+    /* Templates section */
+    .templates-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+      margin-bottom: 48px;
+    }
+
+    .template-card {
+      backdrop-filter: blur(20px);
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-align: center;
+    }
+
+    .template-card:hover {
+      border-color: var(--accent-purple);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 32px rgba(168, 85, 247, 0.15);
+    }
+
+    .template-icon {
+      font-size: 32px;
+      margin-bottom: 12px;
+    }
+
+    .template-name {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .template-desc {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    /* Usage stats */
+    .stats-container {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 48px;
+    }
+
+    .stat-card {
+      backdrop-filter: blur(20px);
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 32px;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent-teal), var(--accent-purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 8px;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .quick-actions, .stats-container {
+        grid-template-columns: 1fr;
+      }
+
+      .canvas-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-title {
+        font-size: 32px;
+      }
+
+      .nav-links {
+        gap: 16px;
+      }
+
+      .container {
+        padding: 100px 16px 48px;
+      }
+
+      .navbar {
+        padding: 0 16px;
+      }
+    }
+
+    /* Animations */
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .hero, .quick-actions, .canvas-grid, .activity-feed, .templates-grid, .stats-container {
+      animation: fadeInUp 0.6s ease-out;
+    }
+
+    .canvas-card, .template-card, .stat-card {
+      animation: fadeInUp 0.6s ease-out;
+      animation-fill-mode: both;
+    }
+
+    .canvas-card:nth-child(1) { animation-delay: 0.1s; }
+    .canvas-card:nth-child(2) { animation-delay: 0.15s; }
+    .canvas-card:nth-child(3) { animation-delay: 0.2s; }
+    .canvas-card:nth-child(4) { animation-delay: 0.25s; }
+  </style>
+</head>
+<body>
+  <div class="bg-container">
+    <div class="mesh-gradient"></div>
+    <div class="noise"></div>
+  </div>
+
+  <nav class="navbar">
+    <div class="logo">StickerNest</div>
+    <div class="nav-links">
+      <a href="#" class="nav-link">Canvas</a>
+      <a href="#" class="nav-link">Marketplace</a>
+      <a href="#" class="nav-link">Docs</a>
+      <div class="user-profile">KM</div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <section class="hero">
+      <h1 class="hero-title">Welcome back, Kimber</h1>
+      <p class="hero-subtitle">Continue where you left off or create something new</p>
+
+      <div class="quick-actions">
+        <button class="action-btn">
+          <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
+            <line x1="12" y1="8" x2="12" y2="16"/>
+            <line x1="8" y1="12" x2="16" y2="12"/>
+          </svg>
+          New Canvas
+        </button>
+        <button class="action-btn">
+          <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2L15.09 8.26H22L16.55 12.5L18.64 18.74H12L6.45 12.5L8.91 8.26H2L12 2Z"/>
+          </svg>
+          New Widget
+        </button>
+        <button class="action-btn">
+          <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="m21 21-4.35-4.35"/>
+          </svg>
+          Browse Marketplace
+        </button>
+      </div>
+    </section>
+
+    <section>
+      <h2 class="section-title">Recent Canvases</h2>
+      <div class="canvas-grid">
+        <div class="canvas-card" onmousemove="updateGradient(event)">
+          <div class="canvas-thumbnail">Interactive Dashboard</div>
+          <div class="canvas-info">
+            <div class="canvas-name">Q1 Analytics</div>
+            <div class="canvas-meta">Edited 2 hours ago</div>
+          </div>
+        </div>
+        <div class="canvas-card" onmousemove="updateGradient(event)">
+          <div class="canvas-thumbnail">Collaborative Board</div>
+          <div class="canvas-info">
+            <div class="canvas-name">Design System</div>
+            <div class="canvas-meta">Edited yesterday</div>
+          </div>
+        </div>
+        <div class="canvas-card" onmousemove="updateGradient(event)">
+          <div class="canvas-thumbnail">Real-time Editor</div>
+          <div class="canvas-info">
+            <div class="canvas-name">Team Roadmap</div>
+            <div class="canvas-meta">Shared with 4 members</div>
+          </div>
+        </div>
+        <div class="canvas-card" onmousemove="updateGradient(event)">
+          <div class="canvas-thumbnail">Prototype Space</div>
+          <div class="canvas-info">
+            <div class="canvas-name">Mobile App UI</div>
+            <div class="canvas-meta">Last edited 3 days ago</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2 class="section-title">Activity Feed</h2>
+      <div class="activity-feed">
+        <div class="activity-item">
+          <div class="activity-avatar"></div>
+          <div class="activity-text">
+            <div class="activity-user">Sarah Chen</div>
+            <div class="activity-action">Added widget to Q1 Analytics</div>
+          </div>
+          <div class="activity-time">2 hours ago</div>
+        </div>
+        <div class="activity-item">
+          <div class="activity-avatar" style="background: linear-gradient(135deg, #a855f7, #ec4899);"></div>
+          <div class="activity-text">
+            <div class="activity-user">Marcus Silva</div>
+            <div class="activity-action">Commented on Design System</div>
+          </div>
+          <div class="activity-time">5 hours ago</div>
+        </div>
+        <div class="activity-item">
+          <div class="activity-avatar" style="background: linear-gradient(135deg, #06b6d4, #0ea5e9);"></div>
+          <div class="activity-text">
+            <div class="activity-user">Jordan Webb</div>
+            <div class="activity-action">Shared Team Roadmap with 2 new members</div>
+          </div>
+          <div class="activity-time">1 day ago</div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2 class="section-title">Featured Templates</h2>
+      <div class="templates-grid">
+        <div class="template-card">
+          <div class="template-icon">📊</div>
+          <div class="template-name">Analytics Dashboard</div>
+          <div class="template-desc">Real-time metrics and KPI tracking</div>
+        </div>
+        <div class="template-card">
+          <div class="template-icon">🎨</div>
+          <div class="template-name">Design System</div>
+          <div class="template-desc">Collaborative component library</div>
+        </div>
+        <div class="template-card">
+          <div class="template-icon">📋</div>
+          <div class="template-name">Project Board</div>
+          <div class="template-desc">Team task management workspace</div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2 class="section-title">Usage Statistics</h2>
+      <div class="stats-container">
+        <div class="stat-card">
+          <div class="stat-value">8</div>
+          <div class="stat-label">Active Canvases</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">24</div>
+          <div class="stat-label">Widgets Created</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">12</div>
+          <div class="stat-label">Collaborators</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    function updateGradient(e) {
+      const rect = e.currentTarget.querySelector('.canvas-thumbnail');
+      const x = (e.clientX - rect.getBoundingClientRect().left) / rect.offsetWidth * 100;
+      const y = (e.clientY - rect.getBoundingClientRect().top) / rect.offsetHeight * 100;
+      rect.style.setProperty('--x', x + '%');
+      rect.style.setProperty('--y', y + '%');
+    }
+
+    // Add smooth scroll behavior
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StickerNest Widget Lab — Futuristic IDE</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-dark: #0a0a0f;
+      --bg-panel: rgba(20, 20, 30, 0.6);
+      --bg-hover: rgba(30, 30, 45, 0.8);
+      --accent-teal: #00e5c7;
+      --accent-purple: #a855f7;
+      --accent-pink: #ec4899;
+      --accent-blue: #3b82f6;
+      --text-primary: #ffffff;
+      --text-secondary: #a0a0b0;
+      --border-color: rgba(255, 255, 255, 0.1);
+      --glow-teal: 0 0 20px rgba(0, 229, 199, 0.3);
+      --glow-purple: 0 0 20px rgba(168, 85, 247, 0.3);
+      --font-family: 'Space Grotesk', 'Satoshi', system-ui, sans-serif;
+      --transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    body {
+      background: var(--bg-dark);
+      color: var(--text-primary);
+      font-family: var(--font-family);
+      overflow: hidden;
+      background-image:
+        radial-gradient(circle at 20% 50%, rgba(168, 85, 247, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(0, 229, 199, 0.1) 0%, transparent 50%);
+    }
+
+    .lab-container {
+      display: grid;
+      grid-template-columns: 280px 1fr 320px;
+      grid-template-rows: 1fr auto;
+      height: 100vh;
+      gap: 12px;
+      padding: 12px;
+    }
+
+    /* ===== ENTITY PALETTE (LEFT) ===== */
+    .entity-palette {
+      grid-column: 1;
+      grid-row: 1 / 3;
+      background: var(--bg-panel);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    .palette-header {
+      padding: 16px;
+      border-bottom: 1px solid var(--border-color);
+      background: rgba(10, 10, 15, 0.5);
+    }
+
+    .palette-header h3 {
+      font-size: 14px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent-teal);
+      margin-bottom: 12px;
+    }
+
+    .palette-search {
+      width: 100%;
+      padding: 8px 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-family: var(--font-family);
+      font-size: 13px;
+      transition: var(--transition);
+    }
+
+    .palette-search:focus {
+      outline: none;
+      background: rgba(255, 255, 255, 0.1);
+      border-color: var(--accent-teal);
+      box-shadow: var(--glow-teal);
+    }
+
+    .palette-categories {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+    }
+
+    .category {
+      margin-bottom: 12px;
+    }
+
+    .category-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      padding: 8px 12px;
+      margin-bottom: 6px;
+      letter-spacing: 0.08em;
+    }
+
+    .entity-card {
+      padding: 10px;
+      margin-bottom: 6px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      cursor: grab;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .entity-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+      transition: left 0.6s ease;
+    }
+
+    .entity-card:hover {
+      background: var(--bg-hover);
+      border-color: var(--accent-purple);
+      box-shadow: var(--glow-purple);
+      transform: translateX(4px);
+    }
+
+    .entity-card:hover::before {
+      left: 100%;
+    }
+
+    .entity-icon {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+
+    /* ===== PIPELINE CANVAS (CENTER) ===== */
+    .pipeline-canvas {
+      grid-column: 2;
+      grid-row: 1;
+      background: var(--bg-panel);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    .canvas-grid {
+      width: 100%;
+      height: 100%;
+      background-image:
+        radial-gradient(circle, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      position: relative;
+    }
+
+    .onboarding-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 24px;
+      z-index: 10;
+      animation: fadeIn 0.6s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .onboarding-icon {
+      width: 80px;
+      height: 80px;
+      margin-bottom: 8px;
+      opacity: 0.8;
+    }
+
+    .onboarding-text {
+      text-align: center;
+    }
+
+    .onboarding-text h2 {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, var(--accent-teal), var(--accent-purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.02em;
+    }
+
+    .onboarding-text p {
+      font-size: 14px;
+      color: var(--text-secondary);
+      max-width: 320px;
+      line-height: 1.6;
+    }
+
+    .node-preview {
+      position: absolute;
+      width: 140px;
+      padding: 12px;
+      background: rgba(168, 85, 247, 0.1);
+      border: 1px solid var(--accent-purple);
+      border-radius: 12px;
+      font-size: 11px;
+      animation: float 3s ease-in-out infinite;
+    }
+
+    .node-preview:nth-child(2) {
+      top: 60px;
+      left: 80px;
+      animation-delay: 0s;
+    }
+
+    .node-preview:nth-child(3) {
+      top: 160px;
+      right: 100px;
+      animation-delay: 1s;
+    }
+
+    .node-preview:nth-child(4) {
+      bottom: 80px;
+      left: 120px;
+      animation-delay: 2s;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-20px); }
+    }
+
+    /* ===== PROPERTIES PANEL (RIGHT) ===== */
+    .properties-panel {
+      grid-column: 3;
+      grid-row: 1;
+      background: var(--bg-panel);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    .panel-header {
+      padding: 16px;
+      border-bottom: 1px solid var(--border-color);
+      background: rgba(10, 10, 15, 0.5);
+    }
+
+    .panel-header h4 {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent-teal);
+    }
+
+    .panel-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .empty-state {
+      color: var(--text-secondary);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    /* ===== AI GENERATION BAR (BOTTOM) ===== */
+    .ai-bar {
+      grid-column: 2 / 4;
+      grid-row: 2;
+      background: var(--bg-panel);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 16px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      align-items: center;
+    }
+
+    .ai-input-group {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .ai-icon {
+      width: 24px;
+      height: 24px;
+      flex-shrink: 0;
+      opacity: 0.7;
+    }
+
+    .ai-input {
+      flex: 1;
+      padding: 10px 14px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 2px solid var(--border-color);
+      border-radius: 10px;
+      color: var(--text-primary);
+      font-family: var(--font-family);
+      font-size: 13px;
+      transition: var(--transition);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .ai-input::before {
+      content: 'Describe your widget...';
+      position: absolute;
+      left: 14px;
+      color: var(--text-secondary);
+      pointer-events: none;
+    }
+
+    .ai-input:focus {
+      outline: none;
+      background: rgba(255, 255, 255, 0.08);
+      border-color: var(--accent-teal);
+      box-shadow: var(--glow-teal);
+    }
+
+    .ai-input:focus::before {
+      opacity: 0;
+    }
+
+    .ai-button {
+      padding: 10px 16px;
+      background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink));
+      border: none;
+      border-radius: 10px;
+      color: white;
+      font-family: var(--font-family);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .ai-button::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.2);
+      transition: left 0.5s ease;
+    }
+
+    .ai-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(168, 85, 247, 0.4);
+    }
+
+    .ai-button:hover::before {
+      left: 100%;
+    }
+
+    .ai-button:active {
+      transform: translateY(0);
+    }
+
+    .ai-examples {
+      position: absolute;
+      top: -120px;
+      right: 0;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s ease;
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    .ai-bar:hover .ai-examples {
+      top: -140px;
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* ===== SCROLLBAR ===== */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 3px;
+      transition: var(--transition);
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+  </style>
+</head>
+<body>
+  <div class="lab-container">
+    <!-- LEFT: Entity Palette -->
+    <div class="entity-palette">
+      <div class="palette-header">
+        <h3>Entities</h3>
+        <input type="text" class="palette-search" placeholder="Search...">
+      </div>
+      <div class="palette-categories">
+        <div class="category">
+          <div class="category-title">Widgets</div>
+          <div class="entity-card">
+            <svg class="entity-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <rect x="3" y="3" width="18" height="18" rx="2" stroke-width="2"/>
+              <path d="M9 3v18M3 9h18" stroke-width="2" stroke="#00e5c7" opacity="0.7"/>
+            </svg>
+            <span>Container</span>
+          </div>
+          <div class="entity-card">
+            <svg class="entity-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M2 20h20" stroke-width="2" stroke="#a855f7" opacity="0.7"/>
+              <rect x="2" y="3" width="20" height="14" rx="2" stroke-width="2"/>
+            </svg>
+            <span>Button Group</span>
+          </div>
+          <div class="entity-card">
+            <svg class="entity-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <circle cx="12" cy="12" r="10" stroke-width="2" stroke="#ec4899" opacity="0.7"/>
+              <path d="M12 7v5l3 2" stroke-width="2"/>
+            </svg>
+            <span>Timer</span>
+          </div>
+        </div>
+
+        <div class="category">
+          <div class="category-title">Transforms</div>
+          <div class="entity-card">
+            <svg class="entity-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M3 12h18M12 3v18" stroke-width="2" stroke="#3b82f6" opacity="0.7"/>
+              <circle cx="12" cy="12" r="3" stroke-width="2"/>
+            </svg>
+            <span>Filter</span>
+          </div>
+          <div class="entity-card">
+            <svg class="entity-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M3 3h18v6H3zM6 12h12v6H6z" stroke-width="2" stroke="#00e5c7" opacity="0.7"/>
+            </svg>
+            <span>Map</span>
+          </div>
+        </div>
+
+        <div class="category">
+          <div class="category-title">Data</div>
+          <div class="entity-card">
+            <svg class="entity-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M12 3v18M3 12h18" stroke-width="2" stroke="#a855f7" opacity="0.7"/>
+              <rect x="7" y="7" width="10" height="10" stroke-width="1.5"/>
+            </svg>
+            <span>Dataset</span>
+          </div>
+          <div class="entity-card">
+            <svg class="entity-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M4 4h16v2H4zM4 8h16v2H4zM4 12h16v2H4zM4 16h16v2H4z" stroke-width="1.5" stroke="#ec4899" opacity="0.7"/>
+            </svg>
+            <span>Table</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CENTER: Pipeline Canvas -->
+    <div class="pipeline-canvas">
+      <div class="canvas-grid">
+        <div class="onboarding-overlay">
+          <svg class="onboarding-icon" viewBox="0 0 100 100" fill="none" stroke="url(#grad)">
+            <defs>
+              <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#00e5c7;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:#a855f7;stop-opacity:1" />
+              </linearGradient>
+            </defs>
+            <circle cx="30" cy="30" r="15" stroke-width="2"/>
+            <circle cx="70" cy="30" r="15" stroke-width="2"/>
+            <circle cx="50" cy="70" r="15" stroke-width="2"/>
+            <line x1="30" y1="45" x2="50" y2="55" stroke-width="2"/>
+            <line x1="70" y1="45" x2="50" y2="55" stroke-width="2"/>
+          </svg>
+          <div class="onboarding-text">
+            <h2>Start Building</h2>
+            <p>Drag entities from the left panel to create your widget pipeline</p>
+          </div>
+        </div>
+        <div class="node-preview">
+          <div style="color: var(--accent-purple); font-weight: 600; margin-bottom: 6px;">Input</div>
+          <div style="color: var(--text-secondary); font-size: 10px;">user_data</div>
+        </div>
+        <div class="node-preview">
+          <div style="color: var(--accent-teal); font-weight: 600; margin-bottom: 6px;">Filter</div>
+          <div style="color: var(--text-secondary); font-size: 10px;">type: widget</div>
+        </div>
+        <div class="node-preview">
+          <div style="color: var(--accent-pink); font-weight: 600; margin-bottom: 6px;">Output</div>
+          <div style="color: var(--text-secondary); font-size: 10px;">rendered</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Properties Panel -->
+    <div class="properties-panel">
+      <div class="panel-header">
+        <h4>Inspector</h4>
+      </div>
+      <div class="panel-content">
+        <div class="empty-state">
+          <p>Select a node to inspect its properties</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- BOTTOM: AI Generation Bar -->
+    <div class="ai-bar">
+      <div class="ai-input-group">
+        <svg class="ai-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/>
+        </svg>
+        <input type="text" class="ai-input">
+        <div class="ai-examples">
+          Try: "a counter widget" • "real-time chat" • "data visualizer"
+        </div>
+      </div>
+      <button class="ai-button">Generate</button>
+    </div>
+  </div>
+
+  <script>
+    // Entity card interactions
+    document.querySelectorAll('.entity-card').forEach(card => {
+      card.addEventListener('mousedown', (e) => {
+        const ghost = card.cloneNode(true);
+        ghost.style.position = 'fixed';
+        ghost.style.pointerEvents = 'none';
+        ghost.style.opacity = '0.7';
+        ghost.style.zIndex = '1000';
+        document.body.appendChild(ghost);
+
+        const move = (ev) => {
+          ghost.style.left = (ev.clientX - 10) + 'px';
+          ghost.style.top = (ev.clientY - 10) + 'px';
+        };
+
+        const end = () => {
+          ghost.remove();
+          document.removeEventListener('mousemove', move);
+          document.removeEventListener('mouseup', end);
+        };
+
+        document.addEventListener('mousemove', move);
+        document.addEventListener('mouseup', end);
+      });
+    });
+
+    // AI input focus effect
+    const aiInput = document.querySelector('.ai-input');
+    aiInput.addEventListener('focus', function() {
+      this.style.paddingLeft = '14px';
+    });
+    aiInput.addEventListener('blur', function() {
+      if (!this.value) {
+        this.style.paddingLeft = '14px';
+      }
+    });
+  </script>
+</body>
+</html>

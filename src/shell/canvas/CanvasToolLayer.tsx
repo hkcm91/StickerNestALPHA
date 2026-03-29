@@ -20,7 +20,6 @@ import { useUIStore } from '../../kernel/stores/ui/ui.store';
 import { CanvasViewportLayer } from './CanvasViewportLayer';
 import { createLocalCanvas, slugifyCanvasName } from './hooks';
 import type { CanvasToolId } from './hooks/useActiveTool';
-import { PathfinderOverlay, PenPathPreviewOverlay } from './ToolOverlays';
 import {
   type CanvasToolLayerProps,
   type DragMode,
@@ -44,6 +43,7 @@ import {
   createArtboardEntity,
   createDrawingEntity,
 } from './tool-layer-helpers';
+import { PathfinderOverlay, PenPathPreviewOverlay } from './ToolOverlays';
 
 /**
  * Invisible layer that captures pointer events and dispatches to the active tool.
@@ -51,7 +51,7 @@ import {
 export const CanvasToolLayer: React.FC<CanvasToolLayerProps> = ({
   viewport, sceneGraph, dashboardSlug = 'dashboard', activeTool, toolsEnabled,
   maxArtboardsPerDashboard = 10, selectedIds, openFolderIds = new Set<string>(),
-  onSelectionChange, onPan, getZoom, backgroundPortalId, gridConfig,
+  onSelectionChange, onPan, getZoom, backgroundPortalId, gridConfig, onDragStateChange,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const normalizedTool: CanvasToolId = (activeTool as string) === 'move' ? 'select' : activeTool;
@@ -192,9 +192,10 @@ export const CanvasToolLayer: React.FC<CanvasToolLayerProps> = ({
       hasEntityDragExceededThreshold.current = false;
       dragModeRef.current = 'move-entities';
       isDraggingRef.current = true; setIsDragging(true);
+      onDragStateChange?.(true, new Set(startPositions.keys()));
       target.setPointerCapture(e.pointerId);
     },
-    [sceneGraph],
+    [sceneGraph, onDragStateChange],
   );
 
   // ── Pointer down ───────────────────────────────────────────────
@@ -415,7 +416,7 @@ export const CanvasToolLayer: React.FC<CanvasToolLayerProps> = ({
       if (!isDraggingRef.current) return;
       const mode = dragModeRef.current;
       try { (e.target as HTMLElement).releasePointerCapture(e.pointerId); } catch { /* noop */ }
-      isDraggingRef.current = false; setIsDragging(false); dragModeRef.current = null;
+      isDraggingRef.current = false; setIsDragging(false); onDragStateChange?.(false); dragModeRef.current = null;
 
       if (mode === 'pan') {
         if (!isRightClickDrag.current && e.button === 2) {
@@ -475,7 +476,7 @@ export const CanvasToolLayer: React.FC<CanvasToolLayerProps> = ({
       }
       if (mode !== 'move-entities') dragRootEntityIds.current.clear();
     },
-    [sceneGraph, normalizedTool, selectedIds, getCanvasPoint, onSelectionChange, applySnap, activeTool, dashboardSlug, maxArtboardsPerDashboard, baseParams, emitCreated],
+    [sceneGraph, normalizedTool, selectedIds, getCanvasPoint, onSelectionChange, applySnap, activeTool, dashboardSlug, maxArtboardsPerDashboard, baseParams, emitCreated, onDragStateChange],
   );
 
   // ── Double-click: enter group / toggle folder ──────────────────
@@ -548,7 +549,7 @@ export const CanvasToolLayer: React.FC<CanvasToolLayerProps> = ({
                   left: resolvedT.position.x - resolvedT.size.width / 2,
                   top: resolvedT.position.y - resolvedT.size.height / 2,
                   width: resolvedT.size.width,
-                  height: isWidget ? 28 : resolvedT.size.height,
+                  height: isWidget && !isDragging ? 28 : resolvedT.size.height,
                   pointerEvents: 'auto',
                   cursor: isWidget ? 'grab' : TOOL_CURSORS[normalizedTool] || 'default',
                   zIndex: entity.zIndex,
@@ -571,6 +572,19 @@ export const CanvasToolLayer: React.FC<CanvasToolLayerProps> = ({
         )}
 
         <PathfinderOverlay hover={pathfinderHover} viewport={viewport} />
+        {/* Full-viewport overlay during entity drag — prevents iframes from stealing pointer */}
+        {isDragging && dragModeRef.current === 'move-entities' && (
+          <div
+            data-testid="drag-capture-overlay"
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 9999,
+              cursor: 'grabbing', pointerEvents: 'auto',
+            }}
+          />
+        )}
+
         {penPathPreview && <PenPathPreviewOverlay preview={penPathPreview} viewport={viewport} />}
       </div>
     </div>

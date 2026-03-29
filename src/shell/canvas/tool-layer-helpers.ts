@@ -31,6 +31,8 @@ export interface CanvasToolLayerProps {
   getZoom?: () => number;
   backgroundPortalId?: string;
   gridConfig?: GridConfig;
+  /** Called when entity drag starts/ends — used to suppress iframe pointer events and boost z-index. */
+  onDragStateChange?: (dragging: boolean, entityIds?: Set<string>) => void;
 }
 
 // ── Drag types ───────────────────────────────────────────────────

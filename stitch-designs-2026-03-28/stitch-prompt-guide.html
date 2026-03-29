@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StickerNest V5 — Stitch Redesign Prompts</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: #0a0a0f;
+    color: #e0e0e0;
+    line-height: 1.6;
+    padding: 0;
+  }
+
+  .header {
+    background: linear-gradient(135deg, #0a0a0f 0%, #1a0a2e 50%, #0a1a2e 100%);
+    border-bottom: 1px solid rgba(0, 229, 199, 0.2);
+    padding: 40px 60px;
+    text-align: center;
+  }
+
+  .header h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 2.5rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #00e5c7, #a855f7);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 8px;
+  }
+
+  .header p {
+    color: #888;
+    font-size: 1rem;
+  }
+
+  .instructions {
+    max-width: 900px;
+    margin: 30px auto;
+    padding: 24px 32px;
+    background: rgba(168, 85, 247, 0.08);
+    border: 1px solid rgba(168, 85, 247, 0.2);
+    border-radius: 12px;
+  }
+
+  .instructions h2 {
+    font-family: 'Space Grotesk', sans-serif;
+    color: #a855f7;
+    font-size: 1.2rem;
+    margin-bottom: 12px;
+  }
+
+  .instructions ol {
+    padding-left: 20px;
+    color: #bbb;
+  }
+
+  .instructions li {
+    margin-bottom: 8px;
+  }
+
+  .instructions code {
+    background: rgba(0, 229, 199, 0.15);
+    color: #00e5c7;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.9em;
+  }
+
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px 40px 60px;
+  }
+
+  .prompt-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    margin-bottom: 32px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+
+  .prompt-card:hover {
+    border-color: rgba(0, 229, 199, 0.3);
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .card-header .left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .priority-badge {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: white;
+  }
+
+  .priority-badge.p1 { background: linear-gradient(135deg, #ef4444, #dc2626); }
+  .priority-badge.p2 { background: linear-gradient(135deg, #f97316, #ea580c); }
+  .priority-badge.p3 { background: linear-gradient(135deg, #eab308, #ca8a04); }
+  .priority-badge.p4 { background: linear-gradient(135deg, #22c55e, #16a34a); }
+  .priority-badge.p5 { background: linear-gradient(135deg, #06b6d4, #0891b2); }
+  .priority-badge.p6 { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+  .priority-badge.p7 { background: linear-gradient(135deg, #ec4899, #db2777); }
+  .priority-badge.p8 { background: linear-gradient(135deg, #6366f1, #4f46e5); }
+  .priority-badge.p9 { background: linear-gradient(135deg, #14b8a6, #0d9488); }
+  .priority-badge.p10 { background: linear-gradient(135deg, #78716c, #57534e); }
+
+  .card-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #fff;
+  }
+
+  .card-meta {
+    font-size: 0.8rem;
+    color: #666;
+  }
+
+  .type-tag {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .type-tag.full-page {
+    background: rgba(0, 229, 199, 0.15);
+    color: #00e5c7;
+  }
+
+  .type-tag.component {
+    background: rgba(168, 85, 247, 0.15);
+    color: #a855f7;
+  }
+
+  .screenshot-section {
+    padding: 16px 24px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .screenshot-section img {
+    width: 100%;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .screenshot-label {
+    font-size: 0.75rem;
+    color: #666;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .current-state-desc {
+    padding: 20px 24px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px dashed rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    color: #777;
+    font-size: 0.85rem;
+    line-height: 1.6;
+  }
+
+  .current-state-desc .page-url {
+    display: inline-block;
+    margin-bottom: 8px;
+    font-family: 'Space Grotesk', monospace;
+    font-size: 0.75rem;
+    color: #00e5c7;
+    background: rgba(0, 229, 199, 0.1);
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+
+  .current-state-desc ul {
+    margin-top: 8px;
+    padding-left: 18px;
+  }
+
+  .current-state-desc li {
+    margin-bottom: 4px;
+  }
+
+  .current-state-desc .issue-tag {
+    display: inline-block;
+    font-size: 0.7rem;
+    padding: 1px 6px;
+    border-radius: 3px;
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+    margin-left: 4px;
+  }
+
+  .prompt-section {
+    padding: 20px 24px;
+  }
+
+  .prompt-label {
+    font-size: 0.75rem;
+    color: #00e5c7;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+    font-weight: 600;
+  }
+
+  .prompt-text {
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 16px 20px;
+    font-size: 0.9rem;
+    line-height: 1.7;
+    color: #ccc;
+    position: relative;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+
+  .prompt-text:hover {
+    border-color: rgba(0, 229, 199, 0.4);
+  }
+
+  .prompt-text::after {
+    content: 'Click to copy';
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    font-size: 0.7rem;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: color 0.2s;
+  }
+
+  .prompt-text:hover::after {
+    color: #00e5c7;
+  }
+
+  .prompt-text.copied::after {
+    content: 'Copied!';
+    color: #00e5c7;
+  }
+
+  .stitch-tip {
+    margin-top: 12px;
+    padding: 10px 16px;
+    background: rgba(168, 85, 247, 0.08);
+    border-left: 3px solid #a855f7;
+    border-radius: 0 8px 8px 0;
+    font-size: 0.8rem;
+    color: #999;
+  }
+
+  .stitch-tip strong {
+    color: #a855f7;
+  }
+
+  .progress-bar {
+    max-width: 900px;
+    margin: 20px auto;
+    padding: 0 40px;
+  }
+
+  .progress-track {
+    height: 4px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #00e5c7, #a855f7);
+    border-radius: 2px;
+    transition: width 0.3s;
+  }
+
+  .progress-label {
+    font-size: 0.75rem;
+    color: #555;
+    margin-top: 6px;
+    text-align: right;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>StickerNest V5 — Stitch Redesign Prompts</h1>
+  <p>10 prompts ready to paste into Google Stitch &middot; Web mode &middot; 3.0 Flash</p>
+</div>
+
+<div class="instructions">
+  <h2>How to Use This Guide</h2>
+  <ol>
+    <li>Open <a href="https://stitch.withgoogle.com" target="_blank" style="color:#00e5c7">stitch.withgoogle.com</a> and make sure <code>Web</code> mode is selected (not App)</li>
+    <li>For each prompt below, click the prompt text to copy it</li>
+    <li>Paste into Stitch's input field and press Enter</li>
+    <li><strong>Recommended:</strong> Before submitting each prompt, take a screenshot of the matching page in your browser (URLs listed in each card below), then click the <code>+</code> button &rarr; <code>Upload Files</code> to attach it as a reference image</li>
+    <li>After Stitch generates, click <code>Export</code> &rarr; save the code to <code>stitch-designs-2026-03-28/exported-code/</code></li>
+    <li>Check off each card as you complete it to track progress</li>
+  </ol>
+</div>
+
+<div class="progress-bar">
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="progress-label" id="progressLabel">0 / 10 completed</div>
+</div>
+
+<div class="container">
+
+<!-- PROMPT 1: Canvas Editor -->
+<div class="prompt-card" data-id="1">
+  <div class="card-header">
+    <div class="left">
+      <div class="priority-badge p1">P1</div>
+      <div>
+        <div class="card-title">Canvas Editor</div>
+        <div class="card-meta">F003 + F006 &middot; Floating toolbar + empty canvas onboarding</div>
+      </div>
+    </div>
+    <span class="type-tag full-page">Full Page</span>
+  </div>
+  <div class="screenshot-section">
+    <div class="screenshot-label">Current State — Screenshot this page in your browser</div>
+    <div class="current-state-desc">
+      <span class="page-url">localhost:5173/canvas/demo</span>
+      <ul>
+        <li>Dark canvas with floating top toolbar (hamburger, "Demo" name, 2 pink circles, zoom 80%, Preview toggle, fullscreen)</li>
+        <li>Left edge: collapsed "Assets" tab handle (barely visible)</li>
+        <li>Right side: "Canvas Docker" panel — plain bordered box with "Widgets" tab and + button</li>
+        <li>Right edge: collapsed "Props" tab handle</li>
+        <li>Canvas contains: pink stickers, heart, "Design. Build. Ship." banner, "Shape Builder Tool" widget, dashed widget containers</li>
+        <li>No visible tool palette <span class="issue-tag">Missing</span></li>
+        <li>No onboarding for empty canvases <span class="issue-tag">Missing</span></li>
+      </ul>
+    </div>
+  </div>
+  <div class="prompt-section">
+    <div class="prompt-label">Stitch Prompt — Click to Copy</div>
+    <div class="prompt-text" onclick="copyPrompt(this)">Redesign the StickerNest canvas editor. The current version has a minimal floating toolbar with no visible tools and an empty canvas with no onboarding. Create a futuristic spatial editor with: (1) a glassmorphism floating tool palette on the left with icons for select, pen, shape, text, sticker, widget tools, (2) a redesigned top toolbar with editable canvas name, tool options, collaboration avatars, and share button, (3) a centered onboarding overlay for empty canvases with 'Add your first widget' prompt and template suggestions, (4) subtle animated dot grid on the canvas background. Dark theme with teal (#00e5c7) and purple (#a855f7) accents on dark (#0a0a0f) background. Geometric heading typography (Space Grotesk). Glassmorphism panels with frosted glass effect throughout.</div>
+    <div class="stitch-tip"><strong>Stitch tip:</strong> If you have a canvas open, screenshot it and upload via + &rarr; Upload Files before submitting</div>
+  </div>
+</div>
+
+<!-- PROMPT 2: Canvas Side Panels -->
+<div class="prompt-card" data-id="2">
+  <div class="card-header">
+    <div class="left">
+      <div class="priority-badge p2">P2</div>
+      <div>
+        <div class="card-title">Canvas Side Panels</div>
+        <div class="card-meta">F004 + F005 &middot; Docker, Assets, Properties panels</div>
+      </div>
+    </div>
+    <span class="type-tag component">Component</span>
+  </div>
+  <div class="screenshot-section">
+    <div class="screenshot-label">Current State — Same canvas view as P1</div>
+    <div class="current-state-desc">
+      <span class="page-url">localhost:5173/canvas/demo</span>
+      <ul>
+        <li>Right panel: "Canvas Docker" — plain dark bordered rectangle, "Widgets" tab, + button, no widget cards visible</li>
+        <li>Left edge: "Assets" — collapsed to a vertical text label, nearly invisible</li>
+        <li>Right edge: "Props" — collapsed to a vertical text label</li>
+        <li>No frosted glass or blur effects <span class="issue-tag">Plain</span></li>
+        <li>Tab handles don't expand on hover <span class="issue-tag">Static</span></li>
+      </ul>
+    </div>
+  </div>
+  <div class="prompt-section">
+    <div class="prompt-label">Stitch Prompt — Click to Copy</div>
+    <div class="prompt-text" onclick="copyPrompt(this)">Redesign the canvas side panels (Canvas Docker on right, Assets panel on left, Properties panel on right). Current panels are plain bordered rectangles with nearly invisible tab handles. Create glassmorphism floating panels with: (1) frosted glass background with subtle blur, (2) icon-based tab handles that expand on hover, (3) widget cards inside Docker showing thumbnails and labels, (4) smooth slide-in animation feel. The panels should feel like holographic displays in a spatial OS. Dark theme with teal (#00e5c7) and purple (#a855f7) accents on dark (#0a0a0f) background.</div>
+    <div class="stitch-tip"><strong>Stitch tip:</strong> Upload a screenshot of the current panels as reference</div>
+  </div>
+</div>
+
+<!-- PROMPT 3: Dashboard -->
+<div class="prompt-card" data-id="3">
+  <div class="card-header">
+    <div class="left">
+      <div class="priority-badge p3">P3</div>
+      <div>
+        <div class="card-title">Dashboard / Home Screen</div>
+        <div class="card-meta">F001 &middot; Main landing page after login</div>
+      </div>
+    </div>
+    <span class="type-tag full-page">Full Page</span>
+  </div>
+  <div class="screenshot-section">
+    <div class="screenshot-label">Current State</div>
+    <div class="current-state-desc">
+      <span class="page-url">localhost:5173/</span>
+      <ul>
+        <li>Top nav: "StickerNest" logo, text links (Dashboard, Canvas, Data, Lab, Marketplace), right-side icons (profile, chat, window, bell, gear, "Dev")</li>
+        <li>Page title: bold "Dashboard" heading</li>
+        <li>4 cards in a row: Canvas (C icon), Databases (D), Marketplace (M), Settings (S) — teal-gray square icons with short descriptions</li>
+        <li>Massive empty space below the cards <span class="issue-tag">Sparse</span></li>
+        <li>No recent canvases, no activity feed, no quick actions <span class="issue-tag">Missing</span></li>
+        <li>Dark gradient background with subtle grid texture</li>
+      </ul>
+    </div>
+  </div>
+  <div class="prompt-section">
+    <div class="prompt-label">Stitch Prompt — Click to Copy</div>
+    <div class="prompt-text" onclick="copyPrompt(this)">Redesign the StickerNest dashboard/home screen. Current version shows four plain cards on a dark background with no real content. Create a rich spatial OS home screen with: (1) hero section with recent canvases as live thumbnail cards with glassmorphism treatment, (2) quick-action bar (New Canvas, New Widget, Browse Marketplace), (3) activity feed showing recent edits and collaborator activity, (4) featured templates section, (5) usage stats mini-widget. Animated mesh gradient background with noise texture. Dark theme with teal (#00e5c7) and purple (#a855f7) accents on dark (#0a0a0f) background. Geometric heading typography (Space Grotesk). Glassmorphism panels with frosted glass effect throughout.</div>
+    <div class="stitch-tip"><strong>Stitch tip:</strong> Upload the dashboard screenshot from localhost:5173 as reference</div>
+  </div>
+</div>
+
+<!-- PROMPT 4: Databases -->
+<div class="prompt-card" data-id="4">
+  <div class="card-header">
+    <div class="left">
+      <div class="priority-badge p4">P4</div>
+      <div>
+        <div class="card-title">Databases Page</div>
+        <div class="card-meta">F007 + F008 &middot; Icon rendering + card layout</div>
+      </div>
+    </div>
+    <span class="type-tag full-page">Full Page</span>
+  </div>
+  <div class="screenshot-section">
+    <div class="screenshot-label">Current State</div>
+    <div class="current-state-desc">
+      <span class="page-url">localhost:5173/data</span>
+      <ul>
+        <li>Sub-nav tabs: "Databases" (active), "Todos"</li>
+        <li>Action buttons: "+ New Database" (teal), "Import from Notion", "Use Template" — all bordered</li>
+        <li>Search bar + "All Types" dropdown filter</li>
+        <li>Database cards: "Fist Document" (DOC), "CRM Contacts" x2 (TABLE), "Bug Tracker" (TABLE), "Content Calendar" (TABLE)</li>
+        <li>Icons show word-text instead of actual icons (e.g. "users", "bug", "calendar" as text) <span class="issue-tag">Broken icons</span></li>
+        <li>Cards have inconsistent sizing, edit/delete icons overlap text <span class="issue-tag">Layout issue</span></li>
+      </ul>
+    </div>
+  </div>
+  <div class="prompt-section">
+    <div class="prompt-label">Stitch Prompt — Click to Copy</div>
+    <div class="prompt-text" onclick="copyPrompt(this)">Redesign the StickerNest Databases page. Current version has broken icon rendering (text overflowing icon containers) and inconsistent card layout. Create a clean data management view with: (1) glassmorphism database cards with proper Lucide icons per type (doc, table, note, folder), (2) clear primary CTA for '+ New Database' with accent glow, (3) secondary actions grouped in a dropdown, (4) search with filter chips, (5) grid/list view toggle. Consistent card hover states with elevation shadow. Dark theme with teal (#00e5c7) and purple (#a855f7) accents on dark (#0a0a0f) background. Geometric heading typography (Space Grotesk).</div>
+  </div>
+</div>
+
+<!-- PROMPT 5: Widget Lab -->
+<div class="prompt-card" data-id="5">
+  <div class="card-header">
+    <div class="left">
+      <div class="priority-badge p5">P5</div>
+      <div>
+        <div class="card-title">Widget Lab</div>
+        <div class="card-meta">F009 + F010 + F011 &middot; Entity sidebar, pipeline, AI generation</div>
+      </div>
+    </div>
+    <span class="type-tag full-page">Full Page</span>
+  </div>
+  <div class="screenshot-section">
+    <div class="screenshot-label">Current State</div>
+    <div class="current-state-desc">
+      <span class="page-url">localhost:5173/lab</span>
+      <ul>
+        <li>Left sidebar icons (vertical): notifications, components, gear, chart, clock, diamond</li>
+        <li>Entity palette panel: "Untitled Widget v0.1.0" header, categories — CONTENT (Widget, Sticker, Text, Audio, Lottie), VISUAL (Shape, Drawing, Path, SVG), SPATIAL (3D Object, Artboard), STRUCTURE (Docker, Group, Folder)</li>
+        <li>"Add to Canvas" button at bottom of palette</li>
+        <li>Main area: empty pipeline canvas with 2 dashed placeholder nodes connected by dashed line, "Add entities to start building your pipeline"</li>
+        <li>Bottom bar: AI generation — "Kimi K2.5" model tag, "Describe a widget..." input, "Generate" button</li>
+        <li>Status bar: "Connected | Paused | Branch: main | Latency: 12ms"</li>
+        <li>AI bar under-emphasized — small and flat <span class="issue-tag">Low visibility</span></li>
+        <li>Entity palette is plain text with no visual previews <span class="issue-tag">Utilitarian</span></li>
+      </ul>
+    </div>
+  </div>
+  <div class="prompt-section">
+    <div class="prompt-label">Stitch Prompt — Click to Copy</div>
+    <div class="prompt-text" onclick="copyPrompt(this)">Redesign the StickerNest Widget Lab. Current version has a utilitarian entity sidebar, bland pipeline empty state, and under-emphasized AI generation bar. Create a creative IDE environment with: (1) colorful category-grouped entity palette with hover previews, (2) pipeline canvas with animated placeholder nodes and guided onboarding, (3) prominent AI generation panel at bottom with gradient-border input, animated placeholder examples, and expandable panel mode, (4) glassmorphism panels throughout. The Lab should feel like a futuristic creative workstation. Dark theme with teal (#00e5c7) and purple (#a855f7) accents on dark (#0a0a0f) background. Geometric heading typography (Space Grotesk).</div>
+  </div>
+</div>
+
+<!-- PROMPT 6: Marketplace -->
+<div class="prompt-card" data-id="6">
+  <div class="card-header">
+    <div class="left">
+      <div class="priority-badge p6">P6</div>
+      <div>
+        <div class="card-title">Marketplace</div>
+        <div class="card-meta">F013 + F014 &middot; Widget cards + featured carousel</div>
+      </div>
+    </div>
+    <span class="type-tag full-page">Full Page</span>
+  </div>
+  <div class="screenshot-section">
+    <div class="screenshot-label">Current State</div>
+    <div class="current-state-desc">
+      <span class="page-url">localhost:5173/marketplace</span>
+      <ul>
+        <li>Sub-nav tabs: Browse (active), Samples, My Library, Publisher</li>
+        <li>Search bar + "All Categories" dropdown + "Newest" sort dropdown</li>
+        <li>"Featured" section: horizontal carousel with 4 visible cards — Dice Roller (Games), Color Palette Generator (Media, $1.99), Pomodoro Timer (Productivity), Markdown Viewer (Official badge)</li>
+        <li>Cards show: letter icon on colored gradient bg, category tag, star ratings, install count, Install/Buy button</li>
+        <li>Dot pagination below Featured carousel</li>
+        <li>"All Widgets 10" section below with more cards (G, M, C, P letters on gradient bgs)</li>
+        <li>Letter-placeholder thumbnails instead of real widget previews <span class="issue-tag">Generic</span></li>
+        <li>Carousel cards slightly overlapping at edges <span class="issue-tag">Layout</span></li>
+      </ul>
+    </div>
+  </div>
+  <div class="prompt-section">
+    <div class="prompt-label">Stitch Prompt — Click to Copy</div>
+    <div class="prompt-text" onclick="copyPrompt(this)">Redesign the StickerNest Marketplace browse page. Current version has functional widget cards with letter-placeholder thumbnails. Create an app-store-quality marketplace with: (1) featured carousel with non-overlapping navigation, (2) widget cards with richer placeholder thumbnails (abstract widget previews), hover elevation with glass overlay showing quick-install action, (3) category pills or sidebar, (4) search with autocomplete suggestions. Premium spatial OS marketplace feel. Dark theme with teal (#00e5c7) and purple (#a855f7) accents on dark (#0a0a0f) background. Geometric heading typography (Space Grotesk).</div>
+  </div>
+</div>
+
+<!-- PROMPT 7: Settings -->
+<div class="prompt-card" data-id="7">
+  <div class="card-header">
+    <div class="left">
+      <div class="priority-badge p7">P7</div>
+      <div>
+        <div class="card-title">Settings</div>
+        <div class="card-meta">F017 &middot; Layout + usage visualization</div>
+      </div>
+    </div>
+    <span class="type-tag full-page">Full Page</span>
+  </div>
+  <div class="screenshot-section">
+    <div class="screenshot-label">Current State</div>
+    <div class="current-state-desc">
+      <span class="page-url">localhost:5173/settings</span>
+      <ul>
+        <li>Bold "Settings" heading, centered narrow column layout</li>
+        <li>Top tab bar: Billing (active, underlined), Integrations, Creator Commerce, My Purchases, Security</li>
+        <li>"Loading..." text visible — content area mostly empty</li>
+        <li>Red "Sign Out" button at bottom of content area</li>
+        <li>Massive unused horizontal space — content doesn't fill the viewport <span class="issue-tag">Sparse layout</span></li>
+        <li>No usage visualizations, no plan info card visible <span class="issue-tag">Missing content</span></li>
+        <li>Sign Out as a standalone button feels out of place <span class="issue-tag">UX issue</span></li>
+      </ul>
+    </div>
+  </div>
+  <div class="prompt-section">
+    <div class="prompt-label">Stitch Prompt — Click to Copy</div>
+    <div class="prompt-text" onclick="copyPrompt(this)">Redesign the StickerNest Settings page. Current version is sparse with a top tab bar and centered narrow column. Create a modern settings layout with: (1) left sidebar tab navigation filling horizontal space, (2) rich usage visualizations (donut charts, progress bars with labels), (3) plan info card with upgrade CTA, (4) Sign Out moved to user menu (not standalone button). Glassmorphism section cards. Dark theme with teal (#00e5c7) and purple (#a855f7) accents on dark (#0a0a0f) background. Geometric heading typography (Space Grotesk).</div>
+  </div>
+</div>
+
+<!-- PROMPT 8: Profile -->
+<div class="prompt-card" data-id="8">
+  <div class="card-header">
+    <div class="left">
+      <div class="priority-badge p8">P8</div>
+      <div>
+        <div class="card-title">User Profile</div>
+        <div class="card-meta">F015 &middot; Creator profile page</div>
+      </div>
+    </div>
+    <span class="type-tag full-page">Full Page</span>
+  </div>
+  <div class="screenshot-section">
+    <div class="screenshot-label">Current State</div>
+    <div class="current-state-desc">
+      <span class="page-url">localhost:5173/profile</span>
+      <ul>
+        <li>Currently returns 404 — "Not Found" <span class="issue-tag">Page missing</span></li>
+        <li>Profile was previously at this route with: purple gradient banner, avatar circle with "K", "Kimber @kimber", stats row (2 Followers, 1 Following, 0 Posts, 0 Canvases), "Find People" search</li>
+        <li>This is a fresh-build opportunity — design from scratch with the spatial creator vision</li>
+      </ul>
+    </div>
+  </div>
+  <div class="prompt-section">
+    <div class="prompt-label">Stitch Prompt — Click to Copy</div>
+    <div class="prompt-text" onclick="copyPrompt(this)">Redesign the StickerNest user profile page. Current version has a generic purple banner and basic social stats. Create a spatial creator profile with: (1) customizable banner area with canvas showcase, (2) animated stat counters for Followers/Following/Posts/Canvases, (3) featured canvases grid with live previews, (4) activity timeline. The profile should celebrate the creator's spatial work. Dark theme with teal (#00e5c7) and purple (#a855f7) accents on dark (#0a0a0f) background. Geometric heading typography (Space Grotesk).</div>
+  </div>
+</div>
+
+<!-- PROMPT 9: Messages -->
+<div class="prompt-card" data-id="9">
+  <div class="card-header">
+    <div class="left">
+      <div class="priority-badge p9">P9</div>
+      <div>
+        <div class="card-title">Messages</div>
+        <div class="card-meta">F018 &middot; Messaging interface</div>
+      </div>
+    </div>
+    <span class="type-tag full-page">Full Page</span>
+  </div>
+  <div class="screenshot-section">
+    <div class="screenshot-label">Current State</div>
+    <div class="current-state-desc">
+      <span class="page-url">localhost:5173/messages</span>
+      <ul>
+        <li>Left panel: "Messages" header, conversation list with 2 entries — both "Unknown User" with gray "U" avatar circles</li>
+        <li>Entry 1: "Hello this is a test!" — 8h ago</li>
+        <li>Entry 2: "Hello!" — 2d ago</li>
+        <li>Right panel: large empty area with centered "Select a conversation to start messaging"</li>
+        <li>No "New Message" button <span class="issue-tag">Missing</span></li>
+        <li>No online status indicators, no unread badges <span class="issue-tag">Missing</span></li>
+        <li>No illustrated empty state <span class="issue-tag">Plain</span></li>
+      </ul>
+    </div>
+  </div>
+  <div class="prompt-section">
+    <div class="prompt-label">Stitch Prompt — Click to Copy</div>
+    <div class="prompt-text" onclick="copyPrompt(this)">Redesign the StickerNest Messages page. Current version has a plain conversation list with 'Unknown User' labels and a basic empty state. Create a modern messaging interface with: (1) conversation list with user avatars, online status indicators, unread badges, and hover states, (2) 'New Message' button, (3) illustrated empty state when no conversation is selected, (4) glassmorphism panels for both list and chat views. Dark theme with teal (#00e5c7) and purple (#a855f7) accents on dark (#0a0a0f) background. Geometric heading typography (Space Grotesk).</div>
+  </div>
+</div>
+
+<!-- PROMPT 10: Global Nav + Background -->
+<div class="prompt-card" data-id="10">
+  <div class="card-header">
+    <div class="left">
+      <div class="priority-badge p10">P10</div>
+      <div>
+        <div class="card-title">Global Navigation + Background</div>
+        <div class="card-meta">F002 + F019 + F020 &middot; Nav bar, typography, background treatment</div>
+      </div>
+    </div>
+    <span class="type-tag component">Component</span>
+  </div>
+  <div class="screenshot-section">
+    <div class="screenshot-label">Current State</div>
+    <div class="current-state-desc">
+      <span class="page-url">Visible on all pages</span>
+      <ul>
+        <li>Nav bar: "StickerNest" text logo (left), then text links — Dashboard, Canvas, Data, Lab, Marketplace</li>
+        <li>Active page has a white pill/highlight background on its text</li>
+        <li>Right side: small icons (profile, 2x chat/window, bell, gear) + "Dev" text label</li>
+        <li>No blur/glass effect on nav — flat dark background <span class="issue-tag">Flat</span></li>
+        <li>No icon+label pairs, no tooltips on right icons <span class="issue-tag">Low discoverability</span></li>
+        <li>Background: subtle dark gradient with faint grid texture — no mesh gradient, no noise overlay</li>
+        <li>Page headings use generic serif-style bold — not geometric sans <span class="issue-tag">Generic typography</span></li>
+      </ul>
+    </div>
+  </div>
+  <div class="prompt-section">
+    <div class="prompt-label">Stitch Prompt — Click to Copy</div>
+    <div class="prompt-text" onclick="copyPrompt(this)">Redesign the StickerNest global navigation bar and background treatment. Current nav is flat text links with small icons. Create: (1) frosted glass navigation bar with subtle blur, (2) gradient underline/glow for active state, (3) icon+label pairs for right-side actions with tooltips, (4) animated mesh gradient background with noise texture overlay for all pages, (5) distinctive heading typography using a geometric sans-serif font. Dark theme with teal (#00e5c7) and purple (#a855f7) accents on dark (#0a0a0f) background.</div>
+  </div>
+</div>
+
+</div>
+
+<script>
+function copyPrompt(el) {
+  const text = el.innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    el.classList.add('copied');
+    setTimeout(() => el.classList.remove('copied'), 2000);
+  });
+}
+
+// Track completion via localStorage-free approach (checkboxes)
+document.querySelectorAll('.prompt-card').forEach(card => {
+  const header = card.querySelector('.card-header');
+  const cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.style.cssText = 'width:18px;height:18px;cursor:pointer;accent-color:#00e5c7;';
+  cb.addEventListener('change', updateProgress);
+  header.appendChild(cb);
+});
+
+function updateProgress() {
+  const total = document.querySelectorAll('.prompt-card').length;
+  const done = document.querySelectorAll('.prompt-card input:checked').length;
+  document.getElementById('progressFill').style.width = (done / total * 100) + '%';
+  document.getElementById('progressLabel').textContent = done + ' / ' + total + ' completed';
+}
+</script>
+
+</body>
+</html>

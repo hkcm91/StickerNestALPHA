@@ -23,6 +23,8 @@ export interface CanvasEntityLayerProps {
   widgetHtmlMap?: Map<string, string>;
   theme?: Record<string, string>;
   interactionMode?: 'edit' | 'preview';
+  /** Entity IDs currently being dragged — these get a z-index boost to render above everything. */
+  draggingEntityIds?: Set<string>;
 }
 
 /**

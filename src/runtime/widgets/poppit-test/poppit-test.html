@@ -1,0 +1,393 @@
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:var(--sn-surface,#1a1a2e);--text:var(--sn-text,#eee);--accent:var(--sn-accent,#e94560);--muted:var(--sn-text-muted,#888);--border:var(--sn-border,#333);--radius:var(--sn-radius,8px);--font:var(--sn-font-family,system-ui,sans-serif)}
+body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh;overflow:hidden;display:flex;flex-direction:column}
+.header{padding:8px 12px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);flex-shrink:0}
+.header h3{font-size:14px;font-weight:600}
+.score-display{font-size:18px;font-weight:bold;color:var(--accent)}
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--border);flex-shrink:0}
+.tab{padding:6px 14px;cursor:pointer;font-size:12px;border:none;background:none;color:var(--muted);border-bottom:2px solid transparent}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.panel{flex:1;overflow-y:auto;padding:10px}
+.panel.hidden{display:none}
+
+/* Game grid */
+.grid{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;max-width:320px;margin:0 auto}
+.balloon{width:100%;aspect-ratio:0.7;border-radius:50% 50% 50% 50% / 60% 60% 40% 40%;cursor:pointer;border:none;transition:transform 0.15s,opacity 0.2s;position:relative;display:flex;align-items:center;justify-content:center;font-size:10px;color:rgba(255,255,255,0.7)}
+.balloon:hover{transform:scale(1.1)}
+.balloon.popped{opacity:0;pointer-events:none;transform:scale(0.3)}
+.balloon.red{background:linear-gradient(135deg,#ff6b6b,#c0392b)}
+.balloon.blue{background:linear-gradient(135deg,#74b9ff,#2980b9)}
+.balloon.green{background:linear-gradient(135deg,#55efc4,#00b894)}
+.balloon.yellow{background:linear-gradient(135deg,#ffeaa7,#fdcb6e)}
+.balloon.purple{background:linear-gradient(135deg,#a29bfe,#6c5ce7)}
+
+/* Room panel */
+.room-status{padding:8px;border-radius:var(--radius);background:rgba(255,255,255,0.05);margin-bottom:8px;font-size:12px}
+.room-status .label{color:var(--muted);font-size:11px}
+.room-status .value{font-weight:600;color:var(--accent)}
+.member{display:flex;align-items:center;gap:6px;padding:4px 0;font-size:12px}
+.member .dot{width:8px;height:8px;border-radius:50%;background:#55efc4}
+.btn{padding:6px 14px;border-radius:var(--radius);border:1px solid var(--border);background:rgba(255,255,255,0.05);color:var(--text);cursor:pointer;font-size:12px;margin:4px 2px}
+.btn:hover{background:rgba(255,255,255,0.1)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn:disabled{opacity:0.4;cursor:not-allowed}
+
+/* Leaderboard panel */
+.lb-entry{display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-bottom:1px solid var(--border);font-size:12px}
+.lb-entry .rank{width:24px;font-weight:bold;color:var(--accent)}
+.lb-entry .name{flex:1}
+.lb-entry .score-val{font-weight:600}
+.scope-toggle{display:flex;gap:4px;margin-bottom:8px}
+
+/* Event log */
+.log{font-family:monospace;font-size:11px;line-height:1.6}
+.log-entry{padding:2px 0;border-bottom:1px solid rgba(255,255,255,0.03)}
+.log-entry .time{color:var(--muted)}
+.log-entry .type{color:var(--accent)}
+.log-entry.incoming .type{color:#55efc4}
+
+.combo-text{font-size:14px;color:var(--accent);font-weight:bold;text-align:center;min-height:20px;margin:4px 0}
+</style>
+
+<div class="header">
+  <h3>Poppit!</h3>
+  <div class="score-display" id="scoreDisplay">0</div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" data-tab="game" onclick="switchTab('game')">Game</button>
+  <button class="tab" data-tab="room" onclick="switchTab('room')">Room</button>
+  <button class="tab" data-tab="leaderboard" onclick="switchTab('leaderboard')">Board</button>
+  <button class="tab" data-tab="log" onclick="switchTab('log')">Log</button>
+</div>
+
+<div class="panel" id="panel-game">
+  <div class="combo-text" id="comboText"></div>
+  <div class="grid" id="grid"></div>
+  <div style="text-align:center;margin-top:8px">
+    <button class="btn primary" id="newGameBtn" onclick="startGame()">New Game</button>
+  </div>
+</div>
+
+<div class="panel hidden" id="panel-room">
+  <div class="room-status">
+    <div class="label">Room ID</div>
+    <div class="value" id="roomId">None</div>
+  </div>
+  <div class="room-status">
+    <div class="label">Status</div>
+    <div class="value" id="roomStatus">Not in room</div>
+  </div>
+  <div style="margin:8px 0">
+    <button class="btn primary" id="createRoomBtn" onclick="createRoom()">Create Room</button>
+    <button class="btn" id="leaveRoomBtn" onclick="leaveRoom()" disabled>Leave</button>
+  </div>
+  <div style="margin:8px 0">
+    <input id="joinInput" placeholder="Room ID to join..." style="padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border);background:rgba(255,255,255,0.05);color:var(--text);font-size:12px;width:160px">
+    <button class="btn" onclick="joinRoom()">Join</button>
+  </div>
+  <div style="margin-top:12px;font-size:12px;color:var(--muted)">Members:</div>
+  <div id="memberList"></div>
+</div>
+
+<div class="panel hidden" id="panel-leaderboard">
+  <div class="scope-toggle">
+    <button class="btn active" id="lbCanvas" onclick="loadLeaderboard('canvas')">This Canvas</button>
+    <button class="btn" id="lbGlobal" onclick="loadLeaderboard('global')">Global</button>
+  </div>
+  <div id="lbMyRank" style="font-size:12px;color:var(--muted);margin-bottom:8px"></div>
+  <div id="lbEntries"></div>
+</div>
+
+<div class="panel hidden" id="panel-log">
+  <button class="btn" onclick="clearLog()" style="margin-bottom:6px">Clear</button>
+  <div class="log" id="eventLog"></div>
+</div>
+
+<script>
+// NOTE: This is a sandboxed widget running in an iframe.
+// All DOM writes use textContent or safe DOM creation — no raw HTML injection.
+
+// ─── State ───
+var score = 0;
+var combo = 0;
+var lastColor = null;
+var balloons = [];
+var gameActive = false;
+var currentRoomId = null;
+var lbScope = 'canvas';
+var logEntries = [];
+var COLORS = ['red', 'blue', 'green', 'yellow', 'purple'];
+var ROWS = 8;
+var COLS = 6;
+
+// ─── Safe DOM helpers ───
+function createEl(tag, className, textContent) {
+  var el = document.createElement(tag);
+  if (className) el.className = className;
+  if (textContent !== undefined) el.textContent = textContent;
+  return el;
+}
+
+// ─── Logging ───
+function log(type, data, incoming) {
+  var entry = {
+    time: new Date().toLocaleTimeString(),
+    type: type,
+    data: JSON.stringify(data).slice(0, 80),
+    incoming: !!incoming
+  };
+  logEntries.unshift(entry);
+  if (logEntries.length > 50) logEntries.pop();
+  renderLog();
+}
+
+function renderLog() {
+  var container = document.getElementById('eventLog');
+  container.textContent = '';
+  logEntries.forEach(function(e) {
+    var row = createEl('div', 'log-entry' + (e.incoming ? ' incoming' : ''));
+    var timeSpan = createEl('span', 'time', e.time + ' ');
+    var typeSpan = createEl('span', 'type', e.type + ' ');
+    var dataText = document.createTextNode(e.data);
+    row.appendChild(timeSpan);
+    row.appendChild(typeSpan);
+    row.appendChild(dataText);
+    container.appendChild(row);
+  });
+}
+
+function clearLog() {
+  logEntries = [];
+  renderLog();
+}
+
+// ─── Tab switching ───
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(function(t) {
+    t.classList.toggle('active', t.dataset.tab === tab);
+  });
+  document.querySelectorAll('.panel').forEach(function(p) {
+    p.classList.toggle('hidden', p.id !== 'panel-' + tab);
+  });
+  if (tab === 'leaderboard') loadLeaderboard(lbScope);
+}
+
+// ─── Game Logic ───
+function startGame() {
+  score = 0;
+  combo = 0;
+  lastColor = null;
+  gameActive = true;
+  balloons = [];
+  for (var i = 0; i < ROWS * COLS; i++) {
+    balloons.push({ color: COLORS[Math.floor(Math.random() * COLORS.length)], popped: false });
+  }
+  renderGrid();
+  updateScore();
+  document.getElementById('comboText').textContent = '';
+  log('game.started', { balloons: ROWS * COLS });
+
+  if (currentRoomId) {
+    StickerNest.room.emit('game.started', { score: 0 });
+  }
+}
+
+function popBalloon(index) {
+  if (!gameActive || balloons[index].popped) return;
+
+  var b = balloons[index];
+  b.popped = true;
+
+  if (b.color === lastColor) {
+    combo++;
+  } else {
+    combo = 1;
+    lastColor = b.color;
+  }
+
+  var points = 10 * combo;
+  score += points;
+  updateScore();
+
+  if (combo >= 3) {
+    document.getElementById('comboText').textContent = combo + 'x COMBO! +' + points;
+    setTimeout(function() { document.getElementById('comboText').textContent = ''; }, 800);
+  }
+
+  var el = document.querySelector('[data-idx="' + index + '"]');
+  if (el) el.classList.add('popped');
+
+  log('balloon.popped', { color: b.color, combo: combo, points: points });
+
+  if (currentRoomId) {
+    StickerNest.room.emit('balloon.popped', { index: index, color: b.color, combo: combo, score: score });
+  }
+
+  var remaining = balloons.filter(function(b) { return !b.popped; }).length;
+  if (remaining === 0) {
+    gameOver();
+  }
+}
+
+function gameOver() {
+  gameActive = false;
+  log('game.over', { finalScore: score });
+
+  StickerNest.leaderboard.submitScore(score, { combo: combo }).then(function() {
+    log('leaderboard.submitted', { score: score });
+  }).catch(function(e) {
+    log('leaderboard.error', { error: String(e) });
+  });
+
+  if (currentRoomId) {
+    StickerNest.room.emit('game.over', { score: score });
+  }
+
+  document.getElementById('comboText').textContent = 'Game Over! Score: ' + score;
+}
+
+function updateScore() {
+  document.getElementById('scoreDisplay').textContent = score;
+}
+
+function renderGrid() {
+  var grid = document.getElementById('grid');
+  grid.textContent = '';
+  balloons.forEach(function(b, i) {
+    var btn = document.createElement('button');
+    btn.className = 'balloon ' + b.color + (b.popped ? ' popped' : '');
+    btn.setAttribute('data-idx', i);
+    btn.onclick = function() { popBalloon(i); };
+    grid.appendChild(btn);
+  });
+}
+
+// ─── Room Management ───
+function createRoom() {
+  log('room.creating', {});
+  StickerNest.room.create({ joinPolicy: 'open', maxMembers: 8 }).then(function(result) {
+    currentRoomId = result.roomId;
+    updateRoomUI();
+    log('room.created', { roomId: currentRoomId });
+    subscribeRoomEvents();
+  }).catch(function(e) {
+    log('room.error', { error: String(e) });
+  });
+}
+
+function joinRoom() {
+  var id = document.getElementById('joinInput').value.trim();
+  if (!id) return;
+  log('room.joining', { roomId: id });
+  StickerNest.room.join(id).then(function() {
+    currentRoomId = id;
+    updateRoomUI();
+    log('room.joined', { roomId: id });
+    subscribeRoomEvents();
+  }).catch(function(e) {
+    log('room.error', { error: String(e) });
+  });
+}
+
+function leaveRoom() {
+  if (!currentRoomId) return;
+  log('room.leaving', { roomId: currentRoomId });
+  StickerNest.room.leave().then(function() {
+    currentRoomId = null;
+    updateRoomUI();
+    log('room.left', {});
+  }).catch(function(e) {
+    log('room.error', { error: String(e) });
+  });
+}
+
+function subscribeRoomEvents() {
+  StickerNest.room.subscribe('balloon.popped', function(data) {
+    log('room:balloon.popped', data, true);
+  });
+  StickerNest.room.subscribe('game.started', function(data) {
+    log('room:game.started', data, true);
+  });
+  StickerNest.room.subscribe('game.over', function(data) {
+    log('room:game.over', data, true);
+  });
+  StickerNest.room.onMemberChange(function(data) {
+    log('room:member.change', data, true);
+    updateRoomUI();
+  });
+}
+
+function updateRoomUI() {
+  document.getElementById('roomId').textContent = currentRoomId || 'None';
+  document.getElementById('roomStatus').textContent = currentRoomId ? 'Connected' : 'Not in room';
+  document.getElementById('createRoomBtn').disabled = !!currentRoomId;
+  document.getElementById('leaveRoomBtn').disabled = !currentRoomId;
+}
+
+// ─── Leaderboard ───
+function loadLeaderboard(scope) {
+  lbScope = scope;
+  document.getElementById('lbCanvas').classList.toggle('active', scope === 'canvas');
+  document.getElementById('lbGlobal').classList.toggle('active', scope === 'global');
+
+  StickerNest.leaderboard.getTop(scope, { limit: 10 }).then(function(entries) {
+    var el = document.getElementById('lbEntries');
+    el.textContent = '';
+    if (!entries || entries.length === 0) {
+      var empty = createEl('div', '', 'No scores yet. Play a game!');
+      empty.style.cssText = 'text-align:center;color:var(--muted);padding:20px;font-size:12px';
+      el.appendChild(empty);
+      return;
+    }
+    entries.forEach(function(e) {
+      var row = createEl('div', 'lb-entry');
+      row.appendChild(createEl('span', 'rank', '#' + e.rank));
+      row.appendChild(createEl('span', 'name', e.displayName || 'Player'));
+      row.appendChild(createEl('span', 'score-val', String(e.score)));
+      el.appendChild(row);
+    });
+    log('leaderboard.loaded', { scope: scope, count: entries.length });
+  }).catch(function(e) {
+    log('leaderboard.error', { error: String(e) });
+  });
+
+  StickerNest.leaderboard.getRank(scope).then(function(rank) {
+    if (rank) {
+      document.getElementById('lbMyRank').textContent =
+        'Your rank: #' + rank.rank + ' (' + rank.score + ' pts) out of ' + rank.total;
+    }
+  }).catch(function() {
+    document.getElementById('lbMyRank').textContent = '';
+  });
+}
+
+// ─── Leaderboard live updates ───
+StickerNest.leaderboard.onUpdate('canvas', function() {
+  if (lbScope === 'canvas') loadLeaderboard('canvas');
+  log('leaderboard:update', { scope: 'canvas' }, true);
+});
+StickerNest.leaderboard.onUpdate('global', function() {
+  if (lbScope === 'global') loadLeaderboard('global');
+  log('leaderboard:update', { scope: 'global' }, true);
+});
+
+// ─── Init ───
+StickerNest.register({
+  id: 'sn.builtin.poppit-test',
+  name: 'Poppit!',
+  version: '1.0.0',
+  permissions: ['rooms', 'leaderboard'],
+  events: {
+    emits: [
+      { name: 'game.started' },
+      { name: 'game.over' },
+      { name: 'balloon.popped' }
+    ],
+    subscribes: []
+  }
+});
+StickerNest.ready();
+startGame();
+</script>
