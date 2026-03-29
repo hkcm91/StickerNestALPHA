@@ -257,4 +257,184 @@ describe('CanvasSettingsDropdown', () => {
       expect(onClose).not.toHaveBeenCalled();
     });
   });
+
+  describe('Canvas Info Section', () => {
+    it('renders Canvas Info section when canvasName is provided', () => {
+      const anchorRef = createAnchorRef();
+      render(
+        <CanvasSettingsDropdown
+          isOpen={true}
+          onClose={vi.fn()}
+          anchorRef={anchorRef}
+          canvasName="My Canvas"
+          canvasSlug="my-canvas"
+        />,
+      );
+
+      expect(screen.getByTestId('canvas-info-section')).toBeTruthy();
+      expect(screen.getByTestId('canvas-name-input')).toBeTruthy();
+      expect((screen.getByTestId('canvas-name-input') as HTMLInputElement).value).toBe('My Canvas');
+    });
+
+    it('does not render Canvas Info section when canvasName is not provided', () => {
+      const anchorRef = createAnchorRef();
+      render(
+        <CanvasSettingsDropdown
+          isOpen={true}
+          onClose={vi.fn()}
+          anchorRef={anchorRef}
+        />,
+      );
+
+      expect(screen.queryByTestId('canvas-info-section')).toBeNull();
+    });
+
+    it('calls onRename when name input is blurred with a new value', () => {
+      const onRename = vi.fn();
+      const anchorRef = createAnchorRef();
+      render(
+        <CanvasSettingsDropdown
+          isOpen={true}
+          onClose={vi.fn()}
+          anchorRef={anchorRef}
+          canvasName="Old Name"
+          canvasSlug="old-name"
+          onRename={onRename}
+        />,
+      );
+
+      const input = screen.getByTestId('canvas-name-input');
+      fireEvent.change(input, { target: { value: 'New Name' } });
+      fireEvent.blur(input);
+
+      expect(onRename).toHaveBeenCalledWith('New Name');
+    });
+
+    it('does not call onRename when name has not changed', () => {
+      const onRename = vi.fn();
+      const anchorRef = createAnchorRef();
+      render(
+        <CanvasSettingsDropdown
+          isOpen={true}
+          onClose={vi.fn()}
+          anchorRef={anchorRef}
+          canvasName="Same Name"
+          canvasSlug="same-name"
+          onRename={onRename}
+        />,
+      );
+
+      const input = screen.getByTestId('canvas-name-input');
+      fireEvent.blur(input);
+
+      expect(onRename).not.toHaveBeenCalled();
+    });
+
+    it('renders visibility toggle with Private active by default', () => {
+      const anchorRef = createAnchorRef();
+      render(
+        <CanvasSettingsDropdown
+          isOpen={true}
+          onClose={vi.fn()}
+          anchorRef={anchorRef}
+          canvasName="Test"
+          canvasSlug="test"
+          isPublic={false}
+        />,
+      );
+
+      expect(screen.getByTestId('visibility-private')).toBeTruthy();
+      expect(screen.getByTestId('visibility-public')).toBeTruthy();
+    });
+
+    it('calls onVisibilityChange when Public button is clicked', () => {
+      const onVisibilityChange = vi.fn();
+      const anchorRef = createAnchorRef();
+      render(
+        <CanvasSettingsDropdown
+          isOpen={true}
+          onClose={vi.fn()}
+          anchorRef={anchorRef}
+          canvasName="Test"
+          canvasSlug="test"
+          isPublic={false}
+          onVisibilityChange={onVisibilityChange}
+        />,
+      );
+
+      fireEvent.click(screen.getByTestId('visibility-public'));
+      expect(onVisibilityChange).toHaveBeenCalledWith(true);
+    });
+
+    it('shows slug input only when isPublic is true', () => {
+      const anchorRef = createAnchorRef();
+      const { rerender } = render(
+        <CanvasSettingsDropdown
+          isOpen={true}
+          onClose={vi.fn()}
+          anchorRef={anchorRef}
+          canvasName="Test"
+          canvasSlug="test"
+          isPublic={false}
+        />,
+      );
+
+      expect(screen.queryByTestId('canvas-slug-input')).toBeNull();
+
+      rerender(
+        <CanvasSettingsDropdown
+          isOpen={true}
+          onClose={vi.fn()}
+          anchorRef={anchorRef}
+          canvasName="Test"
+          canvasSlug="test"
+          isPublic={true}
+        />,
+      );
+
+      expect(screen.getByTestId('canvas-slug-input')).toBeTruthy();
+    });
+
+    it('calls onSlugChange when slug input is blurred with valid new value', () => {
+      const onSlugChange = vi.fn();
+      const anchorRef = createAnchorRef();
+      render(
+        <CanvasSettingsDropdown
+          isOpen={true}
+          onClose={vi.fn()}
+          anchorRef={anchorRef}
+          canvasName="Test"
+          canvasSlug="old-slug"
+          isPublic={true}
+          onSlugChange={onSlugChange}
+        />,
+      );
+
+      const input = screen.getByTestId('canvas-slug-input');
+      fireEvent.change(input, { target: { value: 'new-slug' } });
+      fireEvent.blur(input);
+
+      expect(onSlugChange).toHaveBeenCalledWith('new-slug');
+    });
+
+    it('shows slug error for too-short slug', () => {
+      const anchorRef = createAnchorRef();
+      render(
+        <CanvasSettingsDropdown
+          isOpen={true}
+          onClose={vi.fn()}
+          anchorRef={anchorRef}
+          canvasName="Test"
+          canvasSlug="ab"
+          isPublic={true}
+        />,
+      );
+
+      const input = screen.getByTestId('canvas-slug-input');
+      fireEvent.change(input, { target: { value: 'ab' } });
+      fireEvent.blur(input);
+
+      expect(screen.getByTestId('slug-error')).toBeTruthy();
+    });
+  });
 });
