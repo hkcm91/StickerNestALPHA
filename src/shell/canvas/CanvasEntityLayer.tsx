@@ -37,6 +37,7 @@ export const CanvasEntityLayer: React.FC<CanvasEntityLayerProps> = ({
   widgetHtmlMap,
   theme,
   interactionMode = 'edit',
+  draggingEntityIds,
 }) => {
   const { visibleEntities, entitiesByParent } = useMemo(() => {
     const byId = new Map<string, CanvasEntity>(entities.map((entity) => [entity.id, entity]));
@@ -96,10 +97,17 @@ export const CanvasEntityLayer: React.FC<CanvasEntityLayerProps> = ({
 
   const renderEntity = useCallback((entity: CanvasEntity) => {
     const isFocusHidden = entity.id === focusedActiveId;
+    const isBeingDragged = draggingEntityIds?.has(entity.id);
     return (
       <div
         key={entity.id}
-        style={isFocusHidden ? { opacity: 0, pointerEvents: 'none' } : undefined}
+        style={
+          isFocusHidden
+            ? { opacity: 0, pointerEvents: 'none' }
+            : isBeingDragged
+              ? { position: 'relative', zIndex: 10000 }
+              : undefined
+        }
       >
         <EntityRenderer
           entity={entity}
@@ -117,7 +125,7 @@ export const CanvasEntityLayer: React.FC<CanvasEntityLayerProps> = ({
         />
       </div>
     );
-  }, [selectedIds, openFolderIds, entitiesByParent, widgetHtmlMap, theme, interactionMode, focusedActiveId]);
+  }, [selectedIds, openFolderIds, entitiesByParent, widgetHtmlMap, theme, interactionMode, focusedActiveId, draggingEntityIds]);
 
   return (
     <div data-testid="canvas-entity-layer" style={{ position: 'absolute', inset: 0 }}>

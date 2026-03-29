@@ -254,10 +254,19 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
 
   const focusMode = useUIStore((s) => s.focusMode);
 
+  // Track which entities are being dragged (for z-index boost + iframe suppression)
+  const [draggingEntityIds, setDraggingEntityIds] = useState<Set<string>>(new Set());
+  const emptySet = useRef(new Set<string>()).current;
+  const setCanvasDragging = useCallback((dragging: boolean, entityIds?: Set<string>) => {
+    containerRef.current?.setAttribute('data-canvas-dragging', String(dragging));
+    setDraggingEntityIds(dragging && entityIds ? entityIds : emptySet);
+  }, [emptySet]);
+
   return (
     <div
       ref={containerRef}
       data-testid="canvas-viewport"
+      data-canvas-dragging="false"
       tabIndex={0}
       onKeyDown={handleKeyDown}
       onMouseMove={handleMouseMove}
@@ -273,6 +282,9 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
         outline: "none",
       }}
     >
+      {/* Suppress iframe pointer events during canvas entity drag */}
+      <style>{`[data-canvas-dragging="true"] iframe { pointer-events: none !important; }`}</style>
+
       {spatialMode !== '2d' ? (
         <>
           <div
@@ -538,6 +550,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
               widgetHtmlMap={widgetHtmlMap}
               theme={theme}
               interactionMode={rendererMode}
+              draggingEntityIds={draggingEntityIds}
             />
             {/* Remote user cursors — rendered in canvas space */}
             <PresenceCursorsLayer zoom={viewport.zoom} />
@@ -558,6 +571,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
             getZoom={getZoom}
             backgroundPortalId="canvas-bg-interaction"
             gridConfig={gridConfig}
+            onDragStateChange={setCanvasDragging}
           />
 
           {/* Layer 4: Selection handles — ABOVE tool layer so handles receive pointer events.

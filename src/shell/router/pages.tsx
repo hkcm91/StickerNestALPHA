@@ -1320,6 +1320,7 @@ export const CanvasPage: React.FC = () => {
             padding: `${canvasPosition.topOffset}px 24px 24px`,
             boxSizing: 'border-box',
             display: 'flex',
+            alignItems: 'flex-start',
             position: 'relative',
             ...(workspaceBg.mode === 'image' || workspaceBg.mode === 'parallax'
               ? {
