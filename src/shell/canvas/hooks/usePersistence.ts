@@ -172,6 +172,35 @@ export function renameLocalCanvas(slug: string, newName: string): LocalCanvasSum
   return updated;
 }
 
+export function updateLocalCanvasSlug(oldSlug: string, newSlug: string): LocalCanvasSummary | null {
+  const slugified = slugifyCanvasName(newSlug);
+  if (!slugified || slugified.length < 3 || slugified.length > 64) return null;
+
+  const index = readCanvasIndex();
+  const entry = index.items.find((item) => item.slug === oldSlug);
+  if (!entry) return null;
+
+  // Don't allow changing to an already-taken slug (unless it's the same)
+  if (slugified !== oldSlug && index.items.some((item) => item.slug === slugified)) return null;
+
+  const now = new Date().toISOString();
+  const updated: LocalCanvasSummary = { ...entry, slug: slugified, updatedAt: now };
+
+  // Move stored document from old key to new key
+  const raw = localStorage.getItem(getStorageKey(oldSlug));
+  if (raw) {
+    localStorage.setItem(getStorageKey(slugified), raw);
+    localStorage.removeItem(getStorageKey(oldSlug));
+  }
+
+  // Remove old entry, add updated one
+  const nextItems = index.items.filter((item) => item.slug !== oldSlug && item.id !== entry.id);
+  nextItems.push(updated);
+  writeCanvasIndex({ items: nextItems });
+
+  return updated;
+}
+
 export function deleteLocalCanvas(slug: string): void {
   const index = readCanvasIndex();
   const nextItems = index.items.filter((item) => item.slug !== slug);

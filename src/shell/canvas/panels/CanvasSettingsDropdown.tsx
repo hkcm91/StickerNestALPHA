@@ -13,7 +13,6 @@ import type { GridConfig, GridLineStyle, GridProjectionMode, ThemeName, Viewport
 import { CanvasDocumentEvents, GridEvents } from '@sn/types';
 
 import { DEFAULT_GRID_CONFIG } from '../../../canvas/core';
-
 import { bus } from '../../../kernel/bus';
 import { useUIStore } from '../../../kernel/stores/ui/ui.store';
 import { applyThemeTokens, emitThemeChange } from '../../theme/theme-provider';
@@ -38,6 +37,18 @@ export interface CanvasSettingsDropdownProps {
   canvasPosition?: CanvasPositionConfig;
   /** Current grid configuration */
   gridConfig?: GridConfig;
+  /** Canvas name for metadata editing */
+  canvasName?: string;
+  /** Canvas slug for public URL */
+  canvasSlug?: string;
+  /** Whether the canvas is publicly accessible */
+  isPublic?: boolean;
+  /** Called when the canvas is renamed */
+  onRename?: (newName: string) => void;
+  /** Called when the slug changes */
+  onSlugChange?: (newSlug: string) => void;
+  /** Called when visibility changes */
+  onVisibilityChange?: (isPublic: boolean) => void;
 }
 
 export type CanvasHorizontalAlign = 'left' | 'center' | 'right';
@@ -194,8 +205,68 @@ export const CanvasSettingsDropdown: React.FC<CanvasSettingsDropdownProps> = ({
   borderRadius: initialBorderRadius = 0,
   canvasPosition: initialCanvasPosition = { horizontal: 'center', vertical: 'center', topOffset: 24 },
   gridConfig: gridConfigProp = DEFAULT_GRID_CONFIG,
+  canvasName,
+  canvasSlug,
+  isPublic = false,
+  onRename,
+  onSlugChange,
+  onVisibilityChange,
 }) => {
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // ─── Canvas Info State ──────────────────────────────────────────────────────
+  const [nameValue, setNameValue] = useState(canvasName ?? '');
+  const [slugValue, setSlugValue] = useState(canvasSlug ?? '');
+  const [slugError, setSlugError] = useState<string | null>(null);
+
+  useEffect(() => { setNameValue(canvasName ?? ''); }, [canvasName]);
+  useEffect(() => { setSlugValue(canvasSlug ?? ''); }, [canvasSlug]);
+
+  const handleNameCommit = useCallback(() => {
+    const trimmed = nameValue.trim();
+    if (trimmed && trimmed !== canvasName && onRename) {
+      onRename(trimmed);
+    }
+  }, [nameValue, canvasName, onRename]);
+
+  const handleNameKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      (e.target as HTMLInputElement).blur();
+    }
+  }, []);
+
+  const validateSlug = useCallback((value: string): string | null => {
+    if (value.length < 3) return 'Slug must be at least 3 characters';
+    if (value.length > 64) return 'Slug must be 64 characters or fewer';
+    if (!/^[a-z0-9-]+$/.test(value)) return 'Only lowercase letters, numbers, and hyphens';
+    return null;
+  }, []);
+
+  const handleSlugCommit = useCallback(() => {
+    const slugified = slugValue
+      .toLowerCase()
+      .replace(/[^a-z0-9-]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .replace(/-{2,}/g, '-');
+    setSlugValue(slugified);
+
+    const error = validateSlug(slugified);
+    setSlugError(error);
+    if (!error && slugified !== canvasSlug && onSlugChange) {
+      onSlugChange(slugified);
+    }
+  }, [slugValue, canvasSlug, onSlugChange, validateSlug]);
+
+  const handleSlugKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      (e.target as HTMLInputElement).blur();
+    }
+  }, []);
+
+  const handleCopyLink = useCallback(() => {
+    const url = `${window.location.origin}/canvas/${slugValue}`;
+    navigator.clipboard.writeText(url);
+  }, [slugValue]);
 
   // ─── Grid State ────────────────────────────────────────────────────────────
   const [grid, setGrid] = useState<GridConfig>(gridConfigProp);
@@ -359,6 +430,104 @@ export const CanvasSettingsDropdown: React.FC<CanvasSettingsDropdownProps> = ({
       data-testid="canvas-settings-dropdown"
       style={dropdownStyle}
     >
+      {/* ═══════════════════════════════════════════════════════════════════════
+          CANVAS INFO SECTION
+          ═══════════════════════════════════════════════════════════════════════ */}
+      {canvasName !== undefined && (
+        <div style={sectionStyle} data-testid="canvas-info-section">
+          <div style={sectionTitleStyle}>Canvas Info</div>
+
+          {/* Name */}
+          <div style={{ marginBottom: '10px' }}>
+            <label style={labelStyle}>Name</label>
+            <input
+              type="text"
+              data-testid="canvas-name-input"
+              value={nameValue}
+              onChange={(e) => setNameValue(e.target.value)}
+              onBlur={handleNameCommit}
+              onKeyDown={handleNameKeyDown}
+              placeholder="Canvas name"
+              style={inputStyle}
+            />
+          </div>
+
+          {/* Visibility */}
+          <div style={{ marginBottom: '10px' }}>
+            <label style={labelStyle}>Visibility</label>
+            <div style={buttonGroupStyle}>
+              <button
+                type="button"
+                data-testid="visibility-private"
+                style={toggleBtnStyle(!isPublic)}
+                onClick={() => onVisibilityChange?.(false)}
+              >
+                Private
+              </button>
+              <button
+                type="button"
+                data-testid="visibility-public"
+                style={toggleBtnStyle(isPublic)}
+                onClick={() => onVisibilityChange?.(true)}
+              >
+                Public
+              </button>
+            </div>
+          </div>
+
+          {/* Slug — only shown when public */}
+          {isPublic && (
+            <div style={{ marginBottom: '4px' }}>
+              <label style={labelStyle}>Public URL Slug</label>
+              <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                <input
+                  type="text"
+                  data-testid="canvas-slug-input"
+                  value={slugValue}
+                  onChange={(e) => {
+                    setSlugValue(e.target.value);
+                    setSlugError(null);
+                  }}
+                  onBlur={handleSlugCommit}
+                  onKeyDown={handleSlugKeyDown}
+                  placeholder="my-canvas"
+                  style={{ ...inputStyle, flex: 1 }}
+                />
+                <button
+                  type="button"
+                  data-testid="copy-link-btn"
+                  onClick={handleCopyLink}
+                  title="Copy public link"
+                  style={{
+                    padding: '6px 8px',
+                    border: '1px solid var(--sn-border, rgba(255,255,255,0.06))',
+                    borderRadius: 'var(--sn-radius, 4px)',
+                    background: 'transparent',
+                    color: 'var(--sn-text, #E8E6ED)',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  Copy
+                </button>
+              </div>
+              {slugError && (
+                <div
+                  data-testid="slug-error"
+                  style={{ fontSize: '11px', color: '#ef4444', marginTop: '4px' }}
+                >
+                  {slugError}
+                </div>
+              )}
+              <div style={{ fontSize: '11px', color: 'var(--sn-text-muted, #7A7784)', marginTop: '4px' }}>
+                {window.location.origin}/canvas/{slugValue || '...'}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ═══════════════════════════════════════════════════════════════════════
           CANVAS SIZE SECTION
           ═══════════════════════════════════════════════════════════════════════ */}

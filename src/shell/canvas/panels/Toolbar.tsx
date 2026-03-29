@@ -35,6 +35,14 @@ export interface ToolbarProps {
   canvasPosition?: CanvasPositionConfig;
   selectedIds?: Set<string>;
   onCaptureThumbnail?: () => void;
+  /** Canvas slug for public URL */
+  canvasSlug?: string;
+  /** Whether the canvas is publicly accessible */
+  isPublic?: boolean;
+  /** Called when the slug changes */
+  onSlugChange?: (newSlug: string) => void;
+  /** Called when visibility changes */
+  onVisibilityChange?: (isPublic: boolean) => void;
 }
 
 const DOCKER_LIBRARY_NAME = 'Docker Library';
@@ -312,6 +320,10 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   canvasPosition,
   selectedIds = new Set(),
   onCaptureThumbnail,
+  canvasSlug,
+  isPublic,
+  onSlugChange,
+  onVisibilityChange,
 }) => {
   const activeTool = useUIStore((s) => (s.activeTool === 'move' ? 'select' : s.activeTool));
   const mode = useUIStore((s) => s.canvasInteractionMode);
@@ -753,7 +765,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                 <ToolBtn testId="canvas-settings-btn" icon={<SettingsIcon />} label="Settings" onClick={() => setSettingsOpen(!settingsOpen)} title="Canvas Settings" />
               </BtnGrid>
               <div style={{ position: 'relative' }}>
-                <CanvasSettingsDropdown isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} anchorRef={settingsButtonRef} viewportConfig={viewportConfig} borderRadius={borderRadius} canvasPosition={canvasPosition} gridConfig={gridConfig} />
+                <CanvasSettingsDropdown isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} anchorRef={settingsButtonRef} viewportConfig={viewportConfig} borderRadius={borderRadius} canvasPosition={canvasPosition} gridConfig={gridConfig} canvasName={canvasName} canvasSlug={canvasSlug} isPublic={isPublic} onRename={onRename} onSlugChange={onSlugChange} onVisibilityChange={onVisibilityChange} />
               </div>
 
               <SubLabel>Canvas</SubLabel>

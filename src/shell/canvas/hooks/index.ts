@@ -24,6 +24,7 @@ export {
   deleteLocalCanvas,
   duplicateLocalCanvas,
   renameLocalCanvas,
+  updateLocalCanvasSlug,
   ensureLocalCanvas,
   getLocalCanvasBySlug,
   listLocalCanvases,

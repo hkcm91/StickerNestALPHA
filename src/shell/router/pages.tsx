@@ -14,8 +14,8 @@ import { CanvasDocumentEvents, CanvasEvents, DEFAULT_BACKGROUND, DockerEvents } 
 import { initCanvasCore, teardownCanvasCore, project2Dto3D } from '../../canvas/core';
 import type { SceneGraph } from '../../canvas/core';
 // Canvas sub-layer init/teardown loaded via dynamic import (L6 boundary rule allows dynamic imports only)
-import { bus } from '../../kernel/bus';
 import { signOut } from '../../kernel/auth';
+import { bus } from '../../kernel/bus';
 import { useAuthStore, selectIsAuthenticated } from '../../kernel/stores/auth/auth.store';
 import { useCanvasStore } from '../../kernel/stores/canvas/canvas.store';
 import { useDockerStore } from '../../kernel/stores/docker';
@@ -36,13 +36,14 @@ import {
   deleteLocalCanvas,
   duplicateLocalCanvas,
   renameLocalCanvas,
+  updateLocalCanvasSlug,
   ensureLocalCanvas,
   listLocalCanvases,
 } from '../canvas';
 import type { LocalCanvasSummary } from '../canvas';
+import { CanvasResizeFrame } from '../canvas/components/CanvasResizeFrame';
 import { HistoryPanel } from '../canvas/panels';
 import type { CanvasPositionConfig } from '../canvas/panels/CanvasSettingsDropdown';
-import { CanvasResizeFrame } from '../canvas/components/CanvasResizeFrame';
 import { seedDemoEntities, seedCommerceCanvas, seedClaudeLabCanvas } from '../canvas/seedDemoEntities';
 import { captureAndUploadThumbnail } from '../canvas/utils/thumbnail-capture';
 import { StickerSettingsModal, LoginForm } from '../components';
@@ -498,6 +499,7 @@ function resolveStickerSource(entity: CanvasEntity): {
 
 export const CanvasPage: React.FC = () => {
   const { canvasSlug = '' } = useParams<{ canvasSlug: string }>();
+  const navigate = useNavigate();
   const setMode = useUIStore((s) => s.setCanvasInteractionMode);
   const setActiveCanvas = useCanvasStore((s) => s.setActiveCanvas);
   const user = useAuthStore((s) => s.user);
@@ -1222,6 +1224,28 @@ export const CanvasPage: React.FC = () => {
     }
   }, [canvasSummary]);
 
+  // Canvas visibility state (local-only for now)
+  const [canvasIsPublic, setCanvasIsPublic] = useState(false);
+
+  const handleVisibilityChange = useCallback((newIsPublic: boolean) => {
+    setCanvasIsPublic(newIsPublic);
+    const { setSharingSettings, sharingSettings } = useCanvasStore.getState();
+    setSharingSettings({
+      isPublic: newIsPublic,
+      defaultRole: sharingSettings?.defaultRole ?? 'viewer',
+      slug: canvasSummary?.slug ?? null,
+    });
+  }, [canvasSummary]);
+
+  const handleSlugChange = useCallback((newSlug: string) => {
+    if (!canvasSummary) return;
+    const updated = updateLocalCanvasSlug(canvasSummary.slug, newSlug);
+    if (updated) {
+      setCanvasSummary(updated);
+      navigate(`/canvas/${updated.slug}`, { replace: true });
+    }
+  }, [canvasSummary, navigate]);
+
   const handleCaptureThumbnail = useCallback(async () => {
     const el = canvasViewportRef.current;
     if (!el || !canvasSummary) return;
@@ -1270,6 +1294,10 @@ export const CanvasPage: React.FC = () => {
             canvasPosition={canvasPosition}
             selectedIds={selectedIds}
             onCaptureThumbnail={handleCaptureThumbnail}
+            canvasSlug={canvasSummary?.slug}
+            isPublic={canvasIsPublic}
+            onSlugChange={handleSlugChange}
+            onVisibilityChange={handleVisibilityChange}
           />
         }
         renderDockerWidget={renderDockerWidget}
@@ -1292,18 +1320,6 @@ export const CanvasPage: React.FC = () => {
             padding: `${canvasPosition.topOffset}px 24px 24px`,
             boxSizing: 'border-box',
             display: 'flex',
-            justifyContent:
-              canvasPosition.horizontal === 'left'
-                ? 'flex-start'
-                : canvasPosition.horizontal === 'right'
-                  ? 'flex-end'
-                  : 'center',
-            alignItems:
-              canvasPosition.vertical === 'top'
-                ? 'flex-start'
-                : canvasPosition.vertical === 'bottom'
-                  ? 'flex-end'
-                  : 'center',
             position: 'relative',
             ...(workspaceBg.mode === 'image' || workspaceBg.mode === 'parallax'
               ? {
@@ -1339,6 +1355,10 @@ export const CanvasPage: React.FC = () => {
                 : `${borderRadius.topLeft}px ${borderRadius.topRight}px ${borderRadius.bottomRight}px ${borderRadius.bottomLeft}px`,
               overflow: 'hidden',
               flexShrink: 0,
+              marginTop: canvasPosition.vertical === 'bottom' ? 'auto' : canvasPosition.vertical === 'center' ? 'auto' : 0,
+              marginBottom: canvasPosition.vertical === 'top' ? 'auto' : canvasPosition.vertical === 'center' ? 'auto' : 0,
+              marginLeft: canvasPosition.horizontal === 'right' ? 'auto' : canvasPosition.horizontal === 'center' ? 'auto' : 0,
+              marginRight: canvasPosition.horizontal === 'left' ? 'auto' : canvasPosition.horizontal === 'center' ? 'auto' : 0,
               transition: 'width 200ms ease, height 200ms ease',
               ...(viewportConfig.sizeMode === 'bounded' ? {
                 background: 'var(--sn-surface-glass, rgba(20,17,24,0.85))',

@@ -181,6 +181,16 @@ export const DEFAULT_ASSETS: AssetItem[] = [
     metadata: { widgetId: 'sn.builtin.entity-spawner' },
   },
   {
+    id: 'sn.builtin.book-search',
+    name: 'Book Search',
+    type: 'widget',
+    icon: '\ud83d\udcda',
+    description: 'Search Open Library and save books to your database.',
+    tags: ['productivity', 'books', 'reading', 'library', 'search'],
+    widgetType: 'productivity',
+    metadata: { widgetId: 'sn.builtin.book-search' },
+  },
+  {
     id: 'sn.builtin.social-feed',
     name: 'Social Feed',
     type: 'widget',

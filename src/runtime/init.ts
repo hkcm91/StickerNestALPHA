@@ -630,6 +630,32 @@ StickerNest.ready();
     isBuiltIn: true,
     installedAt: new Date().toISOString(),
   },
+  {
+    widgetId: 'sn.builtin.book-search',
+    manifest: {
+      id: 'sn.builtin.book-search',
+      name: 'Book Search',
+      version: '1.0.0',
+      description: 'Search Open Library and save books to your database',
+      author: { name: 'StickerNest', url: 'https://stickernest.com' },
+      license: 'MIT' as const,
+      tags: ['books', 'reading', 'library', 'search'],
+      category: 'productivity' as const,
+      permissions: ['storage' as const, 'datasource' as const, 'datasource-write' as const],
+      events: {
+        emits: [{ name: 'book.added', description: 'A book was added to the database' }],
+        subscribes: [],
+      },
+      config: { fields: [] },
+      size: { minWidth: 300, minHeight: 400, maxWidth: 500, maxHeight: 700, defaultWidth: 380, defaultHeight: 500, aspectLocked: false },
+      entry: 'inline',
+      spatialSupport: false,
+      crossCanvasChannels: [],
+    },
+    htmlContent: '',
+    isBuiltIn: true,
+    installedAt: new Date().toISOString(),
+  },
 ];
 
 /** Map from registry widgetId to built-in-html key */
@@ -646,6 +672,7 @@ const WIDGET_HTML_KEY: Record<string, string> = {
   'sn.builtin.xc-listener': 'wgt-xc-listener',
   'sn.builtin.data-table': 'wgt-data-table',
   'sn.builtin.entity-spawner': 'wgt-entity-spawner',
+  'sn.builtin.book-search': 'wgt-book-search',
 };
 
 /**
