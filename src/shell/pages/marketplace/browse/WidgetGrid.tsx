@@ -10,7 +10,7 @@ import React from 'react';
 import type { MarketplaceWidgetListing, PaginatedResult } from '../../../../marketplace/api/types';
 import { themeVar } from '../../../theme/theme-vars';
 import { WidgetCard } from '../shared/WidgetCard';
-import { btnSecondary, PAGE_SIZE } from '../styles';
+import { btnSecondary, PAGE_SIZE, sectionHeading } from '../styles';
 
 export interface WidgetGridProps {
   results: PaginatedResult<MarketplaceWidgetListing> | null;
@@ -47,15 +47,24 @@ export const WidgetGrid: React.FC<WidgetGridProps> = ({
   }
 
   const totalPages = results ? Math.ceil(results.total / PAGE_SIZE) : 0;
+  const totalCount = results?.total ?? 0;
 
   return (
     <>
+      <h2 style={{ ...sectionHeading, display: 'flex', alignItems: 'baseline', gap: '8px', fontSize: '16px', margin: '0 0 14px' }}>
+        All Widgets
+        {totalCount > 0 && (
+          <span style={{ fontSize: '13px', fontWeight: 400, color: themeVar('--sn-text-muted') }}>
+            {totalCount}
+          </span>
+        )}
+      </h2>
       <div
         data-testid="marketplace-grid"
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
-          gap: '16px',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+          gap: '14px',
         }}
       >
         {results?.items.map((widget) => (
@@ -65,6 +74,7 @@ export const WidgetGrid: React.FC<WidgetGridProps> = ({
             name={widget.name}
             description={widget.description}
             thumbnailUrl={widget.thumbnailUrl}
+            category={widget.category}
             ratingAverage={widget.ratingAverage}
             ratingCount={widget.ratingCount}
             installCount={widget.installCount}
@@ -102,13 +112,13 @@ export const WidgetGrid: React.FC<WidgetGridProps> = ({
               color: themeVar('--sn-text-muted'),
             }}
           >
-            Page {page} of {totalPages}
+            Page {page} of {Math.ceil((results?.total ?? 0) / (results?.pageSize ?? 1))}
           </span>
           <button
             type="button"
             onClick={() => onPageChange(page + 1)}
-            disabled={!results.hasMore}
-            style={{ ...btnSecondary, opacity: !results.hasMore ? 0.5 : 1 }}
+            disabled={!results?.hasMore}
+            style={{ ...btnSecondary, opacity: !results?.hasMore ? 0.5 : 1 }}
           >
             Next
           </button>

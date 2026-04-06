@@ -4595,4 +4595,392 @@ export const BUILT_IN_WIDGET_HTML: Record<string, string> = {
       })();
     </script>
   `,
+
+  'sn.builtin.notion-viewer': `
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: var(--sn-font-family, system-ui, sans-serif); background: var(--sn-bg, #1a1a2e); color: var(--sn-text, #e5e7eb); padding: 16px; }
+      h2 { font-size: 1.1em; margin-bottom: 12px; color: var(--sn-text, #e5e7eb); }
+      .status { font-size: 0.85em; color: var(--sn-text-muted, #9ca3af); margin-bottom: 12px; }
+      .db-list { list-style: none; }
+      .db-item { padding: 10px 12px; margin-bottom: 6px; background: var(--sn-surface, #16213e); border: 1px solid var(--sn-border, #334155); border-radius: var(--sn-radius, 6px); cursor: pointer; transition: background 0.15s; }
+      .db-item:hover { background: color-mix(in srgb, var(--sn-accent, #6366f1) 15%, var(--sn-surface, #16213e)); }
+      .db-title { font-weight: 600; }
+      .db-meta { font-size: 0.8em; color: var(--sn-text-muted, #9ca3af); margin-top: 4px; }
+      .error { color: #f87171; font-size: 0.85em; }
+      .btn { padding: 6px 14px; background: var(--sn-accent, #6366f1); color: #fff; border: none; border-radius: var(--sn-radius, 6px); cursor: pointer; font-size: 0.85em; margin-top: 8px; }
+      .btn:hover { opacity: 0.9; }
+      .loading { text-align: center; padding: 24px; }
+      .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid var(--sn-border, #334155); border-top-color: var(--sn-accent, #6366f1); border-radius: 50%; animation: spin 0.6s linear infinite; }
+      @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+    <div id="app">
+      <h2>Notion Databases</h2>
+      <div id="status" class="status">Connecting...</div>
+      <ul id="db-list" class="db-list"></ul>
+      <div id="error" class="error" style="display:none;"></div>
+      <button id="refresh" class="btn" style="display:none;">Refresh</button>
+    </div>
+    <script>
+      (function() {
+        var statusEl = document.getElementById('status');
+        var listEl = document.getElementById('db-list');
+        var errorEl = document.getElementById('error');
+        var refreshBtn = document.getElementById('refresh');
+
+        StickerNest.register({
+          id: 'sn.builtin.notion-viewer',
+          name: 'Notion Database Viewer',
+          version: '1.0.0',
+          permissions: ['integrations'],
+          events: { emits: ['notion.db.selected'], subscribes: [] },
+          config: {}
+        });
+
+        function showError(msg) {
+          errorEl.textContent = msg;
+          errorEl.style.display = 'block';
+          statusEl.textContent = 'Error';
+          refreshBtn.style.display = 'inline-block';
+        }
+
+        function clearError() {
+          errorEl.style.display = 'none';
+          refreshBtn.style.display = 'none';
+        }
+
+        async function loadDatabases() {
+          clearError();
+          statusEl.textContent = 'Loading...';
+          listEl.innerHTML = '<li class="loading"><span class="spinner"></span></li>';
+
+          try {
+            var result = await StickerNest.integration('notion').query({
+              action: 'list_databases'
+            });
+
+            listEl.innerHTML = '';
+
+            if (!result || !result.databases || result.databases.length === 0) {
+              statusEl.textContent = 'No databases found.';
+              refreshBtn.style.display = 'inline-block';
+              return;
+            }
+
+            statusEl.textContent = result.databases.length + ' database' + (result.databases.length !== 1 ? 's' : '') + ' found';
+            refreshBtn.style.display = 'inline-block';
+
+            result.databases.forEach(function(db) {
+              var li = document.createElement('li');
+              li.className = 'db-item';
+              li.innerHTML = '<div class="db-title">' + (db.title || 'Untitled') + '</div>' +
+                '<div class="db-meta">' + (db.property_count || 0) + ' properties</div>';
+              li.addEventListener('click', function() {
+                StickerNest.emit('notion.db.selected', { databaseId: db.id, title: db.title });
+              });
+              listEl.appendChild(li);
+            });
+          } catch (err) {
+            listEl.innerHTML = '';
+            showError(err.message || 'Failed to load databases');
+          }
+        }
+
+        refreshBtn.addEventListener('click', loadDatabases);
+
+        loadDatabases();
+        StickerNest.ready();
+      })();
+    </script>
+  `,
+
+  // ===========================================================================
+  // Book Search Widget — search Open Library and save to a DataSource table
+  // ===========================================================================
+
+  'wgt-book-search': `
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: var(--sn-font-family, 'Outfit', sans-serif); color: var(--sn-text, #F2EDE6); background: var(--sn-bg, #110E14); }
+      .root { height: 100%; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+      .db-bar { padding: 8px 12px; border-bottom: 1px solid var(--sn-border, rgba(78,70,88,0.4)); display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+      .db-bar select, .db-bar button { font-family: inherit; font-size: 12px; border-radius: 6px; border: 1px solid var(--sn-border, rgba(78,70,88,0.4)); background: rgba(20,17,24,0.65); color: var(--sn-text, #F2EDE6); padding: 6px 10px; cursor: pointer; }
+      .db-bar select { flex: 1; min-width: 0; }
+      .db-bar button { white-space: nowrap; background: var(--sn-accent, #6BA4B8); border-color: transparent; font-weight: 500; }
+      .db-bar button:hover { opacity: 0.85; }
+      .search-bar { padding: 8px 12px; display: flex; gap: 8px; flex-shrink: 0; }
+      .search-bar input { flex: 1; padding: 8px 12px; border: 1px solid var(--sn-border, rgba(78,70,88,0.4)); border-radius: 6px; background: rgba(20,17,24,0.65); color: var(--sn-text, #F2EDE6); font-size: 13px; font-family: inherit; outline: none; transition: border-color 0.2s; }
+      .search-bar input::placeholder { color: var(--sn-text-muted, #A098A4); }
+      .search-bar input:focus { border-color: var(--sn-accent, #6BA4B8); box-shadow: 0 0 0 2px rgba(107,164,184,0.2); }
+      .search-bar button { padding: 8px 14px; border: none; border-radius: 6px; background: var(--sn-accent, #6BA4B8); color: #fff; font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit; transition: opacity 0.15s; }
+      .search-bar button:hover { opacity: 0.85; }
+      .search-bar button:disabled { opacity: 0.5; cursor: default; }
+      .results { flex: 1; overflow-y: auto; padding: 4px 12px 12px; }
+      .results::-webkit-scrollbar { width: 4px; }
+      .results::-webkit-scrollbar-thumb { background: rgba(107,164,184,0.3); border-radius: 2px; }
+      .card { display: flex; gap: 10px; padding: 10px; margin-bottom: 8px; border-radius: 8px; background: rgba(20,17,24,0.65); backdrop-filter: blur(20px) saturate(1.2); border: 1px solid rgba(78,70,88,0.25); opacity: 0; transform: translateY(8px); animation: cardIn 0.4s cubic-bezier(0.16,1,0.3,1) forwards; }
+      @keyframes cardIn { to { opacity: 1; transform: translateY(0); } }
+      .card-cover { width: 48px; height: 68px; border-radius: 4px; background: rgba(78,70,88,0.3); flex-shrink: 0; object-fit: cover; }
+      .card-cover-placeholder { width: 48px; height: 68px; border-radius: 4px; background: rgba(78,70,88,0.3); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 20px; color: var(--sn-text-muted, #A098A4); }
+      .card-info { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 2px; }
+      .card-title { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .card-author { font-size: 11px; color: var(--sn-text-muted, #A098A4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .card-year { font-size: 11px; color: var(--sn-text-muted, #A098A4); }
+      .card-add { align-self: center; padding: 6px 12px; border: 1px solid var(--sn-accent, #6BA4B8); border-radius: 6px; background: transparent; color: var(--sn-accent, #6BA4B8); font-size: 12px; font-weight: 500; cursor: pointer; font-family: inherit; white-space: nowrap; transition: all 0.2s cubic-bezier(0.16,1,0.3,1); flex-shrink: 0; }
+      .card-add:hover { background: var(--sn-accent, #6BA4B8); color: #fff; }
+      .card-add.added { border-color: #8EC8A4; color: #8EC8A4; pointer-events: none; }
+      .card-add.dupe { border-color: #ECA080; color: #ECA080; pointer-events: none; }
+      .msg { text-align: center; padding: 40px 20px; color: var(--sn-text-muted, #A098A4); font-size: 13px; line-height: 1.6; }
+      .shimmer { background: linear-gradient(90deg, rgba(78,70,88,0.2) 25%, rgba(78,70,88,0.4) 50%, rgba(78,70,88,0.2) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 8px; height: 88px; margin-bottom: 8px; }
+      @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+      .error-toast { position: absolute; bottom: 12px; left: 12px; right: 12px; padding: 8px 12px; background: rgba(236,160,128,0.15); border: 1px solid rgba(236,160,128,0.3); border-radius: 6px; color: #ECA080; font-size: 12px; text-align: center; animation: cardIn 0.3s cubic-bezier(0.16,1,0.3,1) forwards; }
+      select:focus-visible, button:focus-visible, input:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(107,164,184,0.3), 0 0 12px rgba(107,164,184,0.15); }
+    </style>
+    <div class="root">
+      <div class="db-bar">
+        <select id="dbSelect" aria-label="Select database"><option value="">-- Select database --</option></select>
+        <button id="dbCreate" type="button">+ New</button>
+      </div>
+      <div class="search-bar">
+        <input id="searchInput" type="text" placeholder="Search books..." aria-label="Search books" />
+        <button id="searchBtn" type="button">Search</button>
+      </div>
+      <div class="results" id="results">
+        <div class="msg">Search for a book to get started.</div>
+      </div>
+    </div>
+    <script>
+      (function() {
+        var SN = window.StickerNest;
+        var debounceTimer = null;
+        var selectedDsId = null;
+        var existingIds = {};
+
+        SN.register({
+          id: 'wgt-book-search',
+          name: 'Book Search',
+          version: '1.0.0',
+          permissions: ['storage', 'datasource', 'datasource-write'],
+          events: { emits: [{ name: 'book.added', description: 'A book was added to the database' }], subscribes: [] }
+        });
+
+        function clearChildren(el) { while (el.firstChild) el.removeChild(el.firstChild); }
+
+        function createMsg(text) {
+          var div = document.createElement('div');
+          div.className = 'msg';
+          div.textContent = text;
+          return div;
+        }
+
+        function createShimmer() {
+          var div = document.createElement('div');
+          div.className = 'shimmer';
+          return div;
+        }
+
+        function loadDatabases() {
+          SN.datasource.list({ type: 'table' }).then(function(tables) {
+            var sel = document.getElementById('dbSelect');
+            clearChildren(sel);
+            var defOpt = document.createElement('option');
+            defOpt.value = '';
+            defOpt.textContent = '-- Select database --';
+            sel.appendChild(defOpt);
+            (tables || []).forEach(function(t) {
+              var opt = document.createElement('option');
+              opt.value = t.id || t.dataSourceId || '';
+              opt.textContent = (t.metadata && t.metadata.name) || t.id || 'Untitled';
+              sel.appendChild(opt);
+            });
+            if (selectedDsId) { sel.value = selectedDsId; }
+          }).catch(function() {});
+        }
+
+        document.getElementById('dbSelect').addEventListener('change', function() {
+          selectedDsId = this.value || null;
+          SN.setState('dataSourceId', selectedDsId);
+          if (selectedDsId) { loadExistingIds(); }
+        });
+
+        document.getElementById('dbCreate').addEventListener('click', function() {
+          var name = prompt('Database name:', 'My Books');
+          if (!name) return;
+          SN.datasource.create('table', 'canvas', { metadata: { name: name } }).then(function(ds) {
+            selectedDsId = ds.id || ds.dataSourceId;
+            SN.setState('dataSourceId', selectedDsId);
+            loadDatabases();
+          }).catch(function(e) { showError('Could not create database: ' + e.message); });
+        });
+
+        function loadExistingIds() {
+          existingIds = {};
+          if (!selectedDsId) return;
+          SN.datasource.table.getRows(selectedDsId).then(function(rows) {
+            (rows || []).forEach(function(r) { if (r.openLibraryId) existingIds[r.openLibraryId] = true; });
+          }).catch(function() {});
+        }
+
+        var searchInput = document.getElementById('searchInput');
+        var searchBtn = document.getElementById('searchBtn');
+
+        searchInput.addEventListener('input', function() {
+          clearTimeout(debounceTimer);
+          var q = this.value.trim();
+          if (q.length < 2) return;
+          debounceTimer = setTimeout(function() { doSearch(q); }, 300);
+        });
+
+        searchInput.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter') { e.preventDefault(); var q = searchInput.value.trim(); if (q.length >= 2) doSearch(q); }
+        });
+
+        searchBtn.addEventListener('click', function() {
+          var q = searchInput.value.trim();
+          if (q.length >= 2) doSearch(q);
+        });
+
+        function doSearch(query) {
+          var container = document.getElementById('results');
+          clearChildren(container);
+          container.appendChild(createShimmer());
+          container.appendChild(createShimmer());
+          container.appendChild(createShimmer());
+          searchBtn.disabled = true;
+
+          fetch('https://openlibrary.org/search.json?q=' + encodeURIComponent(query) + '&limit=10')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+              searchBtn.disabled = false;
+              var docs = data.docs || [];
+              clearChildren(container);
+              if (docs.length === 0) {
+                container.appendChild(createMsg('No books found. Try a different search term.'));
+                return;
+              }
+              docs.forEach(function(doc, i) {
+                var olid = doc.key ? doc.key.replace('/works/', '') : '';
+                var title = doc.title || 'Untitled';
+                var authors = (doc.author_name || []).join(', ') || 'Unknown author';
+                var year = doc.first_publish_year || '';
+                var isbn = (doc.isbn || [])[0] || '';
+                var coverOlid = (doc.cover_edition_key || (doc.edition_key && doc.edition_key[0])) || '';
+
+                var card = document.createElement('div');
+                card.className = 'card';
+                card.style.animationDelay = (i * 80) + 'ms';
+
+                if (coverOlid) {
+                  var img = document.createElement('img');
+                  img.className = 'card-cover';
+                  img.alt = '';
+                  img.loading = 'lazy';
+                  img.src = 'https://covers.openlibrary.org/b/olid/' + encodeURIComponent(coverOlid) + '-M.jpg';
+                  img.onerror = function() {
+                    var ph = document.createElement('div');
+                    ph.className = 'card-cover-placeholder';
+                    ph.textContent = '\\ud83d\\udcd6';
+                    if (img.parentNode) img.parentNode.replaceChild(ph, img);
+                  };
+                  card.appendChild(img);
+                } else {
+                  var ph = document.createElement('div');
+                  ph.className = 'card-cover-placeholder';
+                  ph.textContent = '\\ud83d\\udcd6';
+                  card.appendChild(ph);
+                }
+
+                var info = document.createElement('div');
+                info.className = 'card-info';
+                var titleEl = document.createElement('div');
+                titleEl.className = 'card-title';
+                titleEl.title = title;
+                titleEl.textContent = title;
+                info.appendChild(titleEl);
+                var authorEl = document.createElement('div');
+                authorEl.className = 'card-author';
+                authorEl.textContent = authors;
+                info.appendChild(authorEl);
+                if (year) {
+                  var yearEl = document.createElement('div');
+                  yearEl.className = 'card-year';
+                  yearEl.textContent = String(year);
+                  info.appendChild(yearEl);
+                }
+                card.appendChild(info);
+
+                var isDupe = existingIds[olid];
+                var btn = document.createElement('button');
+                btn.className = isDupe ? 'card-add dupe' : 'card-add';
+                btn.textContent = isDupe ? 'Added' : 'Add';
+                btn.dataset.olid = olid;
+                btn.dataset.title = title;
+                btn.dataset.authors = authors;
+                btn.dataset.year = String(year);
+                btn.dataset.isbn = isbn;
+                btn.dataset.cover = coverOlid;
+                btn.addEventListener('click', function() { addBook(btn); });
+                card.appendChild(btn);
+
+                container.appendChild(card);
+              });
+            })
+            .catch(function() {
+              searchBtn.disabled = false;
+              clearChildren(container);
+              container.appendChild(createMsg("Couldn't reach Open Library. Try again?"));
+            });
+        }
+
+        function addBook(btn) {
+          if (!selectedDsId) { showError('Select or create a database first.'); return; }
+          var olid = btn.dataset.olid;
+          if (existingIds[olid]) { btn.textContent = 'Already added'; btn.className = 'card-add dupe'; return; }
+
+          var coverOlid = btn.dataset.cover;
+          var coverUrl = coverOlid ? 'https://covers.openlibrary.org/b/olid/' + encodeURIComponent(coverOlid) + '-M.jpg' : '';
+          var row = {
+            title: btn.dataset.title,
+            authors: btn.dataset.authors,
+            year: btn.dataset.year,
+            isbn: btn.dataset.isbn,
+            coverUrl: coverUrl,
+            openLibraryId: olid
+          };
+
+          btn.disabled = true;
+          btn.textContent = '...';
+
+          SN.datasource.table.addRow(selectedDsId, row).then(function() {
+            existingIds[olid] = true;
+            btn.textContent = 'Added';
+            btn.className = 'card-add added';
+            SN.emit('book.added', row);
+          }).catch(function(e) {
+            btn.disabled = false;
+            btn.textContent = 'Add';
+            showError('Failed to add: ' + e.message);
+          });
+        }
+
+        function showError(msg) {
+          var existing = document.querySelector('.error-toast');
+          if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
+          var el = document.createElement('div');
+          el.className = 'error-toast';
+          el.textContent = msg;
+          document.querySelector('.root').appendChild(el);
+          setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 3000);
+        }
+
+        SN.getState('dataSourceId').then(function(id) {
+          if (id) { selectedDsId = id; }
+          loadDatabases();
+          if (selectedDsId) { loadExistingIds(); }
+        }).catch(function() { loadDatabases(); });
+
+        SN.ready();
+      })();
+    </script>
+  `,
 };

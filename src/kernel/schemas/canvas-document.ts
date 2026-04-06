@@ -97,12 +97,12 @@ export const BackgroundSpecSchema = z.discriminatedUnion('type', [
 export type BackgroundSpec = z.infer<typeof BackgroundSpecSchema>;
 
 /**
- * Default background (white solid)
+ * Default background (transparent — ambient effects show through frosted glass pane)
  */
 export const DEFAULT_BACKGROUND: BackgroundSpec = {
   type: 'solid',
-  color: '#ffffff',
-  opacity: 1,
+  color: 'transparent',
+  opacity: 0,
 };
 
 // =============================================================================

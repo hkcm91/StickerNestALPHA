@@ -56,13 +56,21 @@ export async function install(
     widget_id: widgetId,
   });
 
-  // Increment install count
-  await (supabase.rpc as any)('increment_install_count', { widget_id_input: widgetId }).catch(() => {
-    return supabase
-      .from('widgets')
-      .update({ install_count: (data as Record<string, unknown>).install_count as number })
-      .eq('id', widgetId);
-  });
+  // Increment install count (best-effort — never block installation)
+  try {
+    await supabase.rpc('increment_install_count', { widget_id_input: widgetId });
+  } catch {
+    // RPC may not exist yet — fall back to manual increment
+    try {
+      const currentCount = ((data as Record<string, unknown>).install_count as number) ?? 0;
+      await supabase
+        .from('widgets')
+        .update({ install_count: currentCount + 1 })
+        .eq('id', widgetId);
+    } catch {
+      // install_count update is non-critical — swallow silently
+    }
+  }
 
   return {
     htmlContent: data.html_content,

@@ -7,7 +7,7 @@ export default defineConfig({
     include: ['**/*.test.ts', '**/*.test.tsx', '**/*.spec.ts', '**/*.spec.tsx'],
 
     // Exclude patterns (e2e tests run separately with Playwright)
-    exclude: ['node_modules', 'dist', '**/*.d.ts', 'e2e/**'],
+    exclude: ['node_modules', 'dist', '**/*.d.ts', 'e2e/**', '.claude/worktrees/**'],
 
     // Coverage configuration
     coverage: {

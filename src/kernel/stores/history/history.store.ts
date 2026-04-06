@@ -170,6 +170,67 @@ export function setupHistoryBusSubscriptions(): void {
     });
   });
 
+  // Entity resized — includes previousPosition/previousSize for inverse
+  bus.subscribe(CanvasEvents.ENTITY_RESIZED, (event: BusEvent) => {
+    const payload = event.payload as {
+      id: string;
+      position: { x: number; y: number };
+      size: { width: number; height: number };
+      previousPosition?: { x: number; y: number };
+      previousSize?: { width: number; height: number };
+    };
+
+    if (!payload.previousPosition || !payload.previousSize) return;
+
+    const inverseEvent: BusEvent = {
+      type: CanvasEvents.ENTITY_RESIZED,
+      payload: {
+        id: payload.id,
+        position: payload.previousPosition,
+        size: payload.previousSize,
+        previousPosition: payload.position,
+        previousSize: payload.size,
+      },
+    };
+
+    useHistoryStore.getState().pushEntry({
+      event: { type: event.type, payload: event.payload },
+      inverseEvent,
+      timestamp: Date.now(),
+    });
+  });
+
+  // ENTITY_UPDATED history is pushed by canvas core (L4A-1) which has access to
+  // previous entity state from the scene graph. See src/canvas/core/init.ts.
+
+  // Entity config updated — includes previousValue for inverse
+  bus.subscribe(CanvasEvents.ENTITY_CONFIG_UPDATED, (event: BusEvent) => {
+    const payload = event.payload as {
+      id: string;
+      key: string;
+      value: unknown;
+      previousValue?: unknown;
+    };
+
+    if (payload.previousValue === undefined) return;
+
+    const inverseEvent: BusEvent = {
+      type: CanvasEvents.ENTITY_CONFIG_UPDATED,
+      payload: {
+        id: payload.id,
+        key: payload.key,
+        value: payload.previousValue,
+        previousValue: payload.value,
+      },
+    };
+
+    useHistoryStore.getState().pushEntry({
+      event: { type: event.type, payload: event.payload },
+      inverseEvent,
+      timestamp: Date.now(),
+    });
+  });
+
   // Entity deleted — inverse is create (payload should include full entity data)
   bus.subscribe(CanvasEvents.ENTITY_DELETED, (event: BusEvent) => {
     const payload = event.payload as { entityId: string; entityData?: unknown };

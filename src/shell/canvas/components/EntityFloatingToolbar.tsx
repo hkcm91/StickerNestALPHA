@@ -88,17 +88,16 @@ const toolbarStyle: React.CSSProperties = {
   position: "absolute",
   display: "flex",
   gap: "2px",
-  background: "color-mix(in srgb, var(--sn-surface-raised, #1A1A1F) 92%, transparent)",
   padding: "4px 5px",
-  borderRadius: "12px",
-  boxShadow: "0 6px 24px rgba(0, 0, 0, 0.35), 0 0 0 1px var(--sn-border-hover, rgba(255,255,255,0.08))",
   pointerEvents: "auto",
   zIndex: 1000,
-  backdropFilter: "blur(16px) saturate(1.2)",
   transform: "translateX(-50%)",
   userSelect: "none",
   animation: "sn-toolbar-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) both",
 };
+
+/** CSS classes applied to the toolbar container: sn-glass-heavy sn-neo sn-holo-border */
+const TOOLBAR_CLASSES = "sn-glass-heavy sn-neo sn-holo-border";
 
 const buttonBaseStyle: React.CSSProperties = {
   width: "30px",
@@ -253,6 +252,7 @@ export const EntityFloatingToolbar: React.FC<EntityFloatingToolbarProps> = ({
 
   return (
     <div
+      className={TOOLBAR_CLASSES}
       style={{
         ...toolbarStyle,
         left: position.x,

@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StickerNest Marketplace</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Satoshi:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-primary: #0a0a0f;
+      --bg-secondary: #1a1a2e;
+      --bg-tertiary: #2d2d4a;
+      --accent-teal: #00e5c7;
+      --accent-purple: #a855f7;
+      --text-primary: #f5f5fa;
+      --text-secondary: #a0a0b0;
+      --border-color: rgba(255, 255, 255, 0.08);
+      --glass-bg: rgba(26, 26, 46, 0.4);
+      --glow-teal: rgba(0, 229, 199, 0.2);
+      --glow-purple: rgba(168, 85, 247, 0.2);
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #0f0f20 100%);
+      background-attachment: fixed;
+      color: var(--text-primary);
+      font-family: 'Satoshi', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      overflow-x: hidden;
+    }
+
+    /* Noise texture overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' result='noise'/%3E%3C/filter%3E%3Crect width='100%' height='100%' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 1;
+      mix-blend-mode: overlay;
+    }
+
+    body > * {
+      position: relative;
+      z-index: 2;
+    }
+
+    /* Navigation Bar */
+    .navbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(20px);
+      background: var(--glass-bg);
+      border-bottom: 1px solid var(--border-color);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .navbar-logo {
+      font-family: 'Space Grotesk', monospace;
+      font-weight: 700;
+      font-size: 1.5rem;
+      background: linear-gradient(135deg, var(--accent-teal), var(--accent-purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .navbar-links {
+      display: flex;
+      gap: 2rem;
+      align-items: center;
+      list-style: none;
+    }
+
+    .navbar-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.95rem;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      position: relative;
+    }
+
+    .navbar-links a:hover {
+      color: var(--accent-teal);
+    }
+
+    .navbar-links a::after {
+      content: '';
+      position: absolute;
+      bottom: -4px;
+      left: 0;
+      width: 0;
+      height: 2px;
+      background: var(--accent-teal);
+      transition: width 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .navbar-links a:hover::after {
+      width: 100%;
+    }
+
+    .install-btn {
+      background: linear-gradient(135deg, var(--accent-teal), #00d4b0);
+      color: var(--bg-primary);
+      border: none;
+      padding: 0.6rem 1.4rem;
+      border-radius: 0.5rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      box-shadow: 0 0 20px var(--glow-teal);
+    }
+
+    .install-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px var(--glow-teal);
+    }
+
+    /* Main Container */
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 2rem;
+      z-index: 2;
+      position: relative;
+    }
+
+    /* Featured Carousel */
+    .featured-section {
+      margin: 3rem 0;
+      position: relative;
+    }
+
+    .featured-title {
+      font-family: 'Space Grotesk', monospace;
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 2rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .carousel {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 4rem;
+    }
+
+    .featured-card {
+      position: relative;
+      height: 220px;
+      border-radius: 1rem;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      border: 1px solid var(--border-color);
+      backdrop-filter: blur(20px);
+      background: var(--glass-bg);
+    }
+
+    .featured-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(135deg, rgba(0, 229, 199, 0.1), rgba(168, 85, 247, 0.1));
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .featured-card:hover {
+      transform: translateY(-8px);
+      border-color: var(--accent-teal);
+      box-shadow: 0 20px 60px rgba(0, 229, 199, 0.2), inset 0 0 40px rgba(0, 229, 199, 0.05);
+    }
+
+    .featured-thumbnail {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #1a1a2e 0%, #2d2d4a 50%, #1a1a2e 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3rem;
+      font-weight: 700;
+    }
+
+    .featured-overlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 1.5rem;
+      background: linear-gradient(180deg, transparent 0%, rgba(10, 10, 15, 0.95) 50%);
+      z-index: 2;
+    }
+
+    .featured-name {
+      font-family: 'Space Grotesk', monospace;
+      font-weight: 700;
+      font-size: 1.2rem;
+      margin-bottom: 0.3rem;
+    }
+
+    .featured-desc {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    /* Search & Filter Bar */
+    .search-filter-section {
+      display: flex;
+      gap: 1.5rem;
+      margin: 3rem 0;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .search-container {
+      flex: 1;
+      min-width: 250px;
+      position: relative;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 0.8rem 1.2rem;
+      background: var(--glass-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 0.6rem;
+      color: var(--text-primary);
+      font-size: 0.95rem;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      backdrop-filter: blur(20px);
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: var(--accent-teal);
+      box-shadow: 0 0 20px var(--glow-teal);
+    }
+
+    .search-input::placeholder {
+      color: var(--text-secondary);
+    }
+
+    .category-pills {
+      display: flex;
+      gap: 0.8rem;
+      flex-wrap: wrap;
+    }
+
+    .pill {
+      padding: 0.6rem 1.2rem;
+      background: var(--glass-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 2rem;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    .pill:hover {
+      border-color: var(--accent-teal);
+      color: var(--accent-teal);
+      box-shadow: 0 0 15px var(--glow-teal);
+    }
+
+    .pill.active {
+      background: linear-gradient(135deg, var(--accent-teal), #00d4b0);
+      color: var(--bg-primary);
+      border-color: var(--accent-teal);
+    }
+
+    /* Widget Grid */
+    .widgets-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 2rem;
+      margin: 3rem 0;
+    }
+
+    .widget-card {
+      position: relative;
+      border-radius: 1rem;
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+      backdrop-filter: blur(20px);
+      background: var(--glass-bg);
+      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .widget-card:hover {
+      transform: translateY(-8px);
+      border-color: var(--accent-purple);
+      box-shadow: 0 20px 50px rgba(168, 85, 247, 0.2), inset 0 0 30px rgba(168, 85, 247, 0.05);
+    }
+
+    .widget-thumbnail {
+      width: 100%;
+      aspect-ratio: 1;
+      background: linear-gradient(135deg, #2d2d4a 0%, #3d3d5a 50%, #1a1a2e 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3rem;
+      font-weight: 700;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .widget-thumbnail::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(0, 229, 199, 0.1) 0%, transparent 70%);
+      animation: glow 4s ease-in-out infinite;
+    }
+
+    @keyframes glow {
+      0%, 100% { transform: translate(0, 0); }
+      50% { transform: translate(20px, 20px); }
+    }
+
+    .widget-info {
+      padding: 1.2rem;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .widget-header {
+      margin-bottom: 0.8rem;
+    }
+
+    .widget-name {
+      font-family: 'Space Grotesk', monospace;
+      font-weight: 600;
+      font-size: 1rem;
+      margin-bottom: 0.3rem;
+    }
+
+    .widget-author {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+
+    .widget-stats {
+      display: flex;
+      gap: 1rem;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin-bottom: 1rem;
+      padding-top: 0.8rem;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .stat {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .quick-install {
+      width: 100%;
+      padding: 0.7rem;
+      background: linear-gradient(135deg, var(--accent-purple), #9333ea);
+      color: var(--text-primary);
+      border: none;
+      border-radius: 0.5rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      font-size: 0.9rem;
+    }
+
+    .quick-install:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px var(--glow-purple);
+    }
+
+    .rating {
+      display: flex;
+      align-items: center;
+      gap: 0.2rem;
+      color: var(--accent-teal);
+    }
+
+    .star {
+      font-size: 0.8rem;
+    }
+  </style>
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="navbar">
+    <div class="navbar-logo">StickerNest</div>
+    <ul class="navbar-links">
+      <li><a href="#browse">Browse</a></li>
+      <li><a href="#create">Create</a></li>
+      <li><a href="#docs">Docs</a></li>
+      <li><a href="#account">Account</a></li>
+    </ul>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="container">
+    <!-- Featured Section -->
+    <section class="featured-section">
+      <h2 class="featured-title">Featured This Week</h2>
+      <div class="carousel">
+        <div class="featured-card">
+          <div class="featured-thumbnail">🎨</div>
+          <div class="featured-overlay">
+            <div class="featured-name">Color Palette Generator</div>
+            <div class="featured-desc">AI-powered color harmony</div>
+          </div>
+        </div>
+        <div class="featured-card">
+          <div class="featured-thumbnail">📊</div>
+          <div class="featured-overlay">
+            <div class="featured-name">Data Visualizer Pro</div>
+            <div class="featured-desc">Beautiful charts & graphs</div>
+          </div>
+        </div>
+        <div class="featured-card">
+          <div class="featured-thumbnail">✨</div>
+          <div class="featured-overlay">
+            <div class="featured-name">Sparkle Effects</div>
+            <div class="featured-desc">Dynamic particle animations</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Search & Filters -->
+    <section class="search-filter-section">
+      <div class="search-container">
+        <input type="text" class="search-input" placeholder="Search widgets...">
+      </div>
+      <div class="category-pills">
+        <div class="pill active">All</div>
+        <div class="pill">Productivity</div>
+        <div class="pill">Design</div>
+        <div class="pill">Data</div>
+        <div class="pill">Games</div>
+      </div>
+    </section>
+
+    <!-- Widget Grid -->
+    <section class="widgets-grid" id="widgetGrid">
+      <!-- Widgets will be generated here -->
+    </section>
+  </div>
+
+  <script>
+    const widgets = [
+      { name: 'Task Master', emoji: '✓', author: 'Studio Labs', rating: 4.8, installs: '12.5K', reviews: 234 },
+      { name: 'Note Keeper', emoji: '📝', author: 'Alex Chen', rating: 4.6, installs: '8.3K', reviews: 156 },
+      { name: 'Timer Pro', emoji: '⏱️', author: 'Time Tools', rating: 4.9, installs: '24.1K', reviews: 412 },
+      { name: 'Weather Widget', emoji: '🌤️', author: 'MeteoX', rating: 4.7, installs: '15.8K', reviews: 298 },
+      { name: 'Code Snippet', emoji: '{"', author: 'Dev Suite', rating: 4.5, installs: '6.2K', reviews: 89 },
+      { name: 'Music Player', emoji: '♫', author: 'Audio Labs', rating: 4.8, installs: '19.4K', reviews: 356 },
+      { name: 'Calculator Plus', emoji: '🧮', author: 'Math Tools', rating: 4.4, installs: '5.9K', reviews: 72 },
+      { name: 'Calendar Sync', emoji: '📅', author: 'Sync Pro', rating: 4.7, installs: '11.2K', reviews: 201 },
+      { name: 'Habit Tracker', emoji: '📈', author: 'Wellness Co', rating: 4.9, installs: '18.6K', reviews: 389 },
+      { name: 'Pomodoro Timer', emoji: '🍅', author: 'Focus Labs', rating: 4.8, installs: '22.3K', reviews: 445 }
+    ];
+
+    const widgetGrid = document.getElementById('widgetGrid');
+
+    widgets.forEach(widget => {
+      const stars = '★'.repeat(Math.floor(widget.rating)) + '☆'.repeat(5 - Math.floor(widget.rating));
+      const card = document.createElement('div');
+      card.className = 'widget-card';
+      card.innerHTML = `
+        <div class="widget-thumbnail">${widget.emoji}</div>
+        <div class="widget-info">
+          <div class="widget-header">
+            <div class="widget-name">${widget.name}</div>
+            <div class="widget-author">by ${widget.author}</div>
+          </div>
+          <div class="widget-stats">
+            <div class="rating">
+              <span class="star">${widget.rating}</span>
+              <span class="star" style="font-size: 0.7rem;">(${widget.reviews})</span>
+            </div>
+            <div class="stat">${widget.installs} installs</div>
+          </div>
+          <button class="quick-install">Install</button>
+        </div>
+      `;
+      widgetGrid.appendChild(card);
+    });
+
+    // Search functionality
+    document.querySelector('.search-input').addEventListener('input', (e) => {
+      const query = e.target.value.toLowerCase();
+      document.querySelectorAll('.widget-card').forEach(card => {
+        const name = card.querySelector('.widget-name').textContent.toLowerCase();
+        card.style.display = name.includes(query) ? '' : 'none';
+      });
+    });
+
+    // Category pill click handlers
+    document.querySelectorAll('.pill').forEach(pill => {
+      pill.addEventListener('click', () => {
+        document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+        pill.classList.add('active');
+      });
+    });
+
+    // Install button animations
+    document.querySelectorAll('.quick-install').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const original = btn.textContent;
+        btn.textContent = 'Installing...';
+        setTimeout(() => {
+          btn.textContent = 'Installed!';
+          btn.style.background = 'linear-gradient(135deg, var(--accent-teal), #00d4b0)';
+          setTimeout(() => {
+            btn.textContent = original;
+            btn.style.background = '';
+          }, 1500);
+        }, 800);
+      });
+    });
+  </script>
+</body>
+</html>

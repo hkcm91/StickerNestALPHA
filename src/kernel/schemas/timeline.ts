@@ -265,7 +265,7 @@ export type LoopRegion = z.infer<typeof LoopRegionSchema>;
  */
 export const TimelineDataSchema = z.object({
   /** Composition settings (resolution, fps, duration) */
-  composition: CompositionSettingsSchema.default({}),
+  composition: CompositionSettingsSchema.default(CompositionSettingsSchema.parse({})),
   /** All tracks (ordered top to bottom) */
   tracks: z.array(TimelineTrackSchema).default([]),
   /** All clips across all tracks */
@@ -275,7 +275,7 @@ export const TimelineDataSchema = z.object({
   /** Navigation markers */
   markers: z.array(TimelineMarkerSchema).default([]),
   /** Loop region for preview */
-  loopRegion: LoopRegionSchema.default({}),
+  loopRegion: LoopRegionSchema.default(LoopRegionSchema.parse({})),
 });
 
 export type TimelineData = z.infer<typeof TimelineDataSchema>;

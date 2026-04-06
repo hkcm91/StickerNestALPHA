@@ -192,20 +192,17 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
       {/* Panel — always in DOM, visibility toggled */}
       <div
         data-testid="notification-panel"
+        className="sn-glass-heavy sn-neo sn-holo-border"
         style={{
           position: 'fixed',
           top: 48,
           right: 16,
           width: 380,
           maxHeight: 'calc(100vh - 80px)',
-          background: palette.surface,
-          border: `1px solid ${palette.border}`,
-          borderRadius: '12px',
           zIndex: 8001,
           display: isOpen ? 'flex' : 'none',
           flexDirection: 'column',
           fontFamily: themeVar('--sn-font-family'),
-          boxShadow: '0 16px 48px rgba(0,0,0,0.25)',
           overflow: 'hidden',
         }}
       >

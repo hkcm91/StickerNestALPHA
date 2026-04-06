@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StickerNest — Databases</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #1a1a24;
+            --surface-light: rgba(255, 255, 255, 0.05);
+            --surface-medium: rgba(255, 255, 255, 0.08);
+            --border: rgba(255, 255, 255, 0.1);
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --accent-teal: #00e5c7;
+            --accent-purple: #a855f7;
+            --accent-glow-teal: rgba(0, 229, 199, 0.3);
+            --accent-glow-purple: rgba(168, 85, 247, 0.3);
+        }
+
+        html {
+            background: var(--bg-primary);
+        }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: linear-gradient(135deg, var(--bg-primary) 0%, #16101f 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Dot grid background */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: radial-gradient(circle, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        /* Navbar */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 64px;
+            background: rgba(10, 10, 15, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 32px;
+            z-index: 100;
+        }
+
+        .navbar-logo {
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: -1px;
+            background: linear-gradient(135deg, var(--accent-teal), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .navbar-breadcrumb {
+            margin-left: 48px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            letter-spacing: 0.5px;
+        }
+
+        .navbar-spacer {
+            flex: 1;
+        }
+
+        /* Main content */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 96px 32px 48px;
+        }
+
+        .page-header {
+            margin-bottom: 48px;
+        }
+
+        .page-title {
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: -1.5px;
+            margin-bottom: 12px;
+        }
+
+        .page-subtitle {
+            font-size: 14px;
+            color: var(--text-secondary);
+            letter-spacing: 0.5px;
+        }
+
+        /* Controls section */
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 32px;
+            flex-wrap: wrap;
+        }
+
+        .search-container {
+            flex: 1;
+            min-width: 240px;
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 10px 16px 10px 40px;
+            background: var(--surface-medium);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 14px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent-teal);
+            background: var(--surface-light);
+            box-shadow: 0 0 20px var(--accent-glow-teal);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            font-size: 16px;
+        }
+
+        .filter-chips {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .chip {
+            padding: 6px 12px;
+            background: var(--surface-light);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+
+        .chip:hover {
+            background: var(--surface-medium);
+            border-color: var(--accent-teal);
+            color: var(--accent-teal);
+        }
+
+        .chip.active {
+            background: var(--accent-glow-teal);
+            border-color: var(--accent-teal);
+            color: var(--accent-teal);
+        }
+
+        .actions-group {
+            display: flex;
+            gap: 12px;
+            margin-left: auto;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-teal), var(--accent-purple));
+            color: var(--bg-primary);
+            box-shadow: 0 0 20px var(--accent-glow-teal), 0 8px 16px rgba(0, 229, 199, 0.2);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 30px var(--accent-glow-teal), 0 12px 24px rgba(0, 229, 199, 0.3);
+        }
+
+        .btn-secondary {
+            background: var(--surface-medium);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--surface-light);
+            border-color: var(--accent-purple);
+            color: var(--accent-purple);
+        }
+
+        .view-toggle {
+            display: flex;
+            gap: 4px;
+            background: var(--surface-light);
+            padding: 4px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+        }
+
+        .view-toggle-btn {
+            width: 32px;
+            height: 32px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            font-size: 16px;
+        }
+
+        .view-toggle-btn.active {
+            background: var(--accent-glow-purple);
+            color: var(--accent-purple);
+        }
+
+        /* Grid layout */
+        .database-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Database card */
+        .db-card {
+            position: relative;
+            background: var(--surface-light);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            backdrop-filter: blur(10px);
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .db-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, var(--accent-glow-teal), var(--accent-glow-purple));
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            border-radius: 12px;
+        }
+
+        .db-card:hover {
+            border-color: var(--accent-teal);
+            background: var(--surface-medium);
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0, 229, 199, 0.15), 0 0 30px var(--accent-glow-teal);
+        }
+
+        .db-card:hover::before {
+            opacity: 0.05;
+        }
+
+        .db-card-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .db-icon {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .db-icon svg {
+            width: 100%;
+            height: 100%;
+            filter: drop-shadow(0 0 8px var(--accent-glow-teal));
+        }
+
+        .db-name {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            letter-spacing: -0.5px;
+        }
+
+        .db-type {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+        }
+
+        .db-meta {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+        }
+
+        .db-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 4px;
+        }
+
+        .db-actions {
+            margin-top: auto;
+            display: flex;
+            gap: 8px;
+            justify-content: space-between;
+        }
+
+        .db-action-btn {
+            flex: 1;
+            padding: 8px 12px;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            font-size: 11px;
+            font-family: inherit;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            letter-spacing: 0.5px;
+        }
+
+        .db-action-btn:hover {
+            border-color: var(--accent-purple);
+            color: var(--accent-purple);
+            background: var(--accent-glow-purple);
+        }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 80px 32px;
+        }
+
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 24px;
+            opacity: 0.3;
+        }
+
+        .empty-state-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .empty-state-text {
+            color: var(--text-secondary);
+            margin-bottom: 32px;
+            font-size: 14px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 80px 16px 32px;
+            }
+
+            .page-title {
+                font-size: 24px;
+            }
+
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .search-container {
+                order: -1;
+            }
+
+            .actions-group {
+                margin-left: 0;
+            }
+
+            .database-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .navbar {
+                padding: 0 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="navbar-logo">StickerNest</div>
+        <div class="navbar-breadcrumb">Workspace / Databases</div>
+        <div class="navbar-spacer"></div>
+    </nav>
+
+    <!-- Main content -->
+    <div class="container">
+        <div class="page-header">
+            <h1 class="page-title">Databases</h1>
+            <p class="page-subtitle">Manage your data sources and collections</p>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+            <div class="search-container">
+                <span class="search-icon">🔍</span>
+                <input type="text" class="search-input" placeholder="Search databases...">
+            </div>
+
+            <div class="filter-chips">
+                <div class="chip active">All</div>
+                <div class="chip">Documents</div>
+                <div class="chip">Tables</div>
+                <div class="chip">Shared</div>
+            </div>
+
+            <div class="actions-group">
+                <button class="btn btn-secondary">⋮ More</button>
+                <div class="view-toggle">
+                    <button class="view-toggle-btn active">⊞</button>
+                    <button class="view-toggle-btn">≡</button>
+                </div>
+                <button class="btn btn-primary">+ New Database</button>
+            </div>
+        </div>
+
+        <!-- Database grid -->
+        <div class="database-grid">
+            <!-- Doc database -->
+            <div class="db-card">
+                <div class="db-card-content">
+                    <div class="db-icon">
+                        <svg viewBox="0 0 48 48" fill="none">
+                            <rect x="8" y="6" width="32" height="36" rx="2" stroke="currentColor" stroke-width="2" fill="none"/>
+                            <line x1="14" y1="14" x2="34" y2="14" stroke="currentColor" stroke-width="1.5"/>
+                            <line x1="14" y1="20" x2="34" y2="20" stroke="currentColor" stroke-width="1.5"/>
+                            <line x1="14" y1="26" x2="34" y2="26" stroke="currentColor" stroke-width="1.5"/>
+                            <line x1="14" y1="32" x2="28" y2="32" stroke="currentColor" stroke-width="1.5"/>
+                            <circle cx="24" cy="24" r="20" fill="none" stroke="url(#grad1)" stroke-width="2" opacity="0.3"/>
+                            <defs>
+                                <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color:var(--accent-teal);stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:var(--accent-purple);stop-opacity:1" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                    </div>
+                    <h3 class="db-name">Project Notes</h3>
+                    <div class="db-type">Document</div>
+                    <div class="db-meta">
+                        <div class="db-meta-item">📝 12 pages</div>
+                        <div class="db-meta-item">👤 You + 2 others</div>
+                        <div class="db-meta-item">🔄 Updated today</div>
+                    </div>
+                </div>
+                <div class="db-actions">
+                    <button class="db-action-btn">Open</button>
+                    <button class="db-action-btn">Settings</button>
+                </div>
+            </div>
+
+            <!-- Table database -->
+            <div class="db-card">
+                <div class="db-card-content">
+                    <div class="db-icon">
+                        <svg viewBox="0 0 48 48" fill="none">
+                            <rect x="6" y="8" width="36" height="32" rx="2" stroke="currentColor" stroke-width="2"/>
+                            <line x1="6" y1="16" x2="42" y2="16" stroke="currentColor" stroke-width="1.5"/>
+                            <line x1="6" y1="24" x2="42" y2="24" stroke="currentColor" stroke-width="1.5"/>
+                            <line x1="6" y1="32" x2="42" y2="32" stroke="currentColor" stroke-width="1.5"/>
+                            <line x1="18" y1="8" x2="18" y2="40" stroke="currentColor" stroke-width="1.5"/>
+                            <line x1="30" y1="8" x2="30" y2="40" stroke="currentColor" stroke-width="1.5"/>
+                            <circle cx="24" cy="24" r="20" fill="none" stroke="url(#grad2)" stroke-width="2" opacity="0.3"/>
+                            <defs>
+                                <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color:var(--accent-purple);stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:var(--accent-teal);stop-opacity:1" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                    </div>
+                    <h3 class="db-name">Team Members</h3>
+                    <div class="db-type">Table</div>
+                    <div class="db-meta">
+                        <div class="db-meta-item">📊 47 rows</div>
+                        <div class="db-meta-item">👤 You + 5 others</div>
+                        <div class="db-meta-item">🔄 Updated 2h ago</div>
+                    </div>
+                </div>
+                <div class="db-actions">
+                    <button class="db-action-btn">Open</button>
+                    <button class="db-action-btn">Settings</button>
+                </div>
+            </div>
+
+            <!-- Note database -->
+            <div class="db-card">
+                <div class="db-card-content">
+                    <div class="db-icon">
+                        <svg viewBox="0 0 48 48" fill="none">
+                            <rect x="10" y="10" width="28" height="28" rx="2" stroke="currentColor" stroke-width="2"/>
+                            <path d="M14 18 L34 18" stroke="currentColor" stroke-width="1.5"/>
+                            <path d="M14 24 L34 24" stroke="currentColor" stroke-width="1.5"/>
+                            <path d="M14 30 L28 30" stroke="currentColor" stroke-width="1.5"/>
+                            <circle cx="24" cy="24" r="20" fill="none" stroke="url(#grad3)" stroke-width="2" opacity="0.3"/>
+                            <defs>
+                                <linearGradient id="grad3" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color:var(--accent-teal);stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:var(--accent-purple);stop-opacity:1" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                    </div>
+                    <h3 class="db-name">Daily Standup</h3>
+                    <div class="db-type">Note</div>
+                    <div class="db-meta">
+                        <div class="db-meta-item">📄 Shared</div>
+                        <div class="db-meta-item">👤 You + 8 others</div>
+                        <div class="db-meta-item">🔄 Updated 4h ago</div>
+                    </div>
+                </div>
+                <div class="db-actions">
+                    <button class="db-action-btn">Open</button>
+                    <button class="db-action-btn">Settings</button>
+                </div>
+            </div>
+
+            <!-- Folder database -->
+            <div class="db-card">
+                <div class="db-card-content">
+                    <div class="db-icon">
+                        <svg viewBox="0 0 48 48" fill="none">
+                            <path d="M8 14 L8 36 Q8 40 12 40 L40 40 Q44 40 44 36 L44 16 Q44 12 40 12 L20 12 L14 8 Q12 6 10 8 L8 14 Z" stroke="currentColor" stroke-width="2" fill="none"/>
+                            <line x1="14" y1="20" x2="38" y2="20" stroke="currentColor" stroke-width="1.5"/>
+                            <line x1="14" y1="26" x2="38" y2="26" stroke="currentColor" stroke-width="1.5"/>
+                            <line x1="14" y1="32" x2="32" y2="32" stroke="currentColor" stroke-width="1.5"/>
+                            <circle cx="24" cy="24" r="20" fill="none" stroke="url(#grad4)" stroke-width="2" opacity="0.3"/>
+                            <defs>
+                                <linearGradient id="grad4" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color:var(--accent-purple);stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:var(--accent-teal);stop-opacity:1" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                    </div>
+                    <h3 class="db-name">Archive</h3>
+                    <div class="db-type">Folder</div>
+                    <div class="db-meta">
+                        <div class="db-meta-item">📁 12 items</div>
+                        <div class="db-meta-item">👤 You</div>
+                        <div class="db-meta-item">🔄 Updated 1w ago</div>
+                    </div>
+                </div>
+                <div class="db-actions">
+                    <button class="db-action-btn">Open</button>
+                    <button class="db-action-btn">Settings</button>
+                </div>
+            </div>
+
+            <!-- Custom database -->
+            <div class="db-card">
+                <div class="db-card-content">
+                    <div class="db-icon">
+                        <svg viewBox="0 0 48 48" fill="none">
+                            <rect x="8" y="12" width="32" height="24" rx="2" stroke="currentColor" stroke-width="2"/>
+                            <circle cx="16" cy="20" r="3" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                            <circle cx="32" cy="20" r="3" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                            <path d="M12 28 L20 32 L28 30 L36 34" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                            <line x1="8" y1="38" x2="40" y2="38" stroke="currentColor" stroke-width="2"/>
+                            <circle cx="24" cy="24" r="20" fill="none" stroke="url(#grad5)" stroke-width="2" opacity="0.3"/>
+                            <defs>
+                                <linearGradient id="grad5" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color:var(--accent-teal);stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:var(--accent-purple);stop-opacity:1" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                    </div>
+                    <h3 class="db-name">Analytics</h3>
+                    <div class="db-type">Custom</div>
+                    <div class="db-meta">
+                        <div class="db-meta-item">📈 Real-time data</div>
+                        <div class="db-meta-item">👤 You + 3 others</div>
+                        <div class="db-meta-item">🔄 Syncing now</div>
+                    </div>
+                </div>
+                <div class="db-actions">
+                    <button class="db-action-btn">Open</button>
+                    <button class="db-action-btn">Settings</button>
+                </div>
+            </div>
+
+            <!-- Shared database -->
+            <div class="db-card">
+                <div class="db-card-content">
+                    <div class="db-icon">
+                        <svg viewBox="0 0 48 48" fill="none">
+                            <circle cx="18" cy="18" r="8" stroke="currentColor" stroke-width="2" fill="none"/>
+                            <circle cx="32" cy="18" r="8" stroke="currentColor" stroke-width="2" fill="none"/>
+                            <circle cx="25" cy="30" r="8" stroke="currentColor" stroke-width="2" fill="none"/>
+                            <path d="M26 38 L26 42 M22 40 L30 40" stroke="currentColor" stroke-width="1.5"/>
+                            <circle cx="24" cy="24" r="20" fill="none" stroke="url(#grad6)" stroke-width="2" opacity="0.3"/>
+                            <defs>
+                                <linearGradient id="grad6" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color:var(--accent-purple);stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:var(--accent-teal);stop-opacity:1" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                    </div>
+                    <h3 class="db-name">Client Data</h3>
+                    <div class="db-type">Shared</div>
+                    <div class="db-meta">
+                        <div class="db-meta-item">🔗 5 collaborators</div>
+                        <div class="db-meta-item">👤 6 people</div>
+                        <div class="db-meta-item">🔄 Live collaboration</div>
+                    </div>
+                </div>
+                <div class="db-actions">
+                    <button class="db-action-btn">Open</button>
+                    <button class="db-action-btn">Settings</button>
+                </div>
+            </div>
+
+            <!-- Template database -->
+            <div class="db-card">
+                <div class="db-card-content">
+                    <div class="db-icon">
+                        <svg viewBox="0 0 48 48" fill="none">
+                            <rect x="10" y="8" width="28" height="32" rx="2" stroke="currentColor" stroke-width="2"/>
+                            <rect x="14" y="12" width="20" height="12" rx="1" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                            <line x1="14" y1="28" x2="34" y2="28" stroke="currentColor" stroke-width="1.5"/>
+                            <line x1="14" y1="33" x2="34" y2="33" stroke="currentColor" stroke-width="1.5"/>
+                            <circle cx="24" cy="24" r="20" fill="none" stroke="url(#grad7)" stroke-width="2" opacity="0.3"/>
+                            <defs>
+                                <linearGradient id="grad7" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color:var(--accent-teal);stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:var(--accent-purple);stop-opacity:1" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                    </div>
+                    <h3 class="db-name">Template</h3>
+                    <div class="db-type">Template</div>
+                    <div class="db-meta">
+                        <div class="db-meta-item">🏆 Read-only</div>
+                        <div class="db-meta-item">👤 You</div>
+                        <div class="db-meta-item">📌 Pinned</div>
+                    </div>
+                </div>
+                <div class="db-actions">
+                    <button class="db-action-btn">Clone</button>
+                    <button class="db-action-btn">Settings</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Search functionality
+        const searchInput = document.querySelector('.search-input');
+        const cards = document.querySelectorAll('.db-card');
+
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            cards.forEach(card => {
+                const name = card.querySelector('.db-name').textContent.toLowerCase();
+                const type = card.querySelector('.db-type').textContent.toLowerCase();
+                const match = name.includes(query) || type.includes(query);
+                card.style.display = match ? '' : 'none';
+            });
+        });
+
+        // Filter chips
+        const chips = document.querySelectorAll('.chip');
+        chips.forEach(chip => {
+            chip.addEventListener('click', () => {
+                chips.forEach(c => c.classList.remove('active'));
+                chip.classList.add('active');
+            });
+        });
+
+        // View toggle
+        const viewToggles = document.querySelectorAll('.view-toggle-btn');
+        viewToggles.forEach(btn => {
+            btn.addEventListener('click', () => {
+                viewToggles.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+        });
+
+        // Button animations
+        document.querySelectorAll('.btn, .db-action-btn').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                // Prevent default and show feedback
+                e.preventDefault();
+            });
+        });
+    </script>
+</body>
+</html>

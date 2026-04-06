@@ -92,16 +92,13 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   return (
     <div
       data-testid="chat-panel"
+      className="sn-glass-heavy sn-neo sn-holo-border"
       style={{
         position: 'fixed',
         top: 48,
         right: 16,
         width: 360,
         maxHeight: 'calc(100vh - 64px)',
-        background: 'var(--sn-surface, #fff)',
-        border: '1px solid var(--sn-border, #e5e7eb)',
-        borderRadius: 'var(--sn-radius, 12px)',
-        boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
         display: isOpen ? 'flex' : 'none',
         flexDirection: 'column',
         zIndex: 9000,
@@ -112,7 +109,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       <div
         style={{
           padding: '12px 16px',
-          borderBottom: '1px solid var(--sn-border, #e5e7eb)',
+          borderBottom: '1px solid var(--sn-border, rgba(255,255,255,0.06))',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
@@ -128,7 +125,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             border: 'none',
             cursor: 'pointer',
             fontSize: 18,
-            color: 'var(--sn-text-muted, #6b7280)',
+            color: 'var(--sn-text-muted, #7A7784)',
           }}
         >
           ×
@@ -152,7 +149,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           <div
             style={{
               textAlign: 'center',
-              color: 'var(--sn-text-muted, #6b7280)',
+              color: 'var(--sn-text-muted, #7A7784)',
               fontSize: 13,
               padding: 20,
             }}
@@ -164,7 +161,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           <div
             style={{
               textAlign: 'center',
-              color: 'var(--sn-text-muted, #6b7280)',
+              color: 'var(--sn-text-muted, #7A7784)',
               fontSize: 13,
               padding: 20,
             }}
@@ -185,7 +182,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                 background: isOwn
                   ? 'var(--sn-accent, #6366f1)'
                   : 'var(--sn-bg, #f3f4f6)',
-                color: isOwn ? '#fff' : 'var(--sn-text, #1a1a2e)',
+                color: isOwn ? '#fff' : 'var(--sn-text, #E8E6ED)',
                 fontSize: 13,
                 lineHeight: 1.4,
                 wordBreak: 'break-word',
@@ -230,7 +227,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         <div
           style={{
             padding: 12,
-            borderTop: '1px solid var(--sn-border, #e5e7eb)',
+            borderTop: '1px solid var(--sn-border, rgba(255,255,255,0.06))',
             display: 'flex',
             gap: 8,
           }}
@@ -246,13 +243,13 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             style={{
               flex: 1,
               padding: '8px 12px',
-              border: '1px solid var(--sn-border, #e5e7eb)',
+              border: '1px solid var(--sn-border, rgba(255,255,255,0.06))',
               borderRadius: 'var(--sn-radius, 8px)',
               fontSize: 13,
               fontFamily: 'inherit',
               outline: 'none',
-              background: 'var(--sn-bg, #f9fafb)',
-              color: 'var(--sn-text, #1a1a2e)',
+              background: 'var(--sn-bg, rgba(10,10,14,0.5))',
+              color: 'var(--sn-text, #E8E6ED)',
             }}
           />
           <button

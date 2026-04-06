@@ -47,6 +47,23 @@ const validFullTokens: FullThemeTokens = {
   '--sn-success': '#5AA878',
   '--sn-warning': '#D4A04C',
   '--sn-error': '#C85858',
+  '--sn-surface-elevated': 'rgba(30,30,35,0.80)',
+  '--sn-glow': 'rgba(232,128,108,0.08)',
+  '--sn-accent-muted': 'rgba(78,123,142,0.35)',
+  '--sn-transition-spring': 'cubic-bezier(0.16, 1, 0.3, 1)',
+  '--sn-blur-surface': '16px',
+  '--sn-surface-glass-heavy': 'rgba(20,17,24,0.92)',
+  '--sn-surface-liquid-glass': 'rgba(20,17,24,0.55)',
+  '--sn-blur-heavy': '40px',
+  '--sn-border-accent': 'rgba(78,123,142,0.30)',
+  '--sn-accent-glow': 'rgba(184,160,216,0.15)',
+  '--sn-chrome-gradient': 'linear-gradient(135deg, #B8A0D8 0%, #4E7B8E 40%, #B0D0D8 70%, #B8A0D8 100%)',
+  '--sn-holographic-border': 'linear-gradient(135deg, rgba(184,160,216,0.4), rgba(78,123,142,0.2), rgba(176,208,216,0.4))',
+  '--sn-grain-opacity': '0.035',
+  '--sn-hex-opacity': '0.04',
+  '--sn-refraction-edge': 'rgba(255,255,255,0.08)',
+  '--sn-shadow-neo': '6px 6px 16px rgba(0,0,0,0.5), -2px -2px 8px rgba(255,255,255,0.03)',
+  '--sn-shadow-neo-inset': 'inset 2px 2px 6px rgba(0,0,0,0.4), inset -1px -1px 4px rgba(255,255,255,0.02)',
 };
 
 describe('Theme schemas', () => {
@@ -106,6 +123,7 @@ describe('Theme schemas', () => {
       expect(ThemeNameSchema.safeParse('bubbles-sky').success).toBe(true);
       expect(ThemeNameSchema.safeParse('autumn-fireflies').success).toBe(true);
       expect(ThemeNameSchema.safeParse('high-contrast').success).toBe(true);
+      expect(ThemeNameSchema.safeParse('ember').success).toBe(true);
     });
 
     it('rejects old theme names', () => {

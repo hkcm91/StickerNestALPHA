@@ -55,7 +55,7 @@ export const PresenceAvatarBar: React.FC = () => {
             fontWeight: 700,
             color: '#fff',
             cursor: 'default',
-            border: '2px solid var(--sn-surface, #fff)',
+            border: '2px solid var(--sn-surface, #131317)',
           }}
         >
           {getInitials(user.displayName)}
@@ -74,7 +74,7 @@ export const PresenceAvatarBar: React.FC = () => {
             fontSize: 10,
             fontWeight: 700,
             color: '#fff',
-            border: '2px solid var(--sn-surface, #fff)',
+            border: '2px solid var(--sn-surface, #131317)',
           }}
         >
           +{overflow}

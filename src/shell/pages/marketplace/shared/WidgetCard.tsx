@@ -5,19 +5,25 @@
  * @layer L6
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 
+import { ANIMATION_DURATION, ANIMATION_EASING } from '../../../theme/animation-tokens';
 import { themeVar } from '../../../theme/theme-vars';
 import { cardStyle, officialBadge } from '../styles';
 
+import type { ReviewStatus } from '@sn/types';
+
 import { PriceTag } from './PriceTag';
+import { SecurityBadge } from './SecurityBadge';
 import { StarRating } from './StarRating';
+import { WidgetThumbnail } from './WidgetThumbnail';
 
 export interface WidgetCardProps {
   id: string;
   name: string;
   description?: string | null;
   thumbnailUrl?: string | null;
+  category?: string | null;
   ratingAverage: number | null;
   ratingCount: number;
   installCount: number;
@@ -26,6 +32,7 @@ export interface WidgetCardProps {
   currency?: string;
   isOfficial?: boolean;
   isDeprecated?: boolean;
+  reviewStatus?: ReviewStatus;
   onClick: (widgetId: string) => void;
   /** Optional action slot rendered below the card body (e.g., InstallButton). */
   action?: React.ReactNode;
@@ -36,6 +43,7 @@ export const WidgetCard: React.FC<WidgetCardProps> = ({
   name,
   description,
   thumbnailUrl,
+  category,
   ratingAverage,
   ratingCount,
   installCount,
@@ -44,13 +52,19 @@ export const WidgetCard: React.FC<WidgetCardProps> = ({
   currency,
   isOfficial,
   isDeprecated,
+  reviewStatus,
   onClick,
   action,
 }) => {
+  const [hovered, setHovered] = useState(false);
+
   return (
     <div
       data-testid="marketplace-widget-card"
+      className="sn-glass sn-neo sn-lift-on-hover sn-holo-border"
       onClick={() => onClick(id)}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       style={{
         ...cardStyle,
         opacity: isDeprecated ? 0.6 : 1,
@@ -61,40 +75,39 @@ export const WidgetCard: React.FC<WidgetCardProps> = ({
         <img
           src={thumbnailUrl}
           alt={name}
-          style={{ width: '100%', height: '140px', objectFit: 'cover' }}
+          style={{ width: '100%', height: '120px', objectFit: 'cover' }}
         />
       ) : (
-        <div
-          style={{
-            width: '100%',
-            height: '140px',
-            background: themeVar('--sn-bg'),
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '32px',
-            color: themeVar('--sn-text-muted'),
-          }}
-        >
-          W
-        </div>
+        <WidgetThumbnail name={name} category={category} height={120} />
       )}
 
-      {isDeprecated && (
+      {(isDeprecated || (reviewStatus && reviewStatus !== 'approved')) && (
         <div
           style={{
             position: 'absolute',
             top: 8,
             right: 8,
-            padding: '2px 8px',
-            borderRadius: '6px',
-            fontSize: '10px',
-            fontWeight: 600,
-            background: '#6b7280',
-            color: '#fff',
+            display: 'flex',
+            gap: '4px',
           }}
         >
-          Deprecated
+          {isDeprecated && (
+            <span
+              style={{
+                padding: '2px 8px',
+                borderRadius: '6px',
+                fontSize: '10px',
+                fontWeight: 600,
+                background: '#6b7280',
+                color: '#fff',
+              }}
+            >
+              Deprecated
+            </span>
+          )}
+          {reviewStatus && reviewStatus !== 'approved' && (
+            <SecurityBadge reviewStatus={reviewStatus} size="small" />
+          )}
         </div>
       )}
 
@@ -122,8 +135,9 @@ export const WidgetCard: React.FC<WidgetCardProps> = ({
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               display: '-webkit-box',
-              WebkitLineClamp: 2,
+              WebkitLineClamp: 3,
               WebkitBoxOrient: 'vertical',
+              lineHeight: '1.4',
             }}
           >
             {description}
@@ -146,21 +160,34 @@ export const WidgetCard: React.FC<WidgetCardProps> = ({
                 <span>({ratingCount})</span>
               </>
             ) : (
-              '—'
+              <span>No ratings</span>
             )}
-            <span style={{ marginLeft: 4 }}>
-              {installCount.toLocaleString()} installs
-            </span>
           </span>
-          <PriceTag isFree={isFree} priceCents={priceCents} currency={currency} style={{ fontSize: '12px' }} />
+          <span>
+            <PriceTag isFree={isFree} priceCents={priceCents} currency={currency} />
+          </span>
         </div>
 
-        {action && (
-          <div style={{ marginTop: '8px' }} onClick={(e) => e.stopPropagation()}>
-            {action}
-          </div>
-        )}
+        <div
+          style={{
+            fontSize: '11px',
+            color: themeVar('--sn-text-muted'),
+            marginTop: '4px',
+          }}
+        >
+          {installCount.toLocaleString()} installs
+        </div>
       </div>
+
+      {action && (
+        <div
+          style={{ padding: '0 12px 12px' }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {action}
+        </div>
+      )}
     </div>
   );
 };
+        

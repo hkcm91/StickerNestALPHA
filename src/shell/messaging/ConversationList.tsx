@@ -121,12 +121,11 @@ export const ConversationList: React.FC<ConversationListProps> = ({ activeUserId
   return (
     <div
       data-testid="conversation-list"
+      className="sn-glass sn-holo-border"
       style={{
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
-        background: themeVar('--sn-surface'),
-        borderRight: `1px solid ${themeVar('--sn-border')}`,
       }}
     >
       {/* Header */}

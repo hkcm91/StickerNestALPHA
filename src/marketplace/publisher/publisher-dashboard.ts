@@ -31,6 +31,8 @@ export interface PublisherDashboard {
     html: string,
     manifest: WidgetManifest,
     thumbnail: Blob | null,
+    reviewStatus?: string,
+    securityScan?: Record<string, unknown> | null,
   ): Promise<PublishResult>;
   update(
     widgetId: string,
@@ -52,9 +54,11 @@ export function createPublisherDashboard(authorId: string): PublisherDashboard {
       html: string,
       manifest: WidgetManifest,
       thumbnail: Blob | null,
+      reviewStatus?: string,
+      securityScan?: Record<string, unknown> | null,
     ): Promise<PublishResult> {
       try {
-        const { widgetId } = await api.publish(authorId, html, manifest, thumbnail);
+        const { widgetId } = await api.publish(authorId, html, manifest, thumbnail, reviewStatus, securityScan);
 
         bus.emit(MarketplaceEvents.WIDGET_PUBLISHED, {
           widgetId,

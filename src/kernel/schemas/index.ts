@@ -286,6 +286,22 @@ export {
 } from "./pipeline";
 
 // =============================================================================
+// Marketplace Pipeline Template Schemas
+// =============================================================================
+export {
+  // Schemas
+  TemplateConfigFieldSchema,
+  TemplateRequiredWidgetSchema,
+  MarketplacePipelineTemplateSchema,
+  // Types
+  type TemplateConfigField,
+  type TemplateRequiredWidget,
+  type MarketplacePipelineTemplate,
+  // JSON Schemas
+  MarketplacePipelineTemplateJSONSchema,
+} from "./marketplace-pipeline-template";
+
+// =============================================================================
 // Pipeline Intelligence (Port Matching & Templates)
 // =============================================================================
 export {
@@ -978,3 +994,18 @@ export {
   AIActionBatchJSONSchema,
   AICanvasContextJSONSchema,
 } from "./ai-action";
+
+// =============================================================================
+// Widget Package Schemas (.zip format, sample widget registry)
+// =============================================================================
+export {
+  // Schemas
+  WidgetPackageContentsSchema,
+  SampleWidgetEntrySchema,
+  // Types
+  type WidgetPackageContents,
+  type SampleWidgetEntry,
+  // JSON Schemas
+  WidgetPackageContentsJSONSchema,
+  SampleWidgetEntryJSONSchema,
+} from "./widget-package";

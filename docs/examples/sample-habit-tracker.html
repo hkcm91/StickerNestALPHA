@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Track daily habits with a visual streak grid and completion stats">
+  <title>Habit Tracker</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: var(--sn-font-family, 'Inter', system-ui, sans-serif);
+      background: var(--sn-bg, #0a0a0a);
+      color: var(--sn-text, #e0e0e0);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .tracker {
+      padding: 24px;
+      border-radius: var(--sn-radius, 12px);
+      background: var(--sn-surface, #141414);
+      border: 1px solid var(--sn-border, #2a2a2a);
+      width: 320px;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .title {
+      font-size: 16px;
+      font-weight: 700;
+    }
+    .streak-badge {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 12px;
+      background: rgba(234, 179, 8, 0.15);
+      color: #eab308;
+    }
+    .habits {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .habit-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: var(--sn-bg, #0a0a0a);
+      cursor: pointer;
+      transition: background 0.15s;
+      user-select: none;
+    }
+    .habit-row:hover { background: rgba(255,255,255,0.03); }
+    .habit-check {
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      border: 2px solid var(--sn-border, #2a2a2a);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+    .habit-check.done {
+      background: var(--sn-accent, #6366f1);
+      border-color: var(--sn-accent, #6366f1);
+      color: #fff;
+    }
+    .habit-name {
+      flex: 1;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .habit-name.done { text-decoration: line-through; opacity: 0.5; }
+    .habit-streak {
+      font-size: 11px;
+      color: var(--sn-text-muted, #888);
+    }
+    .week-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+      margin-bottom: 16px;
+    }
+    .week-label {
+      text-align: center;
+      font-size: 10px;
+      color: var(--sn-text-muted, #888);
+      padding-bottom: 4px;
+    }
+    .day-cell {
+      aspect-ratio: 1;
+      border-radius: 4px;
+      background: var(--sn-bg, #0a0a0a);
+      border: 1px solid var(--sn-border, #2a2a2a);
+      transition: background 0.2s;
+    }
+    .day-cell.partial { background: rgba(99, 102, 241, 0.3); border-color: rgba(99, 102, 241, 0.4); }
+    .day-cell.full { background: var(--sn-accent, #6366f1); border-color: var(--sn-accent, #6366f1); }
+    .day-cell.today { box-shadow: 0 0 0 2px var(--sn-accent, #6366f1); }
+    .stats {
+      display: flex;
+      justify-content: space-around;
+      text-align: center;
+    }
+    .stat-value { font-size: 20px; font-weight: 700; }
+    .stat-label { font-size: 11px; color: var(--sn-text-muted, #888); }
+    .add-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .add-input {
+      flex: 1;
+      padding: 8px 12px;
+      border-radius: var(--sn-radius, 8px);
+      border: 1px solid var(--sn-border, #2a2a2a);
+      background: var(--sn-bg, #0a0a0a);
+      color: var(--sn-text, #e0e0e0);
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+    }
+    .add-input:focus { border-color: var(--sn-accent, #6366f1); }
+    .add-btn {
+      padding: 8px 14px;
+      border: none;
+      border-radius: var(--sn-radius, 8px);
+      background: var(--sn-accent, #6366f1);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+    }
+    .add-btn:hover { opacity: 0.85; }
+  </style>
+</head>
+<body>
+  <div class="tracker">
+    <div class="header">
+      <div class="title">Today's Habits</div>
+      <div class="streak-badge" id="streakBadge">0 day streak</div>
+    </div>
+
+    <div class="habits" id="habitList"></div>
+
+    <div class="add-row">
+      <input class="add-input" id="addInput" type="text" placeholder="Add a habit..." maxlength="40" />
+      <button class="add-btn" id="addBtn">+</button>
+    </div>
+
+    <div style="margin-top: 16px;">
+      <div class="week-grid" id="weekGrid"></div>
+    </div>
+
+    <div class="stats" id="stats">
+      <div><div class="stat-value" id="statDone">0</div><div class="stat-label">Done</div></div>
+      <div><div class="stat-value" id="statTotal">0</div><div class="stat-label">Total</div></div>
+      <div><div class="stat-value" id="statRate">0%</div><div class="stat-label">Rate</div></div>
+    </div>
+  </div>
+
+  <script>
+    StickerNest.register({
+      id: 'habit-tracker',
+      name: 'Habit Tracker',
+      version: '1.0.0',
+      description: 'Track daily habits with streaks and completion stats',
+      category: 'productivity',
+      tags: ['habits', 'tracker', 'daily', 'productivity', 'streak'],
+      license: 'MIT',
+    });
+
+    const today = new Date().toISOString().slice(0, 10);
+    let habits = [
+      { id: '1', name: 'Meditate', streak: 3 },
+      { id: '2', name: 'Exercise', streak: 7 },
+      { id: '3', name: 'Read 20 pages', streak: 1 },
+    ];
+    let completedToday = {};
+    let weekData = [0, 0, 0, 0, 0, 0, 0];
+
+    function render() {
+      const list = document.getElementById('habitList');
+      list.innerHTML = '';
+      habits.forEach((h) => {
+        const done = !!completedToday[h.id];
+        const row = document.createElement('div');
+        row.className = 'habit-row';
+        row.innerHTML = `
+          <div class="habit-check ${done ? 'done' : ''}">${done ? '\u2713' : ''}</div>
+          <div class="habit-name ${done ? 'done' : ''}">${h.name}</div>
+          <div class="habit-streak">${h.streak}d</div>
+        `;
+        row.addEventListener('click', () => {
+          completedToday[h.id] = !completedToday[h.id];
+          if (completedToday[h.id]) {
+            h.streak++;
+            StickerNest.emit('habit.completed', { habit: h.name, streak: h.streak });
+          } else {
+            h.streak = Math.max(0, h.streak - 1);
+          }
+          save();
+          render();
+        });
+        list.appendChild(row);
+      });
+
+      // Stats
+      const done = Object.values(completedToday).filter(Boolean).length;
+      const total = habits.length;
+      document.getElementById('statDone').textContent = done;
+      document.getElementById('statTotal').textContent = total;
+      document.getElementById('statRate').textContent = total ? Math.round((done / total) * 100) + '%' : '0%';
+
+      // Streak badge
+      const maxStreak = habits.reduce((max, h) => Math.max(max, h.streak), 0);
+      document.getElementById('streakBadge').textContent = maxStreak + ' day streak';
+
+      // Week grid
+      const dayOfWeek = new Date().getDay();
+      weekData[dayOfWeek] = total > 0 ? done / total : 0;
+      renderWeek(dayOfWeek);
+    }
+
+    function renderWeek(todayIdx) {
+      const grid = document.getElementById('weekGrid');
+      const labels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+      grid.innerHTML = labels.map(l => `<div class="week-label">${l}</div>`).join('') +
+        weekData.map((val, i) => {
+          let cls = 'day-cell';
+          if (val >= 1) cls += ' full';
+          else if (val > 0) cls += ' partial';
+          if (i === todayIdx) cls += ' today';
+          return `<div class="${cls}"></div>`;
+        }).join('');
+    }
+
+    function save() {
+      StickerNest.setState('habits', { habits, completedToday, date: today });
+    }
+
+    document.getElementById('addBtn').addEventListener('click', () => {
+      const input = document.getElementById('addInput');
+      const name = input.value.trim();
+      if (!name) return;
+      habits.push({ id: Date.now().toString(), name, streak: 0 });
+      input.value = '';
+      save();
+      render();
+    });
+
+    document.getElementById('addInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') document.getElementById('addBtn').click();
+    });
+
+    // Restore
+    StickerNest.getState('habits').then((saved) => {
+      if (saved && saved.habits) {
+        habits = saved.habits;
+        if (saved.date === today) {
+          completedToday = saved.completedToday || {};
+        }
+      }
+      render();
+    }).catch(() => render());
+
+    StickerNest.onThemeChange(() => {});
+    StickerNest.ready();
+  </script>
+</body>
+</html>

@@ -151,6 +151,7 @@ export const Modal: React.FC<ModalProps> = ({
       <div
         ref={contentRef}
         data-testid="modal-content"
+        className={isMobile ? '' : 'sn-elevated sn-holo-border'}
         tabIndex={-1}
         role="dialog"
         aria-modal="true"
@@ -164,7 +165,6 @@ export const Modal: React.FC<ModalProps> = ({
           maxHeight: isMobile ? '100%' : 'calc(100vh - 32px)',
           background: 'var(--sn-surface, #ffffff)',
           borderRadius: isMobile ? 0 : 'var(--sn-radius, 8px)',
-          boxShadow: isMobile ? 'none' : '0 4px 24px rgba(0, 0, 0, 0.15)',
           overflow: 'hidden',
           outline: 'none',
         }}
@@ -176,7 +176,7 @@ export const Modal: React.FC<ModalProps> = ({
             alignItems: 'center',
             justifyContent: 'space-between',
             padding: '16px 20px',
-            borderBottom: '1px solid var(--sn-border, #e5e7eb)',
+            borderBottom: '1px solid var(--sn-border, rgba(255,255,255,0.06))',
             flexShrink: 0,
           }}
         >
@@ -206,7 +206,7 @@ export const Modal: React.FC<ModalProps> = ({
               background: 'transparent',
               borderRadius: 'var(--sn-radius, 6px)',
               cursor: 'pointer',
-              color: 'var(--sn-text-muted, #6b7280)',
+              color: 'var(--sn-text-muted, #7A7784)',
               fontSize: '20px',
               lineHeight: 1,
               transition: 'background 0.15s, color 0.15s',
@@ -217,7 +217,7 @@ export const Modal: React.FC<ModalProps> = ({
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.color = 'var(--sn-text-muted, #6b7280)';
+              e.currentTarget.style.color = 'var(--sn-text-muted, #7A7784)';
             }}
           >
             ×
@@ -244,7 +244,7 @@ export const Modal: React.FC<ModalProps> = ({
               justifyContent: 'flex-end',
               gap: '12px',
               padding: '16px 20px',
-              borderTop: '1px solid var(--sn-border, #e5e7eb)',
+              borderTop: '1px solid var(--sn-border, rgba(255,255,255,0.06))',
               flexShrink: 0,
             }}
           >

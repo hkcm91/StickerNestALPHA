@@ -31,18 +31,27 @@ interface MenuGroup {
   items: MenuItemDef[];
 }
 
+/** Minimal entity info for context menu decisions */
+interface EntityInfo {
+  id: string;
+  type: string;
+  widgetId?: string;
+}
+
 export interface CanvasContextMenuProps {
   /** Currently selected entity IDs */
   selectedIds: Set<string>;
   /** Interaction mode */
   interactionMode: "edit" | "preview";
+  /** Optional lookup: given an entity ID, return entity info */
+  getEntityInfo?: (id: string) => EntityInfo | undefined;
 }
 
 // ---------------------------------------------------------------------------
 // Menu definitions
 // ---------------------------------------------------------------------------
 
-function getEntityMenu(hasMultiple: boolean): MenuGroup[] {
+function getEntityMenu(hasMultiple: boolean, hasWidget: boolean): MenuGroup[] {
   return [
     {
       items: [
@@ -64,6 +73,9 @@ function getEntityMenu(hasMultiple: boolean): MenuGroup[] {
       items: [
         { id: "lock", label: "Lock", icon: "🔒" },
         { id: "dockToPanel", label: "Dock to panel", icon: "⊟" },
+        ...(hasWidget && !hasMultiple
+          ? [{ id: "sendToFriend", label: "Send to friend", icon: "→" }]
+          : []),
       ],
     },
     {
@@ -92,6 +104,7 @@ function getCanvasMenu(): MenuGroup[] {
 export const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
   selectedIds,
   interactionMode,
+  getEntityInfo,
 }) => {
   const [state, setState] = useState<{
     visible: boolean;
@@ -172,18 +185,31 @@ export const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
         case "selectAll":
           bus.emit("canvas.entity.selectAll", {});
           break;
+        case "sendToFriend": {
+          // Find the widget entity and emit send-widget event
+          const targetId = ids[0];
+          const info = targetId && getEntityInfo ? getEntityInfo(targetId) : undefined;
+          if (info?.widgetId) {
+            bus.emit("shell.sendWidget.requested", { widgetId: info.widgetId, entityId: targetId });
+          }
+          break;
+        }
       }
 
       setState((s) => ({ ...s, visible: false }));
     },
-    [state.targetEntityId, selectedIds],
+    [state.targetEntityId, selectedIds, getEntityInfo],
   );
 
   if (!state.visible) return null;
 
   const hasEntity = state.targetEntityId !== null || selectedIds.size > 0;
+  // Check if the target entity is a widget
+  const targetId = state.targetEntityId ?? (selectedIds.size === 1 ? [...selectedIds][0] : null);
+  const targetInfo = targetId && getEntityInfo ? getEntityInfo(targetId) : undefined;
+  const hasWidget = targetInfo?.type === "widget";
   const groups = hasEntity
-    ? getEntityMenu(selectedIds.size > 1)
+    ? getEntityMenu(selectedIds.size > 1, hasWidget)
     : getCanvasMenu();
 
   return (
@@ -198,14 +224,10 @@ export const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
       }}
     >
       <div
+        className="sn-glass-heavy sn-neo sn-holo-border"
         style={{
-          background: "color-mix(in srgb, var(--sn-surface-raised, #1A1A1F) 94%, transparent)",
-          backdropFilter: "blur(20px) saturate(1.2)",
-          borderRadius: 14,
-          border: "1px solid var(--sn-border-hover, rgba(255,255,255,0.08))",
           padding: "6px",
           minWidth: 200,
-          boxShadow: "0 8px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(0,0,0,0.1)",
         }}
       >
         {groups.map((group, gi) => (

@@ -30,6 +30,12 @@ import {
 import { useAuthStore } from '../../../kernel/stores/auth/auth.store';
 
 // =============================================================================
+// Constants
+// =============================================================================
+
+const SN_SPRING = 'cubic-bezier(0.16, 1, 0.3, 1)';
+
+// =============================================================================
 // Types
 // =============================================================================
 
@@ -65,6 +71,8 @@ export const TableView: React.FC<TableViewProps> = ({
   const [editValue, setEditValue] = useState('');
   const [sorts, setSorts] = useState<SortRule[]>([]);
   const [activeView, setActiveView] = useState<DatabaseView | null>(null);
+  const [hoveredRow, setHoveredRow] = useState<string | null>(null);
+  const [hoveredBtn, setHoveredBtn] = useState<string | null>(null);
 
   // Load schema and rows
   const loadData = useCallback(async () => {
@@ -103,7 +111,7 @@ export const TableView: React.FC<TableViewProps> = ({
         if (!existing) return [{ columnId, direction: 'asc' as const }];
         if (existing.direction === 'asc')
           return [{ columnId, direction: 'desc' as const }];
-        return []; // Third click removes sort
+        return [];
       });
     },
     [],
@@ -125,7 +133,6 @@ export const TableView: React.FC<TableViewProps> = ({
     const column = columns.find((c: TableColumn) => c.id === editingCell.columnId);
     let value: CellValue = editValue;
 
-    // Type coerce based on column type
     if (column) {
       if (column.type === 'number') value = editValue ? Number(editValue) : null;
       else if (column.type === 'checkbox') value = editValue === 'true';
@@ -151,7 +158,6 @@ export const TableView: React.FC<TableViewProps> = ({
     setEditingCell(null);
   }, [editingCell, editValue, dataSourceId, user, columns]);
 
-  // Cancel edit
   const cancelEdit = useCallback(() => {
     setEditingCell(null);
   }, []);
@@ -198,7 +204,16 @@ export const TableView: React.FC<TableViewProps> = ({
     <div data-testid="table-view" style={styles.container}>
       {/* Toolbar */}
       <div style={styles.toolbar}>
-        <button data-testid="btn-back" onClick={onBack} style={styles.backBtn}>
+        <button
+          data-testid="btn-back"
+          onClick={onBack}
+          style={{
+            ...styles.glassBtn,
+            ...(hoveredBtn === 'back' ? styles.glassBtnHover : {}),
+          }}
+          onMouseEnter={() => setHoveredBtn('back')}
+          onMouseLeave={() => setHoveredBtn(null)}
+        >
           Back
         </button>
         <h2 style={styles.tableName}>
@@ -208,14 +223,24 @@ export const TableView: React.FC<TableViewProps> = ({
           <button
             data-testid="btn-ai-assist"
             onClick={onOpenAI}
-            style={styles.aiBtn}
+            style={{
+              ...styles.chromeBtn,
+              ...(hoveredBtn === 'ai' ? styles.chromeBtnHover : {}),
+            }}
+            onMouseEnter={() => setHoveredBtn('ai')}
+            onMouseLeave={() => setHoveredBtn(null)}
           >
             AI Assistant
           </button>
           <button
             data-testid="btn-add-row"
             onClick={handleAddRow}
-            style={styles.addRowBtn}
+            style={{
+              ...styles.accentBtn,
+              ...(hoveredBtn === 'addrow' ? styles.accentBtnHover : {}),
+            }}
+            onMouseEnter={() => setHoveredBtn('addrow')}
+            onMouseLeave={() => setHoveredBtn(null)}
           >
             + Row
           </button>
@@ -245,19 +270,21 @@ export const TableView: React.FC<TableViewProps> = ({
       <div style={styles.tableWrapper}>
         {columns.length === 0 ? (
           <div data-testid="empty-columns" style={styles.emptyColumns}>
-            <h3>No columns in this database</h3>
-            <p>Add your first column to start entering data, or use the AI Assistant to generate a schema for you.</p>
+            <h3 style={{ color: 'var(--sn-text, #E8E6ED)', margin: '0 0 8px' }}>No columns in this database</h3>
+            <p style={{ color: 'var(--sn-text-muted, #7A7784)', margin: '0 0 16px' }}>
+              Add your first column to start entering data, or use the AI Assistant to generate a schema for you.
+            </p>
             <div style={styles.emptyActions}>
               <button
                 data-testid="btn-add-first-column"
                 onClick={onAddColumn}
-                style={styles.addRowBtn}
+                style={styles.accentBtn}
               >
                 + Add Column
               </button>
               <button
                 onClick={onOpenAI}
-                style={styles.aiBtn}
+                style={styles.chromeBtn}
               >
                 Ask AI Assistant
               </button>
@@ -309,7 +336,13 @@ export const TableView: React.FC<TableViewProps> = ({
             </thead>
             <tbody>
               {rows.map((row: TableRow) => (
-                <tr key={row.id} data-testid={`row-${row.id}`}>
+                <tr
+                  key={row.id}
+                  data-testid={`row-${row.id}`}
+                  onMouseEnter={() => setHoveredRow(row.id)}
+                  onMouseLeave={() => setHoveredRow(null)}
+                  style={hoveredRow === row.id ? styles.trHover : undefined}
+                >
                   {columns.map((col: TableColumn) => {
                     const isEditing =
                       editingCell?.rowId === row.id &&
@@ -367,7 +400,9 @@ export const TableView: React.FC<TableViewProps> = ({
 
       {columns.length > 0 && rows.length === 0 && (
         <div style={styles.emptyTable}>
-          <p>No rows yet. Click "+ Row" to add data.</p>
+          <p style={{ color: 'var(--sn-text-muted, #7A7784)', margin: 0 }}>
+            No rows yet. Click "+ Row" to add data.
+          </p>
         </div>
       )}
     </div>
@@ -389,31 +424,229 @@ function renderCellValue(value: CellValue, _column: TableColumn): string {
 // =============================================================================
 
 const styles: Record<string, React.CSSProperties> = {
-  container: { display: 'flex', flexDirection: 'column', height: '100%' },
-  loading: { padding: '48px', textAlign: 'center' as const, color: 'var(--sn-text-muted, #666)' },
-  toolbar: { display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 24px', borderBottom: '1px solid var(--sn-border, #ddd)' },
-  backBtn: { padding: '6px 12px', background: 'var(--sn-surface, #f8f9fa)', border: '1px solid var(--sn-border, #ddd)', borderRadius: 'var(--sn-radius, 6px)', cursor: 'pointer', fontSize: '13px' },
-  tableName: { flex: 1, fontSize: '18px', fontWeight: 600, margin: 0, color: 'var(--sn-text, #111)' },
-  toolbarActions: { display: 'flex', gap: '8px' },
-  aiBtn: { padding: '6px 14px', background: 'linear-gradient(135deg, #7c3aed, #2563eb)', color: '#fff', border: 'none', borderRadius: 'var(--sn-radius, 6px)', cursor: 'pointer', fontSize: '13px', fontWeight: 600 },
-  addRowBtn: { padding: '6px 14px', background: 'var(--sn-accent, #2563eb)', color: '#fff', border: 'none', borderRadius: 'var(--sn-radius, 6px)', cursor: 'pointer', fontSize: '13px' },
-  viewTabs: { display: 'flex', gap: '4px', padding: '8px 24px', borderBottom: '1px solid var(--sn-border, #ddd)' },
-  viewTab: { padding: '6px 12px', background: 'transparent', border: 'none', borderBottom: '2px solid transparent', cursor: 'pointer', fontSize: '13px', color: 'var(--sn-text-muted, #666)' },
-  viewTabActive: { borderBottomColor: 'var(--sn-accent, #2563eb)', color: 'var(--sn-text, #111)', fontWeight: 600 },
-  tableWrapper: { flex: 1, overflow: 'auto', padding: '0 24px' },
-  table: { width: '100%', borderCollapse: 'collapse' as const, fontSize: '14px' },
-  th: { padding: '8px 12px', textAlign: 'left' as const, borderBottom: '2px solid var(--sn-border, #ddd)', background: 'var(--sn-surface, #f8f9fa)', position: 'sticky' as const, top: 0, whiteSpace: 'nowrap' as const },
-  thAction: { width: '40px', padding: '8px', textAlign: 'center' as const, borderBottom: '2px solid var(--sn-border, #ddd)', background: 'var(--sn-surface, #f8f9fa)', position: 'sticky' as const, top: 0 },
-  headerBtn: { background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '13px', color: 'var(--sn-text, #111)', padding: 0 },
-  sortIndicator: { color: 'var(--sn-accent, #2563eb)', marginLeft: '4px' },
-  colEditBtn: { background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', color: 'var(--sn-text-muted, #999)', padding: '2px 4px', marginLeft: '4px' },
-  addColBtn: { background: 'none', border: '1px dashed var(--sn-border, #ccc)', borderRadius: '4px', cursor: 'pointer', padding: '2px 8px', fontSize: '14px', color: 'var(--sn-text-muted, #999)' },
-  td: { padding: '6px 12px', borderBottom: '1px solid var(--sn-border, #eee)', cursor: 'text', minWidth: '120px' },
-  tdAction: { width: '40px', padding: '6px', textAlign: 'center' as const, borderBottom: '1px solid var(--sn-border, #eee)' },
-  cellValue: { display: 'block', minHeight: '20px', color: 'var(--sn-text, #111)' },
-  cellInput: { width: '100%', padding: '4px 6px', border: '2px solid var(--sn-accent, #2563eb)', borderRadius: '3px', fontSize: '14px', outline: 'none', background: 'var(--sn-bg, #fff)' },
-  deleteRowBtn: { background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sn-text-muted, #ccc)', fontSize: '14px', padding: '2px 6px' },
-  emptyTable: { textAlign: 'center' as const, padding: '32px', color: 'var(--sn-text-muted, #666)' },
-  emptyColumns: { textAlign: 'center' as const, padding: '64px 32px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' },
-  emptyActions: { display: 'flex', gap: '12px', marginTop: '12px' },
+  container: {
+    display: 'flex',
+    flexDirection: 'column',
+    height: '100%',
+  },
+  loading: {
+    padding: '48px',
+    textAlign: 'center' as const,
+    color: 'var(--sn-text-muted, #7A7784)',
+  },
+  toolbar: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    padding: '12px 24px',
+    borderBottom: '1px solid var(--sn-border, rgba(255,255,255,0.06))',
+    background: 'var(--sn-surface-glass, rgba(20,17,24,0.82))',
+    backdropFilter: 'blur(40px) saturate(1.3)',
+    WebkitBackdropFilter: 'blur(40px) saturate(1.3)',
+  },
+  glassBtn: {
+    padding: '6px 12px',
+    background: 'var(--sn-surface-glass, rgba(20,17,24,0.75))',
+    border: '1px solid var(--sn-border, rgba(255,255,255,0.06))',
+    borderRadius: 'var(--sn-radius, 6px)',
+    cursor: 'pointer',
+    fontSize: '13px',
+    color: 'var(--sn-text, #E8E6ED)',
+    transition: `all 300ms ${SN_SPRING}`,
+  },
+  glassBtnHover: {
+    borderColor: 'rgba(78,123,142,0.25)',
+    transform: 'translateY(-1px)',
+  },
+  tableName: {
+    flex: 1,
+    fontSize: '18px',
+    fontWeight: 600,
+    margin: 0,
+    color: 'var(--sn-text, #E8E6ED)',
+  },
+  toolbarActions: {
+    display: 'flex',
+    gap: '8px',
+  },
+  chromeBtn: {
+    padding: '6px 14px',
+    background: 'linear-gradient(145deg, var(--sn-accent, #3E7D94), #2E6070)',
+    color: '#fff',
+    border: 'none',
+    borderRadius: 'var(--sn-radius, 6px)',
+    cursor: 'pointer',
+    fontSize: '13px',
+    fontWeight: 600,
+    boxShadow: '0 0 10px rgba(62,125,148,0.2), inset 0 1px 0 rgba(255,255,255,0.1)',
+    transition: `all 300ms ${SN_SPRING}`,
+  },
+  chromeBtnHover: {
+    transform: 'translateY(-2px)',
+    boxShadow: '0 0 16px rgba(62,125,148,0.35), 0 4px 12px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.15)',
+  },
+  accentBtn: {
+    padding: '6px 14px',
+    background: 'var(--sn-accent, #3E7D94)',
+    color: '#fff',
+    border: 'none',
+    borderRadius: 'var(--sn-radius, 6px)',
+    cursor: 'pointer',
+    fontSize: '13px',
+    transition: `all 300ms ${SN_SPRING}`,
+  },
+  accentBtnHover: {
+    transform: 'translateY(-1px)',
+    boxShadow: '0 4px 12px rgba(62,125,148,0.25)',
+  },
+  viewTabs: {
+    display: 'flex',
+    gap: '4px',
+    padding: '8px 24px',
+    borderBottom: '1px solid var(--sn-border, rgba(255,255,255,0.06))',
+    background: 'var(--sn-surface-glass, rgba(20,17,24,0.6))',
+  },
+  viewTab: {
+    padding: '6px 12px',
+    background: 'transparent',
+    border: 'none',
+    borderBottom: '2px solid transparent',
+    cursor: 'pointer',
+    fontSize: '13px',
+    color: 'var(--sn-text-muted, #7A7784)',
+    transition: `all 300ms ${SN_SPRING}`,
+  },
+  viewTabActive: {
+    borderBottomColor: 'var(--sn-accent, #3E7D94)',
+    color: 'var(--sn-text, #E8E6ED)',
+    fontWeight: 600,
+  },
+  tableWrapper: {
+    flex: 1,
+    overflow: 'auto',
+    padding: '0 24px',
+  },
+  table: {
+    width: '100%',
+    borderCollapse: 'collapse' as const,
+    fontSize: '14px',
+  },
+  th: {
+    padding: '8px 12px',
+    textAlign: 'left' as const,
+    borderBottom: '2px solid var(--sn-border, rgba(255,255,255,0.08))',
+    background: 'var(--sn-surface-glass, rgba(20,17,24,0.75))',
+    backdropFilter: 'blur(20px) saturate(1.3)',
+    WebkitBackdropFilter: 'blur(20px) saturate(1.3)',
+    position: 'sticky' as const,
+    top: 0,
+    whiteSpace: 'nowrap' as const,
+    zIndex: 1,
+  },
+  thAction: {
+    width: '40px',
+    padding: '8px',
+    textAlign: 'center' as const,
+    borderBottom: '2px solid var(--sn-border, rgba(255,255,255,0.08))',
+    background: 'var(--sn-surface-glass, rgba(20,17,24,0.75))',
+    backdropFilter: 'blur(20px) saturate(1.3)',
+    WebkitBackdropFilter: 'blur(20px) saturate(1.3)',
+    position: 'sticky' as const,
+    top: 0,
+    zIndex: 1,
+  },
+  headerBtn: {
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    fontWeight: 600,
+    fontSize: '13px',
+    color: 'var(--sn-text, #E8E6ED)',
+    padding: 0,
+    fontFamily: "'DM Mono', monospace",
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.04em',
+  },
+  sortIndicator: {
+    color: 'var(--sn-accent, #3E7D94)',
+    marginLeft: '4px',
+  },
+  colEditBtn: {
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: '12px',
+    color: 'var(--sn-text-muted, #7A7784)',
+    padding: '2px 4px',
+    marginLeft: '4px',
+  },
+  addColBtn: {
+    background: 'none',
+    border: '1px dashed var(--sn-border, rgba(255,255,255,0.12))',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    padding: '2px 8px',
+    fontSize: '14px',
+    color: 'var(--sn-text-muted, #7A7784)',
+  },
+  trHover: {
+    background: 'rgba(78,123,142,0.04)',
+    boxShadow: 'inset 0 0 0 1px rgba(78,123,142,0.06)',
+  },
+  td: {
+    padding: '6px 12px',
+    borderBottom: '1px solid var(--sn-border, rgba(255,255,255,0.04))',
+    cursor: 'text',
+    minWidth: '120px',
+    color: 'var(--sn-text, #E8E6ED)',
+    transition: 'background 150ms ease',
+  },
+  tdAction: {
+    width: '40px',
+    padding: '6px',
+    textAlign: 'center' as const,
+    borderBottom: '1px solid var(--sn-border, rgba(255,255,255,0.04))',
+  },
+  cellValue: {
+    display: 'block',
+    minHeight: '20px',
+    color: 'var(--sn-text, #E8E6ED)',
+  },
+  cellInput: {
+    width: '100%',
+    padding: '4px 6px',
+    border: '2px solid var(--sn-accent, #3E7D94)',
+    borderRadius: '3px',
+    fontSize: '14px',
+    outline: 'none',
+    background: 'var(--sn-surface-glass, rgba(20,17,24,0.75))',
+    color: 'var(--sn-text, #E8E6ED)',
+    boxShadow: '0 0 8px rgba(62,125,148,0.2)',
+  },
+  deleteRowBtn: {
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    color: 'var(--sn-text-muted, #7A7784)',
+    fontSize: '14px',
+    padding: '2px 6px',
+    transition: 'color 150ms',
+  },
+  emptyTable: {
+    textAlign: 'center' as const,
+    padding: '32px',
+  },
+  emptyColumns: {
+    textAlign: 'center' as const,
+    padding: '64px 32px',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '4px',
+  },
+  emptyActions: {
+    display: 'flex',
+    gap: '12px',
+    marginTop: '12px',
+  },
 };

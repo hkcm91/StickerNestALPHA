@@ -52,8 +52,8 @@ describe('uiStore', () => {
       expect(useUIStore.getState().panels).toEqual({});
     });
 
-    it('should have midnight-aurora theme', () => {
-      expect(useUIStore.getState().theme).toBe('midnight-aurora');
+    it('should have ember theme', () => {
+      expect(useUIStore.getState().theme).toBe('ember');
     });
 
     it('should not be globally loading', () => {
@@ -175,7 +175,7 @@ describe('uiStore', () => {
       expect(state.sidebarLeftOpen).toBe(false);
       expect(state.sidebarRightOpen).toBe(false);
       expect(state.panels).toEqual({});
-      expect(state.theme).toBe('midnight-aurora');
+      expect(state.theme).toBe('ember');
       expect(state.isGlobalLoading).toBe(false);
       expect(state.toasts).toEqual([]);
     });
@@ -230,7 +230,7 @@ describe('uiStore', () => {
       setupUIBusSubscriptions();
 
       bus.emit(ShellEvents.THEME_CHANGED, null);
-      expect(useUIStore.getState().theme).toBe('midnight-aurora');
+      expect(useUIStore.getState().theme).toBe('ember');
     });
   });
 });

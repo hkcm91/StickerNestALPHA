@@ -18,7 +18,7 @@ export { CanvasOverlayLayer } from './CanvasOverlayLayer';
 export type { CanvasOverlayLayerProps } from './CanvasOverlayLayer';
 
 export { CanvasToolLayer } from './CanvasToolLayer';
-export type { CanvasToolLayerProps } from './CanvasToolLayer';
+export type { CanvasToolLayerProps } from './tool-layer-helpers';
 
 export { EntityRenderer } from './renderers';
 
@@ -35,9 +35,11 @@ export {
   deleteLocalCanvas,
   duplicateLocalCanvas,
   renameLocalCanvas,
+  updateLocalCanvasSlug,
   ensureLocalCanvas,
   getLocalCanvasBySlug,
   listLocalCanvases,
+  clearAllLocalCanvases,
   slugifyCanvasName,
 } from './hooks';
 export type {

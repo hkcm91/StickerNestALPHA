@@ -146,7 +146,7 @@ export function createPenPathTool(
     switch (event.payload.action) {
       case 'set_point_type':
         if (activeAnchorIndex !== -1) {
-          anchors[activeAnchorIndex].pointType = event.payload.type;
+          anchors[activeAnchorIndex].pointType = event.payload.type as 'corner' | 'smooth' | 'symmetric';
           if (event.payload.type === 'corner') {
             anchors[activeAnchorIndex].handleIn = undefined;
             anchors[activeAnchorIndex].handleOut = undefined;

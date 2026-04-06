@@ -12,6 +12,7 @@ import { bus } from '../kernel/bus';
 import { useHistoryStore } from '../kernel/stores/history/history.store';
 import { useUIStore } from '../kernel/stores/ui/ui.store';
 
+import { clearAllLocalCanvases } from './canvas';
 import { createShortcutRegistry, registerDefaultShortcuts } from './shortcuts/shortcut-registry';
 import type { ShortcutRegistry } from './shortcuts/shortcut-registry';
 import { applyThemeTokens, emitThemeChange } from './theme/theme-provider';
@@ -26,6 +27,9 @@ const busUnsubscribes: Array<() => void> = [];
  */
 export function initShell(): void {
   if (initialized) return;
+
+  // 0. Clear legacy localStorage canvases — beta uses cloud storage only
+  clearAllLocalCanvases();
 
   // 1. Apply initial theme CSS vars
   const theme = useUIStore.getState().theme;

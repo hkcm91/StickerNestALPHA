@@ -51,27 +51,41 @@ export const InstallButton: React.FC<InstallButtonProps> = ({
   const [confirming, setConfirming] = useState(false);
 
   const handleBuy = useCallback(async () => {
-    if (!stripePriceId) {
-      // Fallback: treat as free install if no Stripe price configured
-      await onInstall(widgetId);
-      return;
-    }
+    // Always call the edge function for paid widgets — it creates dynamic
+    // prices via price_data and does NOT need a pre-created stripePriceId.
     try {
       const resp = await supabase.functions.invoke('creator-checkout', {
         body: { action: 'buy_widget', widgetId },
       });
+      // Debug: log full response including error details
+      if (resp.error) {
+        const errContext = (resp.error as { context?: { status?: number; statusText?: string; body?: unknown } }).context;
+        console.error('[InstallButton] Edge function error:', resp.error.name, errContext);
+        // Try to read error body if it's a FunctionsHttpError
+        if (resp.error.name === 'FunctionsHttpError') {
+          try {
+            const errBody = await (resp as unknown as { response: Response }).response?.json?.();
+            console.error('[InstallButton] Edge function error body:', JSON.stringify(errBody));
+          } catch { /* ignore parse errors */ }
+        }
+        return;
+      }
       const data = resp.data as Record<string, unknown> | null;
       if (data?.url && typeof data.url === 'string') {
         window.location.href = data.url;
       } else if (data?.free) {
-        // Free tier checkout — install directly
+        // Edge function determined widget is free — install directly
         await onInstall(widgetId);
+      } else if (data?.alreadyPurchased) {
+        // Already purchased — just install
+        await onInstall(widgetId);
+      } else {
+        console.error('[InstallButton] Unexpected checkout response:', data);
       }
-    } catch {
-      // Purchase initiation failed — let parent handle via installState
-      await onInstall(widgetId);
+    } catch (err) {
+      console.error('[InstallButton] Purchase initiation failed:', err);
     }
-  }, [widgetId, stripePriceId, onInstall]);
+  }, [widgetId, onInstall]);
 
   const priceLabel = ((priceCents ?? 0) / 100).toLocaleString(undefined, {
     style: 'currency',

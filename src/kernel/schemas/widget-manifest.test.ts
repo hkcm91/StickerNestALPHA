@@ -71,6 +71,7 @@ describe('Widget Manifest Schemas', () => {
         'media',
         'geolocation',
         'cross-canvas',
+        'gallery',
       ];
 
       permissions.forEach((perm) => {

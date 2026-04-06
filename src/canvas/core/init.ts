@@ -10,6 +10,7 @@ import { CanvasEvents } from '@sn/types';
 
 import { registerEntityProvider, unregisterEntityProvider } from '../../kernel/ai/entity-provider';
 import { bus } from '../../kernel/bus';
+import { useHistoryStore } from '../../kernel/stores/history';
 
 import { entityBounds } from './hittest';
 import type { DirtyTracker , RenderLoop } from './renderer';
@@ -74,6 +75,20 @@ export function initCanvasCore(): CanvasCoreContext {
     if (existing) {
       const oldBounds = entityBounds(existing);
       dirtyTracker.markDirty(oldBounds);
+
+      // Capture previous values for undo/redo
+      const prev: Record<string, unknown> = {};
+      for (const key of Object.keys(event.payload.updates)) {
+        prev[key] = (existing as Record<string, unknown>)[key];
+      }
+      useHistoryStore.getState().pushEntry({
+        event: { type: event.type, payload: event.payload },
+        inverseEvent: {
+          type: CanvasEvents.ENTITY_UPDATED,
+          payload: { id: event.payload.id, updates: prev },
+        },
+        timestamp: Date.now(),
+      });
     }
     sceneGraph.updateEntity(event.payload.id, event.payload.updates);
     const updated = sceneGraph.getEntity(event.payload.id);
@@ -93,6 +108,25 @@ export function initCanvasCore(): CanvasCoreContext {
       transform: { ...existing.transform, position: event.payload.position },
     } as Partial<CanvasEntity>);
     const updated = sceneGraph.getEntity(event.payload.entityId);
+    if (updated) {
+      dirtyTracker.markDirty(entityBounds(updated));
+    }
+  };
+
+  // Handler for entity resize events
+  const handleEntityResized = (event: BusEvent<{ id: string; position: { x: number; y: number }; size: { width: number; height: number } }>) => {
+    const existing = sceneGraph.getEntity(event.payload.id);
+    if (!existing) return;
+    const oldBounds = entityBounds(existing);
+    dirtyTracker.markDirty(oldBounds);
+    sceneGraph.updateEntity(event.payload.id, {
+      transform: {
+        ...existing.transform,
+        position: event.payload.position,
+        size: event.payload.size,
+      },
+    } as Partial<CanvasEntity>);
+    const updated = sceneGraph.getEntity(event.payload.id);
     if (updated) {
       dirtyTracker.markDirty(entityBounds(updated));
     }
@@ -128,6 +162,13 @@ export function initCanvasCore(): CanvasCoreContext {
     bus.subscribe<{ entityId: string; position: { x: number; y: number } }>(
       CanvasEvents.ENTITY_MOVED,
       handleEntityMoved,
+    ),
+  );
+
+  unsubscribers.push(
+    bus.subscribe<{ id: string; position: { x: number; y: number }; size: { width: number; height: number } }>(
+      CanvasEvents.ENTITY_RESIZED,
+      handleEntityResized,
     ),
   );
 

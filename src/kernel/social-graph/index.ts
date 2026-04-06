@@ -97,6 +97,8 @@ export {
   getSharedCanvases,
   updateCanvasTags,
   updateCanvasThumbnail,
+  updateCanvasSlug,
+  validateSlug,
   deriveCanvasCategory,
 } from './canvases';
 export type { PublicCanvas, CanvasMember, CanvasRole, CanvasCategory } from './canvases';

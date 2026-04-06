@@ -15,6 +15,7 @@ import { MarketplaceEvents } from '@sn/types';
 import { bus } from '../kernel/bus';
 
 import { createPublisherDashboard } from './publisher/publisher-dashboard';
+import { processUpload } from './upload/upload-processor';
 
 let initialized = false;
 const busUnsubscribes: Array<() => void> = [];
@@ -23,6 +24,11 @@ interface PublishRequestPayload {
   html: string;
   manifest: WidgetManifest;
   thumbnail: Blob | null;
+  authorId: string;
+}
+
+interface UploadRequestPayload {
+  file: File;
   authorId: string;
 }
 
@@ -61,6 +67,50 @@ export function initMarketplace(): void {
     },
   );
   busUnsubscribes.push(unsubPublish);
+
+  // Handle upload requests from Shell (L6 cannot import L5 directly)
+  const unsubUpload = bus.subscribe(
+    MarketplaceEvents.UPLOAD_REQUEST,
+    async (event: BusEvent) => {
+      const payload = event.payload as UploadRequestPayload;
+
+      try {
+        const { package: pkg, scanResult } = await processUpload(payload.file);
+
+        const reviewStatus = scanResult.passed ? 'approved' : 'flagged';
+
+        bus.emit(MarketplaceEvents.SECURITY_SCAN_COMPLETE, {
+          scanResult,
+          reviewStatus,
+        });
+
+        const dashboard = createPublisherDashboard(payload.authorId);
+        const result = await dashboard.publish(
+          pkg.html,
+          pkg.manifest,
+          null,
+          reviewStatus,
+          scanResult,
+        );
+
+        bus.emit(MarketplaceEvents.UPLOAD_RESPONSE, {
+          success: result.success,
+          listingId: result.widgetId,
+          error: result.error,
+          scanResult,
+          reviewStatus,
+        });
+      } catch (err) {
+        bus.emit(MarketplaceEvents.UPLOAD_RESPONSE, {
+          success: false,
+          error: err instanceof Error ? err.message : 'Upload failed',
+          scanResult: null,
+          reviewStatus: null,
+        });
+      }
+    },
+  );
+  busUnsubscribes.push(unsubUpload);
 
   initialized = true;
 }

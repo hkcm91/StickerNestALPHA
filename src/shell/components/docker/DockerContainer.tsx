@@ -355,6 +355,7 @@ export const DockerContainer: React.FC<DockerContainerProps> = ({
     return (
       <div
         data-testid={`docker-container-${id}`}
+        className="sn-glass sn-breathe sn-holo-border"
         ref={containerRef}
         style={containerStyle}
         onClick={handleContainerClick}
@@ -413,6 +414,7 @@ export const DockerContainer: React.FC<DockerContainerProps> = ({
   return (
     <div
       data-testid={`docker-container-${id}`}
+      className="sn-holo-border"
       ref={containerRef}
       style={containerStyle}
       onMouseDown={handleContainerClick}

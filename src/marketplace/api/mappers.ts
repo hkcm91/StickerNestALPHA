@@ -16,7 +16,7 @@ import type {
 } from './types';
 
 export const LISTING_COLUMNS =
-  'id,name,slug,description,version,author_id,thumbnail_url,icon_url,category,tags,license,is_published,is_deprecated,install_count,rating_average,rating_count,is_free,price_cents,currency,stripe_price_id,metadata,created_at,updated_at';
+  'id,name,slug,description,version,author_id,thumbnail_url,icon_url,category,tags,license,is_published,is_deprecated,install_count,rating_average,rating_count,is_free,price_cents,currency,stripe_price_id,metadata,review_status,security_scan,created_at,updated_at';
 
 export function rowToListing(row: Record<string, unknown>): MarketplaceWidgetListing {
   return {
@@ -41,6 +41,9 @@ export function rowToListing(row: Record<string, unknown>): MarketplaceWidgetLis
     currency: (row.currency as string) ?? 'usd',
     stripePriceId: (row.stripe_price_id as string | null) ?? null,
     metadata: (row.metadata as Record<string, unknown>) ?? {},
+    reviewStatus: (row.review_status as string as MarketplaceWidgetListing["reviewStatus"]) ?? "approved",
+    securityFlags: Array.isArray((row.security_scan as any)?.flags) ? (row.security_scan as any).flags.length : 0,
+    securityScan: row.security_scan && typeof row.security_scan === "object" ? row.security_scan as MarketplaceWidgetListing["securityScan"] : null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   };
@@ -49,11 +52,30 @@ export function rowToListing(row: Record<string, unknown>): MarketplaceWidgetLis
 export function rowToDetail(row: Record<string, unknown>): MarketplaceWidgetDetail | null {
   const listing = rowToListing(row);
   const manifestResult = WidgetManifestSchema.safeParse(row.manifest);
-  if (!manifestResult.success) return null;
+  if (manifestResult.success) {
+    return {
+      ...listing,
+      htmlContent: row.html_content as string,
+      manifest: manifestResult.data,
+    };
+  }
+  // Fallback: construct a minimal valid manifest from listing data so the
+  // detail page can still render even if the stored manifest is V4-era or
+  // otherwise malformed.
+  const fallbackManifest = WidgetManifestSchema.safeParse({
+    id: listing.slug || listing.id,
+    name: listing.name,
+    version: listing.version || '1.0.0',
+    description: listing.description ?? undefined,
+    category: listing.category ?? 'other',
+    tags: listing.tags,
+    license: listing.license ?? 'MIT',
+  });
+  if (!fallbackManifest.success) return null;
   return {
     ...listing,
-    htmlContent: row.html_content as string,
-    manifest: manifestResult.data,
+    htmlContent: (row.html_content as string) ?? '',
+    manifest: fallbackManifest.data,
   };
 }
 

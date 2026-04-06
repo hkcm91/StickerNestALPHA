@@ -14,6 +14,7 @@ import { CanvasDocumentEvents, CanvasEvents, DEFAULT_BACKGROUND, DockerEvents } 
 import { initCanvasCore, teardownCanvasCore, project2Dto3D } from '../../canvas/core';
 import type { SceneGraph } from '../../canvas/core';
 // Canvas sub-layer init/teardown loaded via dynamic import (L6 boundary rule allows dynamic imports only)
+import { signOut } from '../../kernel/auth';
 import { bus } from '../../kernel/bus';
 import { useAuthStore, selectIsAuthenticated } from '../../kernel/stores/auth/auth.store';
 import { useCanvasStore } from '../../kernel/stores/canvas/canvas.store';
@@ -35,16 +36,19 @@ import {
   deleteLocalCanvas,
   duplicateLocalCanvas,
   renameLocalCanvas,
+  updateLocalCanvasSlug,
   ensureLocalCanvas,
   listLocalCanvases,
 } from '../canvas';
 import type { LocalCanvasSummary } from '../canvas';
+import { CanvasResizeFrame } from '../canvas/components/CanvasResizeFrame';
 import { HistoryPanel } from '../canvas/panels';
 import type { CanvasPositionConfig } from '../canvas/panels/CanvasSettingsDropdown';
 import { seedDemoEntities, seedCommerceCanvas, seedClaudeLabCanvas } from '../canvas/seedDemoEntities';
 import { captureAndUploadThumbnail } from '../canvas/utils/thumbnail-capture';
 import { StickerSettingsModal, LoginForm } from '../components';
 import { GhostWidgetOverlay } from '../components/GhostWidgetOverlay';
+import { OnboardingWizard, useOnboarding } from '../components/onboarding';
 import type { StickerSettings } from '../components/StickerSettingsModal';
 import { UpgradePrompt } from '../components/UpgradePrompt';
 import { ShellLayout } from '../layout';
@@ -59,7 +63,7 @@ const DEFAULT_DOCKER_WIDGET_ID = 'wgt-clock';
 const DEFAULT_DOCKER_WIDGET_INSTANCE_ID = '33333333-3333-4333-8333-333333333333';
 const DEFAULT_DOCKER_WIDGET_ENTITY_ID = 'ddc00000-0000-4000-a000-000000000001';
 const DEMO_CANVAS_ID = '00000000-0000-4000-8000-000000000001';
-const DEFAULT_CANVAS_TOP_SPACING = 40;
+const DEFAULT_CANVAS_TOP_SPACING = 24;
 
 /** Parse hex color to RGB components */
 function hexToRgb(hex: string): { r: number; g: number; b: number } {
@@ -495,6 +499,7 @@ function resolveStickerSource(entity: CanvasEntity): {
 
 export const CanvasPage: React.FC = () => {
   const { canvasSlug = '' } = useParams<{ canvasSlug: string }>();
+  const navigate = useNavigate();
   const setMode = useUIStore((s) => s.setCanvasInteractionMode);
   const setActiveCanvas = useCanvasStore((s) => s.setActiveCanvas);
   const user = useAuthStore((s) => s.user);
@@ -515,6 +520,9 @@ export const CanvasPage: React.FC = () => {
 
   // Per-canvas theme override — when set, overrides global theme for this canvas
   const [canvasTheme, setCanvasTheme] = useState<ThemeName | undefined>(undefined);
+
+  // Onboarding wizard
+  const onboarding = useOnboarding();
 
   // Sticker settings modal state (works for stickers and non-sticker conversion)
   const [entityToEditAsSticker, setEntityToEditAsSticker] = useState<CanvasEntity | null>(null);
@@ -582,6 +590,10 @@ export const CanvasPage: React.FC = () => {
     vertical: 'center',
     topOffset: DEFAULT_CANVAS_TOP_SPACING,
   });
+
+  // Canvas resize frame state (activated by double-clicking a bounded canvas)
+  const [resizeFrameActive, setResizeFrameActive] = useState(false);
+  const canvasBoundedRef = useRef<HTMLDivElement>(null);
 
   const canvasKey = normalizedSlug || 'untitled';
   const canvasId = canvasSummary?.id ?? DEMO_CANVAS_ID;
@@ -1212,6 +1224,28 @@ export const CanvasPage: React.FC = () => {
     }
   }, [canvasSummary]);
 
+  // Canvas visibility state (local-only for now)
+  const [canvasIsPublic, setCanvasIsPublic] = useState(false);
+
+  const handleVisibilityChange = useCallback((newIsPublic: boolean) => {
+    setCanvasIsPublic(newIsPublic);
+    const { setSharingSettings, sharingSettings } = useCanvasStore.getState();
+    setSharingSettings({
+      isPublic: newIsPublic,
+      defaultRole: sharingSettings?.defaultRole ?? 'viewer',
+      slug: canvasSummary?.slug ?? null,
+    });
+  }, [canvasSummary]);
+
+  const handleSlugChange = useCallback((newSlug: string) => {
+    if (!canvasSummary) return;
+    const updated = updateLocalCanvasSlug(canvasSummary.slug, newSlug);
+    if (updated) {
+      setCanvasSummary(updated);
+      navigate(`/canvas/${updated.slug}`, { replace: true });
+    }
+  }, [canvasSummary, navigate]);
+
   const handleCaptureThumbnail = useCallback(async () => {
     const el = canvasViewportRef.current;
     if (!el || !canvasSummary) return;
@@ -1260,6 +1294,10 @@ export const CanvasPage: React.FC = () => {
             canvasPosition={canvasPosition}
             selectedIds={selectedIds}
             onCaptureThumbnail={handleCaptureThumbnail}
+            canvasSlug={canvasSummary?.slug}
+            isPublic={canvasIsPublic}
+            onSlugChange={handleSlugChange}
+            onVisibilityChange={handleVisibilityChange}
           />
         }
         renderDockerWidget={renderDockerWidget}
@@ -1282,18 +1320,7 @@ export const CanvasPage: React.FC = () => {
             padding: `${canvasPosition.topOffset}px 24px 24px`,
             boxSizing: 'border-box',
             display: 'flex',
-            justifyContent:
-              canvasPosition.horizontal === 'left'
-                ? 'flex-start'
-                : canvasPosition.horizontal === 'right'
-                  ? 'flex-end'
-                  : 'center',
-            alignItems:
-              canvasPosition.vertical === 'top'
-                ? 'flex-start'
-                : canvasPosition.vertical === 'bottom'
-                  ? 'flex-end'
-                  : 'center',
+            alignItems: 'flex-start',
             position: 'relative',
             ...(workspaceBg.mode === 'image' || workspaceBg.mode === 'parallax'
               ? {
@@ -1307,7 +1334,15 @@ export const CanvasPage: React.FC = () => {
           }}
         >
           <div
+            ref={canvasBoundedRef}
+            onDoubleClick={(e) => {
+              if (viewportConfig.sizeMode === 'bounded') {
+                e.stopPropagation();
+                setResizeFrameActive(true);
+              }
+            }}
             style={{
+              position: 'relative',
               width:
                 viewportConfig.sizeMode === 'bounded' && viewportConfig.width
                   ? `${viewportConfig.width}px`
@@ -1321,6 +1356,10 @@ export const CanvasPage: React.FC = () => {
                 : `${borderRadius.topLeft}px ${borderRadius.topRight}px ${borderRadius.bottomRight}px ${borderRadius.bottomLeft}px`,
               overflow: 'hidden',
               flexShrink: 0,
+              marginTop: canvasPosition.vertical === 'bottom' ? 'auto' : canvasPosition.vertical === 'center' ? 'auto' : 0,
+              marginBottom: canvasPosition.vertical === 'top' ? 'auto' : canvasPosition.vertical === 'center' ? 'auto' : 0,
+              marginLeft: canvasPosition.horizontal === 'right' ? 'auto' : canvasPosition.horizontal === 'center' ? 'auto' : 0,
+              marginRight: canvasPosition.horizontal === 'left' ? 'auto' : canvasPosition.horizontal === 'center' ? 'auto' : 0,
               transition: 'width 200ms ease, height 200ms ease',
               ...(viewportConfig.sizeMode === 'bounded' ? {
                 background: 'var(--sn-surface-glass, rgba(20,17,24,0.85))',
@@ -1369,6 +1408,17 @@ export const CanvasPage: React.FC = () => {
               theme={widgetTheme}
             />
           </div>
+          {/* Resize frame overlay — activated by double-clicking a bounded canvas.
+              Rendered as sibling so handles aren't clipped by canvas overflow:hidden. */}
+          {resizeFrameActive && viewportConfig.sizeMode === 'bounded' && (
+            <CanvasResizeFrame
+              isActive={resizeFrameActive}
+              width={viewportConfig.width ?? 1920}
+              height={viewportConfig.height ?? 1080}
+              onDismiss={() => setResizeFrameActive(false)}
+              canvasRef={canvasBoundedRef}
+            />
+          )}
         </div>
       </ShellLayout>
 
@@ -1430,6 +1480,16 @@ export const CanvasPage: React.FC = () => {
       {/* Ghost widget overlay for invite placement */}
       <GhostWidgetOverlay />
 
+      {/* Onboarding spotlight wizard */}
+      <OnboardingWizard
+        active={onboarding.active}
+        currentStep={onboarding.currentStep}
+        stepIndex={onboarding.stepIndex}
+        totalSteps={onboarding.totalSteps}
+        onSkip={onboarding.skip}
+        onComplete={onboarding.completeStep}
+      />
+
       {/* Fullscreen preview overlay — strips all chrome, shows canvas only */}
       {fullscreenPreview && (
         <div
@@ -1439,17 +1499,38 @@ export const CanvasPage: React.FC = () => {
             inset: 0,
             zIndex: 9999,
             background: themeVar('--sn-bg'),
-            overflow: 'hidden',
+            overflow: 'auto',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
           }}
         >
-          <CanvasWorkspace
-            sceneGraph={sceneGraph}
-            dashboardSlug={canvasKey}
-            maxArtboardsPerDashboard={DEFAULT_ARTBOARD_LIMIT_PER_DASHBOARD}
-            widgetHtmlMap={widgetHtmlMap}
-            background={viewportConfig.background}
-            theme={widgetTheme}
-          />
+          <div
+            style={{
+              width:
+                viewportConfig.sizeMode === 'bounded' && viewportConfig.width
+                  ? `${viewportConfig.width}px`
+                  : '100%',
+              height:
+                viewportConfig.sizeMode === 'bounded' && viewportConfig.height
+                  ? `${viewportConfig.height}px`
+                  : '100%',
+              flexShrink: 0,
+              borderRadius: typeof borderRadius === 'number'
+                ? `${borderRadius}px`
+                : `${borderRadius.topLeft}px ${borderRadius.topRight}px ${borderRadius.bottomRight}px ${borderRadius.bottomLeft}px`,
+              overflow: 'hidden',
+            }}
+          >
+            <CanvasWorkspace
+              sceneGraph={sceneGraph}
+              dashboardSlug={canvasKey}
+              maxArtboardsPerDashboard={DEFAULT_ARTBOARD_LIMIT_PER_DASHBOARD}
+              widgetHtmlMap={widgetHtmlMap}
+              background={viewportConfig.background}
+              theme={widgetTheme}
+            />
+          </div>
 
           {/* Exit fullscreen button */}
           <button
@@ -1500,6 +1581,7 @@ export const MarketplacePage: React.FC = () => (
 
 export const SettingsPage: React.FC = () => {
   const [tab, setTab] = React.useState<'billing' | 'integrations' | 'commerce' | 'purchases' | 'security'>('billing');
+  const navigate = useNavigate();
 
   const tabBtnStyle = (active: boolean): React.CSSProperties => ({
     padding: '8px 16px',
@@ -1529,6 +1611,28 @@ export const SettingsPage: React.FC = () => {
         {tab === 'purchases' && <MyPurchasesSectionLazy />}
         {tab === 'security' && <SecuritySectionLazy />}
       </Suspense>
+
+      <div style={{ marginTop: 48, paddingTop: 24, borderTop: '1px solid var(--sn-border, #e5e7eb)' }}>
+        <button
+          data-testid="btn-sign-out"
+          onClick={async () => {
+            await signOut();
+            navigate('/login', { replace: true });
+          }}
+          style={{
+            padding: '10px 24px',
+            borderRadius: 'var(--sn-radius, 8px)',
+            fontSize: 14,
+            fontWeight: 600,
+            cursor: 'pointer',
+            border: 'none',
+            background: '#EF4444',
+            color: '#fff',
+          }}
+        >
+          Sign Out
+        </button>
+      </div>
     </div>
   );
 };

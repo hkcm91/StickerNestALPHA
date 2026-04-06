@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Quick Poll</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --sn-bg: #0f0f13;
+    --sn-surface: #1a1a24;
+    --sn-accent: #7c6af7;
+    --sn-text: #e8e8f0;
+    --sn-text-muted: #6b6b80;
+    --sn-border: #2a2a3a;
+    --sn-radius: 12px;
+    --sn-font-family: system-ui, -apple-system, sans-serif;
+  }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    background: var(--sn-bg);
+    color: var(--sn-text);
+    font-family: var(--sn-font-family);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .widget {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 20px 18px;
+    gap: 14px;
+    overflow-y: auto;
+    min-height: 0;
+  }
+
+  .widget::-webkit-scrollbar { width: 5px; }
+  .widget::-webkit-scrollbar-track { background: transparent; }
+  .widget::-webkit-scrollbar-thumb { background: var(--sn-border); border-radius: 3px; }
+
+  /* ── Question ── */
+  .question {
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.4;
+    color: var(--sn-text);
+  }
+
+  /* ── Vote options ── */
+  .options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .option {
+    position: relative;
+    border-radius: 10px;
+    border: 1.5px solid var(--sn-border);
+    background: var(--sn-surface);
+    cursor: pointer;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.15s;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  .option:hover:not(.voted):not(.disabled) {
+    border-color: color-mix(in srgb, var(--sn-accent) 50%, var(--sn-border));
+    transform: translateY(-1px);
+  }
+
+  .option:active:not(.voted):not(.disabled) { transform: scale(0.98); }
+
+  .option.winner {
+    border-color: var(--sn-accent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--sn-accent) 30%, transparent), 0 2px 12px color-mix(in srgb, var(--sn-accent) 15%, transparent);
+  }
+
+  /* Bar fill */
+  .option-bar {
+    position: absolute;
+    inset: 0;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--sn-accent) 12%, transparent);
+    width: 0%;
+    transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    pointer-events: none;
+  }
+
+  .option.winner .option-bar {
+    background: color-mix(in srgb, var(--sn-accent) 18%, transparent);
+  }
+
+  /* Option inner */
+  .option-inner {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 11px 14px;
+    gap: 10px;
+    z-index: 1;
+  }
+
+  .option-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  /* Checkmark circle */
+  .check-circle {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 1.5px solid var(--sn-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, border-color 0.2s;
+  }
+
+  .option.my-vote .check-circle {
+    background: var(--sn-accent);
+    border-color: var(--sn-accent);
+  }
+
+  .check-circle svg { opacity: 0; transition: opacity 0.2s; }
+  .option.my-vote .check-circle svg { opacity: 1; }
+
+  .option-label {
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--sn-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .option-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .option-pct {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--sn-text-muted);
+    font-variant-numeric: tabular-nums;
+    min-width: 32px;
+    text-align: right;
+    transition: color 0.3s;
+  }
+
+  .option.winner .option-pct { color: var(--sn-accent); }
+
+  .winner-badge {
+    display: none;
+    font-size: 10px;
+    background: color-mix(in srgb, var(--sn-accent) 15%, transparent);
+    color: var(--sn-accent);
+    border: 1px solid color-mix(in srgb, var(--sn-accent) 30%, transparent);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+
+  .option.winner .winner-badge { display: block; }
+
+  /* ── Footer ── */
+  .footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 4px;
+  }
+
+  .total-votes {
+    font-size: 11px;
+    color: var(--sn-text-muted);
+  }
+
+  .reset-btn {
+    background: none;
+    border: none;
+    font-size: 11px;
+    color: var(--sn-text-muted);
+    cursor: pointer;
+    font-family: var(--sn-font-family);
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: background 0.2s, color 0.2s;
+  }
+
+  .reset-btn:hover {
+    background: var(--sn-surface);
+    color: var(--sn-text);
+  }
+
+  /* voted state: disable hover glow */
+  .option.disabled { cursor: default; }
+
+  /* Entrance animation */
+  @keyframes slide-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .option {
+    animation: slide-in 0.3s ease both;
+  }
+</style>
+</head>
+<body>
+
+<div class="widget">
+  <div class="question" id="questionEl"></div>
+  <div class="options" id="optionsEl"></div>
+  <div class="footer">
+    <span class="total-votes" id="totalVotesEl">0 votes</span>
+    <button class="reset-btn" id="resetBtn">Reset</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ── SDK shim ──────────────────────────────────────────────────────────────
+  const SN = window.StickerNest || {
+    register(m) { this._manifest = m; },
+    ready() {},
+    getConfig() { return {}; },
+    setState(k, v) { try { localStorage.setItem('sn:poll:' + k, JSON.stringify(v)); } catch {} },
+    getState(k) { try { const r = localStorage.getItem('sn:poll:' + k); return r ? JSON.parse(r) : null; } catch { return null; } },
+    emit(t, p) { console.debug('[SN emit]', t, p); },
+    onThemeChange(fn) { this._themeFn = fn; },
+  };
+
+  SN.register({
+    id: 'sample-quick-poll',
+    version: '1.0.0',
+    events: { emits: ['poll.voted'], subscribes: [] },
+  });
+
+  // ── Config ────────────────────────────────────────────────────────────────
+  const cfg = SN.getConfig() || {};
+  const question = cfg.question || 'What do you prefer?';
+  const optionLabels = (cfg.options || 'Option A, Option B, Option C')
+    .split(',')
+    .map(function (s) { return s.trim(); })
+    .filter(Boolean);
+
+  // ── State ─────────────────────────────────────────────────────────────────
+  // votes[i] = vote count for option i
+  let votes = optionLabels.map(function () { return 0; });
+  let myVoteIndex = null; // null = not yet voted
+
+  // Restore state keyed to question+options so a config change resets
+  const stateKey = question + '|' + optionLabels.join(',');
+  const saved = SN.getState('poll');
+  if (saved && saved.key === stateKey) {
+    votes = saved.votes || votes;
+    myVoteIndex = saved.myVoteIndex !== undefined ? saved.myVoteIndex : null;
+  }
+
+  function persist() {
+    SN.setState('poll', { key: stateKey, votes: votes, myVoteIndex: myVoteIndex });
+  }
+
+  // ── DOM refs ──────────────────────────────────────────────────────────────
+  const questionEl = document.getElementById('questionEl');
+  const optionsEl = document.getElementById('optionsEl');
+  const totalVotesEl = document.getElementById('totalVotesEl');
+  const resetBtn = document.getElementById('resetBtn');
+
+  // ── Render ────────────────────────────────────────────────────────────────
+  questionEl.textContent = question;
+
+  // Build option elements once
+  const optionEls = optionLabels.map(function (label, i) {
+    const el = document.createElement('div');
+    el.className = 'option';
+    el.style.animationDelay = (i * 0.06) + 's';
+
+    el.innerHTML = [
+      '<div class="option-bar"></div>',
+      '<div class="option-inner">',
+        '<div class="option-left">',
+          '<div class="check-circle">',
+            '<svg width="10" height="10" viewBox="0 0 12 12" fill="none">',
+              '<polyline points="2 6 5 9 10 3" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+            '</svg>',
+          '</div>',
+          '<span class="option-label"></span>',
+        '</div>',
+        '<div class="option-right">',
+          '<span class="option-pct">0%</span>',
+          '<span class="winner-badge">Leader</span>',
+        '</div>',
+      '</div>',
+    ].join('');
+
+    el.querySelector('.option-label').textContent = label;
+
+    el.addEventListener('click', function () {
+      if (myVoteIndex !== null) return; // already voted
+      castVote(i);
+    });
+
+    optionsEl.appendChild(el);
+    return el;
+  });
+
+  function totalVotes() {
+    return votes.reduce(function (a, b) { return a + b; }, 0);
+  }
+
+  function winnerIndex() {
+    let max = -1, idx = -1;
+    for (let i = 0; i < votes.length; i++) {
+      if (votes[i] > max) { max = votes[i]; idx = i; }
+    }
+    return max > 0 ? idx : -1;
+  }
+
+  function updateUI() {
+    const total = totalVotes();
+    const winner = winnerIndex();
+    const hasVoted = myVoteIndex !== null;
+
+    optionEls.forEach(function (el, i) {
+      const pct = total > 0 ? Math.round((votes[i] / total) * 100) : 0;
+      const bar = el.querySelector('.option-bar');
+      const pctEl = el.querySelector('.option-pct');
+
+      bar.style.width = pct + '%';
+      pctEl.textContent = hasVoted ? pct + '%' : '';
+
+      el.classList.toggle('my-vote', i === myVoteIndex);
+      el.classList.toggle('winner', hasVoted && i === winner);
+      el.classList.toggle('disabled', hasVoted);
+    });
+
+    const n = total;
+    totalVotesEl.textContent = n + ' vote' + (n !== 1 ? 's' : '');
+  }
+
+  function castVote(i) {
+    myVoteIndex = i;
+    votes[i]++;
+    persist();
+    SN.emit('poll.voted', { option: optionLabels[i], index: i, votes: votes.slice() });
+    updateUI();
+  }
+
+  resetBtn.addEventListener('click', function () {
+    votes = optionLabels.map(function () { return 0; });
+    myVoteIndex = null;
+    persist();
+    updateUI();
+  });
+
+  // ── Theme ─────────────────────────────────────────────────────────────────
+  SN.onThemeChange(function (tokens) {
+    if (!tokens) return;
+    const root = document.documentElement;
+    Object.entries(tokens).forEach(function (entry) { root.style.setProperty(entry[0], entry[1]); });
+  });
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  updateUI();
+  SN.ready();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Settings – StickerNest</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg-base: #0a0a0f;
+      --bg-surface: #1a1a2e;
+      --bg-card: rgba(26, 26, 46, 0.6);
+      --border-color: rgba(0, 229, 199, 0.15);
+      --accent-teal: #00e5c7;
+      --accent-purple: #a855f7;
+      --text-primary: #f8f8ff;
+      --text-secondary: #a0a0b8;
+      --glow-teal: 0 0 20px rgba(0, 229, 199, 0.4);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Space Grotesk', sans-serif;
+      background: linear-gradient(135deg, var(--bg-base) 0%, #1a0f3a 100%);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Noise overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" /></filter><rect width="100%" height="100%" fill="%23000" filter="url(%23n)" opacity="0.03"/></svg>');
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .container {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      height: 100vh;
+      flex-direction: column;
+    }
+
+    /* Top nav */
+    .nav-top {
+      padding: 1.5rem 2rem;
+      border-bottom: 1px solid var(--border-color);
+      backdrop-filter: blur(12px);
+      background: rgba(26, 26, 46, 0.4);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .nav-top h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .nav-top p {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+    }
+
+    /* Main wrapper */
+    .main {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 240px;
+      border-right: 1px solid var(--border-color);
+      backdrop-filter: blur(12px);
+      background: rgba(26, 26, 46, 0.3);
+      padding: 1.5rem;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar nav {
+      flex: 1;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 1rem;
+      margin-bottom: 0.5rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+      border: 1px solid transparent;
+    }
+
+    .nav-item:hover {
+      color: var(--accent-teal);
+      border-color: var(--border-color);
+      background: rgba(0, 229, 199, 0.05);
+    }
+
+    .nav-item.active {
+      color: var(--accent-teal);
+      background: rgba(0, 229, 199, 0.1);
+      border-color: var(--border-color);
+      box-shadow: var(--glow-teal);
+    }
+
+    .nav-item svg {
+      width: 18px;
+      height: 18px;
+      opacity: 0.8;
+    }
+
+    .sidebar-footer {
+      margin-top: auto;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .btn-signout {
+      width: 100%;
+      padding: 0.75rem;
+      background: rgba(168, 85, 247, 0.1);
+      border: 1px solid var(--accent-purple);
+      color: var(--accent-purple);
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.875rem;
+      transition: all 0.3s ease;
+    }
+
+    .btn-signout:hover {
+      background: rgba(168, 85, 247, 0.2);
+      box-shadow: 0 0 16px rgba(168, 85, 247, 0.3);
+    }
+
+    /* Content area */
+    .content {
+      flex: 1;
+      padding: 2rem;
+      overflow-y: auto;
+    }
+
+    .content-header {
+      margin-bottom: 2rem;
+    }
+
+    .content-header h2 {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.5rem;
+    }
+
+    .content-header p {
+      color: var(--text-secondary);
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      backdrop-filter: blur(12px);
+      transition: all 0.3s ease;
+    }
+
+    .card:hover {
+      border-color: rgba(0, 229, 199, 0.3);
+      transform: translateY(-2px);
+    }
+
+    .card h3 {
+      font-size: 1.125rem;
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .card h3 svg {
+      width: 20px;
+      height: 20px;
+      opacity: 0.7;
+    }
+
+    /* Usage section */
+    .usage-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .usage-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    /* Donut chart (CSS-only) */
+    .donut {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: conic-gradient(var(--accent-teal) 0deg 252deg, rgba(0, 229, 199, 0.2) 252deg 360deg);
+      position: relative;
+      margin: 0 auto 1rem;
+      box-shadow: var(--glow-teal);
+    }
+
+    .donut::after {
+      content: '';
+      position: absolute;
+      inset: 30%;
+      border-radius: 50%;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+    }
+
+    .donut-label {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      margin-top: 0.75rem;
+    }
+
+    .donut-value {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: var(--accent-teal);
+    }
+
+    /* Progress bars */
+    .progress-bar {
+      height: 8px;
+      background: rgba(0, 229, 199, 0.1);
+      border-radius: 4px;
+      overflow: hidden;
+      margin: 0.5rem 0;
+      border: 1px solid rgba(0, 229, 199, 0.15);
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent-teal), var(--accent-purple));
+      border-radius: 4px;
+      transition: width 0.6s ease;
+    }
+
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.5rem;
+    }
+
+    /* Plan card */
+    .plan-card {
+      background: linear-gradient(135deg, rgba(0, 229, 199, 0.05) 0%, rgba(168, 85, 247, 0.05) 100%);
+      border: 2px solid var(--accent-teal);
+      border-radius: 12px;
+      padding: 1.75rem;
+      text-align: center;
+      box-shadow: var(--glow-teal);
+      margin-top: 1.5rem;
+    }
+
+    .plan-card h4 {
+      font-size: 1.25rem;
+      margin-bottom: 0.5rem;
+      color: var(--accent-teal);
+    }
+
+    .plan-card p {
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+      margin-bottom: 1rem;
+    }
+
+    .btn-upgrade {
+      padding: 0.75rem 1.5rem;
+      background: linear-gradient(135deg, var(--accent-teal), var(--accent-purple));
+      border: none;
+      border-radius: 8px;
+      color: var(--bg-base);
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.875rem;
+      transition: all 0.3s ease;
+    }
+
+    .btn-upgrade:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(0, 229, 199, 0.4);
+    }
+
+    /* Settings items */
+    .setting-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 0;
+      border-bottom: 1px solid rgba(0, 229, 199, 0.05);
+      transition: all 0.3s ease;
+    }
+
+    .setting-item:last-child {
+      border-bottom: none;
+    }
+
+    .setting-label {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+    }
+
+    .setting-label strong {
+      color: var(--text-primary);
+      display: block;
+      margin-bottom: 0.25rem;
+    }
+
+    /* Toggle switch */
+    .toggle {
+      width: 48px;
+      height: 28px;
+      background: rgba(0, 229, 199, 0.15);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      position: relative;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .toggle.active {
+      background: var(--accent-teal);
+      border-color: var(--accent-teal);
+    }
+
+    .toggle::after {
+      content: '';
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      background: var(--bg-card);
+      border-radius: 50%;
+      top: 2px;
+      left: 2px;
+      transition: all 0.3s ease;
+    }
+
+    .toggle.active::after {
+      left: 22px;
+      background: var(--bg-base);
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(0, 229, 199, 0.2);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(0, 229, 199, 0.4);
+    }
+
+    @media (max-width: 768px) {
+      .main { flex-direction: column; }
+      .sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border-color); }
+      .usage-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Top Nav -->
+    <div class="nav-top">
+      <div>
+        <h1>Settings</h1>
+        <p>Manage your workspace & account</p>
+      </div>
+    </div>
+
+    <!-- Main -->
+    <div class="main">
+      <!-- Sidebar -->
+      <div class="sidebar">
+        <nav>
+          <div class="nav-item active">
+            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+            Profile
+          </div>
+          <div class="nav-item">
+            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>
+            Workspace
+          </div>
+          <div class="nav-item">
+            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+            Billing
+          </div>
+          <div class="nav-item">
+            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
+            Security
+          </div>
+          <div class="nav-item">
+            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/></svg>
+            Integrations
+          </div>
+        </nav>
+
+        <div class="sidebar-footer">
+          <button class="btn-signout">Sign Out</button>
+        </div>
+      </div>
+
+      <!-- Content -->
+      <div class="content">
+        <div class="content-header">
+          <h2>Workspace Settings</h2>
+          <p>Manage team members, billing, and workspace preferences</p>
+        </div>
+
+        <!-- Usage Card -->
+        <div class="card">
+          <h3>
+            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+            Storage Usage
+          </h3>
+          <div class="usage-grid">
+            <div class="usage-item">
+              <div class="donut"></div>
+              <div class="donut-value">7.2 GB</div>
+              <div class="donut-label">of 100 GB</div>
+            </div>
+            <div class="usage-item">
+              <div style="width: 120px; text-align: left;">
+                <div class="progress-label">
+                  <span>Canvas Files</span>
+                  <span>3.5 GB</span>
+                </div>
+                <div class="progress-bar">
+                  <div class="progress-fill" style="width: 45%"></div>
+                </div>
+                <div class="progress-label">
+                  <span>Widgets</span>
+                  <span>2.1 GB</span>
+                </div>
+                <div class="progress-bar">
+                  <div class="progress-fill" style="width: 28%"></div>
+                </div>
+                <div class="progress-label">
+                  <span>Media Assets</span>
+                  <span>1.6 GB</span>
+                </div>
+                <div class="progress-bar">
+                  <div class="progress-fill" style="width: 21%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="plan-card">
+            <h4>Creator Pro Plan</h4>
+            <p>Unlimited canvases, 1TB storage, advanced analytics</p>
+            <button class="btn-upgrade">Upgrade to Pro</button>
+          </div>
+        </div>
+
+        <!-- Workspace Preferences -->
+        <div class="card">
+          <h3>
+            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.62l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94L14.4 2.81c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41L9.25 5.35C8.66 5.59 8.12 5.92 7.63 6.29L5.24 5.33c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.48.11.62l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.62l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.48-.12-.62l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+            Preferences
+          </h3>
+
+          <div class="setting-item">
+            <div class="setting-label">
+              <strong>Public Gallery</strong>
+              <span>Let others discover your public canvases</span>
+            </div>
+            <div class="toggle active" onclick="this.classList.toggle('active')"></div>
+          </div>
+
+          <div class="setting-item">
+            <div class="setting-label">
+              <strong>Email Notifications</strong>
+              <span>Receive updates on workspace activity</span>
+            </div>
+            <div class="toggle active" onclick="this.classList.toggle('active')"></div>
+          </div>
+
+          <div class="setting-item">
+            <div class="setting-label">
+              <strong>API Access</strong>
+              <span>Enable programmatic access to your data</span>
+            </div>
+            <div class="toggle" onclick="this.classList.toggle('active')"></div>
+          </div>
+
+          <div class="setting-item">
+            <div class="setting-label">
+              <strong>Two-Factor Auth</strong>
+              <span>Add an extra layer of security to your account</span>
+            </div>
+            <div class="toggle" onclick="this.classList.toggle('active')"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Smooth scroll behavior
+    document.querySelectorAll('.nav-item').forEach((item) => {
+      item.addEventListener('click', () => {
+        document.querySelectorAll('.nav-item').forEach((el) => el.classList.remove('active'));
+        item.classList.add('active');
+      });
+    });
+  </script>
+</body>
+</html>

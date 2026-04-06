@@ -23,6 +23,8 @@ export interface RothkoFieldProps {
   enabled?: boolean;
   /** Vertical scroll offset — shifts bands slightly for parallax feel */
   scrollY?: number;
+  /** CSS custom property overrides for parallax displacement (set by parent) */
+  style?: React.CSSProperties;
 }
 
 /**
@@ -32,6 +34,7 @@ export interface RothkoFieldProps {
 export const RothkoField: React.FC<RothkoFieldProps> = ({
   enabled = true,
   scrollY = 0,
+  style: externalStyle,
 }) => {
   const [tick, setTick] = useState(0);
   const rafRef = useRef(0);
@@ -70,10 +73,13 @@ export const RothkoField: React.FC<RothkoFieldProps> = ({
       data-testid="rothko-field"
       style={{
         position: "absolute",
-        inset: 0,
+        inset: '-24px',
         zIndex: 0,
         pointerEvents: "none",
         overflow: "hidden",
+        transition: 'transform 0.8s cubic-bezier(0.16, 1, 0.3, 1)',
+        willChange: 'transform',
+        ...externalStyle,
       }}
     >
       {/* Base ground — dark warm gradient */}
@@ -155,6 +161,17 @@ export const RothkoField: React.FC<RothkoFieldProps> = ({
           filter: "blur(70px)",
           opacity: 0.4 + Math.sin(phase * 1.2) * 0.25,
           willChange: "opacity",
+        }}
+      />
+
+      {/* Vignette — subtle darkening at edges to create depth and focus */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          background:
+            "radial-gradient(ellipse 70% 60% at 50% 50%, transparent 40%, rgba(0,0,0,0.35) 100%)",
+          pointerEvents: "none",
         }}
       />
 

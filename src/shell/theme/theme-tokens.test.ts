@@ -16,13 +16,14 @@ import {
 const THEME_NAMES = Object.keys(THEME_TOKENS) as Array<keyof typeof THEME_TOKENS>;
 
 describe('THEME_TOKENS', () => {
-  it('contains exactly five themes', () => {
-    expect(THEME_NAMES).toHaveLength(5);
+  it('contains all six themes', () => {
+    expect(THEME_NAMES).toHaveLength(6);
     expect(THEME_NAMES).toContain('midnight-aurora');
     expect(THEME_NAMES).toContain('crystal-light');
     expect(THEME_NAMES).toContain('bubbles-sky');
     expect(THEME_NAMES).toContain('autumn-fireflies');
     expect(THEME_NAMES).toContain('high-contrast');
+    expect(THEME_NAMES).toContain('ember');
   });
 
   it('every theme has all core token keys', () => {
@@ -90,7 +91,7 @@ describe('extractCoreTokens', () => {
 
   it('preserves core token values correctly', () => {
     const result = extractCoreTokens(THEME_TOKENS['crystal-light']);
-    expect(result['--sn-bg']).toBe('#FAF8F5');
+    expect(result['--sn-bg']).toBe('#FAF6F1');
     expect(result['--sn-text']).toBe('#1A1820');
   });
 });

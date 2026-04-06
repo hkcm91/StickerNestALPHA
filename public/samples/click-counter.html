@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="A simple counter widget that demonstrates StickerNest widget upload">
+  <title>Click Counter</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: var(--sn-font-family, 'Inter', system-ui, sans-serif);
+      background: var(--sn-bg, #0a0a0a);
+      color: var(--sn-text, #e0e0e0);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .counter-container {
+      text-align: center;
+      padding: 32px;
+      border-radius: var(--sn-radius, 12px);
+      background: var(--sn-surface, #141414);
+      border: 1px solid var(--sn-border, #2a2a2a);
+      min-width: 200px;
+    }
+    .count {
+      font-size: 64px;
+      font-weight: 700;
+      line-height: 1;
+      margin-bottom: 16px;
+      color: var(--sn-accent, #6366f1);
+      transition: transform 0.15s ease;
+    }
+    .count.bumped {
+      transform: scale(1.15);
+    }
+    .label {
+      font-size: 14px;
+      color: var(--sn-text-muted, #888);
+      margin-bottom: 20px;
+    }
+    .btn {
+      padding: 10px 24px;
+      border: none;
+      border-radius: var(--sn-radius, 8px);
+      background: var(--sn-accent, #6366f1);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .btn:hover { opacity: 0.85; }
+    .btn:active { opacity: 0.7; }
+    .btn-reset {
+      margin-left: 8px;
+      background: transparent;
+      border: 1px solid var(--sn-border, #2a2a2a);
+      color: var(--sn-text-muted, #888);
+    }
+  </style>
+</head>
+<body>
+  <div class="counter-container">
+    <div class="count" id="count">0</div>
+    <div class="label">clicks</div>
+    <div>
+      <button class="btn" id="increment">Click me</button>
+      <button class="btn btn-reset" id="reset">Reset</button>
+    </div>
+  </div>
+
+  <script>
+    // Register with StickerNest
+    StickerNest.register({
+      id: 'click-counter',
+      name: 'Click Counter',
+      version: '1.0.0',
+      description: 'A simple click counter widget',
+      category: 'utilities',
+      tags: ['counter', 'demo', 'example'],
+      license: 'MIT',
+    });
+
+    const countEl = document.getElementById('count');
+    let count = 0;
+
+    // Restore persisted state
+    StickerNest.getState('count').then((saved) => {
+      if (typeof saved === 'number') {
+        count = saved;
+        countEl.textContent = count;
+      }
+    });
+
+    // Increment
+    document.getElementById('increment').addEventListener('click', () => {
+      count++;
+      countEl.textContent = count;
+      countEl.classList.add('bumped');
+      setTimeout(() => countEl.classList.remove('bumped'), 150);
+
+      StickerNest.setState('count', count);
+      StickerNest.emit('counter.incremented', { count });
+    });
+
+    // Reset
+    document.getElementById('reset').addEventListener('click', () => {
+      count = 0;
+      countEl.textContent = count;
+      StickerNest.setState('count', count);
+      StickerNest.emit('counter.reset', { count: 0 });
+    });
+
+    // Listen for theme changes
+    StickerNest.onThemeChange((tokens) => {
+      // Theme tokens are already applied as CSS variables
+    });
+
+    // Signal ready
+    StickerNest.ready();
+  </script>
+</body>
+</html>

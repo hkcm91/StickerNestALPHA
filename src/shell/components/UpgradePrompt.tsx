@@ -76,7 +76,7 @@ export const UpgradePrompt: React.FC<UpgradePromptProps> = ({
         }}
       >
         <h2 style={{ margin: '0 0 8px', fontSize: 20 }}>Limit Reached</h2>
-        <p style={{ color: 'var(--sn-text-muted, #6b7280)', margin: '0 0 20px', fontSize: 14 }}>
+        <p style={{ color: 'var(--sn-text-muted, #7A7784)', margin: '0 0 20px', fontSize: 14 }}>
           You've used {current} of {limit} {resource}.
         </p>
 
@@ -109,7 +109,7 @@ export const UpgradePrompt: React.FC<UpgradePromptProps> = ({
           onClick={onClose}
           style={{
             padding: '10px 24px',
-            border: '1px solid var(--sn-border, #e5e7eb)',
+            border: '1px solid var(--sn-border, rgba(255,255,255,0.06))',
             borderRadius: 'var(--sn-radius, 8px)',
             background: 'transparent',
             cursor: 'pointer',

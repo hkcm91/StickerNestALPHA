@@ -1,5 +1,5 @@
 /**
- * Toolbar — tool selector, zoom controls, grid controls, mode toggle.
+ * Toolbar — floating island + slide-out tool menu.
  * Wraps the headless ToolbarController from L4A-4.
  *
  * @module shell/canvas/panels
@@ -8,8 +8,8 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import type { CanvasPlatform, GridConfig, GridLineStyle, GridProjectionMode, ViewportConfig } from '@sn/types';
-import { CanvasDocumentEvents, GridEvents } from '@sn/types';
+import type { GridConfig, ViewportConfig } from '@sn/types';
+import { CanvasEvents, GridEvents } from '@sn/types';
 
 import { DEFAULT_GRID_CONFIG } from '../../../canvas/core';
 import { bus } from '../../../kernel/bus';
@@ -24,67 +24,28 @@ import type { ViewportStore } from '../hooks/useViewport';
 import { CanvasSettingsDropdown } from './CanvasSettingsDropdown';
 import type { CanvasPositionConfig } from './CanvasSettingsDropdown';
 
-// ── Canvas Size Presets (by platform) ──────────────────────────────
-interface CanvasSizePreset {
-  label: string;
-  width: number;
-  height: number;
-}
-
-const PLATFORM_PRESETS: Record<CanvasPlatform, CanvasSizePreset[]> = {
-  web: [
-    { label: 'Desktop HD (1920×1080)', width: 1920, height: 1080 },
-    { label: 'Desktop (1440×900)', width: 1440, height: 900 },
-    { label: 'MacBook Pro 14" (1512×982)', width: 1512, height: 982 },
-    { label: 'MacBook Air 13" (1280×800)', width: 1280, height: 800 },
-    { label: 'HD (1280×720)', width: 1280, height: 720 },
-    { label: '4K (3840×2160)', width: 3840, height: 2160 },
-  ],
-  mobile: [
-    { label: 'iPhone 15 Pro (393×852)', width: 393, height: 852 },
-    { label: 'iPhone 15 Pro Max (430×932)', width: 430, height: 932 },
-    { label: 'iPhone SE (375×667)', width: 375, height: 667 },
-    { label: 'Pixel 8 (412×915)', width: 412, height: 915 },
-    { label: 'Samsung Galaxy S24 (360×780)', width: 360, height: 780 },
-    { label: 'iPad (820×1180)', width: 820, height: 1180 },
-    { label: 'iPad Mini (744×1133)', width: 744, height: 1133 },
-    { label: 'iPad Pro 12.9" (1024×1366)', width: 1024, height: 1366 },
-    { label: 'Android Tablet (800×1280)', width: 800, height: 1280 },
-  ],
-  desktop: [
-    { label: 'Full HD (1920×1080)', width: 1920, height: 1080 },
-    { label: 'QHD (2560×1440)', width: 2560, height: 1440 },
-    { label: '4K UHD (3840×2160)', width: 3840, height: 2160 },
-    { label: 'Ultrawide (2560×1080)', width: 2560, height: 1080 },
-    { label: 'MacBook Pro 16" (1728×1117)', width: 1728, height: 1117 },
-    { label: 'iMac 24" (4480×2520)', width: 4480, height: 2520 },
-  ],
-};
-
 export interface ToolbarProps {
   viewportStore: ViewportStore;
-  /** Save status indicator (from usePersistence) */
   saveStatus?: SaveStatus;
-  /** Callback for manual save */
   onSave?: () => void;
-  /** Current canvas name */
   canvasName?: string;
-  /** Callback for renaming the canvas */
   onRename?: (newName: string) => void;
-  /** Current viewport configuration */
   viewportConfig?: ViewportConfig;
-  /** Current canvas border radius */
   borderRadius?: number;
-  /** Current canvas position in workspace */
   canvasPosition?: CanvasPositionConfig;
-  /** Currently selected entity IDs */
   selectedIds?: Set<string>;
-  /** Callback for capturing a thumbnail of the canvas */
   onCaptureThumbnail?: () => void;
+  /** Canvas slug for public URL */
+  canvasSlug?: string;
+  /** Whether the canvas is publicly accessible */
+  isPublic?: boolean;
+  /** Called when the slug changes */
+  onSlugChange?: (newSlug: string) => void;
+  /** Called when visibility changes */
+  onVisibilityChange?: (isPublic: boolean) => void;
 }
 
 const DOCKER_LIBRARY_NAME = 'Docker Library';
-const HISTORY_WIDGET_INSTANCE_ID = '44444444-4444-4444-4444-444444444444';
 
 // ── Icons ────────────────────────────────────────────────────────
 
@@ -157,91 +118,34 @@ const RedoIcon = () => (
   </svg>
 );
 
-const AlignLeftIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="4" y1="2" x2="4" y2="22" />
-    <rect x="8" y="6" width="12" height="4" rx="1" />
-    <rect x="8" y="14" width="8" height="4" rx="1" />
-  </svg>
-);
+const AlignLeftIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="2" x2="4" y2="22" /><rect x="8" y="6" width="12" height="4" rx="1" /><rect x="8" y="14" width="8" height="4" rx="1" /></svg>);
+const AlignCenterHIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="2" x2="12" y2="22" /><rect x="5" y="6" width="14" height="4" rx="1" /><rect x="7" y="14" width="10" height="4" rx="1" /></svg>);
+const AlignRightIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="20" y1="2" x2="20" y2="22" /><rect x="4" y="6" width="12" height="4" rx="1" /><rect x="8" y="14" width="8" height="4" rx="1" /></svg>);
+const AlignTopIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="2" y1="4" x2="22" y2="4" /><rect x="6" y="8" width="4" height="12" rx="1" /><rect x="14" y="8" width="4" height="8" rx="1" /></svg>);
+const AlignCenterVIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="2" y1="12" x2="22" y2="12" /><rect x="6" y="5" width="4" height="14" rx="1" /><rect x="14" y="7" width="4" height="10" rx="1" /></svg>);
+const AlignBottomIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="2" y1="20" x2="22" y2="20" /><rect x="6" y="4" width="4" height="12" rx="1" /><rect x="14" y="8" width="4" height="8" rx="1" /></svg>);
+const XRGogglesIcon = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 10a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-3.5a2 2 0 0 1-1.7-1l-1.6-2.6a2 2 0 0 0-3.4 0L8.2 15a2 2 0 0 1-1.7 1H4a2 2 0 0 1-2-2v-4z" /></svg>);
+const CutIcon = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="6" cy="6" r="3" /><circle cx="6" cy="18" r="3" /><line x1="20" y1="4" x2="8.12" y2="15.88" /><line x1="14.47" y1="14.48" x2="20" y2="20" /><line x1="8.12" y1="8.12" x2="12" y2="12" /></svg>);
+const CopyIcon = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>);
+const PasteIcon = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><rect x="8" y="2" width="8" height="4" rx="1" /></svg>);
+const DistributeHIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="6" width="4" height="12" rx="1" /><rect x="10" y="4" width="4" height="16" rx="1" /><rect x="19" y="6" width="4" height="12" rx="1" /></svg>);
+const DistributeVIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="6" y="1" width="12" height="4" rx="1" /><rect x="4" y="10" width="16" height="4" rx="1" /><rect x="6" y="19" width="12" height="4" rx="1" /></svg>);
+const MatchSizeIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="8" height="16" rx="1" /><rect x="14" y="4" width="8" height="16" rx="1" /></svg>);
+const FlipHIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20" /><path d="M16 7h5l-5 10V7z" /><path d="M8 7H3l5 10V7z" /></svg>);
+const FlipVIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12h20" /><path d="M7 8V3l10 5H7z" /><path d="M7 16v5l10-5H7z" /></svg>);
+const GalleryIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></svg>);
+const StickerIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15.5 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8.5L15.5 3z" /><polyline points="14 3 14 8 21 8" /></svg>);
+const ClearIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>);
+const DockIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><line x1="3" y1="15" x2="21" y2="15" /></svg>);
+const LayersIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2" /><polyline points="2 17 12 22 22 17" /><polyline points="2 12 12 17 22 12" /></svg>);
+const GridIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><line x1="3" y1="9" x2="21" y2="9" /><line x1="3" y1="15" x2="21" y2="15" /><line x1="9" y1="3" x2="9" y2="21" /><line x1="15" y1="3" x2="15" y2="21" /></svg>);
+const SettingsIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="21" x2="4" y2="14" /><line x1="4" y1="10" x2="4" y2="3" /><line x1="12" y1="21" x2="12" y2="12" /><line x1="12" y1="8" x2="12" y2="3" /><line x1="20" y1="21" x2="20" y2="16" /><line x1="20" y1="12" x2="20" y2="3" /><line x1="1" y1="14" x2="7" y2="14" /><line x1="9" y1="8" x2="15" y2="8" /><line x1="17" y1="16" x2="23" y2="16" /></svg>);
+const CameraIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></svg>);
+const FullscreenIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 3 21 3 21 9" /><polyline points="9 21 3 21 3 15" /><line x1="21" y1="3" x2="14" y2="10" /><line x1="3" y1="21" x2="10" y2="14" /></svg>);
+const MenuIcon = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg>);
+const CloseIcon = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>);
+const ChevronIcon: React.FC<{ open: boolean }> = ({ open }) => (<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'transform 0.25s cubic-bezier(0.16,1,0.3,1)', transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}><polyline points="6 9 12 15 18 9" /></svg>);
 
-const AlignCenterHIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="12" y1="2" x2="12" y2="22" />
-    <rect x="5" y="6" width="14" height="4" rx="1" />
-    <rect x="7" y="14" width="10" height="4" rx="1" />
-  </svg>
-);
-
-const AlignRightIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="20" y1="2" x2="20" y2="22" />
-    <rect x="4" y="6" width="12" height="4" rx="1" />
-    <rect x="8" y="14" width="8" height="4" rx="1" />
-  </svg>
-);
-
-const AlignTopIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="2" y1="4" x2="22" y2="4" />
-    <rect x="6" y="8" width="4" height="12" rx="1" />
-    <rect x="14" y="8" width="4" height="8" rx="1" />
-  </svg>
-);
-
-const AlignCenterVIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="2" y1="12" x2="22" y2="12" />
-    <rect x="6" y="5" width="4" height="14" rx="1" />
-    <rect x="14" y="7" width="4" height="10" rx="1" />
-  </svg>
-);
-
-const AlignBottomIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="2" y1="20" x2="22" y2="20" />
-    <rect x="6" y="4" width="4" height="12" rx="1" />
-    <rect x="14" y="8" width="4" height="8" rx="1" />
-  </svg>
-);
-
-const XRGogglesIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M2 10a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-3.5a2 2 0 0 1-1.7-1l-1.6-2.6a2 2 0 0 0-3.4 0L8.2 15a2 2 0 0 1-1.7 1H4a2 2 0 0 1-2-2v-4z" />
-  </svg>
-);
-
-const HistoryIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="10" />
-    <polyline points="12 6 12 12 16 14" />
-  </svg>
-);
-
-const LibraryIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-  </svg>
-);
-
-const CameraIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-    <circle cx="12" cy="13" r="4" />
-  </svg>
-);
-
-const FullscreenIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="15 3 21 3 21 9" />
-    <polyline points="9 21 3 21 3 15" />
-    <line x1="21" y1="3" x2="14" y2="10" />
-    <line x1="3" y1="21" x2="10" y2="14" />
-  </svg>
-);
-
-/** XR icon — reserved for future spatial toolbar button */
 export const XRIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="2" y="6" width="20" height="12" rx="2" />
@@ -258,7 +162,6 @@ interface ToolDef {
   shortcut?: string;
 }
 
-/** Primary tools — always visible in the main toolbar */
 const PRIMARY_TOOLS: ToolDef[] = [
   { id: 'select', label: 'Select', icon: <SelectIcon />, shortcut: 'V' },
   { id: 'pan', label: 'Pan', icon: <PanIcon />, shortcut: 'H' },
@@ -267,113 +170,20 @@ const PRIMARY_TOOLS: ToolDef[] = [
   { id: 'rect', label: 'Shape', icon: <RectIcon />, shortcut: 'R' },
 ];
 
-/** Extra tools — shown in the pull-down tray */
-const TRAY_TOOLS: ToolDef[] = [
+const EXTRA_TOOLS: ToolDef[] = [
   { id: 'artboard', label: 'Artboard', icon: <ArtboardIcon />, shortcut: 'A' },
   { id: 'pathfinder', label: 'Shape Builder', icon: <PathfinderIcon />, shortcut: 'Shift+M' },
 ];
 
-/** All tools combined — exported for keyboard shortcut handling in canvas shortcuts */
-export const TOOLS: ToolDef[] = [...PRIMARY_TOOLS, ...TRAY_TOOLS];
+export const TOOLS: ToolDef[] = [...PRIMARY_TOOLS, ...EXTRA_TOOLS];
 
-/** Spring easing — Principle 4 */
-const TOOLBAR_SPRING = 'cubic-bezier(0.16, 1, 0.3, 1)';
+// ── Spring easing ─────────────────────────────────────────────────
+const SPRING = 'cubic-bezier(0.16, 1, 0.3, 1)';
+const MENU_WIDTH = 320;
+const MENU_Z = 70;
 
-/** Shared button style for small toggle/icon buttons */
-const smallBtnBase: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: '4px',
-  minWidth: '32px',
-  height: '32px',
-  border: '1px solid var(--sn-border, #e0e0e0)',
-  borderRadius: 'var(--sn-radius, 6px)',
-  background: 'transparent',
-  color: 'var(--sn-text, #1a1a2e)',
-  cursor: 'pointer',
-  fontSize: '12px',
-  fontFamily: 'inherit',
-  lineHeight: 1,
-  transition: `all 0.15s ${TOOLBAR_SPRING}`,
-};
+// ── Shared styles ─────────────────────────────────────────────────
 
-const smallBtnActive: React.CSSProperties = {
-  ...smallBtnBase,
-  borderColor: 'var(--sn-accent, #6366f1)',
-  background: 'var(--sn-accent, #6366f1)',
-  color: '#fff',
-};
-
-/** Labeled tool button — icon + text label side by side */
-const LabeledToolBtn: React.FC<{
-  icon: React.ReactNode;
-  label: string;
-  active: boolean;
-  onClick: () => void;
-  title: string;
-  testId: string;
-}> = ({ icon, label, active, onClick, title, testId }) => (
-  <button
-    data-testid={testId}
-    onClick={onClick}
-    title={title}
-    style={{
-      ...smallBtnBase,
-      gap: '4px',
-      padding: '0 8px',
-      minWidth: 'auto',
-      borderColor: active ? 'var(--sn-accent, #6366f1)' : 'var(--sn-border, #e0e0e0)',
-      background: active ? 'var(--sn-accent, #6366f1)' : 'transparent',
-      color: active ? '#fff' : 'var(--sn-text, #1a1a2e)',
-    }}
-  >
-    {icon}
-    <span style={{ fontSize: '11px', fontWeight: 500 }}>{label}</span>
-  </button>
-);
-
-/** Tray section label */
-const TrayLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <span style={{
-    fontSize: '10px',
-    fontWeight: 600,
-    textTransform: 'uppercase',
-    letterSpacing: '0.08em',
-    color: 'var(--sn-text-muted, #888)',
-    marginRight: '6px',
-    whiteSpace: 'nowrap',
-  }}>
-    {children}
-  </span>
-);
-
-/** Vertical divider line */
-const Divider: React.FC = () => (
-  <div style={{ width: '1px', height: '24px', background: 'var(--sn-border, #e0e0e0)', margin: '0 6px' }} />
-);
-
-/** Chevron icon for More Tools toggle */
-const ChevronDownIcon: React.FC<{ open: boolean }> = ({ open }) => (
-  <svg
-    width="12"
-    height="12"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    style={{ transition: `transform 0.25s ${TOOLBAR_SPRING}`, transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}
-  >
-    <polyline points="6 9 12 15 18 9" />
-  </svg>
-);
-
-/**
- * Toolbar component — renders tool buttons, zoom controls, grid controls, and edit/preview toggle.
- * Always visible in both edit and preview modes.
- */
 const SAVE_STATUS_COLORS: Record<SaveStatus, string> = {
   saved: '#22c55e',
   saving: '#eab308',
@@ -386,6 +196,119 @@ const SAVE_STATUS_LABELS: Record<SaveStatus, string> = {
   unsaved: 'Unsaved',
 };
 
+/** Compact tool button used in both island and slide-out menu */
+const ToolBtn: React.FC<{
+  icon: React.ReactNode;
+  label?: string;
+  active?: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+  title: string;
+  testId: string;
+  compact?: boolean;
+}> = ({ icon, label, active, disabled, onClick, title, testId, compact }) => (
+  <button
+    data-testid={testId}
+    className="sn-lift-on-hover"
+    onClick={onClick}
+    title={title}
+    disabled={disabled}
+    style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: compact ? 'center' : 'flex-start',
+      gap: '6px',
+      padding: compact ? '6px' : '6px 10px',
+      minWidth: compact ? '34px' : '100%',
+      height: '34px',
+      border: '1px solid transparent',
+      borderRadius: 'var(--sn-radius, 8px)',
+      background: active
+        ? 'var(--sn-accent, #6366f1)'
+        : 'transparent',
+      color: active ? '#fff' : disabled ? 'var(--sn-text-muted, #666)' : 'var(--sn-text, #F2E8E4)',
+      cursor: disabled ? 'default' : 'pointer',
+      fontSize: '12px',
+      fontFamily: 'inherit',
+      fontWeight: 500,
+      lineHeight: 1,
+      opacity: disabled ? 0.4 : 1,
+      boxShadow: active ? '0 0 12px var(--sn-accent-glow, rgba(184,160,216,0.15))' : 'none',
+    }}
+  >
+    {icon}
+    {label && <span style={{ fontSize: '12px', whiteSpace: 'nowrap' }}>{label}</span>}
+  </button>
+);
+
+/** Divider for the island bar */
+const Divider: React.FC = () => (
+  <div style={{ width: '1px', height: '24px', background: 'var(--sn-border, rgba(255,255,255,0.08))', margin: '0 4px' }} />
+);
+
+/** Collapsible section in the slide-out menu */
+const MenuSection: React.FC<{
+  label: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}> = ({ label, defaultOpen = true, children }) => {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div style={{ borderBottom: '1px solid var(--sn-border, rgba(255,255,255,0.06))' }}>
+      <button
+        onClick={() => setOpen(!open)}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          width: '100%',
+          padding: '12px 16px 8px',
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          color: 'var(--sn-text-muted, #888)',
+          fontSize: '11px',
+          fontWeight: 600,
+          textTransform: 'uppercase',
+          letterSpacing: '0.08em',
+          fontFamily: 'inherit',
+        }}
+      >
+        <span className="sn-chrome-text">{label}</span>
+        <ChevronIcon open={open} />
+      </button>
+      {open && (
+        <div style={{ padding: '0 12px 12px' }}>
+          {children}
+        </div>
+      )}
+    </div>
+  );
+};
+
+/** Sub-label inside a section */
+const SubLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <span style={{ fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--sn-text-muted, #666)', margin: '6px 0 4px', display: 'block' }}>{children}</span>
+);
+
+/** Grid of buttons — 2 or 3 per row */
+const BtnGrid: React.FC<{ cols?: number; children: React.ReactNode }> = ({ cols = 2, children }) => (
+  <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: '4px' }}>
+    {children}
+  </div>
+);
+
+/** Row of buttons in a line */
+const BtnRow: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+    {children}
+  </div>
+);
+
+// ═══════════════════════════════════════════════════════════════════
+// TOOLBAR COMPONENT
+// ═══════════════════════════════════════════════════════════════════
+
 export const Toolbar: React.FC<ToolbarProps> = ({
   viewportStore,
   saveStatus,
@@ -397,6 +320,10 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   canvasPosition,
   selectedIds = new Set(),
   onCaptureThumbnail,
+  canvasSlug,
+  isPublic,
+  onSlugChange,
+  onVisibilityChange,
 }) => {
   const activeTool = useUIStore((s) => (s.activeTool === 'move' ? 'select' : s.activeTool));
   const mode = useUIStore((s) => s.canvasInteractionMode);
@@ -404,12 +331,6 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   const setCanvasInteractionMode = useUIStore((s) => s.setCanvasInteractionMode);
   const spatialMode = useUIStore((s) => s.spatialMode);
   const setSpatialMode = useUIStore((s) => s.setSpatialMode);
-  const canvasPlatform = useUIStore((s) => s.canvasPlatform);
-  const setCanvasPlatform = useUIStore((s) => s.setCanvasPlatform);
-  const setPlatformConfig = useUIStore((s) => s.setPlatformConfig);
-  const platformConfigs = useUIStore((s) => s.platformConfigs);
-  const artboardPreviewMode = useUIStore((s) => s.artboardPreviewMode);
-  const setArtboardPreviewMode = useUIStore((s) => s.setArtboardPreviewMode);
   const setFullscreenPreview = useUIStore((s) => s.setFullscreenPreview);
 
   const canUndo = useHistoryStore(selectCanUndo);
@@ -422,86 +343,61 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   const setDockerVisible = useDockerStore((state) => state.setVisible);
   const bringDockerToFront = useDockerStore((state) => state.bringToFront);
 
-  // Grid config state — kept in sync via bus events
   const [gridConfig, setGridConfig] = useState<GridConfig>({ ...DEFAULT_GRID_CONFIG });
+  const [menuOpen, setMenuOpen] = useState(false);
 
-  // Canvas rename state
-  const [isRenaming, setIsRenaming] = useState(false);
-  const [renameDraft, setRenameDraft] = useState('');
-  const renameInputRef = useRef<HTMLInputElement>(null);
-
-  // Canvas settings dropdown state
+  // Canvas settings dropdown
   const [settingsOpen, setSettingsOpen] = useState(false);
   const settingsButtonRef = useRef<HTMLButtonElement>(null);
 
-  // Subscribe to grid config changes from other sources (e.g., grid-layer)
+  const panels: Record<string, boolean> = {}; // TODO: wire up panel visibility from store
+  const artboardPreview = false; // TODO: wire up from store
+
+  // Subscribe to grid config changes
   useEffect(() => {
     const unsub = bus.subscribe(GridEvents.CONFIG_CHANGED, (event: { payload: { config: Partial<GridConfig> } }) => {
       setGridConfig((prev) => ({ ...prev, ...event.payload.config }));
     });
-
     const unsubToggle = bus.subscribe(GridEvents.TOGGLED, (event: { payload: { enabled: boolean } }) => {
       setGridConfig((prev) => ({ ...prev, enabled: event.payload.enabled }));
     });
-
-    return () => {
-      unsub();
-      unsubToggle();
-    };
+    return () => { unsub(); unsubToggle(); };
   }, []);
 
   const zoom = viewportStore.getState().zoom;
   const zoomPercent = useMemo(() => Math.round(zoom * 100), [zoom]);
 
-  const handleToolClick = useCallback(
-    (toolId: string) => {
-      setActiveTool(toolId);
-    },
-    [setActiveTool],
-  );
-
-  const handleUndo = useCallback(() => {
-    undo();
-  }, [undo]);
-
-  const handleRedo = useCallback(() => {
-    redo();
-  }, [redo]);
+  // ── Handlers ──────────────────────────────────────────────────
+  const handleToolClick = useCallback((toolId: string) => {
+    setActiveTool(toolId);
+    bus.emit(CanvasEvents.TOOL_CHANGED, { tool: toolId });
+  }, [setActiveTool]);
+  const handleUndo = useCallback(() => undo(), [undo]);
+  const handleRedo = useCallback(() => redo(), [redo]);
 
   const handleZoomIn = useCallback(() => {
     const vp = viewportStore.getState();
-    const newZoom = Math.min(vp.zoom * 1.25, 10);
-    viewportStore.zoom(newZoom, {
-      x: vp.viewportWidth / 2,
-      y: vp.viewportHeight / 2,
-    });
+    viewportStore.zoom(Math.min(vp.zoom * 1.25, 10), { x: vp.viewportWidth / 2, y: vp.viewportHeight / 2 });
   }, [viewportStore]);
 
   const handleZoomOut = useCallback(() => {
     const vp = viewportStore.getState();
-    const newZoom = Math.max(vp.zoom / 1.25, 0.1);
-    viewportStore.zoom(newZoom, {
-      x: vp.viewportWidth / 2,
-      y: vp.viewportHeight / 2,
-    });
+    viewportStore.zoom(Math.max(vp.zoom / 1.25, 0.1), { x: vp.viewportWidth / 2, y: vp.viewportHeight / 2 });
   }, [viewportStore]);
 
-  const handleZoomReset = useCallback(() => {
-    viewportStore.reset();
-  }, [viewportStore]);
+  const handleZoomReset = useCallback(() => viewportStore.reset(), [viewportStore]);
 
   const handleModeToggle = useCallback(() => {
-    const next = mode === 'edit' ? 'preview' : 'edit';
-    setCanvasInteractionMode(next);
+    setCanvasInteractionMode(mode === 'edit' ? 'preview' : 'edit');
   }, [mode, setCanvasInteractionMode]);
 
   const handleDockerClick = useCallback(() => {
-    const existing = Object.values(dockers).find((docker) => docker.name === DOCKER_LIBRARY_NAME);
+    const existing = Object.values(dockers).find((d) => d.name === DOCKER_LIBRARY_NAME);
     if (existing) {
       setDockerVisible(existing.id, true);
       bringDockerToFront(existing.id);
     } else {
-      const dockerId = addDocker({
+      const id = addDocker({
         name: DOCKER_LIBRARY_NAME,
         dockMode: 'floating',
         visible: true,
@@ -510,89 +406,25 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         size: { width: 360, height: 460 },
         tabs: [{ id: crypto.randomUUID(), name: 'Library', widgets: [] }],
       });
-      bringDockerToFront(dockerId);
+      bringDockerToFront(id);
     }
   }, [dockers, addDocker, setDockerVisible, bringDockerToFront]);
 
-  const handleHistoryClick = useCallback(() => {
-    const HISTORY_DOCKER_NAME = 'History';
-    const existing = Object.values(dockers).find((docker) => docker.name === HISTORY_DOCKER_NAME);
-    if (existing) {
-      setDockerVisible(existing.id, true);
-      bringDockerToFront(existing.id);
-    } else {
-      const dockerId = addDocker({
-        name: HISTORY_DOCKER_NAME,
-        dockMode: 'floating',
-        visible: true,
-        pinned: false,
-        position: { x: 400, y: 96 },
-        size: { width: 300, height: 400 },
-        tabs: [
-          {
-            id: crypto.randomUUID(),
-            name: 'History',
-            widgets: [{ widgetInstanceId: HISTORY_WIDGET_INSTANCE_ID }],
-          },
-        ],
-      });
-      bringDockerToFront(dockerId);
-    }
-  }, [dockers, addDocker, setDockerVisible, bringDockerToFront]);
+  const handleFullscreenPreview = useCallback(() => setFullscreenPreview(true), [setFullscreenPreview]);
+  const handleCaptureThumbnail = useCallback(() => onCaptureThumbnail?.(), [onCaptureThumbnail]);
 
-  const handleSpatialModeChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSpatialMode(e.target.value as any);
-  }, [setSpatialMode]);
+  // Grid toggle — must set both enabled AND showGridLines for the renderer to draw
+  const handleGridToggle = useCallback(() => {
+    const newEnabled = !gridConfig.enabled;
+    bus.emit(GridEvents.CONFIG_CHANGED, { canvasId: '', config: { enabled: newEnabled, showGridLines: newEnabled } });
+    bus.emit(GridEvents.TOGGLED, { canvasId: '', enabled: newEnabled });
+  }, [gridConfig.enabled]);
 
-  const handlePlatformChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-    const platform = e.target.value as CanvasPlatform;
-    setCanvasPlatform(platform);
-  }, [setCanvasPlatform]);
-
-  const handlePresetChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-    const presetLabel = e.target.value;
-    if (presetLabel === '__current__') return;
-    const presets = PLATFORM_PRESETS[canvasPlatform];
-    const preset = presets.find((p) => p.label === presetLabel);
-    if (preset) {
-      setPlatformConfig(canvasPlatform, {
-        width: preset.width,
-        height: preset.height,
-        sizeMode: 'bounded',
-      });
-      bus.emit(CanvasDocumentEvents.VIEWPORT_CHANGED, {
-        canvasId: '',
-        viewport: { width: preset.width, height: preset.height, sizeMode: 'bounded' },
-      });
-    }
-  }, [canvasPlatform, setPlatformConfig]);
-
-  const handleArtboardPreviewToggle = useCallback(() => {
-    setArtboardPreviewMode(!artboardPreviewMode);
-  }, [artboardPreviewMode, setArtboardPreviewMode]);
-
-  const handleEnterXR = useCallback(() => {
-    setSpatialMode('vr');
-    enterXR('immersive-vr');
-  }, [setSpatialMode]);
-
-  const handleFullscreenPreview = useCallback(() => {
-    setFullscreenPreview(true);
-  }, [setFullscreenPreview]);
-
-  const handleCaptureThumbnail = useCallback(() => {
-    onCaptureThumbnail?.();
-  }, [onCaptureThumbnail]);
-
-  // ── Alignment / Grouping ───────────────────────────────────────
-
-  const handleAlign = useCallback(
-    (type: string) => {
-      if (selectedIds.size < 2) return;
-      bus.emit(`canvas.align.${type}`, { entityIds: Array.from(selectedIds) });
-    },
-    [selectedIds],
-  );
+  // Alignment / Grouping
+  const handleAlign = useCallback((type: string) => {
+    if (selectedIds.size < 2) return;
+    bus.emit(`canvas.align.${type}`, { entityIds: Array.from(selectedIds) });
+  }, [selectedIds]);
 
   const handleGroup = useCallback(() => {
     if (selectedIds.size < 2) return;
@@ -604,165 +436,103 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     bus.emit('canvas.entity.ungroup', { entityIds: Array.from(selectedIds) });
   }, [selectedIds]);
 
-  // ── Grid controls ──────────────────────────────────────────────
+  // Clipboard
+  const handleCut = useCallback(() => { if (selectedIds.size === 0) return; bus.emit('canvas.clipboard.cut', { entityIds: Array.from(selectedIds) }); }, [selectedIds]);
+  const handleCopy = useCallback(() => { if (selectedIds.size === 0) return; bus.emit('canvas.clipboard.copy', { entityIds: Array.from(selectedIds) }); }, [selectedIds]);
+  const handlePaste = useCallback(() => bus.emit('canvas.clipboard.paste', {}), []);
 
-  const handleGridToggle = useCallback(() => {
-    const newEnabled = !gridConfig.enabled;
-    bus.emit(GridEvents.CONFIG_CHANGED, { canvasId: '', config: { enabled: newEnabled } });
-    bus.emit(GridEvents.TOGGLED, { canvasId: '', enabled: newEnabled });
-  }, [gridConfig.enabled]);
+  // Arrange extras
+  const handleDistributeH = useCallback(() => { if (selectedIds.size < 3) return; bus.emit('canvas.arrange.distributeH', { entityIds: Array.from(selectedIds) }); }, [selectedIds]);
+  const handleDistributeV = useCallback(() => { if (selectedIds.size < 3) return; bus.emit('canvas.arrange.distributeV', { entityIds: Array.from(selectedIds) }); }, [selectedIds]);
+  const handleMatchSize = useCallback(() => { if (selectedIds.size < 2) return; bus.emit('canvas.arrange.matchSize', { entityIds: Array.from(selectedIds) }); }, [selectedIds]);
+  const handleFlipH = useCallback(() => { if (selectedIds.size === 0) return; bus.emit('canvas.arrange.flipH', { entityIds: Array.from(selectedIds) }); }, [selectedIds]);
+  const handleFlipV = useCallback(() => { if (selectedIds.size === 0) return; bus.emit('canvas.arrange.flipV', { entityIds: Array.from(selectedIds) }); }, [selectedIds]);
 
-  const handleSnapModeChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-    bus.emit(GridEvents.CONFIG_CHANGED, { canvasId: '', config: { snapMode: e.target.value } });
-  }, []);
-
-  const handleGridLinesToggle = useCallback(() => {
-    const newShow = !gridConfig.showGridLines;
-    bus.emit(GridEvents.CONFIG_CHANGED, { canvasId: '', config: { showGridLines: newShow } });
-  }, [gridConfig.showGridLines]);
-
-  const handleProjectionChange = useCallback(
-    (e: React.ChangeEvent<HTMLSelectElement>) => {
-      const projection = e.target.value as GridProjectionMode;
-      bus.emit(GridEvents.CONFIG_CHANGED, { canvasId: '', config: { projection } });
-    },
-    [],
-  );
-
-  // ── More Tools tray ────────────────────────────────────────────
-  const [trayOpen, setTrayOpen] = useState(false);
-  const trayRef = useRef<HTMLDivElement>(null);
-
-  // Dismiss tray on outside click
-  useEffect(() => {
-    if (!trayOpen) return;
-    const handleOutsideClick = (e: MouseEvent) => {
-      if (trayRef.current && !trayRef.current.contains(e.target as Node)) {
-        setTrayOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleOutsideClick);
-    return () => document.removeEventListener('mousedown', handleOutsideClick);
-  }, [trayOpen]);
-
-  // ── Grid customizer popover ─────────────────────────────────────
-  const [gridCustomizerOpen, setGridCustomizerOpen] = useState(false);
-  const gridCustomizerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!gridCustomizerOpen) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (gridCustomizerRef.current && !gridCustomizerRef.current.contains(e.target as Node)) {
-        setGridCustomizerOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [gridCustomizerOpen]);
-
-  const handleGridStyleChange = useCallback((style: GridLineStyle) => {
-    bus.emit(GridEvents.CONFIG_CHANGED, { canvasId: '', config: { gridLineStyle: style } });
-  }, []);
-
-  const handleGridColorChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    bus.emit(GridEvents.CONFIG_CHANGED, { canvasId: '', config: { gridLineColor: e.target.value } });
-  }, []);
-
-  const handleGridOpacityChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    bus.emit(GridEvents.CONFIG_CHANGED, { canvasId: '', config: { gridLineOpacity: Number(e.target.value) } });
-  }, []);
-
-  const handleGridWeightChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    bus.emit(GridEvents.CONFIG_CHANGED, { canvasId: '', config: { gridLineWidth: Number(e.target.value) } });
-  }, []);
-
-  const handleGridDotSizeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    bus.emit(GridEvents.CONFIG_CHANGED, { canvasId: '', config: { dotSize: Number(e.target.value) } });
-  }, []);
+  // TODO: wire up from store
+  const handleEnterXR = useCallback(() => enterXR(), []);
+  const handleClearCanvas = useCallback(() => bus.emit('canvas.clear', {}), []);
+  const handlePanelToggle = useCallback((panel: string) => bus.emit('canvas.panel.toggle', { panel }), []);
+  const handleArtboardPreviewToggle = useCallback(() => bus.emit('canvas.artboard.toggle', {}), []);
 
   const isEditMode = mode === 'edit';
 
-  // Select style for tray dropdowns
-  const traySelectStyle: React.CSSProperties = {
-    height: '32px',
-    padding: '0 6px',
-    border: '1px solid var(--sn-border, #e0e0e0)',
-    borderRadius: 'var(--sn-radius, 6px)',
-    background: 'var(--sn-surface, #fff)',
-    color: 'var(--sn-text, #1a1a2e)',
+  // ── Island button style ─────────────────────────────────────────
+  const islandBtn: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '4px',
+    minWidth: '30px',
+    height: '30px',
+    border: 'none',
+    borderRadius: '8px',
+    background: 'transparent',
+    color: 'var(--sn-text, #F2E8E4)',
     cursor: 'pointer',
-    fontSize: '11px',
+    fontSize: '12px',
     fontFamily: 'inherit',
+    lineHeight: 1,
+    transition: `all 0.15s ${SPRING}`,
   };
 
   return (
-    <div ref={trayRef} data-testid="canvas-toolbar" style={{ position: 'relative' }}>
-      {/* ═══ PRIMARY TOOLBAR ═══ */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '4px',
-          padding: '0 12px',
-          background: 'var(--sn-surface-glass, rgba(255,255,255,0.75))',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-          borderBottom: '1px solid var(--sn-border, #e0e0e0)',
-          height: '48px',
-          fontFamily: 'var(--sn-font-family, system-ui)',
-          fontSize: '13px',
-          userSelect: 'none',
-        }}
-      >
-        {/* Canvas name + Save */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-          {canvasName !== undefined && (
-            isRenaming ? (
-              <input
-                ref={renameInputRef}
-                data-testid="canvas-name-input"
-                value={renameDraft}
-                onChange={(e) => setRenameDraft(e.target.value)}
-                onBlur={() => {
-                  if (renameDraft.trim() && onRename) onRename(renameDraft.trim());
-                  setIsRenaming(false);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    if (renameDraft.trim() && onRename) onRename(renameDraft.trim());
-                    setIsRenaming(false);
-                  } else if (e.key === 'Escape') {
-                    setIsRenaming(false);
-                  }
-                }}
+    <>
+      {/* ═══ FLOATING ISLAND ═══ */}
+      <div data-testid="canvas-toolbar" style={{
+        position: 'relative',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        padding: '12px 0 0',
+        pointerEvents: 'none',
+      }}>
+        <div
+          data-testid="toolbar-island"
+          className="sn-liquid-glass sn-neo sn-holo-border"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '6px 16px',
+            height: '44px',
+            fontFamily: 'var(--sn-font-family, Outfit, system-ui, sans-serif)',
+            color: 'var(--sn-text, #F2E8E4)',
+            pointerEvents: 'auto',
+            transition: `all 0.3s ${SPRING}`,
+          }}
+        >
+          {/* Menu toggle (edit mode only) */}
+          {isEditMode && (
+            <>
+              <button
+                data-testid="menu-toggle"
+                onClick={() => setMenuOpen(!menuOpen)}
+                title={menuOpen ? 'Close tool menu' : 'Open tool menu'}
                 style={{
-                  fontWeight: 600,
-                  fontSize: '13px',
-                  fontFamily: 'inherit',
-                  border: '1px solid var(--sn-accent, #6366f1)',
-                  borderRadius: '4px',
-                  padding: '2px 6px',
-                  background: 'var(--sn-bg, #fff)',
-                  color: 'var(--sn-text, #1a1a2e)',
-                  outline: 'none',
-                  width: '160px',
-                  height: '28px',
+                  ...islandBtn,
+                  background: menuOpen ? 'var(--sn-accent, #6366f1)' : 'transparent',
+                  color: menuOpen ? '#fff' : 'var(--sn-text-muted, rgba(242,232,228,0.55))',
+                  boxShadow: menuOpen ? '0 0 12px var(--sn-accent-glow, rgba(184,160,216,0.15))' : 'none',
                 }}
-              />
-            ) : (
+              >
+                {menuOpen ? <CloseIcon /> : <MenuIcon />}
+              </button>
+              <Divider />
+            </>
+          )}
+
+          {/* Canvas name + save */}
+          {typeof canvasName === 'string' && canvasName && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <div
                 data-testid="canvas-name"
-                onDoubleClick={() => {
-                  setRenameDraft(canvasName);
-                  setIsRenaming(true);
-                  setTimeout(() => renameInputRef.current?.select(), 0);
-                }}
-                title="Double-click to rename"
+                className="sn-chrome-text"
+                title={canvasName}
                 style={{
-                  fontWeight: 600,
-                  fontSize: '13px',
-                  cursor: 'pointer',
-                  maxWidth: '180px',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  fontFamily: 'var(--sn-font-serif, Newsreader, Georgia, serif)',
+                  maxWidth: '140px',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
@@ -770,328 +540,255 @@ export const Toolbar: React.FC<ToolbarProps> = ({
               >
                 {canvasName}
               </div>
-            )
+              {saveStatus && (
+                <div
+                  data-testid="save-status"
+                  title={SAVE_STATUS_LABELS[saveStatus]}
+                  style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--sn-text-muted)' }}
+                >
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: SAVE_STATUS_COLORS[saveStatus], display: 'inline-block' }} />
+                </div>
+              )}
+              <Divider />
+            </div>
           )}
 
-          {saveStatus && (
+          {/* Undo / Redo */}
+          {isEditMode && (
             <>
-              <button
-                data-testid="save-btn"
-                onClick={onSave}
-                title="Save (Ctrl+S)"
-                style={{ ...smallBtnBase, padding: '0 10px', width: 'auto', fontSize: '12px', fontWeight: 600 }}
-              >
-                Save
-              </button>
-              <div
-                data-testid="save-status"
-                title={SAVE_STATUS_LABELS[saveStatus]}
-                style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--sn-text-muted, #6b7280)' }}
-              >
-                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: SAVE_STATUS_COLORS[saveStatus], display: 'inline-block' }} />
-                {SAVE_STATUS_LABELS[saveStatus]}
+              <div style={{ display: 'flex', gap: '2px' }}>
+                <button data-testid="undo-btn" onClick={handleUndo} title="Undo (Ctrl+Z)" style={islandBtn} disabled={!canUndo}><UndoIcon /></button>
+                <button data-testid="redo-btn" onClick={handleRedo} title="Redo (Ctrl+Shift+Z)" style={islandBtn} disabled={!canRedo}><RedoIcon /></button>
               </div>
+              <Divider />
             </>
           )}
-          <Divider />
-        </div>
 
-        {/* Primary tool buttons — labeled, edit mode only */}
-        {isEditMode && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }} data-testid="toolbar-tools">
-            <div style={{ display: 'flex', gap: '2px' }}>
-              {PRIMARY_TOOLS.map((tool) => (
-                <LabeledToolBtn
-                  key={tool.id}
-                  testId={`tool-${tool.id}`}
-                  icon={tool.icon}
-                  label={tool.label}
-                  active={activeTool === tool.id}
-                  onClick={() => handleToolClick(tool.id)}
-                  title={`${tool.label}${tool.shortcut ? ` (${tool.shortcut})` : ''}`}
-                />
-              ))}
-            </div>
-
-            <Divider />
-
-            <div style={{ display: 'flex', gap: '2px' }}>
-              <button onClick={handleUndo} disabled={!canUndo} title="Undo (Ctrl+Z)" style={{ ...smallBtnBase, opacity: canUndo ? 1 : 0.4 }}>
-                <UndoIcon />
-              </button>
-              <button onClick={handleRedo} disabled={!canRedo} title="Redo (Ctrl+Shift+Z)" style={{ ...smallBtnBase, opacity: canRedo ? 1 : 0.4 }}>
-                <RedoIcon />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Spacer */}
-        <div style={{ flex: 1 }} />
-
-        {/* Presence avatars */}
-        <PresenceAvatarBar />
-
-        {/* Zoom controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }} data-testid="toolbar-zoom">
-          <button data-testid="zoom-out" onClick={handleZoomOut} title="Zoom out" style={smallBtnBase}>-</button>
-          <button
-            data-testid="zoom-reset"
-            onClick={handleZoomReset}
-            title="Reset zoom"
-            style={{ ...smallBtnBase, border: 'none', minWidth: '44px', color: 'var(--sn-text-muted, #6b7280)' }}
-          >
-            {zoomPercent}%
-          </button>
-          <button data-testid="zoom-in" onClick={handleZoomIn} title="Zoom in" style={smallBtnBase}>+</button>
-        </div>
-
-        <Divider />
-
-        {/* Thumbnail capture */}
-        {isEditMode && (
-          <>
-            <Divider />
+          {/* Zoom controls */}
+          <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
+            <button data-testid="zoom-out" onClick={handleZoomOut} title="Zoom out" style={islandBtn}>−</button>
             <button
-              data-testid="capture-thumbnail"
-              onClick={handleCaptureThumbnail}
-              title="Capture Thumbnail"
-              style={smallBtnBase}
+              data-testid="zoom-reset"
+              onClick={handleZoomReset}
+              title="Reset zoom"
+              style={{ ...islandBtn, minWidth: '40px', color: 'var(--sn-text-muted)', fontSize: '11px' }}
             >
-              <CameraIcon />
+              {zoomPercent}%
             </button>
-          </>
-        )}
+            <button data-testid="zoom-in" onClick={handleZoomIn} title="Zoom in" style={islandBtn}>+</button>
+          </div>
 
-        <Divider />
+          <Divider />
 
-        {/* Mode toggle + Fullscreen */}
-        <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+          {/* Presence avatars */}
+          <PresenceAvatarBar />
+
+          <Divider />
+
+          {/* Mode toggle */}
           <button
             data-testid="mode-toggle"
             onClick={handleModeToggle}
             title={isEditMode ? 'Switch to Preview (P)' : 'Switch to Edit (P)'}
             style={{
-              height: '32px',
+              height: '30px',
               padding: '0 16px',
-              border: '1px solid var(--sn-border, #e0e0e0)',
-              borderRadius: 'var(--sn-radius, 6px)',
+              border: 'none',
+              borderRadius: '999px',
               background: isEditMode ? 'transparent' : 'var(--sn-accent, #6366f1)',
-              color: isEditMode ? 'var(--sn-text, #1a1a2e)' : '#fff',
+              color: isEditMode ? 'var(--sn-text)' : '#fff',
               cursor: 'pointer',
               fontSize: '12px',
               fontFamily: 'inherit',
               fontWeight: 600,
-              transition: `all 0.15s ${TOOLBAR_SPRING}`,
+              transition: `all 0.25s ${SPRING}`,
+              boxShadow: !isEditMode ? '0 0 16px var(--sn-accent-glow, rgba(184,160,216,0.2))' : 'none',
             }}
           >
-            {isEditMode ? 'Run' : 'Edit'}
+            {isEditMode ? 'Preview' : 'Edit'}
           </button>
+
           <button
             data-testid="fullscreen-preview-btn"
             onClick={handleFullscreenPreview}
             title="Fullscreen Preview (Shift+F)"
-            style={{ ...smallBtnBase, height: '32px' }}
+            style={{ ...islandBtn, width: '30px', padding: 0 }}
           >
             <FullscreenIcon />
           </button>
         </div>
-
-        {/* More Tools toggle */}
-        {isEditMode && (
-          <>
-            <Divider />
-            <button
-              data-testid="more-tools-toggle"
-              onClick={() => setTrayOpen((p) => !p)}
-              title={trayOpen ? 'Hide tools' : 'More tools'}
-              style={{
-                ...smallBtnBase,
-                gap: '4px',
-                padding: '0 10px',
-                minWidth: 'auto',
-                background: trayOpen ? 'var(--sn-surface-raised, #1E1E24)' : 'transparent',
-                fontSize: '11px',
-                fontWeight: 500,
-              }}
-            >
-              MORE TOOLS
-              <ChevronDownIcon open={trayOpen} />
-            </button>
-          </>
-        )}
       </div>
 
-      {/* ═══ PULL-DOWN TRAY ═══ */}
+      {/* ═══ SLIDE-OUT TOOL MENU ═══ */}
       {isEditMode && (
-        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 40, overflow: 'hidden', pointerEvents: trayOpen ? 'auto' : 'none' }}>
+        <>
+          {/* Backdrop */}
+          {menuOpen && (
+            <div
+              data-testid="menu-backdrop"
+              onClick={() => setMenuOpen(false)}
+              style={{
+                position: 'fixed',
+                inset: 0,
+                zIndex: MENU_Z - 1,
+                background: 'rgba(0,0,0,0.25)',
+                transition: `opacity 0.3s ${SPRING}`,
+                pointerEvents: 'auto',
+              }}
+            />
+          )}
+
+          {/* Slide-out panel */}
           <div
-            data-testid="toolbar-tray"
+            data-testid="toolbar-menu"
+            className="sn-glass-heavy sn-neo sn-holo-border"
             style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              alignItems: 'center',
-              gap: '12px',
-              padding: '8px 16px',
-              background: 'var(--sn-surface-glass, rgba(255,255,255,0.75))',
-              backdropFilter: 'blur(20px)',
-              WebkitBackdropFilter: 'blur(20px)',
-              borderBottom: '1px solid var(--sn-border, #e0e0e0)',
-              boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
-              fontFamily: 'var(--sn-font-family, system-ui)',
-              fontSize: '12px',
-              userSelect: 'none',
-              transform: trayOpen ? 'translateY(0)' : 'translateY(-100%)',
-              transition: `transform 0.35s ${TOOLBAR_SPRING}`,
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              bottom: 0,
+              width: MENU_WIDTH,
+              zIndex: MENU_Z,
+              borderRight: '1px solid var(--sn-border, rgba(255,255,255,0.08))',
+              transform: menuOpen ? 'translateX(0)' : 'translateX(-100%)',
+              transition: `transform 0.35s ${SPRING}`,
+              overflowY: 'auto',
+              overflowX: 'hidden',
+              fontFamily: 'var(--sn-font-family, Outfit, system-ui, sans-serif)',
+              color: 'var(--sn-text, #F2E8E4)',
+              borderRadius: 0,
+              pointerEvents: 'auto',
             }}
           >
-            {/* Extra Tools */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <TrayLabel>Tools</TrayLabel>
-              {TRAY_TOOLS.map((tool) => (
-                <LabeledToolBtn
-                  key={tool.id}
-                  testId={`tool-${tool.id}`}
-                  icon={tool.icon}
-                  label={tool.label}
-                  active={activeTool === tool.id}
-                  onClick={() => handleToolClick(tool.id)}
-                  title={`${tool.label}${tool.shortcut ? ` (${tool.shortcut})` : ''}`}
-                />
-              ))}
-            </div>
-
-            <Divider />
-
-            {/* Grid */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }} data-testid="toolbar-grid">
-              <TrayLabel>Grid</TrayLabel>
-              <button data-testid="grid-toggle" onClick={handleGridToggle} title={gridConfig.enabled ? 'Hide grid (G)' : 'Show grid (G)'} style={{ ...(gridConfig.enabled ? smallBtnActive : smallBtnBase), padding: '0 8px', width: 'auto' }}>Grid</button>
-              {gridConfig.enabled && <button data-testid="grid-lines-toggle" onClick={handleGridLinesToggle} title={gridConfig.showGridLines ? 'Hide grid lines' : 'Show grid lines'} style={{ ...(gridConfig.showGridLines ? smallBtnActive : smallBtnBase), padding: '0 8px', width: 'auto' }}>Lines</button>}
-              <select data-testid="snap-mode" value={gridConfig.snapMode ?? 'none'} onChange={handleSnapModeChange} title="Snap mode" style={traySelectStyle}>
-                <option value="none">No Snap</option>
-                <option value="center">Center</option>
-                <option value="corner">Corner</option>
-                <option value="edge">Edge</option>
-              </select>
-              {gridConfig.enabled && (
-                <select data-testid="grid-projection" value={gridConfig.projection} onChange={handleProjectionChange} title="Grid projection" style={traySelectStyle}>
-                  <option value="orthogonal">Square</option>
-                  <option value="isometric">Isometric</option>
-                  <option value="triangular">Triangular</option>
-                  <option value="hexagonal">Hexagonal</option>
-                </select>
-              )}
-              {gridConfig.enabled && (
-                <div ref={gridCustomizerRef} style={{ position: 'relative' }}>
-                  <button data-testid="grid-customizer-toggle" onClick={() => setGridCustomizerOpen(!gridCustomizerOpen)} title="Grid appearance" style={{ ...(gridCustomizerOpen ? smallBtnActive : smallBtnBase), padding: '0 6px', width: 'auto', fontSize: '11px' }}>{'\u2699'}</button>
-                  {gridCustomizerOpen && (
-                    <div data-testid="grid-customizer-popover" style={{ position: 'absolute', top: '100%', right: 0, marginTop: 4, padding: '10px 12px', background: 'var(--sn-surface, #fff)', border: '1px solid var(--sn-border, #e0e0e0)', borderRadius: 'var(--sn-radius, 6px)', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 100, minWidth: 180, display: 'flex', flexDirection: 'column', gap: 8, fontSize: '11px', fontFamily: 'inherit', color: 'var(--sn-text, #1a1a2e)' }}>
-                      <div>
-                        <div style={{ marginBottom: 4, fontWeight: 600 }}>Style</div>
-                        <div style={{ display: 'flex', gap: 4 }}>
-                          {(['line', 'dot', 'cross'] as GridLineStyle[]).map((style) => (
-                            <button key={style} data-testid={`grid-style-${style}`} onClick={() => handleGridStyleChange(style)} style={{ ...(gridConfig.gridLineStyle === style || (!gridConfig.gridLineStyle && style === 'line') ? smallBtnActive : smallBtnBase), padding: '2px 8px', fontSize: '11px', textTransform: 'capitalize' }}>{style}</button>
-                          ))}
-                        </div>
-                      </div>
-                      <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span>Color</span>
-                        <input data-testid="grid-color-picker" type="color" value={gridConfig.gridLineColor?.startsWith('#') ? gridConfig.gridLineColor : '#ffffff'} onChange={handleGridColorChange} style={{ width: 28, height: 22, padding: 0, border: '1px solid var(--sn-border, #e0e0e0)', borderRadius: 3, cursor: 'pointer' }} />
-                      </label>
-                      <label style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Opacity</span><span style={{ color: 'var(--sn-text-muted, #888)' }}>{((gridConfig.gridLineOpacity ?? 0.1) * 100).toFixed(0)}%</span></div>
-                        <input data-testid="grid-opacity-slider" type="range" min="0" max="1" step="0.05" value={gridConfig.gridLineOpacity ?? 0.1} onChange={handleGridOpacityChange} style={{ width: '100%', cursor: 'pointer' }} />
-                      </label>
-                      <label style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Weight</span><span style={{ color: 'var(--sn-text-muted, #888)' }}>{gridConfig.gridLineWidth ?? 1}px</span></div>
-                        <input data-testid="grid-weight-slider" type="range" min="0.5" max="4" step="0.5" value={gridConfig.gridLineWidth ?? 1} onChange={handleGridWeightChange} style={{ width: '100%', cursor: 'pointer' }} />
-                      </label>
-                      {gridConfig.gridLineStyle === 'dot' && (
-                        <label style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Dot Size</span><span style={{ color: 'var(--sn-text-muted, #888)' }}>{gridConfig.dotSize ?? 1.5}px</span></div>
-                          <input data-testid="grid-dot-size-slider" type="range" min="0.5" max="6" step="0.5" value={gridConfig.dotSize ?? 1.5} onChange={handleGridDotSizeChange} style={{ width: '100%', cursor: 'pointer' }} />
-                        </label>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <Divider />
-
-            {/* Alignment */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <TrayLabel>Align</TrayLabel>
-              <button onClick={() => handleAlign('left')} disabled={selectedIds.size < 2} title="Align Left" style={{ ...smallBtnBase, opacity: selectedIds.size < 2 ? 0.4 : 1 }}><AlignLeftIcon /></button>
-              <button onClick={() => handleAlign('centerH')} disabled={selectedIds.size < 2} title="Center H" style={{ ...smallBtnBase, opacity: selectedIds.size < 2 ? 0.4 : 1 }}><AlignCenterHIcon /></button>
-              <button onClick={() => handleAlign('right')} disabled={selectedIds.size < 2} title="Align Right" style={{ ...smallBtnBase, opacity: selectedIds.size < 2 ? 0.4 : 1 }}><AlignRightIcon /></button>
-              <button onClick={() => handleAlign('top')} disabled={selectedIds.size < 2} title="Align Top" style={{ ...smallBtnBase, opacity: selectedIds.size < 2 ? 0.4 : 1 }}><AlignTopIcon /></button>
-              <button onClick={() => handleAlign('centerV')} disabled={selectedIds.size < 2} title="Center V" style={{ ...smallBtnBase, opacity: selectedIds.size < 2 ? 0.4 : 1 }}><AlignCenterVIcon /></button>
-              <button onClick={() => handleAlign('bottom')} disabled={selectedIds.size < 2} title="Align Bottom" style={{ ...smallBtnBase, opacity: selectedIds.size < 2 ? 0.4 : 1 }}><AlignBottomIcon /></button>
-            </div>
-
-            <Divider />
-
-            {/* Grouping */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <TrayLabel>Group</TrayLabel>
-              <button onClick={handleGroup} disabled={selectedIds.size < 2} title="Group (Ctrl+G)" style={{ ...smallBtnBase, padding: '0 8px', width: 'auto', opacity: selectedIds.size < 2 ? 0.4 : 1 }}>Group</button>
-              <button onClick={handleUngroup} disabled={selectedIds.size === 0} title="Ungroup (Ctrl+Shift+G)" style={{ ...smallBtnBase, padding: '0 8px', width: 'auto', opacity: selectedIds.size === 0 ? 0.4 : 1 }}>Ungroup</button>
+            {/* Menu header */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '16px',
+              borderBottom: '1px solid var(--sn-border, rgba(255,255,255,0.06))',
+            }}>
+              <span className="sn-chrome-text" style={{ fontSize: '14px', fontWeight: 600, letterSpacing: '0.02em' }}>Tool Menu</span>
               <button
-                onClick={() => {
-                  if (selectedIds.size === 0) return;
-                  useUIStore.getState().enterFocusMode(Array.from(selectedIds));
+                data-testid="menu-close"
+                onClick={() => setMenuOpen(false)}
+                title="Close"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '28px',
+                  height: '28px',
+                  border: 'none',
+                  borderRadius: '6px',
+                  background: 'transparent',
+                  color: 'var(--sn-text-muted)',
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
                 }}
-                disabled={selectedIds.size === 0}
-                title="Focus Mode (F)"
-                style={{ ...smallBtnBase, padding: '0 8px', width: 'auto', opacity: selectedIds.size === 0 ? 0.4 : 1 }}
               >
-                Focus
+                <CloseIcon />
               </button>
             </div>
 
-            <Divider />
+            {/* ── Tools ── */}
+            <MenuSection label="Tools">
+              <BtnGrid cols={2}>
+                {TOOLS.map((t) => (
+                  <ToolBtn
+                    key={t.id}
+                    testId={`tool-${t.id}`}
+                    icon={t.icon}
+                    label={t.label}
+                    active={activeTool === t.id}
+                    onClick={() => handleToolClick(t.id)}
+                    title={`${t.label}${t.shortcut ? ` (${t.shortcut})` : ''}`}
+                  />
+                ))}
+              </BtnGrid>
+            </MenuSection>
 
-            {/* Canvas settings */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <TrayLabel>Canvas</TrayLabel>
-              <select data-testid="platform-select" value={canvasPlatform} onChange={handlePlatformChange} title="Platform" style={traySelectStyle}>
-                <option value="web">Web</option>
-                <option value="mobile">Mobile</option>
-                <option value="desktop">Desktop</option>
-              </select>
-              <select data-testid="canvas-size-preset" value={PLATFORM_PRESETS[canvasPlatform].find((p) => p.width === (platformConfigs[canvasPlatform]?.width ?? viewportConfig?.width) && p.height === (platformConfigs[canvasPlatform]?.height ?? viewportConfig?.height))?.label ?? '__current__'} onChange={handlePresetChange} title="Canvas size" style={{ ...traySelectStyle, maxWidth: '180px' }}>
-                {!PLATFORM_PRESETS[canvasPlatform].find((p) => p.width === (platformConfigs[canvasPlatform]?.width ?? viewportConfig?.width) && p.height === (platformConfigs[canvasPlatform]?.height ?? viewportConfig?.height)) && (
-                  <option value="__current__">{viewportConfig?.width && viewportConfig?.height ? `Custom (${viewportConfig.width}\u00D7${viewportConfig.height})` : 'Custom'}</option>
-                )}
-                {PLATFORM_PRESETS[canvasPlatform].map((preset) => <option key={preset.label} value={preset.label}>{preset.label}</option>)}
-              </select>
-              <select data-testid="spatial-mode-select" value={spatialMode} onChange={handleSpatialModeChange} title="Spatial Mode" style={traySelectStyle}>
-                <option value="2d">2D</option>
-                <option value="3d">3D</option>
-                <option value="vr">VR</option>
-                <option value="ar">AR</option>
-              </select>
-              {spatialMode !== '2d' && <button onClick={handleEnterXR} title={`Enter WebXR (${spatialMode.toUpperCase()})`} style={smallBtnBase}><XRGogglesIcon /></button>}
-              <button onClick={handleArtboardPreviewToggle} title={artboardPreviewMode ? 'Exit Artboard Preview' : 'Artboard Preview'} style={{ ...(artboardPreviewMode ? smallBtnActive : smallBtnBase), padding: '0 8px', width: 'auto', fontSize: '11px' }}>Artboard</button>
-            </div>
+            {/* ── Edit ── */}
+            <MenuSection label="Edit">
+              <BtnGrid cols={2}>
+                <ToolBtn testId="menu-undo" icon={<UndoIcon />} label="Undo" disabled={!canUndo} onClick={handleUndo} title="Undo (Ctrl+Z)" />
+                <ToolBtn testId="menu-redo" icon={<RedoIcon />} label="Redo" disabled={!canRedo} onClick={handleRedo} title="Redo (Ctrl+Shift+Z)" />
+                <ToolBtn testId="menu-cut" icon={<CutIcon />} label="Cut" onClick={handleCut} title="Cut (Ctrl+X)" />
+                <ToolBtn testId="menu-copy" icon={<CopyIcon />} label="Copy" onClick={handleCopy} title="Copy (Ctrl+C)" />
+                <ToolBtn testId="menu-paste" icon={<PasteIcon />} label="Paste" onClick={handlePaste} title="Paste (Ctrl+V)" />
+              </BtnGrid>
+            </MenuSection>
 
-            <Divider />
+            {/* ── Arrange ── */}
+            <MenuSection label="Arrange" defaultOpen={false}>
+              <SubLabel>Align</SubLabel>
+              <BtnGrid cols={3}>
+                <ToolBtn testId="align-left" icon={<AlignLeftIcon />} label="Left" onClick={() => handleAlign('left')} title="Align Left" compact />
+                <ToolBtn testId="align-center-h" icon={<AlignCenterHIcon />} label="Center" onClick={() => handleAlign('centerH')} title="Align Center (H)" compact />
+                <ToolBtn testId="align-right" icon={<AlignRightIcon />} label="Right" onClick={() => handleAlign('right')} title="Align Right" compact />
+                <ToolBtn testId="align-top" icon={<AlignTopIcon />} label="Top" onClick={() => handleAlign('top')} title="Align Top" compact />
+                <ToolBtn testId="align-center-v" icon={<AlignCenterVIcon />} label="Middle" onClick={() => handleAlign('centerV')} title="Align Center (V)" compact />
+                <ToolBtn testId="align-bottom" icon={<AlignBottomIcon />} label="Bottom" onClick={() => handleAlign('bottom')} title="Align Bottom" compact />
+              </BtnGrid>
+              <SubLabel>Distribute</SubLabel>
+              <BtnGrid cols={2}>
+                <ToolBtn testId="dist-h-btn" icon={<DistributeHIcon />} label="Horizontal" onClick={handleDistributeH} title="Distribute Horizontal" />
+                <ToolBtn testId="dist-v-btn" icon={<DistributeVIcon />} label="Vertical" onClick={handleDistributeV} title="Distribute Vertical" />
+                <ToolBtn testId="match-size-btn" icon={<MatchSizeIcon />} label="Match Size" onClick={handleMatchSize} title="Match Size" />
+              </BtnGrid>
+              <SubLabel>Transform</SubLabel>
+              <BtnGrid cols={2}>
+                <ToolBtn testId="flip-h-btn" icon={<FlipHIcon />} label="Flip H" onClick={handleFlipH} title="Flip Horizontal" />
+                <ToolBtn testId="flip-v-btn" icon={<FlipVIcon />} label="Flip V" onClick={handleFlipV} title="Flip Vertical" />
+                <ToolBtn testId="group-btn" icon={<LayersIcon />} label="Group" onClick={handleGroup} title="Group" />
+                <ToolBtn testId="ungroup-btn" icon={<LayersIcon />} label="Ungroup" onClick={handleUngroup} title="Ungroup" />
+              </BtnGrid>
+            </MenuSection>
 
-            {/* Docker + History + Settings */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <button onClick={handleDockerClick} title="Docker Library" style={{ ...smallBtnBase, gap: '4px', padding: '0 8px', minWidth: 'auto' }}><LibraryIcon /><span style={{ fontSize: '11px' }}>Library</span></button>
-              <button onClick={handleHistoryClick} title="History" style={{ ...smallBtnBase, gap: '4px', padding: '0 8px', minWidth: 'auto' }}><HistoryIcon /><span style={{ fontSize: '11px' }}>History</span></button>
+            {/* ── View ── */}
+            <MenuSection label="View">
+              <SubLabel>Spatial Mode</SubLabel>
+              <BtnGrid cols={3}>
+                <ToolBtn testId="spatial-2d" icon={<RectIcon />} label="2D" active={spatialMode === '2d'} onClick={() => setSpatialMode('2d')} title="2D Canvas" compact />
+                <ToolBtn testId="spatial-3d" icon={<ArtboardIcon />} label="3D" active={spatialMode === '3d'} onClick={() => setSpatialMode('3d')} title="3D Scene" compact />
+                <ToolBtn testId="spatial-vr" icon={<XRIcon />} label="VR" active={spatialMode === 'vr'} onClick={() => setSpatialMode('vr')} title="VR (WebXR)" compact />
+              </BtnGrid>
+              {spatialMode === 'vr' && (
+                <div style={{ marginTop: '6px' }}>
+                  <ToolBtn testId="enter-xr-btn" icon={<XRGogglesIcon />} label="Enter VR" onClick={handleEnterXR} title="Enter VR" />
+                </div>
+              )}
+
+              <SubLabel>Grid</SubLabel>
+              <BtnGrid cols={2}>
+                <ToolBtn testId="grid-toggle" icon={<GridIcon />} label={gridConfig.enabled ? 'Grid On' : 'Grid Off'} active={gridConfig.enabled} onClick={handleGridToggle} title="Toggle Grid (G)" />
+                <ToolBtn testId="canvas-settings-btn" icon={<SettingsIcon />} label="Settings" onClick={() => setSettingsOpen(!settingsOpen)} title="Canvas Settings" />
+              </BtnGrid>
               <div style={{ position: 'relative' }}>
-                <button ref={settingsButtonRef} data-testid="canvas-settings-btn" onClick={() => setSettingsOpen(!settingsOpen)} title="Canvas Settings" style={{ ...smallBtnBase, padding: '0 8px', width: 'auto', borderColor: settingsOpen ? 'var(--sn-accent, #6366f1)' : undefined, background: settingsOpen ? 'var(--sn-accent, #6366f1)' : undefined, color: settingsOpen ? '#fff' : undefined }}>Settings</button>
-                <CanvasSettingsDropdown isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} anchorRef={settingsButtonRef} viewportConfig={viewportConfig} borderRadius={borderRadius} canvasPosition={canvasPosition} />
+                <CanvasSettingsDropdown isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} anchorRef={settingsButtonRef} viewportConfig={viewportConfig} borderRadius={borderRadius} canvasPosition={canvasPosition} gridConfig={gridConfig} canvasName={canvasName} canvasSlug={canvasSlug} isPublic={isPublic} onRename={onRename} onSlugChange={onSlugChange} onVisibilityChange={onVisibilityChange} />
               </div>
-            </div>
+
+              <SubLabel>Canvas</SubLabel>
+              <BtnGrid cols={2}>
+                <ToolBtn testId="artboard-preview-toggle" icon={<ArtboardIcon />} label="Artboard" active={artboardPreview} onClick={handleArtboardPreviewToggle} title="Toggle Artboard Preview" />
+                <ToolBtn testId="capture-thumbnail" icon={<CameraIcon />} label="Capture" onClick={handleCaptureThumbnail} title="Capture Thumbnail" />
+              </BtnGrid>
+            </MenuSection>
+
+            {/* ── Panels ── */}
+            <MenuSection label="Panels">
+              <BtnGrid cols={2}>
+                <ToolBtn testId="panel-gallery" icon={<GalleryIcon />} label="Gallery" active={!!panels['gallery']} onClick={() => handlePanelToggle('gallery')} title="Gallery" />
+                <ToolBtn testId="panel-stickers" icon={<StickerIcon />} label="Stickers" active={!!panels['stickers']} onClick={() => handlePanelToggle('stickers')} title="Stickers" />
+                <ToolBtn testId="panel-layers" icon={<LayersIcon />} label="Layers" active={!!panels['layers']} onClick={() => handlePanelToggle('layers')} title="Layers" />
+                <ToolBtn testId="panel-dock" icon={<DockIcon />} label="Docker" onClick={handleDockerClick} title="Docker Library" />
+                <ToolBtn testId="panel-fullscreen" icon={<FullscreenIcon />} label="Fullscreen" onClick={handleFullscreenPreview} title="Fullscreen Preview" />
+                <ToolBtn testId="panel-clear" icon={<ClearIcon />} label="Clear" onClick={handleClearCanvas} title="Clear Canvas" />
+              </BtnGrid>
+            </MenuSection>
           </div>
-        </div>
+        </>
       )}
-    </div>
+    </>
   );
 };

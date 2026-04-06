@@ -34,12 +34,12 @@ export const ToastContainer: React.FC = () => {
         <div
           key={toast.id}
           data-testid={`toast-${toast.type}`}
+          className="sn-glass sn-neo sn-holo-border"
           style={{
             padding: '12px 20px',
             borderRadius: '8px',
             background: getToastBackground(toast.type),
             color: '#fff',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
             fontSize: '14px',
             fontWeight: 500,
             display: 'flex',

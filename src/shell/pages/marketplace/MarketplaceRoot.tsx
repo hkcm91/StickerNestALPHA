@@ -26,9 +26,11 @@ import { DetailPage } from './detail/DetailPage';
 import { LibraryPage } from './library/LibraryPage';
 import { PublisherPage } from './publisher/PublisherPage';
 import { WidgetManagePage } from './publisher/WidgetManagePage';
+import { SamplesPage } from './samples';
 
 const TABS = [
   { path: '/marketplace', label: 'Browse', exact: true },
+  { path: '/marketplace/samples', label: 'Samples', exact: false },
   { path: '/marketplace/library', label: 'My Library', exact: false },
   { path: '/marketplace/publisher', label: 'Publisher', exact: false },
 ] as const;
@@ -41,8 +43,8 @@ function shouldShowTabs(pathname: string): boolean {
 
 const tabBarStyle: React.CSSProperties = {
   display: 'flex',
-  gap: '4px',
-  padding: '0 24px',
+  gap: '2px',
+  padding: '0 40px',
   borderBottom: `1px solid ${themeVar('--sn-border')}`,
   background: themeVar('--sn-bg'),
   maxWidth: '1100px',
@@ -51,8 +53,8 @@ const tabBarStyle: React.CSSProperties = {
 
 function tabStyle(isActive: boolean): React.CSSProperties {
   return {
-    padding: '10px 16px',
-    fontSize: '14px',
+    padding: '10px 14px',
+    fontSize: '13px',
     fontWeight: isActive ? 600 : 400,
     color: isActive ? themeVar('--sn-text') : themeVar('--sn-text-muted'),
     textDecoration: 'none',
@@ -97,6 +99,7 @@ export const MarketplaceRoot: React.FC = () => {
       <Routes>
         <Route index element={<BrowsePage />} />
         <Route path="widget/:id" element={<DetailPage />} />
+        <Route path="samples" element={<SamplesPage />} />
         <Route path="library" element={<LibraryPage />} />
         <Route path="publisher" element={<PublisherPage />} />
         <Route path="publisher/:widgetId" element={<WidgetManagePage />} />
@@ -104,3 +107,4 @@ export const MarketplaceRoot: React.FC = () => {
     </>
   );
 };
+   

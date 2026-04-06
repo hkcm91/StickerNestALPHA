@@ -33,6 +33,11 @@ vi.mock('../supabase', () => ({
   },
 }));
 
+vi.mock('../social-graph/profiles', () => ({
+  getProfile: vi.fn().mockResolvedValue({ success: true, data: {} }),
+  createProfile: vi.fn().mockResolvedValue({ success: true, data: {} }),
+}));
+
 // Import after mocks
 const authModule = await import('./auth');
 const { signInWithEmail, signUp, signOut, signInWithOAuth, refreshSession, initAuthListener } = authModule;

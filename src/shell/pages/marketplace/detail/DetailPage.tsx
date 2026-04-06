@@ -15,10 +15,12 @@ import { useWidgetStore } from '../../../../kernel/stores/widget/widget.store';
 import { createMarketplaceAPI } from '../../../../marketplace/api/marketplace-api';
 import type { MarketplaceWidgetDetail } from '../../../../marketplace/api/types';
 import { createInstallFlowService } from '../../../../marketplace/install/install-flow';
+import { buildWidgetPackage, downloadPackage } from '../../../../runtime/package/builder';
 import { themeVar } from '../../../theme/theme-vars';
 import { InstallButton, type InstallState, type UninstallState } from '../shared/InstallButton';
 import { LicenseBadge } from '../shared/LicenseBadge';
 import { StarRating } from '../shared/StarRating';
+import { WidgetThumbnail } from '../shared/WidgetThumbnail';
 import { btnPrimary, btnSecondary, officialBadge, pageStyle, tagStyle } from '../styles';
 
 import { ReviewsSection } from './ReviewsSection';
@@ -38,21 +40,73 @@ export const DetailPage: React.FC = () => {
   const [installState, setInstallState] = useState<InstallState>('idle');
   const [uninstallState, setUninstallState] = useState<UninstallState>('idle');
 
-  // Load widget detail
+  // Find a registry entry by direct key, widgetId, or manifest.id
+  const findRegistryEntry = useCallback((lookupId: string) => {
+    // Direct key match
+    if (widgetRegistry[lookupId]) return widgetRegistry[lookupId];
+    // Search all entries by widgetId or manifest.id
+    for (const entry of Object.values(widgetRegistry)) {
+      if (entry.widgetId === lookupId || entry.manifest.id === lookupId) return entry;
+    }
+    return null;
+  }, [widgetRegistry]);
+
+  // Construct a MarketplaceWidgetDetail from a local registry entry
+  const detailFromRegistry = useCallback((lookupId: string): MarketplaceWidgetDetail | null => {
+    const entry = findRegistryEntry(lookupId);
+    if (!entry) return null;
+    const m = entry.manifest;
+    return {
+      id: lookupId, // preserve the URL id so install/uninstall buttons work with it
+      name: m.name,
+      slug: m.id,
+      description: m.description ?? null,
+      version: m.version,
+      authorId: null,
+      thumbnailUrl: null,
+      iconUrl: null,
+      category: m.category ?? null,
+      tags: m.tags ?? [],
+      license: 'MIT',
+      isPublished: true,
+      isDeprecated: false,
+      installCount: 0,
+      ratingAverage: null,
+      ratingCount: 0,
+      isFree: true,
+      priceCents: null,
+      currency: 'usd',
+      stripePriceId: null,
+      metadata: { official: entry.isBuiltIn, builtIn: entry.isBuiltIn },
+      createdAt: entry.installedAt,
+      updatedAt: entry.installedAt,
+      htmlContent: entry.htmlContent,
+      manifest: m,
+    };
+  }, [findRegistryEntry]);
+
+  // Load widget detail — try Supabase first, fall back to local widgetStore registry
   useEffect(() => {
     if (!id) return;
     let cancelled = false;
     setLoading(true);
     api.getWidget(id).then((widget) => {
-      if (!cancelled) {
+      if (cancelled) return;
+      if (widget) {
         setDetail(widget);
-        setLoading(false);
+      } else {
+        const fallback = detailFromRegistry(id);
+        if (fallback) setDetail(fallback);
       }
+      setLoading(false);
     }).catch(() => {
-      if (!cancelled) setLoading(false);
+      if (cancelled) return;
+      const fallback = detailFromRegistry(id);
+      if (fallback) setDetail(fallback);
+      setLoading(false);
     });
     return () => { cancelled = true; };
-  }, [api, id]);
+  }, [api, id, widgetRegistry]);
 
   // Handle post-purchase auto-install with retry (webhook may not have fired yet)
   useEffect(() => {
@@ -93,19 +147,23 @@ export const DetailPage: React.FC = () => {
 
     tryInstall();
     return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [detail, searchParams]);
 
   const isInstalled = useMemo(() => {
     if (!detail) return false;
     if (uninstallState === 'uninstalled') return false;
-    return detail.id in widgetRegistry || installState === 'installed';
-  }, [detail, widgetRegistry, installState, uninstallState]);
+    // Check by UUID, manifest.id (slug), and slug — covers built-in widgets whose
+    // registry key (sn.builtin.*) differs from the Supabase row UUID.
+    return !!findRegistryEntry(detail.id)
+      || !!findRegistryEntry(detail.manifest.id)
+      || (detail.slug ? !!findRegistryEntry(detail.slug) : false)
+      || installState === 'installed';
+  }, [detail, widgetRegistry, installState, uninstallState, findRegistryEntry]);
 
   const isBuiltIn = useMemo(() => {
     if (!detail) return false;
-    return widgetRegistry[detail.id]?.isBuiltIn === true;
-  }, [detail, widgetRegistry]);
+    return (findRegistryEntry(detail.id) ?? findRegistryEntry(detail.manifest.id))?.isBuiltIn === true;
+  }, [detail, widgetRegistry, findRegistryEntry]);
 
   const handleInstall = useCallback(
     async (widgetId: string) => {
@@ -135,9 +193,20 @@ export const DetailPage: React.FC = () => {
     [userId, installService],
   );
 
+  const handleDownloadZip = useCallback(() => {
+    if (!detail) return;
+    const entry = findRegistryEntry(detail.id);
+    if (!entry) return;
+    const data = buildWidgetPackage({
+      manifest: entry.manifest,
+      htmlContent: entry.htmlContent,
+    });
+    downloadPackage(data, `${entry.manifest.id}.snwidget.zip`);
+  }, [detail, widgetRegistry]);
+
   if (loading) {
     return (
-      <div style={pageStyle}>
+      <div data-marketplace-scroll style={pageStyle}>
         <div style={{ color: themeVar('--sn-text-muted'), padding: '40px', textAlign: 'center' }}>
           Loading widget...
         </div>
@@ -147,21 +216,58 @@ export const DetailPage: React.FC = () => {
 
   if (!detail) {
     return (
-      <div style={pageStyle}>
-        <button type="button" onClick={() => navigate('/marketplace')} style={{ ...btnSecondary, marginBottom: '16px' }}>
-          Back to Marketplace
-        </button>
-        <div style={{ color: themeVar('--sn-text-muted'), padding: '40px', textAlign: 'center' }}>
-          Widget not found.
+      <div data-marketplace-scroll style={pageStyle}>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '80px 24px',
+            textAlign: 'center',
+          }}
+        >
+          {/* Search icon illustration */}
+          <svg width="64" height="64" viewBox="0 0 64 64" fill="none" style={{ marginBottom: '24px', opacity: 0.4 }}>
+            <circle cx="28" cy="28" r="20" stroke={themeVar('--sn-text-muted')} strokeWidth="3" fill="none" />
+            <line x1="43" y1="43" x2="58" y2="58" stroke={themeVar('--sn-text-muted')} strokeWidth="3" strokeLinecap="round" />
+            <line x1="20" y1="28" x2="36" y2="28" stroke={themeVar('--sn-text-muted')} strokeWidth="2" strokeLinecap="round" />
+          </svg>
+          <h2 style={{ margin: '0 0 8px', fontSize: '20px', fontWeight: 600 }}>
+            Widget not found
+          </h2>
+          <p style={{ color: themeVar('--sn-text-muted'), fontSize: '14px', margin: '0 0 24px', maxWidth: '360px' }}>
+            This widget may have been removed or the link may be incorrect.
+          </p>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button
+              type="button"
+              onClick={() => navigate('/marketplace')}
+              style={btnPrimary}
+            >
+              Browse Marketplace
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/marketplace?q=')}
+              style={btnSecondary}
+            >
+              Search for widgets
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
   const isOfficial = !!(detail.metadata as Record<string, unknown>)?.official;
+  const hasEvents = detail.manifest.events &&
+    ((detail.manifest.events.emits && detail.manifest.events.emits.length > 0) ||
+     (detail.manifest.events.subscribes && detail.manifest.events.subscribes.length > 0));
+  const hasPermissions = detail.manifest.permissions && detail.manifest.permissions.length > 0;
 
   return (
-    <div data-testid="page-marketplace-detail" style={pageStyle}>
+    <div data-testid="page-marketplace-detail" data-marketplace-scroll style={pageStyle}>
       <button
         type="button"
         onClick={() => navigate('/marketplace')}
@@ -187,18 +293,12 @@ export const DetailPage: React.FC = () => {
             <div
               style={{
                 width: '100%',
-                aspectRatio: '16/10',
-                background: themeVar('--sn-surface'),
                 borderRadius: '8px',
                 border: `1px solid ${themeVar('--sn-border')}`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '48px',
-                color: themeVar('--sn-text-muted'),
+                overflow: 'hidden',
               }}
             >
-              W
+              <WidgetThumbnail name={detail.name} category={detail.category} height={175} />
             </div>
           )}
 
@@ -245,9 +345,14 @@ export const DetailPage: React.FC = () => {
                 <div style={{ fontSize: '13px', color: themeVar('--sn-text-muted'), marginBottom: '8px' }}>
                   Open any canvas and find this widget in the Asset Panel to place it.
                 </div>
-                <button type="button" onClick={() => navigate('/')} style={btnPrimary}>
-                  Go to Canvas
-                </button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button type="button" onClick={() => navigate('/')} style={btnPrimary}>
+                    Go to Canvas
+                  </button>
+                  <button type="button" onClick={handleDownloadZip} style={btnSecondary}>
+                    Download .zip
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -268,19 +373,21 @@ export const DetailPage: React.FC = () => {
             {isOfficial && <span style={{ ...officialBadge, fontSize: '11px', padding: '2px 8px', borderRadius: '10px' }}>Official</span>}
           </h1>
 
-          <div style={{ fontSize: '13px', color: themeVar('--sn-text-muted'), marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span>v{detail.version}</span>
+          <div style={{ fontSize: '13px', color: themeVar('--sn-text-muted'), marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <span>{isOfficial ? 'StickerNest' : `v${detail.version}`}</span>
             {detail.ratingAverage !== null && (
               <>
                 <StarRating value={detail.ratingAverage} size={14} />
                 <span>({detail.ratingCount} reviews)</span>
               </>
             )}
-            <span>{detail.installCount.toLocaleString()} installs</span>
+            {detail.installCount > 0 && (
+              <span>{detail.installCount.toLocaleString()} installs</span>
+            )}
           </div>
 
           {detail.description && (
-            <p style={{ lineHeight: 1.6, margin: '0 0 16px' }}>{detail.description}</p>
+            <p style={{ lineHeight: 1.6, margin: '0 0 16px', fontSize: '15px' }}>{detail.description}</p>
           )}
 
           {detail.tags.length > 0 && (
@@ -293,69 +400,52 @@ export const DetailPage: React.FC = () => {
 
           <div style={{ fontSize: '13px', color: themeVar('--sn-text-muted'), display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '16px' }}>
             {detail.license && <LicenseBadge license={detail.license} />}
-            {detail.category && <span>Category: <strong>{detail.category}</strong></span>}
+            {detail.category && <span>{detail.category}</span>}
           </div>
 
-          {/* Event Contract */}
-          {detail.manifest.events && (
-            <div style={{ marginTop: '16px' }}>
-              <h3 style={{ fontSize: '14px', marginBottom: '8px' }}>Event Contract</h3>
-              <div
-                style={{
-                  fontSize: '13px',
-                  fontFamily: 'monospace',
-                  background: themeVar('--sn-surface'),
-                  padding: '12px',
-                  borderRadius: '6px',
-                  border: `1px solid ${themeVar('--sn-border')}`,
-                }}
-              >
-                {detail.manifest.events.emits && detail.manifest.events.emits.length > 0 && (
-                  <div style={{ marginBottom: '8px' }}>
-                    <strong>Emits:</strong>{' '}
-                    {detail.manifest.events.emits
-                      .map((e: unknown) =>
-                        typeof e === 'string'
-                          ? e
-                          : ((e as Record<string, unknown>)?.name ??
-                             (e as Record<string, unknown>)?.type ??
-                             String(e)),
-                      )
-                      .join(', ')}
+          {/* Event contract */}
+          {hasEvents && (
+            <div style={{ marginBottom: '16px' }}>
+              <h3 style={{ fontSize: '14px', fontWeight: 600, margin: '0 0 8px' }}>Event Contract</h3>
+              {detail.manifest.events?.emits && detail.manifest.events.emits.length > 0 && (
+                <div style={{ marginBottom: '8px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 600, color: themeVar('--sn-text-muted') }}>Emits:</span>
+                  <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '4px' }}>
+                    {detail.manifest.events.emits.map((e) => {
+                      const label = typeof e === 'string' ? e : e.name;
+                      return <span key={label} style={tagStyle}>{label}</span>;
+                    })}
                   </div>
-                )}
-                {detail.manifest.events.subscribes && detail.manifest.events.subscribes.length > 0 && (
-                  <div>
-                    <strong>Subscribes:</strong>{' '}
-                    {detail.manifest.events.subscribes
-                      .map((e: unknown) =>
-                        typeof e === 'string'
-                          ? e
-                          : ((e as Record<string, unknown>)?.name ??
-                             (e as Record<string, unknown>)?.type ??
-                             String(e)),
-                      )
-                      .join(', ')}
+                </div>
+              )}
+              {detail.manifest.events?.subscribes && detail.manifest.events.subscribes.length > 0 && (
+                <div>
+                  <span style={{ fontSize: '12px', fontWeight: 600, color: themeVar('--sn-text-muted') }}>Subscribes:</span>
+                  <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '4px' }}>
+                    {detail.manifest.events.subscribes.map((e) => {
+                      const label = typeof e === 'string' ? e : e.name;
+                      return <span key={label} style={tagStyle}>{label}</span>;
+                    })}
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           )}
 
           {/* Permissions */}
-          {detail.manifest.permissions && detail.manifest.permissions.length > 0 && (
-            <div style={{ marginTop: '16px' }}>
-              <h3 style={{ fontSize: '14px', marginBottom: '8px' }}>Permissions</h3>
-              <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '13px' }}>
-                {detail.manifest.permissions.map((perm: string) => (
-                  <li key={perm}>{perm}</li>
+          {hasPermissions && (
+            <div style={{ marginBottom: '16px' }}>
+              <h3 style={{ fontSize: '14px', fontWeight: 600, margin: '0 0 8px' }}>Permissions</h3>
+              <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                {detail.manifest.permissions!.map((p: string) => (
+                  <span key={p} style={tagStyle}>{p}</span>
                 ))}
-              </ul>
+              </div>
             </div>
           )}
 
           {/* Reviews */}
-          <ReviewsSection widgetId={detail.id} />
+          <ReviewsSection widgetId={detail.id} api={api} />
         </div>
       </div>
     </div>

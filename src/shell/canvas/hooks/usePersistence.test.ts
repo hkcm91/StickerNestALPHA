@@ -20,6 +20,7 @@ import {
   listLocalCanvases,
   getLocalCanvasBySlug,
   renameLocalCanvas,
+  updateLocalCanvasSlug,
   deleteLocalCanvas,
   duplicateLocalCanvas,
   ensureLocalCanvas,
@@ -221,5 +222,43 @@ describe('readStoredDocument', () => {
   it('returns null for invalid JSON', () => {
     localStorage.setItem(getStorageKey('bad'), 'not-json{');
     expect(readStoredDocument('bad')).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: updateLocalCanvasSlug
+// ---------------------------------------------------------------------------
+
+describe('updateLocalCanvasSlug', () => {
+  it('updates slug in index and moves storage key', () => {
+    const original = createLocalCanvas({ name: 'Slug Test', slug: 'slug-test' });
+    localStorage.setItem(getStorageKey(original.slug), JSON.stringify({ meta: { id: original.id } }));
+
+    const updated = updateLocalCanvasSlug('slug-test', 'new-slug');
+    expect(updated).not.toBeNull();
+    expect(updated!.slug).toBe('new-slug');
+
+    // Old key removed, new key exists
+    expect(localStorage.getItem(getStorageKey('slug-test'))).toBeNull();
+    expect(localStorage.getItem(getStorageKey('new-slug'))).not.toBeNull();
+
+    // Index updated
+    expect(getLocalCanvasBySlug('slug-test')).toBeNull();
+    expect(getLocalCanvasBySlug('new-slug')).not.toBeNull();
+  });
+
+  it('returns null for non-existent slug', () => {
+    expect(updateLocalCanvasSlug('does-not-exist', 'new-slug')).toBeNull();
+  });
+
+  it('returns null for too-short slug', () => {
+    createLocalCanvas({ name: 'Short Test', slug: 'short-test' });
+    expect(updateLocalCanvasSlug('short-test', 'ab')).toBeNull();
+  });
+
+  it('returns null if new slug is already taken', () => {
+    createLocalCanvas({ name: 'Canvas A', slug: 'canvas-a' });
+    createLocalCanvas({ name: 'Canvas B', slug: 'canvas-b' });
+    expect(updateLocalCanvasSlug('canvas-a', 'canvas-b')).toBeNull();
   });
 });

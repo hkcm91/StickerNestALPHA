@@ -115,12 +115,14 @@ export function initCanvasTools(
     bus.emit(CanvasEvents.PEN_PATH_PREVIEW, state);
   }
 
-  // Also activate bridged tools when TOOL_CHANGED fires from the shell
+  // Activate tools when TOOL_CHANGED fires from the shell.
+  // All registered tools are activated; BUS_BRIDGED_TOOLS only gates
+  // input dispatch (pointer/key events), not activation.
   const unsubToolChanged = bus.subscribe(
     CanvasEvents.TOOL_CHANGED,
     (event: { payload: { tool: string } }) => {
       const toolName = event.payload.tool;
-      if (BUS_BRIDGED_TOOLS.has(toolName)) {
+      if (registry.getTool(toolName)) {
         registry.activate(toolName);
       }
     },

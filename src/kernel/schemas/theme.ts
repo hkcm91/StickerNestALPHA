@@ -80,6 +80,27 @@ export const ExtendedThemeTokensSchema = z.object({
   '--sn-success': z.string(),
   '--sn-warning': z.string(),
   '--sn-error': z.string(),
+
+  // Overhaul tokens — frosted glass, parallax, ambient glow
+  '--sn-surface-elevated': z.string(),
+  '--sn-glow': z.string(),
+  '--sn-accent-muted': z.string(),
+  '--sn-transition-spring': z.string(),
+  '--sn-blur-surface': z.string(),
+
+  // Obsidian design system — liquid glass, chrome, grain, hex
+  '--sn-surface-glass-heavy': z.string(),
+  '--sn-surface-liquid-glass': z.string(),
+  '--sn-blur-heavy': z.string(),
+  '--sn-border-accent': z.string(),
+  '--sn-accent-glow': z.string(),
+  '--sn-chrome-gradient': z.string(),
+  '--sn-holographic-border': z.string(),
+  '--sn-grain-opacity': z.string(),
+  '--sn-hex-opacity': z.string(),
+  '--sn-refraction-edge': z.string(),
+  '--sn-shadow-neo': z.string(),
+  '--sn-shadow-neo-inset': z.string(),
 });
 
 export type ExtendedThemeTokens = z.infer<typeof ExtendedThemeTokensSchema>;
@@ -116,6 +137,7 @@ export const ThemeNameSchema = z.enum([
   'bubbles-sky',
   'autumn-fireflies',
   'high-contrast',
+  'ember',
 ]);
 
 export type ThemeName = z.infer<typeof ThemeNameSchema>;

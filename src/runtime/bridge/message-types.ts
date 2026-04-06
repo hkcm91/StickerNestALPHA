@@ -43,6 +43,7 @@ export type HostMessage =
   | { type: 'CANVAS_WRITE_RESPONSE'; requestId: string; success: boolean; entityId?: string; error?: string }
   | { type: 'PROPERTY_LAYER_RESPONSE'; requestId: string; success: boolean; layerId?: string; error?: string }
   | { type: 'ENTITY_RESPONSE'; requestId: string; result: unknown; error?: string }
+  | { type: 'GALLERY_RESPONSE'; requestId: string; result: unknown; error?: string }
   | { type: 'DESTROY' };
 
 /**
@@ -87,4 +88,9 @@ export type WidgetMessage =
   // Property layer messages (requires 'canvas-write' permission)
   | { type: 'ADD_PROPERTY_LAYER'; requestId: string; entityId: string; label?: string; properties: Record<string, unknown> }
   | { type: 'UPDATE_PROPERTY_LAYER'; requestId: string; entityId: string; layerId: string; properties: Record<string, unknown> }
-  | { type: 'REMOVE_PROPERTY_LAYER'; requestId: string; entityId: string; layerId: string };
+  | { type: 'REMOVE_PROPERTY_LAYER'; requestId: string; entityId: string; layerId: string }
+  // Gallery asset management messages (requires 'gallery' permission)
+  | { type: 'GALLERY_UPLOAD'; requestId: string; imageUrl: string; name?: string; sourceEntityId?: string }
+  | { type: 'GALLERY_LIST'; requestId: string; limit?: number; offset?: number }
+  | { type: 'GALLERY_DELETE'; requestId: string; assetId: string }
+  | { type: 'GALLERY_GET'; requestId: string; assetId: string };

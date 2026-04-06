@@ -173,7 +173,6 @@ export const DockerTabBar: React.FC<DockerTabBarProps> = ({
           flex: 1,
           overflowX: 'auto',
           overflowY: 'hidden',
-          scrollbarWidth: 'none',
         }}
       >
         {tabs.map((tab, index) => {
@@ -356,16 +355,12 @@ export const DockerTabBar: React.FC<DockerTabBarProps> = ({
       {contextMenu && (
         <div
           data-testid="docker-tab-context-menu"
+          className="sn-glass-heavy sn-neo sn-holo-border"
           style={{
             position: 'fixed',
             left: contextMenu.x,
             top: contextMenu.y,
-            background: 'var(--sn-surface-glass, rgba(20,17,24,0.85))',
-            backdropFilter: 'blur(20px) saturate(1.2)',
-            WebkitBackdropFilter: 'blur(20px) saturate(1.2)',
-            border: '1px solid rgba(255,255,255,0.08)',
             borderRadius: 8,
-            boxShadow: '0 4px 16px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2)',
             zIndex: 1000,
             minWidth: 130,
             padding: '4px',

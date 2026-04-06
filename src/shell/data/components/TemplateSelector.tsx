@@ -107,20 +107,22 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
 // Styles
 // =============================================================================
 
+const SN_SPRING = 'cubic-bezier(0.16, 1, 0.3, 1)';
+
 const styles: Record<string, React.CSSProperties> = {
-  overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
-  modal: { background: 'var(--sn-surface, #fff)', borderRadius: '12px', width: '700px', maxWidth: '90vw', maxHeight: '80vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px', borderBottom: '1px solid var(--sn-border, #ddd)' },
-  title: { margin: 0, fontSize: '20px', fontWeight: 700, color: 'var(--sn-text, #111)' },
-  closeBtn: { background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', color: 'var(--sn-text-muted, #999)', padding: '4px 8px' },
-  categoryBar: { display: 'flex', gap: '6px', padding: '12px 24px', borderBottom: '1px solid var(--sn-border, #eee)', flexWrap: 'wrap' },
-  categoryBtn: { padding: '4px 12px', background: 'var(--sn-bg, #f0f0f0)', border: '1px solid transparent', borderRadius: '20px', cursor: 'pointer', fontSize: '12px', color: 'var(--sn-text-muted, #666)' },
-  categoryBtnActive: { background: 'var(--sn-accent, #2563eb)', color: '#fff', borderColor: 'var(--sn-accent, #2563eb)' },
+  overlay: { position: 'fixed', inset: 0, background: 'rgba(10,10,14,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
+  modal: { background: 'var(--sn-surface-glass, rgba(20,17,24,0.82))', backdropFilter: 'blur(40px) saturate(1.3)', WebkitBackdropFilter: 'blur(40px) saturate(1.3)', borderRadius: '12px', width: '700px', maxWidth: '90vw', maxHeight: '80vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', border: '1px solid rgba(78,123,142,0.12)' },
+  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px', borderBottom: '1px solid var(--sn-border, rgba(255,255,255,0.06))' },
+  title: { margin: 0, fontSize: '20px', fontWeight: 700, color: 'var(--sn-text, #E8E6ED)' },
+  closeBtn: { background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', color: 'var(--sn-text-muted, #7A7784)', padding: '4px 8px' },
+  categoryBar: { display: 'flex', gap: '6px', padding: '12px 24px', borderBottom: '1px solid var(--sn-border, rgba(255,255,255,0.06))', flexWrap: 'wrap' },
+  categoryBtn: { padding: '4px 12px', background: 'var(--sn-surface-raised, #1A1A1F)', border: '1px solid transparent', borderRadius: '20px', cursor: 'pointer', fontSize: '12px', color: 'var(--sn-text-muted, #7A7784)', transition: `all 300ms ${SN_SPRING}` },
+  categoryBtnActive: { background: 'var(--sn-accent, #3E7D94)', color: '#fff', borderColor: 'var(--sn-accent, #3E7D94)', boxShadow: '0 0 8px rgba(62,125,148,0.25)' },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px', padding: '16px 24px', overflow: 'auto', flex: 1 },
-  card: { display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '20px 16px', background: 'var(--sn-bg, #f8f9fa)', border: '1px solid var(--sn-border, #ddd)', borderRadius: 'var(--sn-radius, 8px)', cursor: 'pointer', textAlign: 'center' as const, transition: 'border-color 0.15s, box-shadow 0.15s', width: '100%' },
+  card: { display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '20px 16px', background: 'var(--sn-surface-glass, rgba(20,17,24,0.6))', border: '1px solid var(--sn-border, rgba(255,255,255,0.06))', borderRadius: 'var(--sn-radius, 8px)', cursor: 'pointer', textAlign: 'center' as const, transition: `all 300ms ${SN_SPRING}`, width: '100%', backdropFilter: 'blur(12px)' },
   cardIcon: { fontSize: '28px', marginBottom: '8px' },
-  cardName: { fontWeight: 600, fontSize: '14px', color: 'var(--sn-text, #111)', marginBottom: '4px' },
-  cardDesc: { fontSize: '12px', color: 'var(--sn-text-muted, #666)', marginBottom: '8px', lineHeight: 1.4 },
-  cardColumns: { fontSize: '11px', color: 'var(--sn-text-muted, #999)', background: 'var(--sn-surface, #fff)', padding: '2px 8px', borderRadius: '10px' },
-  empty: { padding: '32px', textAlign: 'center' as const, color: 'var(--sn-text-muted, #666)' },
+  cardName: { fontWeight: 600, fontSize: '14px', color: 'var(--sn-text, #E8E6ED)', marginBottom: '4px' },
+  cardDesc: { fontSize: '12px', color: 'var(--sn-text-muted, #7A7784)', marginBottom: '8px', lineHeight: 1.4 },
+  cardColumns: { fontSize: '11px', color: 'var(--sn-text-muted, #7A7784)', background: 'rgba(20,17,24,0.5)', padding: '2px 8px', borderRadius: '10px' },
+  empty: { padding: '32px', textAlign: 'center' as const, color: 'var(--sn-text-muted, #7A7784)' },
 };

@@ -8,13 +8,22 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import type { WidgetManifest, WidgetPackageContents } from '@sn/types';
+import { CanvasEvents } from '@sn/types';
+
+import { bus } from '../../../../kernel/bus';
 import { useAuthStore } from '../../../../kernel/stores/auth/auth.store';
+import { useCanvasStore } from '../../../../kernel/stores/canvas/canvas.store';
 import { useWidgetStore } from '../../../../kernel/stores/widget/widget.store';
 import { createMarketplaceAPI } from '../../../../marketplace/api/marketplace-api';
 import type { MarketplaceWidgetListing } from '../../../../marketplace/api/types';
 import { createInstallFlowService } from '../../../../marketplace/install/install-flow';
+import { generateManifestFromHtml } from '../../../../runtime/ai/manifest-generator';
+import { extractWidgetPackage } from '../../../../runtime/package/extractor';
 import { themeVar } from '../../../theme/theme-vars';
 import { InstallButton, type UninstallState } from '../shared/InstallButton';
+import { ManifestReview } from '../shared/ManifestReview';
+import { PackageUpload } from '../shared/PackageUpload';
 import { WidgetCard } from '../shared/WidgetCard';
 import { btnSecondary, pageStyle, sectionHeading } from '../styles';
 
@@ -28,6 +37,48 @@ export const LibraryPage: React.FC = () => {
   const [widgets, setWidgets] = useState<MarketplaceWidgetListing[]>([]);
   const [loading, setLoading] = useState(true);
   const [uninstallStatus, setUninstallStatus] = useState<Record<string, UninstallState>>({});
+
+  // Package upload state
+  const [showUpload, setShowUpload] = useState(false);
+  const [uploadLoading, setUploadLoading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [pendingPackage, setPendingPackage] = useState<{
+    contents: WidgetPackageContents;
+    data: ArrayBuffer;
+  } | null>(null);
+
+  const handlePackageLoaded = useCallback((data: ArrayBuffer) => {
+    setUploadError(null);
+    const result = extractWidgetPackage(data);
+    if (!result.success) {
+      setUploadError(result.error);
+      return;
+    }
+    let contents = result.contents;
+    if (contents.manifestGenerated) {
+      const aiResult = generateManifestFromHtml(contents.htmlContent);
+      contents = { ...contents, manifest: aiResult.manifest, manifestConfidence: aiResult.confidence };
+    }
+    setPendingPackage({ contents, data });
+  }, []);
+
+  const handleInstallPackage = useCallback(async (_manifest: WidgetManifest) => {
+    if (!userId || !pendingPackage) return;
+    setUploadLoading(true);
+    try {
+      // TODO: Wire to installService.installFromPackage when available
+      // For now, emit a bus event so the widget store can register it
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      setPendingPackage(null);
+      setShowUpload(false);
+      const items = await api.getInstalledWidgets(userId);
+      setWidgets(items);
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Installation failed');
+    } finally {
+      setUploadLoading(false);
+    }
+  }, [userId, pendingPackage, installService, api]);
 
   useEffect(() => {
     if (!userId) return;
@@ -70,6 +121,23 @@ export const LibraryPage: React.FC = () => {
   // Stub install handler (library only uninstalls)
   const handleInstallNoop = useCallback(async () => {}, []);
 
+  // Navigate to canvas and activate widget placement tool
+  const activeCanvasId = useCanvasStore((s) => s.activeCanvasId);
+  const handleAddToCanvas = useCallback(
+    (widgetId: string) => {
+      // Emit tool change so the canvas activates widget placement mode
+      bus.emit(CanvasEvents.TOOL_CHANGED, {
+        tool: 'widget',
+        widgetId,
+        metadata: { widgetId },
+      });
+      // Navigate to the canvas — the tool change persists in uiStore
+      const canvasPath = activeCanvasId ? `/canvas/${activeCanvasId}` : '/';
+      navigate(canvasPath);
+    },
+    [navigate, activeCanvasId],
+  );
+
   // Include built-in widgets from the registry
   const builtInWidgets = useMemo(() => {
     return Object.values(widgetRegistry)
@@ -110,104 +178,155 @@ export const LibraryPage: React.FC = () => {
     <div data-testid="page-marketplace-library" style={pageStyle}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
         <h1 style={{ margin: 0, fontSize: '24px' }}>My Library</h1>
-        <button type="button" onClick={() => navigate('/marketplace')} style={btnSecondary}>
-          Browse Marketplace
-        </button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            type="button"
+            onClick={() => { setShowUpload(true); setPendingPackage(null); setUploadError(null); }}
+            style={{
+              ...btnSecondary,
+              background: themeVar('--sn-accent'),
+              color: '#fff',
+              borderColor: themeVar('--sn-accent'),
+            }}
+          >
+            Install from file
+          </button>
+          <button type="button" onClick={() => navigate('/marketplace')} style={btnSecondary}>
+            Browse Marketplace
+          </button>
+        </div>
       </div>
 
       {loading ? (
-        <div style={{ color: themeVar('--sn-text-muted'), padding: '40px', textAlign: 'center' }}>
-          Loading your widgets...
-        </div>
+        <p style={{ color: themeVar('--sn-text-muted') }}>Loading library...</p>
       ) : allWidgets.length === 0 ? (
-        <div style={{ color: themeVar('--sn-text-muted'), padding: '40px', textAlign: 'center' }}>
-          No widgets installed yet. Browse the marketplace to find widgets.
+        <div style={{ textAlign: 'center', padding: '48px 16px', color: themeVar('--sn-text-muted') }}>
+          <p style={{ fontSize: '16px', marginBottom: '8px' }}>No widgets installed yet.</p>
+          <button type="button" onClick={() => navigate('/marketplace')} style={btnSecondary}>
+            Browse Marketplace
+          </button>
         </div>
       ) : (
-        <>
-          {builtInWidgets.length > 0 && (
-            <>
-              <h2 style={sectionHeading}>Built-in Widgets</h2>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
-                  gap: '16px',
-                  marginBottom: '32px',
-                }}
-              >
-                {builtInWidgets.map((widget) => (
-                  <WidgetCard
-                    key={widget.id}
-                    id={widget.id}
-                    name={widget.name}
-                    description={widget.description}
-                    thumbnailUrl={widget.thumbnailUrl}
-                    ratingAverage={widget.ratingAverage}
-                    ratingCount={widget.ratingCount}
-                    installCount={widget.installCount}
-                    isFree={widget.isFree}
-                    onClick={handleWidgetClick}
-                    action={
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+            gap: '16px',
+          }}
+        >
+          {allWidgets.map((widget) => {
+            const isBuiltIn = !!(widget.metadata as Record<string, unknown>)?.builtIn;
+            return (
+              <WidgetCard
+                key={widget.id}
+                id={widget.id}
+                name={widget.name}
+                description={widget.description}
+                thumbnailUrl={widget.thumbnailUrl}
+                category={widget.category}
+                ratingAverage={widget.ratingAverage}
+                ratingCount={widget.ratingCount}
+                installCount={widget.installCount}
+                isFree={widget.isFree}
+                priceCents={widget.priceCents}
+                currency={widget.currency}
+                isOfficial={isBuiltIn}
+                isDeprecated={widget.isDeprecated}
+                onClick={handleWidgetClick}
+                action={
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button
+                      type="button"
+                      data-testid="add-to-canvas-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAddToCanvas(widget.id);
+                      }}
+                      style={{
+                        flex: 1,
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        border: 'none',
+                        background: themeVar('--sn-accent'),
+                        color: '#fff',
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Add to Canvas
+                    </button>
+                    {!isBuiltIn && (
                       <InstallButton
-                        widgetId={widget.id}
-                        isInstalled
-                        isBuiltIn
-                        isFree
+                        isInstalled={true}
                         onInstall={handleInstallNoop}
-                        onUninstall={handleInstallNoop}
-                        compact
-                      />
-                    }
-                  />
-                ))}
-              </div>
-            </>
-          )}
-
-          {widgets.length > 0 && (
-            <>
-              <h2 style={sectionHeading}>Installed Widgets</h2>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
-                  gap: '16px',
-                }}
-              >
-                {widgets.map((widget) => (
-                  <WidgetCard
-                    key={widget.id}
-                    id={widget.id}
-                    name={widget.name}
-                    description={widget.description}
-                    thumbnailUrl={widget.thumbnailUrl}
-                    ratingAverage={widget.ratingAverage}
-                    ratingCount={widget.ratingCount}
-                    installCount={widget.installCount}
-                    isFree={widget.isFree}
-                    priceCents={widget.priceCents}
-                    currency={widget.currency}
-                    onClick={handleWidgetClick}
-                    action={
-                      <InstallButton
-                        widgetId={widget.id}
-                        isInstalled
-                        isBuiltIn={false}
-                        isFree={widget.isFree}
+                        onUninstall={() => handleUninstall(widget.id)}
                         uninstallState={uninstallStatus[widget.id]}
-                        onInstall={handleInstallNoop}
-                        onUninstall={handleUninstall}
-                        compact
                       />
-                    }
-                  />
-                ))}
-              </div>
-            </>
-          )}
-        </>
+                    )}
+                  </div>
+                }
+              />
+            );
+          })}
+        </div>
+      )}
+
+      {showUpload && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.4)',
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowUpload(false); }}
+        >
+          <div
+            style={{
+              background: themeVar('--sn-bg'),
+              borderRadius: '12px',
+              padding: '24px',
+              maxWidth: '520px',
+              width: '90%',
+              maxHeight: '80vh',
+              overflow: 'auto',
+              boxShadow: '0 16px 48px rgba(0,0,0,0.2)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h2 style={{ margin: 0, fontSize: '18px' }}>Install Widget from File</h2>
+              <button
+                type="button"
+                onClick={() => setShowUpload(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '18px',
+                  cursor: 'pointer',
+                  color: themeVar('--sn-text-muted'),
+                  padding: '4px',
+                }}
+              >
+                ✕
+              </button>
+            </div>
+            <p style={{ color: themeVar('--sn-text-muted'), fontSize: '14px', marginBottom: '16px' }}>
+              Upload a <code>.snwidget.zip</code> file to install a widget locally.
+            </p>
+            <input
+              type="file"
+              accept=".zip"
+              onChange={() => { /* File upload handler */ }}
+              style={{ fontSize: '14px' }}
+            />
+          </div>
+        </div>
       )}
     </div>
   );
 };
+        

@@ -1,0 +1,96 @@
+{
+  "name": "content-0002",
+  "feature": "AI Prompt Refinement Overlay",
+  "audience": "creator",
+  "target": {
+    "baseUrl": "http://localhost:5173/StickerNest5.0/",
+    "viewport": { "width": 1920, "height": 1080 },
+    "deviceScaleFactor": 2
+  },
+  "setup": [
+    {
+      "id": "load-app",
+      "label": "Load StickerNest",
+      "action": { "type": "navigate", "url": "http://localhost:5173/StickerNest5.0/" }
+    },
+    {
+      "id": "wait-canvas",
+      "label": "Wait for canvas to load",
+      "action": { "type": "waitForSelector", "selector": "[data-testid='canvas-viewport']", "timeout": 10000 }
+    },
+    {
+      "id": "navigate-lab",
+      "label": "Open Widget Lab",
+      "action": { "type": "navigate", "url": "http://localhost:5173/StickerNest5.0/lab" }
+    },
+    {
+      "id": "wait-lab",
+      "label": "Wait for Lab IDE to load",
+      "action": { "type": "waitForSelector", "selector": "[data-testid='lab-editor']", "timeout": 10000 }
+    }
+  ],
+  "steps": [
+    {
+      "id": "01-lab-overview",
+      "label": "Show the Widget Lab IDE",
+      "action": { "type": "wait", "ms": 1500 },
+      "capture": { "screenshot": true, "annotation": "Widget Lab — where creators build apps" },
+      "narration": "This is the Widget Lab — StickerNest's built-in IDE for creating widgets."
+    },
+    {
+      "id": "02-focus-prompt-bar",
+      "label": "Click into the AI prompt bar",
+      "action": { "type": "click", "selector": "[data-testid='ai-prompt-input'], [data-testid='prompt-bar']" },
+      "capture": { "screenshot": true, "annotation": "AI generation prompt bar" },
+      "narration": "Type a widget idea into the AI prompt bar to start generating."
+    },
+    {
+      "id": "03-type-prompt",
+      "label": "Type a widget prompt",
+      "action": { "type": "type", "selector": "[data-testid='ai-prompt-input'], [data-testid='prompt-bar']", "text": "Build a weather dashboard with live temperature and forecast" },
+      "capture": { "screenshot": true },
+      "narration": "We want a weather dashboard. But instead of generating immediately..."
+    },
+    {
+      "id": "04-submit-prompt",
+      "label": "Submit to trigger refinement overlay",
+      "action": { "type": "keyboard", "key": "Enter" },
+      "capture": { "screenshot": true, "gif": true, "annotation": "The refinement overlay appears" },
+      "narration": "The prompt refinement overlay slides in — clarifying questions, compatible widgets, and quick toggles. All before a single line of code is generated."
+    },
+    {
+      "id": "05-show-questions",
+      "label": "Show AI clarifying questions",
+      "action": { "type": "wait", "ms": 2000 },
+      "capture": { "screenshot": true, "annotation": "AI asks smart questions before building" },
+      "narration": "The AI asks clarifying questions: What data sources? What visual style? What interactions? Better input = better output."
+    },
+    {
+      "id": "06-answer-question",
+      "label": "Answer a clarifying question",
+      "action": { "type": "click", "selector": "[data-testid='question-input-0'], .prompt-refinement-question input" },
+      "capture": { "screenshot": true, "gif": true, "annotation": "Answering refines the generation" },
+      "narration": "Answer the questions to give the AI more context. Every answer sharpens the result."
+    },
+    {
+      "id": "07-toggle-options",
+      "label": "Toggle interactive mode and dark mode",
+      "action": { "type": "click", "selector": "[data-testid='toggle-interactive'], .toggle-pill" },
+      "capture": { "screenshot": true, "annotation": "Quick toggles: interactive, dark mode, events" },
+      "narration": "Quick toggles let you set preferences without typing — interactive mode, dark mode, event emission."
+    },
+    {
+      "id": "08-generate",
+      "label": "Click Generate with enriched prompt",
+      "action": { "type": "click", "selector": "[data-testid='generate-button'], [data-testid='refine-generate']" },
+      "capture": { "screenshot": true, "gif": true, "annotation": "Generate with full context" },
+      "narration": "Hit Generate. The enriched prompt — original idea + answers + toggles + compatible widgets — all feeds into the AI. The result is dramatically better than a raw prompt."
+    }
+  ],
+  "metadata": {
+    "hook": "Your AI doesn't just build what you type — it asks the right questions first.",
+    "cta": "StickerNest V5 — where widgets build themselves. Follow for more.",
+    "tags": ["#BuildInPublic", "#AI", "#NoCode", "#StickerNest", "#WidgetLab", "#IndieHacker"],
+    "description": "StickerNest's Widget Lab now features a prompt refinement overlay that asks clarifying questions before AI generates your widget. Better input → dramatically better output."
+  }
+}

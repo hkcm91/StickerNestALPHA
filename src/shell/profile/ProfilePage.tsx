@@ -30,9 +30,11 @@ import {
 } from '../../kernel/social-graph';
 import type { PublicCanvas } from '../../kernel/social-graph';
 import { useAuthStore } from '../../kernel/stores/auth/auth.store';
+import { deleteLocalCanvas } from '../canvas';
 
 import { CanvasGallerySection } from './CanvasGallerySection';
 import { FollowersPanel } from './FollowersPanel';
+import { UserSearchSection } from './UserSearchSection';
 
 // ---------------------------------------------------------------------------
 // Sub-components
@@ -188,13 +190,14 @@ export const ProfilePage: React.FC = () => {
       const isOwn = currentUser?.id != null && p.userId === currentUser.id;
 
       if (isOwn) {
-        // Own profile: fetch ALL owned canvases + shared canvases
+        // Own profile: load canvases from Supabase (cloud storage)
         const [ownResult, sharedResult] = await Promise.all([
           getUserCanvases(p.userId, currentUser!.id, { limit: 100 }),
           getSharedCanvases(p.userId, { limit: 100 }),
         ]);
+
         if (!cancelled) {
-          if (ownResult.success) setOwnedCanvases(ownResult.data.items);
+          setOwnedCanvases(ownResult.success ? ownResult.data.items : []);
           if (sharedResult.success) setSharedCanvases(sharedResult.data.items);
         }
       } else {
@@ -284,6 +287,10 @@ export const ProfilePage: React.FC = () => {
 
   const handleDeleteCanvas = useCallback((canvas: PublicCanvas) => {
     if (!window.confirm(`Delete "${canvas.name}"? This cannot be undone.`)) return;
+    // Remove from localStorage persistence
+    if (canvas.slug) {
+      deleteLocalCanvas(canvas.slug);
+    }
     setOwnedCanvases((prev) => prev.filter((c) => c.id !== canvas.id));
   }, []);
 
@@ -517,6 +524,9 @@ export const ProfilePage: React.FC = () => {
           onClose={() => setFollowersPanel(null)}
         />
       )}
+
+      {/* User Search (own profile only) */}
+      {isOwnProfile && <UserSearchSection />}
 
       {/* Canvas Gallery Section */}
       <CanvasGallerySection

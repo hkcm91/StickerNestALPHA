@@ -282,6 +282,17 @@ export const MarketplaceEvents = {
   WIDGET_DEPRECATED: 'marketplace.widget.deprecated',
   PUBLISH_REQUEST: 'marketplace.publish.request',
   PUBLISH_RESPONSE: 'marketplace.publish.response',
+  UPLOAD_REQUEST: 'marketplace.upload.request',
+  UPLOAD_RESPONSE: 'marketplace.upload.response',
+  SECURITY_SCAN_COMPLETE: 'marketplace.security.scan.complete',
+  // Pipeline Template events (cross-layer bridge between L4A-3 and L5)
+  TEMPLATE_EXPORT_REQUEST: 'marketplace.template.export.request',
+  TEMPLATE_EXPORT_RESPONSE: 'marketplace.template.export.response',
+  TEMPLATE_PUBLISH_REQUEST: 'marketplace.template.publish.request',
+  TEMPLATE_PUBLISH_RESPONSE: 'marketplace.template.publish.response',
+  TEMPLATE_INSTALL_REQUEST: 'marketplace.template.install.request',
+  TEMPLATE_INSTALL_RESPONSE: 'marketplace.template.install.response',
+  TEMPLATE_INSTALLED: 'marketplace.template.installed',
 } as const;
 
 /**

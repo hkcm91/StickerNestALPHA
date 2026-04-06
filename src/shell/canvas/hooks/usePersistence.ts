@@ -172,11 +172,52 @@ export function renameLocalCanvas(slug: string, newName: string): LocalCanvasSum
   return updated;
 }
 
+export function updateLocalCanvasSlug(oldSlug: string, newSlug: string): LocalCanvasSummary | null {
+  const slugified = slugifyCanvasName(newSlug);
+  if (!slugified || slugified.length < 3 || slugified.length > 64) return null;
+
+  const index = readCanvasIndex();
+  const entry = index.items.find((item) => item.slug === oldSlug);
+  if (!entry) return null;
+
+  // Don't allow changing to an already-taken slug (unless it's the same)
+  if (slugified !== oldSlug && index.items.some((item) => item.slug === slugified)) return null;
+
+  const now = new Date().toISOString();
+  const updated: LocalCanvasSummary = { ...entry, slug: slugified, updatedAt: now };
+
+  // Move stored document from old key to new key
+  const raw = localStorage.getItem(getStorageKey(oldSlug));
+  if (raw) {
+    localStorage.setItem(getStorageKey(slugified), raw);
+    localStorage.removeItem(getStorageKey(oldSlug));
+  }
+
+  // Remove old entry, add updated one
+  const nextItems = index.items.filter((item) => item.slug !== oldSlug && item.id !== entry.id);
+  nextItems.push(updated);
+  writeCanvasIndex({ items: nextItems });
+
+  return updated;
+}
+
 export function deleteLocalCanvas(slug: string): void {
   const index = readCanvasIndex();
   const nextItems = index.items.filter((item) => item.slug !== slug);
   writeCanvasIndex({ items: nextItems });
   localStorage.removeItem(getStorageKey(slug));
+}
+
+/**
+ * Remove all locally-persisted canvases from localStorage.
+ * Used during beta migration to move fully to cloud storage.
+ */
+export function clearAllLocalCanvases(): void {
+  const index = readCanvasIndex();
+  for (const item of index.items) {
+    localStorage.removeItem(getStorageKey(item.slug));
+  }
+  localStorage.removeItem(STORAGE_INDEX_KEY);
 }
 
 export function duplicateLocalCanvas(slug: string): LocalCanvasSummary | null {
@@ -442,6 +483,8 @@ export function usePersistence(
       bus.subscribe(CanvasEvents.ENTITY_CREATED, scheduleSave),
       bus.subscribe(CanvasEvents.ENTITY_UPDATED, scheduleSave),
       bus.subscribe(CanvasEvents.ENTITY_DELETED, scheduleSave),
+      bus.subscribe(CanvasEvents.ENTITY_MOVED, scheduleSave),
+      bus.subscribe(CanvasEvents.ENTITY_RESIZED, scheduleSave),
       bus.subscribe(CanvasEvents.ENTITY_CONFIG_UPDATED, scheduleSave),
       bus.subscribe(CanvasEvents.ENTITY_GROUPED, scheduleSave),
       bus.subscribe(CanvasEvents.ENTITY_UNGROUPED, scheduleSave),

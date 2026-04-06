@@ -31,23 +31,26 @@ export type SortBy = (typeof SORT_OPTIONS)[number]['value'];
 
 export const pageStyle: React.CSSProperties = {
   minHeight: '100%',
-  padding: '24px',
+  height: '100%',
+  padding: '32px 40px 64px',
   boxSizing: 'border-box',
   background: themeVar('--sn-bg'),
   color: themeVar('--sn-text'),
   fontFamily: themeVar('--sn-font-family'),
   maxWidth: '1100px',
   margin: '0 auto',
+  overflowY: 'auto',
 };
 
 export const inputStyle: React.CSSProperties = {
-  padding: '8px 12px',
+  padding: '9px 12px',
   border: `1px solid ${themeVar('--sn-border')}`,
-  borderRadius: '6px',
+  borderRadius: '8px',
   background: themeVar('--sn-surface'),
   color: themeVar('--sn-text'),
-  fontSize: '14px',
+  fontSize: '13px',
   fontFamily: 'inherit',
+  outline: 'none',
 };
 
 export const selectStyle: React.CSSProperties = { ...inputStyle, cursor: 'pointer' };
@@ -84,11 +87,11 @@ export const btnDanger: React.CSSProperties = {
 
 export const cardStyle: React.CSSProperties = {
   border: `1px solid ${themeVar('--sn-border')}`,
-  borderRadius: themeVar('--sn-radius'),
+  borderRadius: '10px',
   background: themeVar('--sn-surface'),
   overflow: 'hidden',
   cursor: 'pointer',
-  transition: 'border-color 0.15s',
+  transition: 'transform 150ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 150ms cubic-bezier(0.16, 1, 0.3, 1), border-color 150ms cubic-bezier(0.16, 1, 0.3, 1)',
 };
 
 export const labelBuiltIn: React.CSSProperties = {

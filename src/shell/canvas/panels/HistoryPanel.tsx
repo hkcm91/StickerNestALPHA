@@ -60,7 +60,7 @@ export const HistoryPanel: React.FC = () => {
           background: themeVar('--sn-surface'),
         }}
       >
-        <span style={{ fontWeight: 600 }}>History</span>
+        <span className="sn-chrome-text" style={{ fontWeight: 600 }}>History</span>
         <button
           onClick={clear}
           style={{

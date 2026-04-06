@@ -38,9 +38,9 @@ describe('WidgetCard', () => {
     expect(onClick).toHaveBeenCalledWith('w-1');
   });
 
-  it('shows Free badge for free widgets', () => {
+  it('hides price tag for free widgets', () => {
     render(<WidgetCard {...baseProps} />);
-    expect(screen.getByTestId('price-tag').textContent).toBe('Free');
+    expect(screen.queryByTestId('price-tag')).toBeNull();
   });
 
   it('shows price for paid widgets', () => {

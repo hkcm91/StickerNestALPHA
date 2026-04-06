@@ -45,13 +45,14 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isSent })
     }}
   >
     <div
+      className={isSent ? 'sn-neo' : 'sn-glass sn-neo'}
       style={{
         maxWidth: '70%',
         padding: '8px 12px',
         borderRadius: isSent ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
         background: isSent
           ? 'var(--sn-accent, #6366f1)'
-          : themeVar('--sn-surface-raised'),
+          : undefined,
         color: isSent ? '#fff' : themeVar('--sn-text'),
         fontSize: 14,
         lineHeight: 1.45,
