@@ -2,7 +2,6 @@
  * Built-in Widgets
  *
  * Trusted widgets that use the same SDK interface as sandboxed widgets.
- * Current set: Sticky Note, Clock/Timer, Counter, Image viewer, Markdown note.
  *
  * @module runtime/widgets
  * @layer L3
@@ -17,6 +16,7 @@ export { ActivityFeedWidget } from './activity-feed/activity-feed.widget';
 export { activityFeedManifest } from './activity-feed/activity-feed.widget';
 export { AICanvasAgentWidget } from './ai-canvas-agent/ai-canvas-agent.widget';
 export { aiCanvasAgentManifest } from './ai-canvas-agent/ai-canvas-agent.widget';
+export { AIWidgetGeneratorWidget, aiWidgetGeneratorManifest } from './ai-widget-generator';
 export { ImageGeneratorWidget } from './image-generator/image-generator.widget';
 export { imageGeneratorManifest } from './image-generator/image-generator.widget';
 export { KanbanWidget } from './kanban/kanban.widget';
