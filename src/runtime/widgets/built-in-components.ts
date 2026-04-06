@@ -12,6 +12,7 @@ import type React from 'react';
 import { ActivityFeedWidget } from './activity-feed/activity-feed.widget';
 import { AiAgentWidget } from './ai-agent/ai-agent.widget';
 import { AICanvasAgentWidget } from './ai-canvas-agent/ai-canvas-agent.widget';
+import { AIWidgetGeneratorWidget } from './ai-widget-generator/ai-widget-generator.widget';
 import { GalleryWidget } from './gallery/gallery.widget';
 import { GreenScreenRemoverWidget } from './green-screen-remover/green-screen-remover.widget';
 import { ImageGeneratorWidget } from './image-generator/image-generator.widget';
@@ -26,6 +27,7 @@ export const BUILT_IN_WIDGET_COMPONENTS: Record<string, React.ComponentType<any>
   'sn.builtin.activity-feed': ActivityFeedWidget,
   'sn.builtin.ai-agent': AiAgentWidget,
   'sn.builtin.ai-canvas-agent': AICanvasAgentWidget,
+  'sn.builtin.ai-widget-generator': AIWidgetGeneratorWidget,
   'sn.builtin.image-generator': ImageGeneratorWidget,
   'sn.builtin.green-screen-remover': GreenScreenRemoverWidget,
   'sn.builtin.kanban': KanbanWidget,
