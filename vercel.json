@@ -19,11 +19,32 @@
         {
           "key": "X-XSS-Protection",
           "value": "1; mode=block"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "frame-ancestors *"
         }
       ]
     },
     {
-      "source": "/((?!embed/).*)",
+      "source": "/w/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "frame-ancestors *"
+        }
+      ]
+    },
+    {
+      "source": "/((?!embed/|w/).*)",
       "headers": [
         {
           "key": "X-Content-Type-Options",
